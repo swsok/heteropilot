@@ -295,16 +295,28 @@ class LLMServingSimPredictor(Predictor):
             return SimResult(candidate.id, SimOutcome.CRASHED, detail=f"compile failed: {exc}")
         self.last_reduction = reduction
 
-        run_dir = self.work_dir / candidate.id
+        # Candidate ids may contain characters that are awkward in paths
+        # (mixed ids carry parentheses and plus signs); sanitize for the dir.
+        safe_id = "".join(ch if ch.isalnum() or ch in "-_." else "_" for ch in candidate.id)
+        run_dir = self.work_dir / safe_id
         run_dir.mkdir(parents=True, exist_ok=True)
         config_path = run_dir / "cluster.json"
         config_path.write_text(json.dumps(config, indent=2))
 
-        result = self._run_once(candidate, spec, config_path, run_dir)
+        # Energy is trustworthy only when EVERY node in this deployment carries
+        # a power block. Upstream itself disables power modeling when any node
+        # lacks one (config_builder.py:326), so today this guard is defense in
+        # depth: if that upstream behavior ever changes, a partially-covered
+        # total would under-count energy and inflate tokens/J (deviations D14).
+        power_complete = all("power" in node for node in config["nodes"])
+
+        result = self._run_once(candidate, spec, config_path, run_dir, power_complete)
         if result.outcome is SimOutcome.CRASHED and self.retry_once:
             # §5.5 asks for one retry. A deterministic simulator rarely benefits,
             # but a transient failure (disk, port, ASTRA-Sim startup) can.
-            retry = self._run_once(candidate, spec, config_path, run_dir, attempt=2)
+            retry = self._run_once(
+                candidate, spec, config_path, run_dir, power_complete, attempt=2
+            )
             if retry.ok:
                 retry.warnings.append("succeeded on retry after a first-attempt failure")
                 return retry
@@ -322,11 +334,14 @@ class LLMServingSimPredictor(Predictor):
         spec: ServiceSpec,
         config_path: Path,
         run_dir: Path,
+        power_complete: bool,
         attempt: int = 1,
     ) -> SimResult:
         csv_path = run_dir / f"sim{attempt}.csv"
         log_path = run_dir / f"sim{attempt}.log"
-        run_id = f"{candidate.id}-a{attempt}".replace("/", "_")
+        run_id = "".join(
+            ch if ch.isalnum() or ch in "-_" else "_" for ch in f"{candidate.id}-a{attempt}"
+        )
 
         cmd = [
             self.python, "-m", "serving",
@@ -393,7 +408,7 @@ class LLMServingSimPredictor(Predictor):
             )
 
         try:
-            metrics, warnings = self._parse(csv_path, stdout, spec, wall)
+            metrics, warnings = self._parse(csv_path, stdout, spec, wall, power_complete)
         except (ValueError, KeyError, PowerParseError) as exc:
             return SimResult(
                 candidate.id,
@@ -411,7 +426,12 @@ class LLMServingSimPredictor(Predictor):
         )
 
     def _parse(
-        self, csv_path: Path, stdout: str, spec: ServiceSpec, wall: float
+        self,
+        csv_path: Path,
+        stdout: str,
+        spec: ServiceSpec,
+        wall: float,
+        power_complete: bool,
     ) -> tuple[PredictedMetrics, list[str]]:
         df = pd.read_csv(csv_path)
         if df.empty:
@@ -445,7 +465,12 @@ class LLMServingSimPredictor(Predictor):
         power = parse_power(stdout)
         warnings.extend(power.warnings)
         energy = avg_w = peak_w = tok_per_j = None
-        if power.summary is not None:
+        if power.summary is not None and not power_complete:
+            warnings.append(
+                "power output covers only part of this deployment's nodes; energy "
+                "metrics dropped rather than reported under-counted (deviations D2)"
+            )
+        elif power.summary is not None:
             energy = power.summary.total_energy_j
             avg_w = power.summary.average_power_w
             peak_w = power.summary.peak_power_w

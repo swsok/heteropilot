@@ -1,0 +1,43 @@
+# Lightweight variant of llama31-8b.yaml for Exp 2 (heterogeneous resource
+# selection). The full-rate spec (10 rps) saturates every A5000 configuration
+# (TTFT P99 71-195s vs a 25s budget in the 300-request sweep), which makes
+# "which hardware should serve this?" a question with only one viable answer.
+# At 2.5 rps the offered decode load (~1,580 tok/s) sits below the A5000's
+# simulated ceiling (~1.9k tok/s single-GPU), so A5000-only, RTXPRO6000-only
+# and mixed placements are all live options and the planner's choice is a
+# real decision.
+#
+# Token distributions are unchanged from llama31-8b.yaml (approximating the
+# bundled sharegpt-300 workload); only the rate, the SLO budgets and the
+# objective differ.
+
+service:
+  model: meta-llama/Llama-3.1-8B
+  dtype: bfloat16
+  kv_cache_dtype: auto
+
+traffic:
+  arrival_rate_rps: 2.5
+  input_tokens:
+    p50: 731
+    p95: 2470
+    p99: 2884
+  output_tokens:
+    p50: 632
+    p95: 780
+  burstiness: 1.0
+  prefix_share_ratio: 0.07
+
+slo:
+  ttft:
+    percentile: 99
+    max_ms: 15000
+  tpot:
+    percentile: 99
+    max_ms: 100
+
+objective:
+  # Differentiates only where attainment differs (see the M2 objective
+  # sensitivity study) - which is exactly the regime this spec creates.
+  primary: maximize_slo_goodput_per_joule
+  secondary: minimize_active_accelerators

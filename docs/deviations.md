@@ -502,6 +502,46 @@ A cold-cache run reporting a non-zero hit count is a bug, not a nicety — worth
 
 ---
 
+## D14 — The simulator's topology inference requires uniform instance sizes · Resolved (constraint enumerated around)
+
+**Work order §1.3 / Exp 2** exploit heterogeneity at replica granularity: replicas of the same
+model on different islands, requests spread by the router. Nothing in the work order restricts the
+per-island parallelism of those replicas.
+
+**Upstream**: `serving/core/config_builder.py::_compute_network_dims` infers the ASTRA-Sim topology
+for independent instances as `[npus_per_group, num_instances]` with
+`npus_per_group = total_npu // num_instances` (or `// total_pp`) — **integer division over the
+device total, which assumes every instance is the same size.** A tp=1 instance mixed with a tp=2
+instance yields `3 // 2 = 1`, silently mis-scoping the tp=2 instance's collectives into a
+1-wide dimension. There is no validation catching this; the run would produce wrong numbers, not
+an error.
+
+**Adaptation**: mixed candidates are enumerated only with **equal devices-per-replica across
+islands** (`tp_a * pp_a == tp_b * pp_b`; pairs only for the MVP). Unequal mixes are structurally
+unrepresentable, so — like cross-backend TP — they are excluded without per-candidate rejection
+records; the constraint is asserted by `tests/test_mixed.py`. Locally this is no loss (the A5000
+island is tp=1-only anyway); on the incoming A40 nodes uniform-tp mixes still cover Exp 2's
+design space.
+
+**Related Level-1 note**: for tp=1 mixed replicas there are *no* collectives at all, so the scalar
+`link_bw` bottleneck reduction (D3) is irrelevant to them. For future uniform-tp>1 mixes the scalar
+min() is pessimistic for intra-island collectives; the honest encoding is a per-dimension
+`link_bw` array (the config supports it), but the array rank depends on `_compute_network_dims`
+internals, so that is deferred to Phase 5 when `config_builder.py` opens for modification.
+
+Two honesty guards shipped with the mixed feature. The envelope cache key now describes the
+**entire placement** (every assignment, sorted — a mixed candidate can never hit a single-island
+entry, extending the D13 fix). And a deployment whose nodes are only partially covered by
+`power:` blocks reports **no** energy. On the second point upstream turns out to already be safe —
+`config_builder.py:326` disables power modeling wholesale when any node lacks a power spec
+(verified in a real mixed run: no power output at all) — so the predictor's `power_complete`
+guard is defense-in-depth against that upstream behavior ever changing, not a live bug fix.
+Practical consequence: mixed candidates have energy metrics only once *every* node they touch has
+a measured power block, which makes the A5000 power measurement a prerequisite for energy-ranked
+Exp 2.
+
+---
+
 ## Open items summary
 
 | ID | Blocks | Status |

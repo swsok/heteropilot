@@ -4,9 +4,9 @@ A file-backed cache of simulation results. The work order is explicit that this
 stays on the filesystem - no database server - because the point is that a
 result set can be committed, diffed and shipped with a paper.
 
-The key follows §3.6: (model, dtype, accelerator, tp, pp, ep, pd_role,
-scheduler_config_hash, network_class, workload_bucket). Two runs that agree on
-all of those are interchangeable; anything else is a different experiment.
+The key extends §3.6 to describe the entire deployment (every island
+assignment, dp included) - see EnvelopeKey for why. Two runs that agree on the
+full key are interchangeable; anything else is a different experiment.
 """
 
 from __future__ import annotations
@@ -58,24 +58,18 @@ def network_class(link_bw_gbps: float) -> str:
 class EnvelopeKey:
     model: str
     dtype: str
-    accelerator: str
-    tp: int
-    pp: int
-    ep: int
-    #: NOT in the work order's §3.6 key list, and deliberately added.
+    #: Canonical description of the ENTIRE deployment, one segment per island
+    #: assignment: "accelerator|role|tp|pp|ep|dp", sorted and ';'-joined.
     #:
-    #: Our predictor simulates the *whole deployment*, replicas included, so a
-    #: 2-replica result is nothing like a 1-replica one - roughly double the
-    #: throughput and a fraction of the queueing delay. Omitting `dp` made
-    #: dp=1 and dp=2 collide: in a 30-candidate run, all 12 dp=2 candidates
-    #: were served the dp=1 entry and never simulated, and some were then
-    #: wrongly marked slo_violated.
-    #:
-    #: §3.6's list would only be sufficient for an envelope describing
-    #: *per-replica* performance that the planner then composes. That is not
-    #: what this cache stores.
-    dp: int
-    pd_role: str
+    #: This deliberately extends the work order's §3.6 key in two ways. `dp`
+    #: was added after omitting it served 12 dp=2 candidates their dp=1 metrics
+    #: (deviations D13). Then mixed candidates made the per-field form
+    #: insufficient outright: a placement spanning two islands must never
+    #: collide with a single-island placement that happens to share the first
+    #: assignment. Our predictor simulates whole deployments, so the key must
+    #: describe whole deployments. §3.6's field list would only suffice for a
+    #: *per-replica* envelope that the planner composes arithmetically.
+    placement: str
     scheduler_config_hash: str
     network_class: str
     workload_bucket: str
@@ -87,23 +81,30 @@ class EnvelopeKey:
         return dict(self.__dict__)
 
 
+class EnvelopeKeyError(ValueError):
+    """Raised when a candidate cannot be keyed (unknown island)."""
+
+
 def key_for(
     candidate: CandidateConfig,
     spec: ServiceSpec,
     *,
-    accelerator: str,
+    accelerator_of: dict[str, str],
     link_bw_gbps: float,
 ) -> EnvelopeKey:
-    first = candidate.assignments[0]
+    segments = []
+    for a in candidate.assignments:
+        accel = accelerator_of.get(a.island_id)
+        if accel is None:
+            raise EnvelopeKeyError(
+                f"candidate {candidate.id}: island '{a.island_id}' has no accelerator "
+                f"mapping; refusing to build a cache key that ignores an assignment"
+            )
+        segments.append(f"{accel}|{a.role.value}|{a.tp_size}|{a.pp_size}|1|{a.dp_replicas}")
     return EnvelopeKey(
         model=candidate.model,
         dtype=candidate.dtype,
-        accelerator=accelerator,
-        tp=first.tp_size,
-        pp=first.pp_size,
-        ep=1,
-        dp=first.dp_replicas,
-        pd_role=first.role.value,
+        placement=";".join(sorted(segments)),
         scheduler_config_hash=prov.hash_object(candidate.knobs.model_dump()),
         network_class=network_class(link_bw_gbps),
         workload_bucket=workload_bucket(spec),
@@ -141,12 +142,13 @@ class EnvelopeCache:
             self.root.mkdir(parents=True, exist_ok=True)
 
     def _path(self, candidate: CandidateConfig) -> Path | None:
-        accel = self.accelerator_of.get(candidate.assignments[0].island_id)
-        if accel is None:
+        try:
+            key = key_for(
+                candidate, self.spec,
+                accelerator_of=self.accelerator_of, link_bw_gbps=self.link_bw_gbps,
+            )
+        except EnvelopeKeyError:
             return None
-        key = key_for(
-            candidate, self.spec, accelerator=accel, link_bw_gbps=self.link_bw_gbps
-        )
         name = key.digest()
         if self.trace_digest:
             name = prov.hash_object([name, self.trace_digest])
@@ -180,9 +182,9 @@ class EnvelopeCache:
         path = self._path(candidate)
         if path is None:
             return
-        accel = self.accelerator_of[candidate.assignments[0].island_id]
         key = key_for(
-            candidate, self.spec, accelerator=accel, link_bw_gbps=self.link_bw_gbps
+            candidate, self.spec,
+            accelerator_of=self.accelerator_of, link_bw_gbps=self.link_bw_gbps,
         )
         assert result.metrics is not None
         payload = {

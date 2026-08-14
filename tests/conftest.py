@@ -83,25 +83,34 @@ class MockPredictor(Predictor):
         if candidate.id in self.fail_ids:
             return SimResult(candidate.id, SimOutcome.CRASHED, detail="mock crash")
 
-        a = candidate.assignments[0]
-        island = islands[a.island_id]
-        profile = profiles[island.accelerator_model]
         seqs = candidate.knobs.max_num_seqs
         devices = candidate.total_devices
-
-        report = memutil.evaluate(
-            candidate.model, tp_size=a.tp_size,
-            device_memory_gb=island.total_memory_gb / island.size,
-            dtype=candidate.dtype,
-        )
         median_len = spec.traffic.input_tokens.p50 + spec.traffic.output_tokens.p50
-        active = max(1, min(seqs, report.kv_tokens // max(1, median_len)))
 
-        bytes_per_step = report.weight_bytes + active * report.kv_bytes_per_token
-        roofline_ms = (bytes_per_step / (profile.memory_bandwidth_gbps * 1e9)) * 1e3
-        tpot = roofline_ms * MOCK_ROOFLINE_SLACK
+        # Per-assignment roofline, then aggregate: replicas serve independently,
+        # so throughput adds and the tail latency is set by the slowest class a
+        # request can land on (with LOAD routing every class serves traffic).
+        per_tpot: list[float] = []
+        decode_tps = 0.0
+        all_powered = True
+        for a in candidate.assignments:
+            island = islands[a.island_id]
+            profile = profiles[island.accelerator_model]
+            report = memutil.evaluate(
+                candidate.model, tp_size=a.tp_size,
+                device_memory_gb=island.total_memory_gb / island.size,
+                dtype=candidate.dtype,
+            )
+            active = max(1, min(seqs, report.kv_tokens // max(1, median_len)))
+            bytes_per_step = report.weight_bytes + active * report.kv_bytes_per_token
+            roofline_ms = (bytes_per_step / (profile.memory_bandwidth_gbps * 1e9)) * 1e3
+            tpot_i = roofline_ms * MOCK_ROOFLINE_SLACK
+            per_tpot.append(tpot_i)
+            decode_tps += (active / (tpot_i / 1e3)) * a.dp_replicas
+            if cluster.node(island.node_id).power is None:
+                all_powered = False
 
-        decode_tps = (active / (tpot / 1e3)) * a.dp_replicas
+        tpot = max(per_tpot)
         offered_tps = spec.traffic.arrival_rate_rps * spec.traffic.output_tokens.p50
         utilization = offered_tps / decode_tps if decode_tps > 0 else float("inf")
         attainment = min(1.0, 1.0 / utilization) if utilization > 0 else 1.0
@@ -114,11 +123,10 @@ class MockPredictor(Predictor):
         ttft = (tpot * 8.0 + seqs * 0.5) * queue_factor
 
         tokens = 20_000
-        # Mirror the real predictor: the simulator emits energy only when the
-        # node config carries a `power:` block (deviations D2). A mock that
-        # always reports energy cannot exercise the unscored-plan path.
-        has_power = cluster.node(island.node_id).power is not None
-        energy = (1000.0 * devices + seqs * 2.0) if has_power else None
+        # Mirror the real simulator: power modeling is disabled wholesale
+        # unless every node has a `power:` block (config_builder.py:326), so a
+        # partially-covered deployment yields no energy at all (deviations D14).
+        energy = (1000.0 * devices + seqs * 2.0) if all_powered else None
 
         return SimResult(
             candidate.id,

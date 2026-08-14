@@ -15,7 +15,7 @@ from planner.envelope import EnvelopeCache, key_for, network_class, workload_buc
 from planner.plan import CandidateConfig, IslandAssignment, PredictedMetrics, Role, VllmKnobs
 from planner.predictor import SimOutcome, SimResult
 
-ACCEL = {"isl": "RTXPRO6000"}
+ACCEL = {"isl": "RTXPRO6000", "isl2": "RTX-A5000"}
 
 
 def candidate(cid="c", *, tp=1, dp=1, pp=1, seqs=128, tokens=2048,
@@ -57,8 +57,8 @@ def cache(tmp_path: Path, spec, **kw) -> EnvelopeCache:
     ],
 )
 def test_configurations_that_change_the_result_get_distinct_keys(spec, kw_a, kw_b, field) -> None:
-    a = key_for(candidate(**kw_a), spec, accelerator="RTXPRO6000", link_bw_gbps=900.0)
-    b = key_for(candidate(**kw_b), spec, accelerator="RTXPRO6000", link_bw_gbps=900.0)
+    a = key_for(candidate(**kw_a), spec, accelerator_of=ACCEL, link_bw_gbps=900.0)
+    b = key_for(candidate(**kw_b), spec, accelerator_of=ACCEL, link_bw_gbps=900.0)
     assert a.digest() != b.digest(), f"{field} does not affect the cache key"
 
 
@@ -143,3 +143,58 @@ def test_hit_and_miss_counters(tmp_path: Path, spec) -> None:
     c.put(candidate(), result())
     c.get(candidate())
     assert c.stats() == {"hits": 1, "misses": 1}
+
+
+def candidate_mixed(cid="m", *, tp=1, dp_a=1, dp_b=1, seqs=128, tokens=2048) -> CandidateConfig:
+    return CandidateConfig(
+        id=cid, model="meta-llama/Llama-3.1-8B", dtype="bfloat16",
+        assignments=[
+            IslandAssignment(island_id="isl", role=Role.AGGREGATED, tp_size=tp, dp_replicas=dp_a),
+            IslandAssignment(island_id="isl2", role=Role.AGGREGATED, tp_size=tp, dp_replicas=dp_b),
+        ],
+        knobs=VllmKnobs(max_num_seqs=seqs, max_num_batched_tokens=tokens),
+    )
+
+
+def test_mixed_never_collides_with_single(tmp_path: Path, spec) -> None:
+    """A two-island placement must not hit the entry of a single-island one
+    that happens to share its first assignment - the mixed-generation version
+    of the D13 collision."""
+    c = cache(tmp_path, spec)
+    c.put(candidate("single", tp=1, dp=1), result("single", ttft=100.0))
+    assert c.get(candidate_mixed("mixed", tp=1, dp_a=1, dp_b=1)) is None
+
+
+def test_mixed_key_is_assignment_order_independent(spec) -> None:
+    a = candidate_mixed("m1")
+    b = candidate_mixed("m2")
+    b_rev = b.model_copy(update={"assignments": list(reversed(b.assignments))})
+    ka = key_for(a, spec, accelerator_of=ACCEL, link_bw_gbps=900.0)
+    kb = key_for(b_rev, spec, accelerator_of=ACCEL, link_bw_gbps=900.0)
+    assert ka.digest() == kb.digest()
+
+
+def test_mixed_dp_split_changes_the_key(spec) -> None:
+    """1+2 replicas and 2+1 replicas on *different* islands are different
+    deployments even though total replica count matches."""
+    a = key_for(candidate_mixed("a", dp_a=1, dp_b=2), spec,
+                accelerator_of=ACCEL, link_bw_gbps=900.0)
+    b = key_for(candidate_mixed("b", dp_a=2, dp_b=1), spec,
+                accelerator_of=ACCEL, link_bw_gbps=900.0)
+    assert a.digest() != b.digest()
+
+
+def test_unmapped_island_refuses_a_key(tmp_path: Path, spec) -> None:
+    """Never build a key that silently ignores an assignment."""
+    from planner.envelope import EnvelopeKeyError
+
+    bad = CandidateConfig(
+        id="x", model="m", dtype="bfloat16",
+        assignments=[IslandAssignment(island_id="ghost", tp_size=1, dp_replicas=1)],
+    )
+    with pytest.raises(EnvelopeKeyError):
+        key_for(bad, spec, accelerator_of=ACCEL, link_bw_gbps=900.0)
+    # and the cache treats it as unkeyable, not as an error
+    c = cache(tmp_path, spec)
+    c.put(bad, result("x"))
+    assert c.get(bad) is None

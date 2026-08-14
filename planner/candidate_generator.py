@@ -76,6 +76,7 @@ class CandidateGenerator:
         activation_reserve_gb: float = 0.0,
         enable_prefix_caching: bool = False,
         enable_bound_pruning: bool = True,
+        enable_mixed: bool = True,
     ) -> None:
         self.spec = spec
         self.cluster = cluster
@@ -93,6 +94,9 @@ class CandidateGenerator:
         #: pruned and unpruned searches disagree and the test fails. Stages 1-3
         #: are exact, not bounds, so they always run.
         self.enable_bound_pruning = enable_bound_pruning
+        #: Enumerate two-island replica placements (work order §1.3). Pairs
+        #: only, uniform devices-per-replica - see _mixed_candidates and D14.
+        self.enable_mixed = enable_mixed
         self._rejections: list[Rejection] = []
         self._generated = 0
 
@@ -103,12 +107,19 @@ class CandidateGenerator:
         self._generated = 0
         survivors: list[CandidateConfig] = []
 
+        island_opts: dict[str, tuple[ExecutionIsland, AcceleratorProfile, list]] = {}
         for island in self.islands:
             profile = self.profiles.get(island.accelerator_model)
             if not self._stage1_compatible(island, profile):
                 continue
             assert profile is not None
-            survivors.extend(self._for_island(island, profile))
+            opts = self._parallelism_options(island, profile)
+            survivors.extend(self._single_island_candidates(island, profile, opts))
+            if opts:
+                island_opts[island.id] = (island, profile, opts)
+
+        if self.enable_mixed:
+            survivors.extend(self._mixed_candidates(island_opts))
 
         return GenerationResult(survivors, list(self._rejections), self._generated)
 
@@ -147,10 +158,16 @@ class CandidateGenerator:
 
     # -- per-island enumeration -------------------------------------------
 
-    def _for_island(
+    def _parallelism_options(
         self, island: ExecutionIsland, profile: AcceleratorProfile
-    ) -> list[CandidateConfig]:
-        out: list[CandidateConfig] = []
+    ) -> list[tuple[int, memutil.MemoryReport]]:
+        """Knob-independent (tp, memory report) options for one island.
+
+        Runs stages 2-4 once per TP degree; the surviving options feed both
+        single-island and mixed enumeration so the two can never disagree on
+        what an island supports.
+        """
+        out: list[tuple[int, memutil.MemoryReport]] = []
         per_device_gb = island.total_memory_gb / island.size
 
         for tp in island.max_tp_candidates:
@@ -186,6 +203,19 @@ class CandidateGenerator:
                 )
                 continue
 
+            if not self._stage4_topology_ok(island, tp):
+                continue
+            out.append((tp, report))
+        return out
+
+    def _single_island_candidates(
+        self,
+        island: ExecutionIsland,
+        profile: AcceleratorProfile,
+        opts: list[tuple[int, memutil.MemoryReport]],
+    ) -> list[CandidateConfig]:
+        out: list[CandidateConfig] = []
+        for tp, report in opts:
             max_replicas = island.size // tp
             for dp in range(1, max_replicas + 1):
                 for seqs, tokens in itertools.product(
@@ -193,13 +223,92 @@ class CandidateGenerator:
                 ):
                     self._generated += 1
                     cand = self._build(island, tp, dp, seqs, tokens)
-
-                    if not self._stage4_topology_ok(cand, island, report):
-                        continue
                     if not self._stage5_analytical_ok(cand, island, profile, report, seqs):
                         continue
                     out.append(cand)
         return out
+
+    # -- mixed (cross-island) enumeration -----------------------------------
+
+    def _mixed_candidates(
+        self,
+        island_opts: dict[str, tuple[ExecutionIsland, AcceleratorProfile, list]],
+    ) -> list[CandidateConfig]:
+        """Replica placements spanning two islands (work order §1.3).
+
+        Heterogeneity at replica granularity: each island hosts its own
+        replicas at its own parallelism, one engine per replica, requests
+        spread by the router. TP never crosses an island (absolute rule 2 is
+        structural here - each assignment carries its own tp).
+
+        Two restrictions, both deliberate:
+        - Pairs only. Exp 2 compares A-only / B-only / mixed; k>2 islands adds
+          combinatorial volume the MVP does not need.
+        - Equal devices-per-replica across the two islands. The simulator
+          infers its network topology as [npus_per_group, num_instances] with
+          integer division over the total device count, which silently
+          mis-scopes collectives when instance sizes differ (deviations D14).
+          Unequal-size mixes are unrepresentable, so they are not enumerated -
+          same treatment as cross-backend TP.
+        """
+        out: list[CandidateConfig] = []
+        for a_id, b_id in itertools.combinations(sorted(island_opts), 2):
+            island_a, prof_a, opts_a = island_opts[a_id]
+            island_b, prof_b, opts_b = island_opts[b_id]
+            for (tp_a, rep_a), (tp_b, rep_b) in itertools.product(opts_a, opts_b):
+                if tp_a != tp_b:  # D14: uniform instance size required
+                    continue
+                for dp_a in range(1, island_a.size // tp_a + 1):
+                    for dp_b in range(1, island_b.size // tp_b + 1):
+                        for seqs, tokens in itertools.product(
+                            self.max_num_seqs, self.max_num_batched_tokens
+                        ):
+                            self._generated += 1
+                            cand = self._build_mixed(
+                                (island_a, tp_a, dp_a), (island_b, tp_b, dp_b), seqs, tokens
+                            )
+                            ok = True
+                            for isl, prof, rep in (
+                                (island_a, prof_a, rep_a),
+                                (island_b, prof_b, rep_b),
+                            ):
+                                if not self._stage5_analytical_ok(cand, isl, prof, rep, seqs):
+                                    ok = False
+                                    break
+                            if ok:
+                                out.append(cand)
+        return out
+
+    def _build_mixed(
+        self,
+        a: tuple[ExecutionIsland, int, int],
+        b: tuple[ExecutionIsland, int, int],
+        seqs: int,
+        tokens: int,
+    ) -> CandidateConfig:
+        knobs = VllmKnobs(
+            max_num_seqs=seqs,
+            max_num_batched_tokens=tokens,
+            enable_prefix_caching=self.enable_prefix_caching,
+            kv_cache_dtype=self.spec.service.kv_cache_dtype,
+        )
+        parts = []
+        assignments = []
+        for island, tp, dp in (a, b):
+            parts.append(f"{island.id}-tp{tp}-dp{dp}")
+            assignments.append(
+                IslandAssignment(
+                    island_id=island.id, role=Role.AGGREGATED, tp_size=tp, dp_replicas=dp
+                )
+            )
+        return CandidateConfig(
+            id=f"mix({'+'.join(parts)})-s{seqs}-t{tokens}",
+            model=self.spec.model,
+            dtype=self.spec.service.dtype,
+            assignments=assignments,
+            serving_arch=ServingArch.AGGREGATED,
+            knobs=knobs,
+        )
 
     def _build(
         self, island: ExecutionIsland, tp: int, dp: int, seqs: int, tokens: int
@@ -225,18 +334,16 @@ class CandidateGenerator:
 
     # -- stage 4: topology lower bound -------------------------------------
 
-    def _stage4_topology_ok(
-        self, cand: CandidateConfig, island: ExecutionIsland, report: memutil.MemoryReport
-    ) -> bool:
+    def _stage4_topology_ok(self, island: ExecutionIsland, tp: int) -> bool:
         """Reject only if TP collectives alone already blow the TPOT budget.
 
         Per decode step every transformer block runs two all-reduces over the
         hidden state. A ring all-reduce moves 2(N-1)/N x bytes. Compute is
-        assumed free here - that is what makes it a lower bound.
+        assumed free here - that is what makes it a lower bound. Knob- and
+        replica-independent, so it runs once per (island, tp) option.
         """
         if not self.enable_bound_pruning:
             return True
-        tp = cand.assignments[0].tp_size
         if tp == 1:
             return True
 
@@ -256,8 +363,9 @@ class CandidateGenerator:
 
         budget = self.spec.slo.tpot.max_ms
         if floor_ms > budget:
+            self._generated += 1
             self._reject(
-                cand.id,
+                f"{island.id}/tp{tp}",
                 RejectionStage.TOPOLOGY_INFEASIBLE,
                 f"TP={tp} all-reduce floor {floor_ms:.1f}ms exceeds the TPOT budget "
                 f"{budget:.1f}ms even with zero compute "
