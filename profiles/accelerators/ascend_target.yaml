@@ -1,0 +1,31 @@
+profile_id: ascend-target
+vendor: Huawei
+model: ASCEND_TARGET
+backend: ascend
+memory_gb: 64
+memory_bandwidth_gbps: 1600
+
+# NO simulator hardware key: there is no profiler/perf/ASCEND_TARGET/ directory,
+# so any cluster config naming this accelerator will fail upstream validation.
+# That is intentional - it makes the gap fail loudly instead of silently
+# producing fabricated numbers.
+sim_hardware: null
+
+# EVERY number in this file is a placeholder. No Ascend hardware exists on this
+# machine and no external measurement has been imported yet. Nothing here may be
+# cited as a measurement (absolute rule 3, work order §11 "실물 hardware 부족").
+# Closing this is deviations D4, and the Phase 3 CsvProfileImporter is the path.
+source: placeholder
+
+perf_data: null
+
+supported_models:
+  - pattern: "Qwen/Qwen3-*"
+    dtypes: [bfloat16]
+
+max_tp_size: 8
+
+notes: >
+  Shape-only stub so heterogeneous candidate generation can be exercised before
+  real Ascend data exists. Any plan selecting this island must be reported as
+  simulator-only with placeholder inputs, never as a measured result.

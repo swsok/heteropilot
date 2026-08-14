@@ -1,0 +1,40 @@
+profile_id: a5000-24gb
+vendor: NVIDIA
+model: RTX-A5000
+backend: cuda
+memory_gb: 24
+memory_bandwidth_gbps: 768
+
+# Simulator `hardware` key. Must match a directory under profiler/perf/.
+sim_hardware: A5000
+
+# Per-field provenance, because a single top-level `source` cannot describe a
+# profile whose numbers come from different places (absolute rule 3).
+#   memory_gb             : measured  - nvidia-smi reports 24564 MiB
+#   memory_bandwidth_gbps : vendor_spec - NVIDIA published figure, 384-bit GDDR6.
+#                           Not measured; no bandwidth microbenchmark was run.
+#   perf_data             : measured  - profiled locally on this machine,
+#                           2026-08-07, vLLM 0.19.0, CUDA 12.8, sm_86.
+source: measured
+
+perf_data: profiler/perf/A5000/
+
+# No `power:` block. The driver reports power.max_limit = 230 W, but the
+# simulator needs idle_power / standby_power / active_power / standby_duration
+# and none of those has a measured source here. Omitted rather than invented
+# (deviations D7). A cluster using this profile produces no energy output.
+
+supported_models:
+  - pattern: "meta-llama/Llama-3.1-8B"
+    dtypes: [bfloat16]
+
+# Only TP=1 has been profiled so far; TP=2 was deferred (it is not needed for
+# the Phase 0 sim-vs-real validation, which runs at TP=1). Raise this once
+# profiler/perf/A5000/.../tp2/ exists.
+max_tp_size: 1
+
+notes: >
+  Locally measured second hardware class, added to partially close deviations
+  D4. Attention grid is at the x2 factor only (8,643 keys); the shipped
+  RTXPRO6000 bundle is denser (19,364 keys), which costs about 2.2pp of
+  end-to-end accuracy - see deviations D11.

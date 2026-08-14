@@ -1,0 +1,42 @@
+profile_id: rtxpro6000-96gb
+vendor: NVIDIA
+model: RTXPRO6000
+backend: cuda
+memory_gb: 96
+memory_bandwidth_gbps: 1597
+
+sim_hardware: RTXPRO6000
+
+#   memory_gb, memory_bandwidth_gbps : copied from upstream's bundled cluster
+#     configs (configs/cluster/*.json). Upstream does not state how they were
+#     obtained, so they are not claimed as measured here.
+#   perf_data : measured by upstream, not by us. profiler/perf/RTXPRO6000/
+#     meta.yaml records gpu="NVIDIA RTX PRO 6000 Blackwell Server Edition",
+#     vLLM 0.19.0, CUDA 13.0, profiled 2026-04-24.
+source: vendor_spec
+
+perf_data: profiler/perf/RTXPRO6000/
+
+power:
+  # Copied verbatim from upstream configs/cluster/single_node_power_instance.json.
+  # Upstream documents no derivation for these, so: placeholder, not measured.
+  idle_power: 35
+  standby_power: 300
+  active_power: 600
+  standby_duration: 18
+  source: placeholder
+
+supported_models:
+  - pattern: "meta-llama/Llama-3.1-*"
+    dtypes: [bfloat16]
+  - pattern: "Qwen/Qwen3-32B"
+    dtypes: [bfloat16]
+  - pattern: "Qwen/Qwen3-30B-A3B-*"
+    dtypes: [bfloat16]
+
+max_tp_size: 2
+
+notes: >
+  The only hardware class shipped by upstream. Profiled on CUDA 13.0 /
+  Blackwell, whereas our A5000 bundle is CUDA 12.8 / Ampere - when comparing
+  the two, toolchain differs alongside hardware.
