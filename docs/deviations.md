@@ -1,0 +1,502 @@
+# Deviations — work order spec vs. upstream reality
+
+Per the work order's closing instruction: when this document's spec and the real upstream code
+conflict, **the real code wins**; the difference is recorded here and work continues.
+
+Each entry: what the work order assumes, what upstream actually does, and how HeteroPilot adapts.
+Format evidence is in `phase0_formats.md`. Pin: `2c2042ce`.
+
+Status legend — **Resolved** (adaptation decided, no user input needed) ·
+**Open** (needs a decision before the phase it blocks).
+
+---
+
+## D1 — There is no `sim.csv` · Resolved
+
+**Work order §5.5** says `parse_results(output_dir)` reads "`sim.csv` 등 출력".
+
+**Upstream**: the per-request CSV path is whatever `--output` says; the literal `{run_id}` in the
+path is substituted with the run id. Without `--output` results go to stdout only. No fixed filename
+exists anywhere.
+
+**Adaptation**: the predictor chooses the output path itself, so nothing needs discovering. Use
+`--output <tmpdir>/{run_id}.csv` and read back the resolved path.
+
+---
+
+## D2 — Power and energy are stdout-only · **Decided 2026-08-07** (parse stdout in Phase 2)
+
+**Work order §5.5** expects `parse_results` to extract "TTFT/TPOT percentile, throughput,
+power/energy" from output files. §3.6 wants `average_power_w`, `peak_power_w`, `total_energy_j`,
+`tokens_per_joule` in the envelope DB, and §5.6 makes `PeakPower(x) <= slo.max_cluster_power_w` and
+`TokensPerJoule(x) >= slo.min_tokens_per_joule` hard constraints.
+
+**Upstream**: the per-request CSV has no power, energy, or memory column. Energy appears **only** as
+Rich-formatted stdout (`Total energy consumption (kJ)`, a per-node component tree, and
+`Power per N sec (W): [...]`). Confirmed by running the power example — see `phase0_formats.md` §3.1.
+
+This is a genuine tension: two Phase 2 hard constraints depend on numbers that only exist as
+console text, and `serving/core/power_model.py` is not editable until Phase 4 under §7.
+
+**Options**
+
+| | Approach | Cost |
+| --- | --- | --- |
+| A | Parse the stdout power block with pinned regexes | No upstream change; brittle against Rich formatting and log-level changes |
+| B | Pull Phase 4's `power_model.py` API exposure forward to Phase 2 | Clean and machine-readable; breaks the §7 phase gate early |
+| C | Recompute energy in the planner from the power config + CSV timings | Duplicates upstream's state machine — violates the "call, don't copy" rule of §5.4 |
+
+**Recommendation: A for Phase 2, B at Phase 4.** Parsing keeps the Phase 5 no-touch rule intact,
+and the risk is contained: isolate every regex in one module (`planner/predictor/_power_parse.py`)
+with a golden-text fixture test, so a format change fails loudly in CI rather than silently
+producing wrong energy. Switch to B when §7 opens `power_model.py` anyway.
+
+Two findings make A far less brittle than it first looks:
+
+- **Upstream already does this.** `bench/core/validate.py::_load_sim_log` parses the simulator's
+  stdout with regexes (`_TS_RE`, `_TPUT_RE`, `_INST_RE`) and `bench validate` takes `sim.log`
+  alongside `sim.csv` as a first-class input. Log parsing is the established upstream contract for
+  metrics absent from the CSV, not a workaround we invented.
+- **Redirected output is clean plain text.** Verified on the captured run: zero ANSI escape
+  sequences (Rich detects the non-TTY). The only non-ASCII is stable UTF-8 box drawing (`├─`, `└─`)
+  in the per-component tree. Anchor regexes on the label text, not the tree glyphs.
+
+Lines to parse (exact, from the reproduction run):
+
+```text
+Total energy consumption (kJ):                                      1.42
+Node 0 total energy consumption (kJ):                               1.42
+├─ NPU energy consumption (J):                                      972.14
+Power per 1.0 sec (W): [845.91]
+```
+
+Note also that `bench/examples/<model>/outputs/` names its files `sim.csv` / `sim.log`. That is a
+bench-example convention, not a simulator-fixed name (D1 stands) — but it is the naming the
+validation tooling expects, so the predictor should adopt it for calibration runs in Phase 4.
+
+**Caveat regardless of option**: `Power per N sec (W)` resolution equals `--log-interval`, so
+`peak_power_w` is an interval average, not a true instantaneous peak. Enforcing a power cap against
+it is optimistic. Pick the interval deliberately and record it in provenance.
+
+---
+
+## D3 — The cluster config has no topology graph · **Decided 2026-08-07** (Level-1 now, compare later)
+
+**Work order §3.2.2** defines a rich `links` graph: per-link `src`/`dst`, `type`, `bandwidth_gbps`,
+`latency_ns`, `energy_per_bit_pj`, `duplex`, `contention_group`. §5.3 builds a `TopologyGraph` on it
+and computes bottleneck bandwidth by dividing each link's bandwidth by its `contention_group` flow
+count.
+
+**Upstream**: the cluster config carries exactly two topology fields — `link_bw` (GB/s) and
+`link_latency` (ns) — each a scalar or a per-dimension array matching `network.yml::npus_count`.
+There is no notion of a named link, an endpoint pair, a contention group, or per-link energy.
+
+**Consequences**
+
+- `ClusterSpecV2` **cannot round-trip**. Compilation is lossy by construction: an arbitrary graph
+  collapses to a per-dimension bandwidth/latency vector.
+- The Level 1 fast model (§5.3) is the *only* model expressible through the stock config. Level 2
+  path-aware evaluation needs the `config_builder.py` work that §7 unlocks at Phase 5 — it is not
+  an optimization, it is a prerequisite.
+- `energy_per_bit_pj` has no simulator consumer today. Link energy comes from the `power` block's
+  `link.energy_per_bit`, which is **per node, not per link**.
+
+**Adaptation for Phase 2**: keep the full graph in `ClusterSpecV2` — it is still the planner's own
+reasoning substrate for pruning and for the topology lower-bound filter. At compile time, reduce it
+to `link_bw`/`link_latency` by taking the bottleneck along the relevant path, and record the
+reduction in provenance so results are never mistaken for path-aware ones. Do not silently average.
+
+---
+
+## D4 — Only one hardware profile exists · **Partially addressed 2026-08-07** (A5000 profiling underway)
+
+**Work order §2.1 / §3.3 / Phase 3** assume `h100.yaml`, `rtxpro6000.yaml`, `ascend_target.yaml`,
+and a Phase 3 exit criterion of "2–3 accelerator classes appearing as candidates".
+
+**Upstream**: `profiler/perf/` contains **`RTXPRO6000` only**, for three models
+(`meta-llama/Llama-3.1-8B`, `Qwen/Qwen3-30B-A3B-Instruct-2507`, `Qwen/Qwen3-32B`).
+`configs/cluster/single_node_single_instance_H100.json` ships but has no `profiler/perf/H100/`
+behind it, and upstream validation rejects a `hardware` value with no profile directory.
+
+Compounding it: this machine has 2 × RTX A5000 and no NPU, so we cannot profile an H100 or an
+Ascend part ourselves.
+
+**Adaptation**: Phase 3's `CsvProfileImporter` (work order V1 path) stops being a convenience and
+becomes the critical path — every non-RTXPRO6000 accelerator must arrive as imported CSV under the
+`profiler/CONTRACT.md` schema. A5000 is profilable locally and is the honest second class if a
+real second class is needed before external data lands.
+
+**Needs a decision at Phase 3**: where H100 / Ascend performance data comes from — published
+benchmarks, a collaborator's measurements, or vendor specs. Whatever the source, it is
+`source: placeholder` or `source: measured` with attribution, never silently synthesized
+(absolute rule 3, §11 "실물 hardware 부족").
+
+---
+
+## D5 — No `--seed` flag · Resolved
+
+**Work order §9** requires "same spec + seed run twice ⇒ byte-identical plan output", and §5.5 says
+"random_seed 필수".
+
+**Upstream**: `python -m serving` has no seed flag. It does not need one — given a fixed input trace
+and a deterministic routing policy it is a deterministic discrete-event simulation. Verified: two
+identical invocations produced byte-identical CSVs.
+
+**Adaptation**: the seed belongs to *our* workload generator (`planner/util/workload.py`), which
+turns the `ServiceSpec.traffic` distribution into the JSONL trace. Seed there, record it in
+provenance (§3.8), and avoid `--request-routing-policy RAND` (and `RAND` expert routing) in any
+reproducible run. Reproducibility is then a property of trace generation, not of the simulator.
+
+---
+
+## D6 — Committed example outputs are stale · Resolved
+
+**Not a work order assumption** — a trap worth recording, since §9 asks for golden-output tests and
+`outputs/example_*_run.csv` looks like a ready-made reference set.
+
+**Upstream**: those CSVs predate the current `main`. Verified across all 10 rows of the power
+example against `workloads/example_trace.jsonl`: the committed files record `output = input_toks +
+output_toks` (total length) while current `main` records `output = output_toks` (decode only).
+Latencies moved as well — request 3 TPOT 25.54 ms → 11.21 ms — consistent with post-artifact
+accounting fixes in `serving/`. Current behavior matches
+`docs/docs/simulator/reading-output.md`; the committed CSVs do not.
+
+**Adaptation**: generate all golden fixtures ourselves at the pinned commit. Never diff against
+`outputs/example_*`. If upstream is ever re-pinned, regenerate the goldens as part of that change.
+
+---
+
+## D7 — Accelerator profile schema does not map onto the simulator's power block · Resolved
+
+**Work order §3.3** defines a profile with `memory_bandwidth_gbps`, `tdp_w`, `idle_power_w`.
+
+**Upstream** needs, per node and keyed by hardware string: `idle_power`, `standby_power`,
+`active_power`, `standby_duration` (ns), plus node-level `base_node_power`, `cpu`, `dram`, `link`,
+`nic`, `storage` sub-blocks.
+
+Two fields have no source in the work order schema: **`standby_power`** and **`standby_duration`**,
+and `tdp_w` is not the same quantity as `active_power`.
+
+**Adaptation**: extend the profile schema with an explicit `power:` block mirroring the simulator's
+field names one-to-one, rather than deriving them at compile time. Anything not measured is
+`source: placeholder` and says so. Node-level components (`cpu`, `dram`, `nic`, `storage`,
+`base_node_power`) are properties of the *node*, not the accelerator, so they belong in
+`ClusterSpecV2` under `nodes[i]`, not in `profiles/accelerators/*.yaml`.
+
+---
+
+## D8 — DP replicas are separate instances; `dp_group` means something else · Resolved
+
+**Work order §5.4** lists `dp_replicas` as an enumerated decision variable, and §3.4 gives each
+`DeploymentPlan.instances[i]` a `tp_size`/`pp_size` but no replica count.
+
+**Upstream**: data-parallel replication is expressed by listing N sibling entries in
+`nodes[i].instances`, with cross-instance load spread handled by `--request-routing-policy`. The
+`dp_group` field is **not** data parallelism — it is a MoE expert-sharing group whose members
+exchange tokens via cross-instance ALLTOALL and must agree on `ep_size` and `tp_size`.
+
+**Adaptation**: compile `dp_replicas = N` into N instance objects. Leave `dp_group` `null` for dense
+models; set it only for MoE expert parallelism. Naming the planner's variable `dp_replicas` while
+upstream's `dp_group` means something unrelated is a live footgun — comment it at the compile site.
+
+---
+
+## D9 — "heterogeneous" upstream means P/D, not mixed hardware · Resolved
+
+`configs/cluster/single_node_heterogeneous.json` is a prefill/decode split with **both instances on
+`RTXPRO6000`**. It is not an example of hardware heterogeneity and must not be cited as a starting
+point for `examples/clusters/heterogeneous-lab.yaml`.
+
+---
+
+## D10 — The simulator's memory model has no utilization or overhead reserve · **Open (affects Phase 2 §5.4 stage 2)**
+
+**Work order §5.4** makes memory feasibility the second pruning stage and requires calling
+`serving/core/memory_model.py` rather than reimplementing it, so whatever that model computes
+becomes the planner's definition of "fits".
+
+**Upstream**: `MemoryModel` computes `mem_for_kv = npu_mem - weight` (`memory_model.py:60`), where
+`npu_mem` is the config's `npu_mem.mem_size` in GB. There is **no `gpu_memory_utilization` factor
+and no reserve for activations or CUDA graphs** — grep for a utilization factor in `serving/core/`
+returns nothing.
+
+Real vLLM reserves `gpu_memory_utilization` (default 0.9) of total VRAM and then subtracts weights,
+activation peak, and CUDA-graph capture.
+
+**Measured on this machine** (RTX A5000 24 GB, Llama-3.1-8B bf16, TP=1, `enforce_eager=True`,
+`max_model_len=2048`) — vLLM reports `Available KV cache memory: 5.29 GiB` / `GPU KV cache size:
+43,296 tokens`. Independently derived: KV/token = 2 × 32 layers × 8 kv-heads × 128 head-dim × 2 B
+= 128 KiB, and 43,296 × 128 KiB = 5.29 GiB. The two agree exactly.
+
+| | KV budget | KV tokens |
+| --- | ---: | ---: |
+| Simulator, `mem_size: 24` (24 GiB − 14.96 GiB weights) | 9.04 GiB | 74,075 |
+| Planner with `gpu_memory_utilization=0.9` applied | 6.64 GiB | 54,415 |
+| Real vLLM on the same card | 5.29 GiB | 43,296 |
+| | | **raw sim over-estimates by +71%** |
+
+Applying the 0.9 utilization factor alone leaves +26%. Closing the rest needs an
+explicit activation reserve; measured at **1.35 GiB** for this model/device under
+`enforce_eager=True`. That figure will grow once CUDA graphs are captured, so it
+is an input, not a constant.
+
+**Why this was invisible until now**: upstream's validation ran on a 96 GB RTX PRO 6000 where the
+workload never approached the KV limit, so the missing reserve changed nothing. On a 24 GB card it
+becomes first-order — the sharegpt-300 workload at `max_num_seqs=128` wants ~177,664 concurrent KV
+tokens (21.7 GiB), far above *both* budgets, so KV pressure is the binding constraint and a 71%
+error in it drives preemption and queueing behavior directly.
+
+**Consequence for the planner**: the memory feasibility filter will over-estimate KV capacity on
+every real device by roughly the utilization factor, admitting candidates that cannot actually be
+served. Worse, the error scales *inversely* with card size — negligible on 96 GB, severe on 24 GB —
+so a planner validated on large cards silently degrades on small ones. Any Phase 4 deployment built
+on this filter would OOM or thrash.
+
+**Adaptation**: keep calling upstream's model (§5.4's "call, don't copy" rule stands), but apply an
+explicit, recorded derating in the planner before the call — `effective_mem_size = mem_size *
+gpu_memory_utilization - activation_reserve` — with both terms named in `ClusterSpecV2` rather than
+hard-coded, and defaulting to vLLM's own defaults. Do not silently bake 0.9 in.
+
+**Empirically confirmed 2026-08-07.** Both configurations were run against the same real A5000
+measurement (`phase0_bench_plan.md` §2b). Correcting only the memory accounting moved mean
+\|error\| from **22.54% to 9.26%** (−13.28pp, 13 of 15 metrics improved); TTFT Mean went −32.0% →
+−7.7%. On a memory-constrained device this is the largest single error term, larger than profile
+quality and far larger than grid density. The derating in `planner/util/memory.py` is therefore
+load-bearing, not defensive.
+
+Measured under the real bench engine settings (`max_model_len=8192`, CUDA graphs on) vLLM reports
+`Available KV cache memory: 5.85 GiB` / `47,920 tokens`, against the simulator's 9.04 GiB / 74,075
+— **+55%**. The earlier +71% figure was measured with `enforce_eager=True`; the over-estimate
+varies with engine settings, which is another reason to treat the reserve as an input.
+
+**Open question for the A5000 validation**: whether to run the comparison at nominal `mem_size: 24`
+or at a KV-matched `mem_size` (~21.3 GB = 16 GiB weights + 5.29 GiB observed KV). Running **both**
+separates memory-accounting error from profile error, which is the entire point of the exercise;
+that is the plan unless it proves too costly. Re-measure the KV figure under the actual bench
+engine settings first — the 5.29 GiB above was captured with `enforce_eager=True`, and CUDA-graph
+capture in the real bench run will reduce it.
+
+---
+
+## D11 — `meta.yaml` under-describes the profile grid, and grid density costs ~2.2pp of accuracy · Resolved (quantified)
+
+**Not a work order assumption** — discovered while trying to make the A5000 bundle comparable to
+the shipped RTXPRO6000 one.
+
+**Finding 1 — `meta.yaml` is not a faithful description of the bundle.** It records
+`attention_grid: {chunk_factor: 2.0, kv_factor: 2.0, chunks: "0, 16-2048 x2"}`, which yields 9
+`prefill_chunk` values. The actual `attention.csv` contains **20**:
+
+```
+meta.yaml (x2)  : 0, 16, 32, 64, 128, 256, 512, 1024, 2048
+actual CSV      : 0, 16, 24, 32, 36, 54, 64, 81, 122, 128, 182, 256, 273, 410, 512, 615, 923, 1024, 1384, 2048
+```
+
+The extra points are a ×1.5 sequence (16·1.5ⁿ, and 512·1.5ⁿ on the kv axes). The bundle is the
+**union of at least two runs at different factors**, accumulated through the profiler's default
+resume mode, while `meta.yaml` is overwritten with only the most recent run's settings.
+`skew.csv` shows no such densification — its `pc` axis has the 9 values `meta.yaml` claims.
+
+Consequence: **never infer a bundle's grid from `meta.yaml`.** Read the CSV keys. Phase 3's
+`CsvProfileImporter` and `profiler/CONTRACT.md` must record measured coverage, not declared factors.
+
+**Finding 2 — density is worth ~2.2pp of end-to-end accuracy.** Controlled experiment: the
+RTXPRO6000 `attention.csv` was subset to exactly the 8,643 keys present in the locally measured
+A5000 grid (`profiler/perf/RTXPRO6000X2/`, a derived artifact — every other file copied verbatim),
+then the same simulation and `bench validate` were re-run against the same real-vLLM data. Only
+attention-grid density changed.
+
+| Metric | full grid (19,364) | ×2 subset (8,643) | penalty |
+| --- | ---: | ---: | ---: |
+| TTFT P99 | +1.0% | +4.4% | +3.40pp |
+| TPOT P99 | +2.1% | +3.8% | +1.70pp |
+| Latency P99 | +0.8% | +2.8% | +2.00pp |
+| **mean over 15 metrics** | | | **+2.21pp** |
+
+Range +1.50 to +3.40pp, and **every one of the 15 is positive** — coarser interpolation makes the
+simulator uniformly more pessimistic, never optimistic.
+
+**Consequences**
+
+- The "systematic positive bias" recorded in `phase0_bench_plan.md` is partly an artifact of
+  interpolation, not purely a simulator property. On the full grid the tail bias is ~+1–2%; the
+  reference bundle happens to be densely sampled.
+- **The A5000 comparison must subtract this penalty before attributing anything to hardware or
+  profile quality.** The A5000 bundle is at ×2 density, so its expected error floor is roughly the
+  ×2-subset column above, not the full-grid column. That is exactly why the control was run.
+- For the planner: profile density is a first-class accuracy/cost knob. A denser bundle costs GPU
+  hours once and buys ~2pp of prediction accuracy permanently — relevant to §5.8's robust margin,
+  since a 2pp tighter margin admits materially more candidates.
+
+**Why the A5000 bundle was not densified instead**: matching the reference grid would have required
+39,831 additional shots (~4.4 h for TP=1 attention alone, 12 h+ with TP=2 and skew) against ~10 min
+of CPU simulation for the control. The control also isolates density better, since it holds
+hardware and real-measurement data fixed.
+
+---
+
+## D12 — Prefix-cache memory grows monotonically until the run dies · **Open (blocks Phase 2)**
+
+**Not a work order assumption** — found while running the A5000 sim-vs-real validation, and the
+most consequential finding so far.
+
+**Symptom**: simulating the bundled sharegpt-300 workload on a 24 GB device
+(`hardware: A5000`, `mem_size: 24`, `max_num_seqs: 128`, prefix caching at its default of ON) dies
+partway through:
+
+```
+[13.0s] ... Each NPU Memory Usage 24534.51 MB (99.831 % Used)
+Traceback (most recent call last):
+  serving/core/scheduler.py:800    in add_done            -> self.memory.cache_unfinished_req(...)
+  serving/core/memory_model.py:454 in cache_unfinished_req -> self.apply_kv_cache_events()
+  serving/core/memory_model.py:608 in apply_kv_cache_events -> self.allocate(npu_byte_alloc, Device.NPU)
+  serving/core/memory_model.py:252 in allocate
+RuntimeError: NPU: tried to load 2.00MB but only 1.49MB is available.
+```
+
+Both the nominal (`mem_size: 24`) and KV-matched (`mem_size: 20.81`) configurations fail; the
+tighter one fails sooner.
+
+**This is not a missing-preemption problem.** `scheduler.py:194` implements exactly that — it
+preempts decode requests one at a time and spills their KV to CPU until the batch fits. The failing
+call is on a different path: **prefix-cache bookkeeping** (`cache_unfinished_req` →
+`apply_kv_cache_events` → `allocate`), which allocates unconditionally and has no eviction
+fallback. Confirmed by construction: the identical run with `--no-enable-prefix-caching` completes
+cleanly (exit 0).
+
+**Why upstream never saw it**: their validation runs on a 96 GB RTX PRO 6000, where this workload
+peaks far below capacity. It needs a device small enough for NPU memory to actually reach ~100%.
+Same root cause as D10 — the accounting only matters once memory is the binding constraint.
+
+**Why it blocks Phase 2.** HeteroPilot exists to plan on memory-constrained heterogeneous hardware.
+The candidates worth evaluating are precisely the tight ones, and the predictor crashing on them is
+not a survivable failure mode:
+
+- A crash is indistinguishable from a genuinely infeasible configuration unless the predictor
+  inspects the traceback. Silently treating it as "infeasible" would discard candidates that real
+  vLLM serves fine — vLLM handles this workload on the same card without incident.
+- It is *selective*: it removes exactly the memory-tight candidates, which biases the planner
+  toward over-provisioning in a way that looks like a legitimate optimizer decision.
+- Prefix caching is on by default and `prefix_share_ratio` is a `ServiceSpec` field (§3.1), so
+  "just turn it off" narrows the model the planner is allowed to reason about.
+
+**Adaptation (Phase 2)**
+
+1. The predictor must classify a non-zero simulator exit as a distinct outcome —
+   `SIM_ERROR`, never silently folded into `slo_violated` or `memory_infeasible` — and surface the
+   count in `rejected_summary`. A candidate set with many `SIM_ERROR` entries is a broken run, not
+   a planning result.
+2. Match the sim's prefix-caching setting to whatever the deployment will use, and record it in
+   provenance. Comparing a prefix-cache-off simulation against a prefix-cache-on deployment is not
+   a valid comparison.
+3. Longer term this wants an upstream fix: `apply_kv_cache_events` should evict from the prefix
+   cache rather than raise, mirroring what `evict_prefix_cache` already does elsewhere.
+   `serving/core/memory_model.py` is not editable until Phase 4 under §7, so Phase 2 lives with
+   the workaround.
+
+### Two fix attempts, both wrong — 2026-08-10
+
+The user authorized pulling an upstream fix forward (a documented exception to absolute rule 1).
+**Both attempts failed and were reverted; `serving/` is pristine again.** Recorded here so nobody
+repeats them.
+
+**Attempt 1 — make the prefix-cache store best-effort** (`memory_model.py`). Reclaim evictable
+blocks before allocating, and if the store still does not fit, skip it and roll back the
+`_npu_cache_hashtolen` entries instead of raising. Passed the byte-identical RTXPRO6000 regression.
+
+*Outcome: strictly worse.* The crash became a **silent deadlock** — NPU memory pinned at 99.994%,
+0 requests running, 300 waiting, throughput zero, forever. A loud failure turned into one that
+burns wall-clock and looks like a slow candidate to a planner. The reclaim found nothing to evict,
+which is the real clue: essentially the whole cache was un-evictable.
+
+**Attempt 2 — release prefix locks on preemption** (`scheduler.py`). The eviction site at line ~204
+frees the request's KV and spills to CPU but never calls `unlock_prefix`; the *other* eviction site
+(~494) does, but only `if is_prefill()`. Hypothesis: preempted decode requests keep their radix
+nodes pinned forever, so the cache can never be evicted. Also passed the regression.
+
+*Outcome: no change.* Still deadlocked at 99.994% with 0 running / 300 waiting. The hypothesis was
+wrong, or at least incomplete.
+
+### What the evidence actually says
+
+- Memory climbs **monotonically** — 66% at t=1s, 80% at t=6s, 99.8% at t=13s, then pinned at
+  99.994% — and never comes back down. This trajectory is identical with and without either fix;
+  the crash was only ever the symptom of hitting the ceiling.
+- At the deadlock, `Total CPU Memory Usage 0.00 MB`. Preemption never spilled anything, so the
+  ~9.2 GB of non-weight NPU memory is prefix cache, not request KV.
+- Prefix hit ratio stays low (3.02%), so the cache is retaining blocks that are not being reused.
+
+The likely root cause is the accounting relationship flagged above: the scheduler allocates a
+request's KV (`scheduler.py:248, 841`) *and* `apply_kv_cache_events` allocates again for the same
+blocks when they are stored in the radix cache, with the request's own allocation only freed at
+completion (`scheduler.py:790`). On a 96 GB card the resulting slack is invisible; on 24 GB it
+compounds until the pool is gone. Confirming that requires understanding upstream's intended KV
+lifecycle rather than guessing at it — two guesses have already been wrong.
+
+### Recommended next step
+
+Treat this as an upstream bug report, not a local patch: a minimal reproducer exists
+(`experiments/configs/clusters/a5000-llama31-8b-tp1.json` + `sharegpt-llama-3.1-8b-300-sps10.jsonl`
+at `max_num_seqs=128`), it needs no GPU, and it fails on any device small enough to saturate.
+
+Until it is resolved, Phase 2 must either run memory-tight candidates with prefix caching disabled
+(losing `ServiceSpec.prefix_share_ratio` coverage, §3.1) or restrict itself to devices with enough
+headroom that the growth never reaches the ceiling — which excludes exactly the hardware
+HeteroPilot is meant to plan for. **The predictor must in any case treat a non-zero simulator exit
+and a wall-clock timeout as distinct `SIM_ERROR` outcomes**, never silently folded into
+`memory_infeasible`, and must impose a timeout — attempt 1 showed the failure can present as a hang
+rather than a crash.
+
+---
+
+## D13 — The §3.6 envelope key omits `dp_replicas`, and results collide · Resolved
+
+**Work order §3.6** specifies the PerformanceEnvelope key as:
+
+```
+PerformanceEnvelope[model, dtype, accelerator, tp, pp, ep, pd_role,
+                    scheduler_config_hash, network_class, workload_bucket]
+```
+
+Implemented literally. It is **missing the data-parallel replica count**, and our predictor
+simulates the *whole deployment* — every replica — so a 2-replica run has roughly double the
+throughput and a fraction of the queueing delay of a 1-replica one. Two candidates that differ only
+in `dp_replicas` hashed to the same entry.
+
+**Observed damage.** In a 30-candidate, 300-request run (`outputs/plans/llama31-8b-plan-300.yaml`,
+2026-08-10) the generator emits dp=1 before dp=2 for each parallelism degree, so:
+
+- 18 candidates were simulated and cached;
+- **all 12 dp=2 candidates were then served the corresponding dp=1 entry** and never simulated;
+- they were ranked, and in some cases rejected as `slo_violated`, on single-replica metrics.
+
+The run's own provenance recorded `envelope_cache_hits: 12` on a cold cache — a cold cache should
+produce zero hits, which is the signal that was there to be read.
+
+**Why it is silent.** A wrong hit does not error. It returns plausible, well-formed metrics for a
+configuration that was never run. Nothing downstream can tell the difference.
+
+**Fix**: `dp` added to `EnvelopeKey`, with `tests/test_envelope.py` asserting distinct digests for
+every field that changes the outcome (`dp`, `tp`, `pp`, `max_num_seqs`,
+`max_num_batched_tokens`, `role`) plus a direct regression for the collision. The poisoned cache
+was discarded and the run repeated.
+
+**Where §3.6 would have been right**: if an envelope described *per-replica* performance that the
+planner then composed arithmetically. That is a defensible design — it makes entries reusable across
+replica counts — but it is not what this predictor produces, and the key has to match what is
+actually stored. If the surrogate predictor of Phase 2's later stages ever moves to per-replica
+envelopes, revisit this.
+
+**General lesson for the cache**: any field that changes the simulated result must be in the key.
+A cold-cache run reporting a non-zero hit count is a bug, not a nicety — worth an assertion.
+
+---
+
+## Open items summary
+
+| ID | Blocks | Status |
+| --- | --- | --- |
+| D2 | Phase 2 | **Decided** — parse stdout in Phase 2, switch to a `power_model.py` API at Phase 4 |
+| D3 | Phase 5 | **Decided** — Level-1 compile for Phase 2; revisit after adding the link graph and compare the two |
+| D4 | Phase 3 | **Partially addressed** — A5000 profiled locally as a measured second class. H100 / Ascend data source still undecided |
+| D10 | Phase 2 | **Open** — derating factor for the memory feasibility filter; nominal vs KV-matched config for the A5000 comparison |
