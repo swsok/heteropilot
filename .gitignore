@@ -19,3 +19,11 @@ bench/results/
 .copilot/
 .aider*
 .continue/
+
+# HeteroPilot scratch and regenerable outputs.
+# Planner work dirs, envelope caches and re-runnable simulation artifacts are
+# untracked: simulations are deterministic given the committed code, profiles
+# and seeds. Measured (irreplaceable) artifacts and validation summaries are
+# committed explicitly with `git add -f`.
+outputs/.hp-*
+outputs/phase0_bench/

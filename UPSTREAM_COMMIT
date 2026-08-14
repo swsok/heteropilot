@@ -1,0 +1,15 @@
+2c2042ce4bf1b0283ebeed1db95db6f25e3e7511
+# Upstream baseline pin for HeteroPilot (Phase 0, work order §7).
+# Line 1 is the pinned commit hash and is the only machine-read line.
+#
+# repository : https://github.com/casys-kaist/LLMServingSim
+# branch     : main
+# commit     : 2c2042ce4bf1b0283ebeed1db95db6f25e3e7511
+# date       : 2026-07-29 20:16:26 +0900
+# subject    : Merge pull request #57 from hsule/fix-stale-dtype-examples
+#
+# submodule astra-sim
+#   url    : https://github.com/casys-kaist/astra-sim.git
+#   commit : f82fb3d861614a2a61febfaf87a1360db05efd81
+#
+# pinned on : 2026-08-07
