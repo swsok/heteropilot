@@ -1,0 +1,36 @@
+# Second example, chosen because it is the one model this lab can actually run
+# end to end: it fits a single 24 GB A5000, a measured A5000 profile exists, and
+# upstream ships real vLLM measurements for it in bench/examples/.
+#
+# The traffic block approximates the bundled sharegpt-300 workload
+# (workloads/sharegpt-llama-3.1-8b-300-sps10.jsonl): 300 requests, median
+# input 731 / output 632 tokens, ~10 requests per second offered.
+
+service:
+  model: meta-llama/Llama-3.1-8B
+  dtype: bfloat16
+  kv_cache_dtype: auto
+
+traffic:
+  arrival_rate_rps: 10
+  input_tokens:
+    p50: 731
+    p95: 2470
+    p99: 2884
+  output_tokens:
+    p50: 632
+    p95: 780
+  burstiness: 1.0
+  prefix_share_ratio: 0.07     # measured prefix hit ratio on this workload
+
+slo:
+  ttft:
+    percentile: 99
+    max_ms: 25000
+  tpot:
+    percentile: 99
+    max_ms: 50
+
+objective:
+  primary: minimize_energy
+  secondary: minimize_active_accelerators

@@ -1,0 +1,152 @@
+# NOTE ON PROVENANCE (absolute rule 3)
+# node0 mirrors the real machine this repo was developed on (2 x RTX A5000,
+# verified with nvidia-smi). node1 and node2 are HYPOTHETICAL - no RTX PRO 6000
+# and no Ascend hardware exists here. Every link number below is
+# source: placeholder unless stated otherwise; none was measured.
+#
+# This file exists so heterogeneous candidate generation can be exercised. It is
+# not a description of any cluster that physically exists.
+
+cluster_id: heterogeneous-lab
+
+nodes:
+  - id: node0
+    accelerators:
+      - id: gpu0
+        type: GPU
+        vendor: NVIDIA
+        model: RTX-A5000
+        backend: cuda
+        memory_gb: 24
+        state: FREE
+        profile: profiles/accelerators/a5000.yaml
+      - id: gpu1
+        type: GPU
+        vendor: NVIDIA
+        model: RTX-A5000
+        backend: cuda
+        memory_gb: 24
+        state: FREE
+        profile: profiles/accelerators/a5000.yaml
+    nics:
+      - id: nic0
+        type: ethernet
+        speed_gbps: 10
+
+  - id: node1
+    accelerators:
+      - id: gpu0
+        type: GPU
+        vendor: NVIDIA
+        model: RTXPRO6000
+        backend: cuda
+        memory_gb: 96
+        state: FREE
+        profile: profiles/accelerators/rtxpro6000.yaml
+      - id: gpu1
+        type: GPU
+        vendor: NVIDIA
+        model: RTXPRO6000
+        backend: cuda
+        memory_gb: 96
+        state: FREE
+        profile: profiles/accelerators/rtxpro6000.yaml
+    nics:
+      - id: mlx5_0
+        type: infiniband
+        speed_gbps: 400
+    # Present so this node produces energy output; the simulator emits none
+    # without it (deviations D2). Every value is source: placeholder - see
+    # NodePower in planner/inventory.py. node0 and node2 deliberately omit the
+    # block, which is what makes the "constraint could not be checked" path
+    # observable rather than silently passing.
+    power:
+      source: placeholder
+
+  - id: node2
+    accelerators:
+      - id: npu0
+        type: NPU
+        vendor: Huawei
+        model: ASCEND_TARGET
+        backend: ascend
+        memory_gb: 64
+        state: FREE
+        profile: profiles/accelerators/ascend_target.yaml
+      - id: npu1
+        type: NPU
+        vendor: Huawei
+        model: ASCEND_TARGET
+        backend: ascend
+        memory_gb: 64
+        state: FREE
+        profile: profiles/accelerators/ascend_target.yaml
+      - id: npu2
+        type: NPU
+        vendor: Huawei
+        model: ASCEND_TARGET
+        backend: ascend
+        memory_gb: 64
+        state: DEGRADED        # excluded from islands: exercises the state filter
+        profile: profiles/accelerators/ascend_target.yaml
+    nics:
+      - id: mlx5_0
+        type: infiniband
+        speed_gbps: 400
+
+links:
+  # node0: two A5000s on the same PCIe root complex, no NVLink bridge.
+  - id: pcie-node0-gpu0-gpu1
+    src: node0/gpu0
+    dst: node0/gpu1
+    type: PCIE
+    bandwidth_gbps: 64
+    latency_ns: 1500
+    contention_group: node0-pcie-root
+    source: placeholder
+
+  # node1: NVLink pair.
+  - id: nvlink-node1-gpu0-gpu1
+    src: node1/gpu0
+    dst: node1/gpu1
+    type: NVLINK
+    bandwidth_gbps: 900
+    latency_ns: 1000
+    energy_per_bit_pj: 1.0
+    contention_group: node1-nvswitch
+    source: placeholder
+
+  # node2: HCCS mesh across the two usable NPUs.
+  - id: hccs-node2-npu0-npu1
+    src: node2/npu0
+    dst: node2/npu1
+    type: HCCS
+    bandwidth_gbps: 392
+    latency_ns: 1200
+    contention_group: node2-hccs
+    source: placeholder
+
+  # Host-side attachment and the inter-node fabric.
+  - id: pcie-node1-gpu0-nic
+    src: node1/gpu0
+    dst: node1/mlx5_0
+    type: PCIE
+    bandwidth_gbps: 256
+    latency_ns: 1500
+    contention_group: node1-pcie-root
+    source: placeholder
+  - id: ib-node1-node2
+    src: node1/mlx5_0
+    dst: node2/mlx5_0
+    type: INFINIBAND
+    bandwidth_gbps: 400
+    latency_ns: 5000
+    energy_per_bit_pj: 5.0
+    source: placeholder
+  - id: eth-node0-node1
+    src: node0/nic0
+    dst: node1/mlx5_0
+    type: ETHERNET
+    bandwidth_gbps: 10
+    latency_ns: 20000
+    source: placeholder
