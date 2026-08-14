@@ -1,0 +1,37 @@
+profile_id: a40-48gb
+vendor: NVIDIA
+model: A40
+backend: cuda
+memory_gb: 48
+memory_bandwidth_gbps: 696
+
+# NO sim_hardware yet: profiler/perf/A40/ does not exist. Any cluster config
+# naming this accelerator fails upstream validation until the bundle is
+# profiled on the real nodes (docs/hardware_roadmap.md step 2).
+sim_hardware: null
+
+#   memory_gb, memory_bandwidth_gbps : NVIDIA published figures (48 GB GDDR6,
+#     696 GB/s). Not measured by us.
+#   perf_data : none yet.
+source: vendor_spec
+
+perf_data: null
+
+# A40 is Ampere sm_86 like the locally boot-tested A5000, same vLLM CUDA path,
+# so declaring the same model support is a vendor_spec-level claim, not a
+# measurement. Confirm with a real boot at bring-up before relying on it.
+supported_models:
+  - pattern: "meta-llama/Llama-3.1-*"
+    dtypes: [bfloat16]
+  - pattern: "Qwen/Qwen3-32B"
+    dtypes: [bfloat16]
+  - pattern: "Qwen/Qwen3-30B-A3B-*"
+    dtypes: [bfloat16]
+
+max_tp_size: 8
+
+notes: >
+  Up to 8 nodes x 8 devices expected reachable from the week of 2026-08-17
+  (docs/hardware_roadmap.md). Qwen3-32B bf16 (~64 GB weights) serves at TP=2 on
+  48 GB devices, making this the Phase 4 calibration target for the work
+  order's headline model.

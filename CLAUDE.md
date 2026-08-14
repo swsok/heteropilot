@@ -78,6 +78,11 @@ Consequences: real-vLLM `bench/` runs are possible only at small scale and only 
 Ascend/NPU number in this project is simulated or externally imported until real NPU hardware
 exists. Label it that way in every result file and figure.
 
+**Incoming remote hardware** (expected from 2026-08-17, not yet reachable): A40x8 GPU nodes (up
+to 8), 4x Rebellions ATOM, 4x FuriosaAI RNGD. Bring-up plan, provenance rules and open questions:
+`docs/hardware_roadmap.md`. Until inventoried, their profile stubs are placeholders with empty
+`supported_models` and are excluded from candidate generation by design.
+
 ## Architecture: the planning pipeline
 
 ```

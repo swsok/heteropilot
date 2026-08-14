@@ -108,7 +108,7 @@ reduction in provenance so results are never mistaken for path-aware ones. Do no
 
 ---
 
-## D4 — Only one hardware profile exists · **Partially addressed 2026-08-07** (A5000 profiling underway)
+## D4 — Only one hardware profile exists · **Resolution path secured 2026-08-14** (real hardware incoming)
 
 **Work order §2.1 / §3.3 / Phase 3** assume `h100.yaml`, `rtxpro6000.yaml`, `ascend_target.yaml`,
 and a Phase 3 exit criterion of "2–3 accelerator classes appearing as candidates".
@@ -130,6 +130,16 @@ real second class is needed before external data lands.
 benchmarks, a collaborator's measurements, or vendor specs. Whatever the source, it is
 `source: placeholder` or `source: measured` with attribution, never silently synthesized
 (absolute rule 3, §11 "실물 hardware 부족").
+
+**Update 2026-08-14 — the decision resolved itself with real hardware.** The user confirmed
+access from the week of 2026-08-17 to A40x8 GPU nodes (up to 8), 4x Rebellions ATOM and
+4x FuriosaAI RNGD. The concrete NPU targets are therefore ATOM/RNGD rather than Ascend (the
+work order's `backend` enum is explicitly extensible; `rbln` and `furiosa` identifiers added),
+and the second-large-GPU class is A40 rather than imported H100 data. Profiles become
+*measured* instead of imported; the CsvProfileImporter remains the V1 entry path for NPU
+latency data. Plan and bring-up order: `docs/hardware_roadmap.md`. Stubs with all-placeholder
+fields and empty `supported_models` (= excluded until verified):
+`profiles/accelerators/{a40,rbln_atom,furiosa_rngd}.yaml`.
 
 ---
 
@@ -498,5 +508,5 @@ A cold-cache run reporting a non-zero hit count is a bug, not a nicety — worth
 | --- | --- | --- |
 | D2 | Phase 2 | **Decided** — parse stdout in Phase 2, switch to a `power_model.py` API at Phase 4 |
 | D3 | Phase 5 | **Decided** — Level-1 compile for Phase 2; revisit after adding the link graph and compare the two |
-| D4 | Phase 3 | **Partially addressed** — A5000 profiled locally as a measured second class. H100 / Ascend data source still undecided |
+| D4 | Phase 3 | **Resolution path secured** — A5000 measured locally; A40/ATOM/RNGD hardware reachable from 2026-08-17 (see `docs/hardware_roadmap.md`) |
 | D10 | Phase 2 | **Open** — derating factor for the memory feasibility filter; nominal vs KV-matched config for the A5000 comparison |

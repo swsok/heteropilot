@@ -1,0 +1,30 @@
+profile_id: rbln-atom
+vendor: Rebellions
+model: RBLN-ATOM
+backend: rbln
+# EVERY number below is a placeholder pending first access to the machine
+# (docs/hardware_roadmap.md). Read the real figures off the device's own tools
+# at bring-up and replace them; do not cite these.
+memory_gb: 16
+memory_bandwidth_gbps: 256
+
+# No profiler/perf/ bundle and no verified serving stack yet: excluded from
+# candidate generation, and any direct use fails loudly.
+sim_hardware: null
+source: placeholder
+perf_data: null
+
+# Deliberately empty. Empty means "unknown", and unknown means excluded from
+# candidates (work order §11 Risk 1) - NPU model/kernel support must be
+# verified on the vLLM-compatible stack (vllm-rbln), never assumed. Fill this
+# from an actual boot per (model, dtype) pair.
+supported_models: []
+
+max_tp_size: 4
+
+notes: >
+  4 devices expected reachable from the week of 2026-08-17. Bring-up follows
+  the V1 path: verify serving stack, measure, import via CsvProfileImporter
+  against profiler/CONTRACT.md. Replaces Ascend as a concrete NPU target for
+  Exp 4 (GPU vs NPU SLO-goodput/J); the ascend_target.yaml stub remains as a
+  schema example only.

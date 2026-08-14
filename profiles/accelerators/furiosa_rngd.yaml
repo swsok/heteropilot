@@ -1,0 +1,30 @@
+profile_id: furiosa-rngd
+vendor: FuriosaAI
+model: RNGD
+backend: furiosa
+# EVERY number below is a placeholder pending first access to the machine
+# (docs/hardware_roadmap.md). Read the real figures off the device's own tools
+# at bring-up and replace them; do not cite these.
+memory_gb: 48
+memory_bandwidth_gbps: 1500
+
+# No profiler/perf/ bundle and no verified serving stack yet: excluded from
+# candidate generation, and any direct use fails loudly.
+sim_hardware: null
+source: placeholder
+perf_data: null
+
+# Deliberately empty. Empty means "unknown", and unknown means excluded from
+# candidates (work order §11 Risk 1) - NPU model/kernel support must be
+# verified on the vendor serving stack (furiosa-llm), never assumed. Fill this
+# from an actual boot per (model, dtype) pair.
+supported_models: []
+
+max_tp_size: 4
+
+notes: >
+  4 devices expected reachable from the week of 2026-08-17. Bring-up follows
+  the V1 path: verify serving stack, measure, import via CsvProfileImporter
+  against profiler/CONTRACT.md. Vendor positions the part on efficiency
+  (low-TDP HBM design), which is the tokens/J axis this planner optimizes -
+  prime Exp 4 material once measured.
