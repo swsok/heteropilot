@@ -19,10 +19,25 @@ source: measured
 
 perf_data: profiler/perf/A5000/
 
-# No `power:` block. The driver reports power.max_limit = 230 W, but the
-# simulator needs idle_power / standby_power / active_power / standby_duration
-# and none of those has a measured source here. Omitted rather than invented
-# (deviations D7). A cluster using this profile produces no energy output.
+# Measured 2026-08-14 on this machine's GPU 0 via nvidia-smi power.draw polling
+# at 10 Hz (raw data: experiments/results/a5000_power/). Method:
+#   active_power     = mean over 2,602 samples at util >= 90% during a real
+#                      vLLM bench (300 sharegpt requests); p95 229.7 W, max
+#                      230.0 W (= the board power cap)
+#   standby_power    = mean of the first 2 s after the load ended (113.3 W)
+#   standby_duration = elevated-draw window read off the decay curve (~2 s;
+#                      140 W at +0 s, 24 W by +4 s)
+#   idle_power       = post-run settled floor with the driver active (~19 W).
+#                      Bare idle with no CUDA context measured 8.2 W; 19 W is
+#                      the representative floor for a resident serving process.
+# nvidia-smi reports board power internally averaged over ~1 s; treat the
+# standby figures as first-order (deviations D7).
+power:
+  idle_power: 19.0
+  standby_power: 113.3
+  active_power: 227.6
+  standby_duration: 2000000000   # ns (2 s)
+  source: measured
 
 supported_models:
   - pattern: "meta-llama/Llama-3.1-8B"
