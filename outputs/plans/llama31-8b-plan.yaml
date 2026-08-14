@@ -1,0 +1,786 @@
+feasible: true
+service_model: meta-llama/Llama-3.1-8B
+cluster_id: heterogeneous-lab
+recommended:
+  plan:
+    plan_id: hp-00027
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: cuda-rtxpro6000-node1-tp2-dp1-s128-t8192
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-rtxpro6000-node1
+        role: aggregated
+        tp_size: 2
+        pp_size: 1
+        dp_replicas: 1
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 128
+        max_num_batched_tokens: 8192
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+    predicted:
+      p50_ttft_ms: 28.078892
+      p95_ttft_ms: 60.6997967
+      p99_ttft_ms: 65.55935373999999
+      p50_tpot_ms: 8.016072000000001
+      p95_tpot_ms: 8.1523869
+      p99_tpot_ms: 8.16453018
+      throughput_tps: 4164.3409386204185
+      slo_goodput_rps: 2.7927978932468767
+      slo_attainment: 1.0
+      completed_requests: 20
+      completed_tokens: 12884
+      total_energy_j: 10340.0
+      average_power_w: 1416.9957142857145
+      peak_power_w: 1444.65
+      tokens_per_joule: 1.2460348162475823
+      sim_wall_seconds: 77.28
+    routing: single
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: minimize_energy
+  value: -10340.0
+  note: ''
+  equivalent_candidates:
+  - cuda-rtxpro6000-node1-tp2-dp1-s256-t8192
+  - cuda-rtxpro6000-node1-tp2-dp1-s32-t8192
+alternatives:
+- plan:
+    plan_id: hp-00026
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: cuda-rtxpro6000-node1-tp2-dp1-s128-t2048
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-rtxpro6000-node1
+        role: aggregated
+        tp_size: 2
+        pp_size: 1
+        dp_replicas: 1
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 128
+        max_num_batched_tokens: 2048
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+    predicted:
+      p50_ttft_ms: 27.720252000000002
+      p95_ttft_ms: 74.54337100000001
+      p99_ttft_ms: 87.26245739999997
+      p50_tpot_ms: 8.0196115
+      p95_tpot_ms: 8.176972750000001
+      p99_tpot_ms: 8.18984335
+      throughput_tps: 4156.314292093862
+      slo_goodput_rps: 2.787414856209417
+      slo_attainment: 1.0
+      completed_requests: 20
+      completed_tokens: 12884
+      total_energy_j: 10360.0
+      average_power_w: 1417.0285714285715
+      peak_power_w: 1444.64
+      tokens_per_joule: 1.2436293436293435
+      sim_wall_seconds: 75.86
+    routing: single
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: minimize_energy
+  value: -10360.0
+  note: higher p99_ttft_ms (worse), higher p99_tpot_ms (worse), lower peak_power_w,
+    lower tokens_per_joule (worse)
+  equivalent_candidates:
+  - cuda-rtxpro6000-node1-tp2-dp1-s256-t2048
+  - cuda-rtxpro6000-node1-tp2-dp1-s32-t2048
+- plan:
+    plan_id: hp-00015
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: cuda-rtxpro6000-node1-tp1-dp1-s128-t8192
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-rtxpro6000-node1
+        role: aggregated
+        tp_size: 1
+        pp_size: 1
+        dp_replicas: 1
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 128
+        max_num_batched_tokens: 8192
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+    predicted:
+      p50_ttft_ms: 52.516494
+      p95_ttft_ms: 116.1891978
+      p99_ttft_ms: 117.79581956
+      p50_tpot_ms: 14.303027
+      p95_tpot_ms: 14.5979002
+      p99_tpot_ms: 14.63731684
+      throughput_tps: 2446.4807597859885
+      slo_goodput_rps: 1.6407221244624697
+      slo_attainment: 1.0
+      completed_requests: 20
+      completed_tokens: 12884
+      total_energy_j: 10610.0
+      average_power_w: 861.5666666666666
+      peak_power_w: 869.74
+      tokens_per_joule: 1.2143261074458058
+      sim_wall_seconds: 68.2
+    routing: single
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: minimize_energy
+  value: -10610.0
+  note: higher p99_ttft_ms (worse), higher p99_tpot_ms (worse), lower peak_power_w,
+    lower tokens_per_joule (worse), lower active_accelerators
+  equivalent_candidates:
+  - cuda-rtxpro6000-node1-tp1-dp1-s256-t8192
+  - cuda-rtxpro6000-node1-tp1-dp1-s32-t8192
+unscored:
+- plan:
+    plan_id: hp-00000
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: cuda-rtx-a5000-node0-tp1-dp1-s32-t2048
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-rtx-a5000-node0
+        role: aggregated
+        tp_size: 1
+        pp_size: 1
+        dp_replicas: 1
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 32
+        max_num_batched_tokens: 2048
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+    predicted:
+      p50_ttft_ms: 759.5361645
+      p95_ttft_ms: 1382.3335154000001
+      p99_ttft_ms: 1403.14086228
+      p50_tpot_ms: 30.6983115
+      p95_tpot_ms: 32.841123
+      p99_tpot_ms: 32.9752174
+      throughput_tps: 1147.462979731191
+      slo_goodput_rps: 0.7695412646577633
+      slo_attainment: 1.0
+      completed_requests: 20
+      completed_tokens: 12884
+      total_energy_j: null
+      average_power_w: null
+      peak_power_w: null
+      tokens_per_joule: null
+      sim_wall_seconds: 62.03
+    routing: single
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  reason: 'objective ''minimize_energy'' needs energy, but this plan has none - the
+    node running it has no power: block, so the simulator emitted no energy (deviations
+    D2)'
+- plan:
+    plan_id: hp-00001
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: cuda-rtx-a5000-node0-tp1-dp1-s32-t8192
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-rtx-a5000-node0
+        role: aggregated
+        tp_size: 1
+        pp_size: 1
+        dp_replicas: 1
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 32
+        max_num_batched_tokens: 8192
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+    predicted:
+      p50_ttft_ms: 534.7681765
+      p95_ttft_ms: 795.1356735500001
+      p99_ttft_ms: 822.06730031
+      p50_tpot_ms: 29.727093
+      p95_tpot_ms: 31.58869745
+      p99_tpot_ms: 31.661086689999998
+      throughput_tps: 1182.63312453729
+      slo_goodput_rps: 0.7931279756805647
+      slo_attainment: 1.0
+      completed_requests: 20
+      completed_tokens: 12884
+      total_energy_j: null
+      average_power_w: null
+      peak_power_w: null
+      tokens_per_joule: null
+      sim_wall_seconds: 61.99
+    routing: single
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  reason: 'objective ''minimize_energy'' needs energy, but this plan has none - the
+    node running it has no power: block, so the simulator emitted no energy (deviations
+    D2)'
+- plan:
+    plan_id: hp-00002
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: cuda-rtx-a5000-node0-tp1-dp1-s128-t2048
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-rtx-a5000-node0
+        role: aggregated
+        tp_size: 1
+        pp_size: 1
+        dp_replicas: 1
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 128
+        max_num_batched_tokens: 2048
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+    predicted:
+      p50_ttft_ms: 759.5361645
+      p95_ttft_ms: 1382.3335154000001
+      p99_ttft_ms: 1403.14086228
+      p50_tpot_ms: 30.6983115
+      p95_tpot_ms: 32.841123
+      p99_tpot_ms: 32.9752174
+      throughput_tps: 1147.462979731191
+      slo_goodput_rps: 0.7695412646577633
+      slo_attainment: 1.0
+      completed_requests: 20
+      completed_tokens: 12884
+      total_energy_j: null
+      average_power_w: null
+      peak_power_w: null
+      tokens_per_joule: null
+      sim_wall_seconds: 62.45
+    routing: single
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  reason: 'objective ''minimize_energy'' needs energy, but this plan has none - the
+    node running it has no power: block, so the simulator emitted no energy (deviations
+    D2)'
+- plan:
+    plan_id: hp-00003
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: cuda-rtx-a5000-node0-tp1-dp1-s128-t8192
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-rtx-a5000-node0
+        role: aggregated
+        tp_size: 1
+        pp_size: 1
+        dp_replicas: 1
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 128
+        max_num_batched_tokens: 8192
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+    predicted:
+      p50_ttft_ms: 534.7681765
+      p95_ttft_ms: 795.1356735500001
+      p99_ttft_ms: 822.06730031
+      p50_tpot_ms: 29.727093
+      p95_tpot_ms: 31.58869745
+      p99_tpot_ms: 31.661086689999998
+      throughput_tps: 1182.63312453729
+      slo_goodput_rps: 0.7931279756805647
+      slo_attainment: 1.0
+      completed_requests: 20
+      completed_tokens: 12884
+      total_energy_j: null
+      average_power_w: null
+      peak_power_w: null
+      tokens_per_joule: null
+      sim_wall_seconds: 61.58
+    routing: single
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  reason: 'objective ''minimize_energy'' needs energy, but this plan has none - the
+    node running it has no power: block, so the simulator emitted no energy (deviations
+    D2)'
+- plan:
+    plan_id: hp-00004
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: cuda-rtx-a5000-node0-tp1-dp1-s256-t2048
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-rtx-a5000-node0
+        role: aggregated
+        tp_size: 1
+        pp_size: 1
+        dp_replicas: 1
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 256
+        max_num_batched_tokens: 2048
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+    predicted:
+      p50_ttft_ms: 759.5361645
+      p95_ttft_ms: 1382.3335154000001
+      p99_ttft_ms: 1403.14086228
+      p50_tpot_ms: 30.6983115
+      p95_tpot_ms: 32.841123
+      p99_tpot_ms: 32.9752174
+      throughput_tps: 1147.462979731191
+      slo_goodput_rps: 0.7695412646577633
+      slo_attainment: 1.0
+      completed_requests: 20
+      completed_tokens: 12884
+      total_energy_j: null
+      average_power_w: null
+      peak_power_w: null
+      tokens_per_joule: null
+      sim_wall_seconds: 61.93
+    routing: single
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  reason: 'objective ''minimize_energy'' needs energy, but this plan has none - the
+    node running it has no power: block, so the simulator emitted no energy (deviations
+    D2)'
+- plan:
+    plan_id: hp-00005
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: cuda-rtx-a5000-node0-tp1-dp1-s256-t8192
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-rtx-a5000-node0
+        role: aggregated
+        tp_size: 1
+        pp_size: 1
+        dp_replicas: 1
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 256
+        max_num_batched_tokens: 8192
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+    predicted:
+      p50_ttft_ms: 534.7681765
+      p95_ttft_ms: 795.1356735500001
+      p99_ttft_ms: 822.06730031
+      p50_tpot_ms: 29.727093
+      p95_tpot_ms: 31.58869745
+      p99_tpot_ms: 31.661086689999998
+      throughput_tps: 1182.63312453729
+      slo_goodput_rps: 0.7931279756805647
+      slo_attainment: 1.0
+      completed_requests: 20
+      completed_tokens: 12884
+      total_energy_j: null
+      average_power_w: null
+      peak_power_w: null
+      tokens_per_joule: null
+      sim_wall_seconds: 62.26
+    routing: single
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  reason: 'objective ''minimize_energy'' needs energy, but this plan has none - the
+    node running it has no power: block, so the simulator emitted no energy (deviations
+    D2)'
+- plan:
+    plan_id: hp-00006
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: cuda-rtx-a5000-node0-tp1-dp2-s32-t2048
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-rtx-a5000-node0
+        role: aggregated
+        tp_size: 1
+        pp_size: 1
+        dp_replicas: 2
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 32
+        max_num_batched_tokens: 2048
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+    predicted:
+      p50_ttft_ms: 759.5361645
+      p95_ttft_ms: 1382.3335154000001
+      p99_ttft_ms: 1403.14086228
+      p50_tpot_ms: 30.6983115
+      p95_tpot_ms: 32.841123
+      p99_tpot_ms: 32.9752174
+      throughput_tps: 1147.462979731191
+      slo_goodput_rps: 0.7695412646577633
+      slo_attainment: 1.0
+      completed_requests: 20
+      completed_tokens: 12884
+      total_energy_j: null
+      average_power_w: null
+      peak_power_w: null
+      tokens_per_joule: null
+      sim_wall_seconds: 62.03
+    routing: load
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  reason: 'objective ''minimize_energy'' needs energy, but this plan has none - the
+    node running it has no power: block, so the simulator emitted no energy (deviations
+    D2)'
+- plan:
+    plan_id: hp-00007
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: cuda-rtx-a5000-node0-tp1-dp2-s32-t8192
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-rtx-a5000-node0
+        role: aggregated
+        tp_size: 1
+        pp_size: 1
+        dp_replicas: 2
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 32
+        max_num_batched_tokens: 8192
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+    predicted:
+      p50_ttft_ms: 534.7681765
+      p95_ttft_ms: 795.1356735500001
+      p99_ttft_ms: 822.06730031
+      p50_tpot_ms: 29.727093
+      p95_tpot_ms: 31.58869745
+      p99_tpot_ms: 31.661086689999998
+      throughput_tps: 1182.63312453729
+      slo_goodput_rps: 0.7931279756805647
+      slo_attainment: 1.0
+      completed_requests: 20
+      completed_tokens: 12884
+      total_energy_j: null
+      average_power_w: null
+      peak_power_w: null
+      tokens_per_joule: null
+      sim_wall_seconds: 61.99
+    routing: load
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  reason: 'objective ''minimize_energy'' needs energy, but this plan has none - the
+    node running it has no power: block, so the simulator emitted no energy (deviations
+    D2)'
+- plan:
+    plan_id: hp-00008
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: cuda-rtx-a5000-node0-tp1-dp2-s128-t2048
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-rtx-a5000-node0
+        role: aggregated
+        tp_size: 1
+        pp_size: 1
+        dp_replicas: 2
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 128
+        max_num_batched_tokens: 2048
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+    predicted:
+      p50_ttft_ms: 759.5361645
+      p95_ttft_ms: 1382.3335154000001
+      p99_ttft_ms: 1403.14086228
+      p50_tpot_ms: 30.6983115
+      p95_tpot_ms: 32.841123
+      p99_tpot_ms: 32.9752174
+      throughput_tps: 1147.462979731191
+      slo_goodput_rps: 0.7695412646577633
+      slo_attainment: 1.0
+      completed_requests: 20
+      completed_tokens: 12884
+      total_energy_j: null
+      average_power_w: null
+      peak_power_w: null
+      tokens_per_joule: null
+      sim_wall_seconds: 62.45
+    routing: load
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  reason: 'objective ''minimize_energy'' needs energy, but this plan has none - the
+    node running it has no power: block, so the simulator emitted no energy (deviations
+    D2)'
+- plan:
+    plan_id: hp-00009
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: cuda-rtx-a5000-node0-tp1-dp2-s128-t8192
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-rtx-a5000-node0
+        role: aggregated
+        tp_size: 1
+        pp_size: 1
+        dp_replicas: 2
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 128
+        max_num_batched_tokens: 8192
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+    predicted:
+      p50_ttft_ms: 534.7681765
+      p95_ttft_ms: 795.1356735500001
+      p99_ttft_ms: 822.06730031
+      p50_tpot_ms: 29.727093
+      p95_tpot_ms: 31.58869745
+      p99_tpot_ms: 31.661086689999998
+      throughput_tps: 1182.63312453729
+      slo_goodput_rps: 0.7931279756805647
+      slo_attainment: 1.0
+      completed_requests: 20
+      completed_tokens: 12884
+      total_energy_j: null
+      average_power_w: null
+      peak_power_w: null
+      tokens_per_joule: null
+      sim_wall_seconds: 61.58
+    routing: load
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  reason: 'objective ''minimize_energy'' needs energy, but this plan has none - the
+    node running it has no power: block, so the simulator emitted no energy (deviations
+    D2)'
+- plan:
+    plan_id: hp-00010
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: cuda-rtx-a5000-node0-tp1-dp2-s256-t2048
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-rtx-a5000-node0
+        role: aggregated
+        tp_size: 1
+        pp_size: 1
+        dp_replicas: 2
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 256
+        max_num_batched_tokens: 2048
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+    predicted:
+      p50_ttft_ms: 759.5361645
+      p95_ttft_ms: 1382.3335154000001
+      p99_ttft_ms: 1403.14086228
+      p50_tpot_ms: 30.6983115
+      p95_tpot_ms: 32.841123
+      p99_tpot_ms: 32.9752174
+      throughput_tps: 1147.462979731191
+      slo_goodput_rps: 0.7695412646577633
+      slo_attainment: 1.0
+      completed_requests: 20
+      completed_tokens: 12884
+      total_energy_j: null
+      average_power_w: null
+      peak_power_w: null
+      tokens_per_joule: null
+      sim_wall_seconds: 61.93
+    routing: load
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  reason: 'objective ''minimize_energy'' needs energy, but this plan has none - the
+    node running it has no power: block, so the simulator emitted no energy (deviations
+    D2)'
+- plan:
+    plan_id: hp-00011
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: cuda-rtx-a5000-node0-tp1-dp2-s256-t8192
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-rtx-a5000-node0
+        role: aggregated
+        tp_size: 1
+        pp_size: 1
+        dp_replicas: 2
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 256
+        max_num_batched_tokens: 8192
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+    predicted:
+      p50_ttft_ms: 534.7681765
+      p95_ttft_ms: 795.1356735500001
+      p99_ttft_ms: 822.06730031
+      p50_tpot_ms: 29.727093
+      p95_tpot_ms: 31.58869745
+      p99_tpot_ms: 31.661086689999998
+      throughput_tps: 1182.63312453729
+      slo_goodput_rps: 0.7931279756805647
+      slo_attainment: 1.0
+      completed_requests: 20
+      completed_tokens: 12884
+      total_energy_j: null
+      average_power_w: null
+      peak_power_w: null
+      tokens_per_joule: null
+      sim_wall_seconds: 62.26
+    routing: load
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  reason: 'objective ''minimize_energy'' needs energy, but this plan has none - the
+    node running it has no power: block, so the simulator emitted no energy (deviations
+    D2)'
+rejected_summary:
+  backend_incompatible: 1
+evaluated_candidates: 30
+generated_candidates: 30
+reason: ''
+closest_plan: null
+violated_constraints: []
+suggestions: []
+provenance:
+  git_commit: 2c2042ce4bf1b0283ebeed1db95db6f25e3e7511
+  git_dirty: true
+  llmservingsim_commit: 2c2042ce4bf1b0283ebeed1db95db6f25e3e7511
+  vllm_version: null
+  backend_version: null
+  model_revision: null
+  hardware_profile_hash: 05c54efbb2a411ef5ecdbbf1f0b34e2fcb60fa0fc36eb3f04e2e536a1e6379dd
+  cluster_spec_hash: 37db021b8211dc91856b4a094ebc7e9d1a300268de54bb291d71f19e5418bbdb
+  service_spec_hash: 860c8a567b759ac948d4ae16951a5c878e7654201d9e89b08bf21e6e38f4880c
+  dataset_hash: 7daa7766e09b50450295482a4fdf5260c0cb5e3beecd79772100c92ab66496de
+  random_seed: 42
+  command: __main__.py plan --service examples/service_specs/llama31-8b.yaml --cluster
+    examples/clusters/heterogeneous-lab.yaml --num-requests 20 --seed 42 --timeout
+    400 --quiet --work-dir outputs/.hp-plan --cache-dir outputs/.hp-envelope --output
+    outputs/plans/llama31-8b-plan.yaml
+  timestamp: '2026-08-10T05:50:03.982530+00:00'
+  python_version: 3.10.12
+  platform: Linux-6.8.0-124-generic-x86_64-with-glibc2.35
+  hostname: node02-ai
+  cpu_count: 20
+  workload:
+    path: outputs/.hp-plan/workload.jsonl
+    num_requests: 20
+    random_seed: 42
+    total_input_tokens: 16938
+    total_output_tokens: 12884
+    horizon_s: 1.585
+  gpu_memory_utilization: 0.9
+  activation_reserve_gb: 0.0
+  enable_prefix_caching: false
+  bound_pruning: true
+  topology:
+    link_bw_gbps: 64.0
+    link_latency_ns: 5000.0
+    basis: 'Level-1 bottleneck over 3 island(s): min bandwidth, max latency. The simulator
+      has no link graph, so contention_group and per-link energy are dropped here
+      (deviations D3).'
+    assumptions:
+    - islands cuda-rtx-a5000-node0 and cuda-rtxpro6000-node1 are not connected in
+      the spec; used the INFINIBAND class default (400.0 GB/s), source=placeholder
+    - islands cuda-rtxpro6000-node1 and ascend-ascend-target-node2 are not connected
+      in the spec; used the INFINIBAND class default (400.0 GB/s), source=placeholder
+    model_level: 1
+    path_aware: false
+  envelope_cache_hits: 30
+  envelope_cache_hit_ids:
+  - cuda-rtx-a5000-node0-tp1-dp1-s128-t2048
+  - cuda-rtx-a5000-node0-tp1-dp1-s128-t8192
+  - cuda-rtx-a5000-node0-tp1-dp1-s256-t2048
+  - cuda-rtx-a5000-node0-tp1-dp1-s256-t8192
+  - cuda-rtx-a5000-node0-tp1-dp1-s32-t2048
+  - cuda-rtx-a5000-node0-tp1-dp1-s32-t8192
+  - cuda-rtx-a5000-node0-tp1-dp2-s128-t2048
+  - cuda-rtx-a5000-node0-tp1-dp2-s128-t8192
+  - cuda-rtx-a5000-node0-tp1-dp2-s256-t2048
+  - cuda-rtx-a5000-node0-tp1-dp2-s256-t8192
+  - cuda-rtx-a5000-node0-tp1-dp2-s32-t2048
+  - cuda-rtx-a5000-node0-tp1-dp2-s32-t8192
+  - cuda-rtxpro6000-node1-tp1-dp1-s128-t2048
+  - cuda-rtxpro6000-node1-tp1-dp1-s128-t8192
+  - cuda-rtxpro6000-node1-tp1-dp1-s256-t2048
+  - cuda-rtxpro6000-node1-tp1-dp1-s256-t8192
+  - cuda-rtxpro6000-node1-tp1-dp1-s32-t2048
+  - cuda-rtxpro6000-node1-tp1-dp1-s32-t8192
+  - cuda-rtxpro6000-node1-tp1-dp2-s128-t2048
+  - cuda-rtxpro6000-node1-tp1-dp2-s128-t8192
+  - cuda-rtxpro6000-node1-tp1-dp2-s256-t2048
+  - cuda-rtxpro6000-node1-tp1-dp2-s256-t8192
+  - cuda-rtxpro6000-node1-tp1-dp2-s32-t2048
+  - cuda-rtxpro6000-node1-tp1-dp2-s32-t8192
+  - cuda-rtxpro6000-node1-tp2-dp1-s128-t2048
+  - cuda-rtxpro6000-node1-tp2-dp1-s128-t8192
+  - cuda-rtxpro6000-node1-tp2-dp1-s256-t2048
+  - cuda-rtxpro6000-node1-tp2-dp1-s256-t8192
+  - cuda-rtxpro6000-node1-tp2-dp1-s32-t2048
+  - cuda-rtxpro6000-node1-tp2-dp1-s32-t8192
+  envelope_cache:
+    hits: 30
+    misses: 0
+caveats:
+- 'Prefix caching is disabled for every candidate. With it enabled the simulator''s
+  prefix-cache memory grows monotonically and the run dies on any device small enough
+  to saturate (docs/deviations.md D12). Consequence: ServiceSpec.traffic.prefix_share_ratio
+  has no effect on these predictions, and TTFT is pessimistic for workloads with genuinely
+  shared prefixes.'
