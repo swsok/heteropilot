@@ -1,0 +1,257 @@
+feasible: true
+service_model: meta-llama/Llama-3.1-8B
+cluster_id: heterogeneous-lab
+recommended:
+  plan:
+    plan_id: hp-00014
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: cuda-rtxpro6000-node1-tp1-dp1-s128-t2048
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-rtxpro6000-node1
+        role: aggregated
+        tp_size: 1
+        pp_size: 1
+        dp_replicas: 1
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 128
+        max_num_batched_tokens: 2048
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+    predicted:
+      p50_ttft_ms: 49.9441335
+      p95_ttft_ms: 138.79431105
+      p99_ttft_ms: 182.73345702999987
+      p50_tpot_ms: 16.3717285
+      p95_tpot_ms: 17.33779925
+      p99_tpot_ms: 17.48290719
+      throughput_tps: 3498.670510362998
+      slo_goodput_rps: 2.314256947302865
+      slo_attainment: 1.0
+      completed_requests: 300
+      completed_tokens: 190920
+      total_energy_j: 112510.0
+      average_power_w: 866.6577519379846
+      peak_power_w: 893.31
+      tokens_per_joule: 1.6969158297040263
+      sim_wall_seconds: 609.24
+    routing: single
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: maximize_slo_goodput_per_joule
+  value: 1.6969158297040263
+  note: ''
+  equivalent_candidates: []
+alternatives:
+- plan:
+    plan_id: hp-00015
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: cuda-rtxpro6000-node1-tp1-dp1-s128-t8192
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-rtxpro6000-node1
+        role: aggregated
+        tp_size: 1
+        pp_size: 1
+        dp_replicas: 1
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 128
+        max_num_batched_tokens: 8192
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+    predicted:
+      p50_ttft_ms: 48.953526499999995
+      p95_ttft_ms: 106.1398171
+      p99_ttft_ms: 118.46924885999985
+      p50_tpot_ms: 16.241441000000002
+      p95_tpot_ms: 17.1836061
+      p99_tpot_ms: 17.35796954
+      throughput_tps: 3498.650224458536
+      slo_goodput_rps: 2.3142435288357084
+      slo_attainment: 1.0
+      completed_requests: 300
+      completed_tokens: 190920
+      total_energy_j: 112510.0
+      average_power_w: 866.7010852713181
+      peak_power_w: 886.92
+      tokens_per_joule: 1.6969158297040263
+      sim_wall_seconds: 610.46
+    routing: single
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: maximize_slo_goodput_per_joule
+  value: 1.6969158297040263
+  note: lower p99_ttft_ms, lower p99_tpot_ms, lower peak_power_w
+  equivalent_candidates:
+  - cuda-rtxpro6000-node1-tp1-dp1-s256-t8192
+- plan:
+    plan_id: hp-00013
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: cuda-rtxpro6000-node1-tp1-dp1-s32-t8192
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-rtxpro6000-node1
+        role: aggregated
+        tp_size: 1
+        pp_size: 1
+        dp_replicas: 1
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 32
+        max_num_batched_tokens: 8192
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+    predicted:
+      p50_ttft_ms: 50.7220045
+      p95_ttft_ms: 931.9928020000001
+      p99_ttft_ms: 1458.6662459399995
+      p50_tpot_ms: 16.0639195
+      p95_tpot_ms: 17.1077042
+      p99_tpot_ms: 17.26941191
+      throughput_tps: 3498.923852994534
+      slo_goodput_rps: 2.3144245252280635
+      slo_attainment: 1.0
+      completed_requests: 300
+      completed_tokens: 190920
+      total_energy_j: 112510.0
+      average_power_w: 866.7182945736436
+      peak_power_w: 919.3
+      tokens_per_joule: 1.6969158297040263
+      sim_wall_seconds: 614.55
+    routing: single
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: maximize_slo_goodput_per_joule
+  value: 1.6969158297040263
+  note: higher p99_ttft_ms (worse), lower p99_tpot_ms, higher peak_power_w (worse)
+  equivalent_candidates: []
+- plan:
+    plan_id: hp-00027
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: cuda-rtxpro6000-node1-tp2-dp1-s128-t8192
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-rtxpro6000-node1
+        role: aggregated
+        tp_size: 2
+        pp_size: 1
+        dp_replicas: 1
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 128
+        max_num_batched_tokens: 8192
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+    predicted:
+      p50_ttft_ms: 25.802694
+      p95_ttft_ms: 55.21695755000001
+      p99_ttft_ms: 60.47521581999995
+      p50_tpot_ms: 7.5320995
+      p95_tpot_ms: 8.14268635
+      p99_tpot_ms: 8.25733795
+      throughput_tps: 3620.8929238523083
+      slo_goodput_rps: 2.395103105492369
+      slo_attainment: 1.0
+      completed_requests: 300
+      completed_tokens: 190920
+      total_energy_j: 180440.0
+      average_power_w: 1438.3822399999997
+      peak_power_w: 1444.35
+      tokens_per_joule: 1.0580802482819773
+      sim_wall_seconds: 1363.83
+    routing: single
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: maximize_slo_goodput_per_joule
+  value: 1.0580802482819773
+  note: lower p99_ttft_ms, lower p99_tpot_ms, higher peak_power_w (worse), lower tokens_per_joule
+    (worse), higher active_accelerators (worse)
+  equivalent_candidates:
+  - cuda-rtxpro6000-node1-tp2-dp1-s256-t8192
+  - cuda-rtxpro6000-node1-tp2-dp1-s32-t8192
+unscored: []
+rejected_summary:
+  backend_incompatible: 1
+  slo_violated: 6
+evaluated_candidates: 54
+generated_candidates: 54
+reason: ''
+closest_plan: null
+violated_constraints: []
+suggestions: []
+provenance:
+  git_commit: 2480008db2ed9edf9aa4f1367653a1c65e258488
+  git_dirty: null
+  llmservingsim_commit: 2c2042ce4bf1b0283ebeed1db95db6f25e3e7511
+  vllm_version: null
+  backend_version: null
+  model_revision: null
+  hardware_profile_hash: 555b4bf1734064537362f7e34abf40c9ed148463264490e5d2aeeadd90edec46
+  cluster_spec_hash: c8cd3bdc3a98499e452baffe2ffd544fe7b67ac10c06d30f169e33d00dc15f73
+  service_spec_hash: 347904f686dc3c9a12ac459dd94a326d6857a85378556b47d0fd3924c77991b1
+  dataset_hash: 2c39e2ae0c5d2a05b7f33c5d91ae366fe09817d3f99839d2274eba5a353ffc79
+  random_seed: 42
+  command: __main__.py plan --service examples/service_specs/llama31-8b-light.yaml
+    --cluster experiments/configs/clusters/exp2-local-lab.yaml --num-requests 300
+    --seed 42 --timeout 3000 --work-dir outputs/.hp-exp2 --cache-dir outputs/.hp-envelope-exp2
+    --output outputs/plans/exp2-llama31-8b-light.yaml
+  timestamp: '2026-08-14T08:38:00.184370+00:00'
+  python_version: 3.10.12
+  platform: Linux-6.8.0-124-generic-x86_64-with-glibc2.35
+  hostname: node02-ai
+  cpu_count: 20
+  workload:
+    path: outputs/.hp-exp2/workload.jsonl
+    num_requests: 300
+    random_seed: 42
+    total_input_tokens: 262617
+    total_output_tokens: 190920
+    horizon_s: 121.203
+  gpu_memory_utilization: 0.9
+  activation_reserve_gb: 0.0
+  enable_prefix_caching: false
+  bound_pruning: true
+  topology:
+    link_bw_gbps: 64.0
+    link_latency_ns: 5000.0
+    basis: 'Level-1 bottleneck over 3 island(s): min bandwidth, max latency. The simulator
+      has no link graph, so contention_group and per-link energy are dropped here
+      (deviations D3).'
+    assumptions:
+    - islands cuda-rtx-a5000-node0 and cuda-rtxpro6000-node1 are not connected in
+      the spec; used the INFINIBAND class default (400.0 GB/s), source=placeholder
+    - islands cuda-rtxpro6000-node1 and ascend-ascend-target-node2 are not connected
+      in the spec; used the INFINIBAND class default (400.0 GB/s), source=placeholder
+    model_level: 1
+    path_aware: false
+  envelope_cache:
+    hits: 0
+    misses: 54
+caveats:
+- 'Prefix caching is disabled for every candidate. With it enabled the simulator''s
+  prefix-cache memory grows monotonically and the run dies on any device small enough
+  to saturate (docs/deviations.md D12). Consequence: ServiceSpec.traffic.prefix_share_ratio
+  has no effect on these predictions, and TTFT is pessimistic for workloads with genuinely
+  shared prefixes.'
