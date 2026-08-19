@@ -67,22 +67,56 @@ needed (currently every candidate is fully simulated). Increment 1 should
 `log()` the candidate count and, if it explodes, gate full simulation behind a
 cheap analytical top-K before committing to the surrogate.
 
-## Increment 2 — Level-2 path-aware network (FIRST UPSTREAM EDIT: config_builder.py)
-Goal: charge each P/D KV transfer the *actual* path bandwidth/latency, with
-`contention_group` sharing, for the top-K candidates only.
-- `serving/core/config_builder.py`: extend the ClusterSpecV2→ASTRA adapter so the
-  sim can represent per-instance-pair network cost (not one global `link_bw`).
-  This is the D3 resolution. **This is the first edit to `serving/` — do it on a
-  dedicated branch, keep the change additive/back-compatible with the existing
-  flat `link_bw` configs (all current tests + bench must still reproduce
-  byte-identically at the pin), and re-pin/record per absolute rule.**
-- `planner/predictor/llmservingsim.py`: for top-K only, emit the Level-2 network
-  block instead of the single representative value; Level-1 stays the default for
-  bulk scoring.
-- `topology.py`: `reduce_for_simulator` gains a Level-2 path-aware mode; provenance
-  flips `path_aware: true` for those runs.
-Gate: this increment is only worth doing once increment 1 shows P/D candidates
-that are close enough that the representative-link error changes the ranking.
+## Increment 2 — Level-2 path-aware network — SPIKED, DEFERRED (2026-08-19)
+
+**Correction to the original framing.** Increment 2 was scoped as "the FIRST
+upstream edit to `config_builder.py`". That was wrong on two counts:
+1. **It needs no upstream edit.** The ASTRA-sim analytical backend already accepts
+   a per-dimension `link_bw`/`link_latency` LIST (`config_builder._create_network_config`
+   → `_normalize_network_dim_values`; upstream commit `72955ea2`, predates the pin;
+   D3 documents the array form; `dual_node_moe_dp_ep_intra_inter_instance.json`
+   uses `link_bw: [128,16]`). So "Level-2" = the planner emitting a per-dimension
+   `[intra, cross]` list where the cross-instance value is the path-aware,
+   contention-adjusted bandwidth from `TopologyGraph.path()` +
+   `effective_bandwidth_gbps()`. Pure planner change; `serving/` stays pristine.
+   The graph-with-per-pair-contention that D3 calls impossible needs ns3, and was
+   never the achievable Level-2.
+
+**Decisive spike (verification step 4) — the analytical backend does NOT charge
+P/D KV transfer to the cross-instance link.** Ran the P/D config
+`single_node_pd_per_instance_config.json` (prefill+decode, isolated `--run-id`,
+network.yml verified as `bandwidth: [900, X]`) sweeping the cross-instance
+dimension X ∈ {400, 100, 25} GB/s:
+
+| run | network.yml bandwidth | Median/P99 TTFT | Mean TPOT | output |
+| --- | --- | --- | --- | --- |
+| cross=400 | [900, 400] | 46.56 / 248.59 | 21.89 | — |
+| cross=100 | [900, 100] | 46.56 / 248.59 | 21.89 | **byte-identical** |
+| cross=25  | [900, 25]  | 46.56 / 248.59 | 21.89 | **byte-identical** |
+
+A 16× swing on the cross-instance dimension changes *nothing* (identical CSVs);
+crushing the intra dimension to 10 GB/s at tp1 is likewise inert. The backend is
+NOT network-blind, though: a TP=2 control (`single_node_4_instance_2TP.json`,
+`link_bw` 900 vs 1) moves P99 ITL 14.27 → 17.25 ms with different output — so it
+*does* charge TP-collective cost. It just does not charge the prefill→decode KV
+transfer to the cross-instance dimension.
+
+**Decision: DEFER.** Level-2 path-aware cross-instance bandwidth is inert for P/D
+on the analytical backend, so building the (planner-only, byte-identical) plumbing
+would be dormant *and* useless. Not implemented.
+
+**Implication for increment 4 (the headline network sweep).** The §5.9 experiment
+— "sweep 25/100/200/400G and find the bandwidth where the P/D benefit vanishes" —
+**cannot be reproduced on the analytical backend**, because the P/D KV-transfer
+cost that the sweep is meant to move is not modelled there. Options to revisit
+before promising that result: (a) build/enable the **ns3 backend** (packet-level,
+models the transfer — large effort, currently not built, `scripts/compile.sh` has
+it commented out); (b) confirm whether a different P/D config makes the sim route
+KV transfer over a costed dimension (the "sender NPU" mechanism in
+`config_builder` may need specific wiring); or (c) reframe Phase 5's contribution
+around what the analytical backend *does* model (TP/replica placement, memory,
+TP-collective cost) rather than P/D-transfer-vs-bandwidth. This is a material
+finding for the Phase 5 paper story and should be resolved before increment 4.
 
 ## Increment 3 — network-aware routing (UPSTREAM: router.py, §2.2)
 - `serving/core/router.py`: add an SLO-aware `_custom_select()` hook (the work
