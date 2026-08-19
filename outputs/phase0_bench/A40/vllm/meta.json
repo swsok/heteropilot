@@ -17,7 +17,7 @@
   "dataset_path": "workloads/sharegpt-llama-3.1-8b-300-sps10.jsonl",
   "dataset_hash": "05e48b32da530d4a3dd77f3d47c6fe694ac8308d611aa088e38bb10fba2b3b3a",
   "num_requests": 300,
-  "started_at": "2026-08-19T01:56:44.757124Z",
-  "finished_at": "2026-08-19T01:59:44.656789Z",
+  "started_at": "2026-08-19T06:48:57.154593Z",
+  "finished_at": "2026-08-19T06:51:56.976870Z",
   "tick_seconds": 1.0
 }

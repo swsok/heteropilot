@@ -223,3 +223,21 @@ def test_stop_is_idempotent_on_dead_pid(tmp_path, profiles) -> None:
     pidfile.write_text("2147483647")
     backend.stop(dep_id)
     assert not pidfile.exists()
+
+
+def test_build_serve_command_max_model_len(islands) -> None:
+    # --max-model-len is emitted only when the knob is set; None -> omitted
+    # (vLLM then uses the model default, which is also the simulator's context).
+    with_len = build_serve_command(
+        _plan(knobs=VllmKnobs(max_model_len=8192)),
+        _plan(knobs=VllmKnobs(max_model_len=8192)).candidate.assignments[0],
+        _island_map(islands)[A5000_ISLAND], port=8000,
+    )
+    assert "--max-model-len" in with_len.argv
+    assert with_len.argv[with_len.argv.index("--max-model-len") + 1] == "8192"
+
+    without = build_serve_command(
+        _plan(), _plan().candidate.assignments[0],
+        _island_map(islands)[A5000_ISLAND], port=8000,
+    )
+    assert "--max-model-len" not in without.argv

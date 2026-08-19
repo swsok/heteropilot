@@ -10,8 +10,8 @@
                               Input configuration                               
 
   • Cluster config             : experiments/configs/clusters/a40-llama31-8b-tp1.json
-  • Run ID                     : run_1787104786064323_618919
-  • ASTRA-Sim inputs root      : /home/swsok/heteropilot/astra-sim/inputs/runs/run_1787104786064323_618919
+  • Run ID                     : run_1787122318326184_693360
+  • ASTRA-Sim inputs root      : /home/swsok/heteropilot/astra-sim/inputs/runs/run_1787122318326184_693360
   • Dataset                    : workloads/sharegpt-llama-3.1-8b-300-sps10.jsonl
   • Max num seqs               : 128
   • Max batched tokens         : 2048
@@ -570,7 +570,7 @@ All Request Has Been Exited
 ────────────────────────────────────────────────────────────────────────────────
 ▶ Simulation results...
 
-Total simulation time: 0h 2m 15.359s
+Total simulation time: 0h 2m 12.770s
 ────────────────────────────── Throughput Results ──────────────────────────────
 Total requests:                                                     300
 Total clocks (ns):                                                  177828057930

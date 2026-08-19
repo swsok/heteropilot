@@ -107,6 +107,8 @@ def build_serve_command(
         "--port",
         str(port),
     ]
+    if knobs.max_model_len is not None:
+        argv += ["--max-model-len", str(knobs.max_model_len)]
     _flag(argv, knobs.enable_prefix_caching, "enable-prefix-caching")
     _flag(argv, knobs.enable_chunked_prefill, "enable-chunked-prefill")
 

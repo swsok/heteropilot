@@ -46,12 +46,27 @@ by trying a candidate list of metric names (first with data wins) and adding a
 regression test. Unit tests used a fixture with the old name, so only a real
 scrape surfaced this.
 
+## On max_model_len (corrected 2026-08-19)
+An earlier note here claimed a mismatch (deploy 131072 vs sim 8192). That was
+wrong: **the simulator has no `max_model_len` at all** - `serving` only uses the
+model's `max_position_embeddings` (131072 for Llama-3.1) to cap
+`max_num_batched_tokens` (serving/core/scheduler.py, trace_generator.py). The
+bench's real side also defaulted to the model max (`max_model_len: None` in its
+meta). So the deploy, the bench, and the sim were all already at 131072 - the
+calibration was matched. `max_model_len` was nonetheless added to `VllmKnobs`
+(default None = model max, i.e. the sim's effective context) so a deployment can
+explicitly pin its context/KV budget; `build_serve_command` emits
+`--max-model-len` only when it is set.
+
+Matched calibration, re-run and confirmed (both sides at 131072):
+`profiles/calibration/a40.yaml` - TTFT `real = 1.0167*sim + 110.92`, TPOT
+`real = 1.0115*sim - 0.02` (source measured), mean |error| 1.33% over 16 metrics.
+(The small run-to-run drift vs the first fit is real-vLLM timing jitter.)
+
 ## Known gaps / follow-ups
-- **`VllmKnobs` has no `max_model_len`**, so `deploy` uses the model default
-  (131072) while the sim configs pin 8192. For a matched live-vs-sim calibration,
-  add `max_model_len` to the deploy knobs (and thus the serve command).
 - The deploy backend resolves `vllm` from `PATH`; in this repo's dual-venv setup
   that means running `deploy --no-dry-run` with `.venv-vllm/bin` on `PATH`
   (documented). A configurable serve-executable would be cleaner.
-- The live server's own metrics were not used for the fit (its max_model_len
-  differs from the sim); the fit uses the matched bench data instead.
+- A live-deployment-based calibration (vs the bench-based one) would also need the
+  load driver to reproduce the dataset's arrival timing; the current driver fires
+  a saturation load, so the clean matched pair remains bench-vs-sim.
