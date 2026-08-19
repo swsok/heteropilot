@@ -87,10 +87,20 @@ class MockPredictor(Predictor):
         devices = candidate.total_devices
         median_len = spec.traffic.input_tokens.p50 + spec.traffic.output_tokens.p50
 
-        # Per-assignment roofline, then aggregate: replicas serve independently,
-        # so throughput adds and the tail latency is set by the slowest class a
-        # request can land on (with LOAD routing every class serves traffic).
-        per_tpot: list[float] = []
+        from planner.plan import Role
+
+        # Per-assignment roofline, then aggregate. Disaggregation is modelled
+        # honestly: a prefill engine (Role.PREFILL) runs no decode steps, so its
+        # roofline feeds TTFT, never TPOT, and it contributes no decode
+        # throughput. TPOT comes from the decode/aggregated assignments only.
+        # This mirrors the role-aware analytical bounds in candidate_generator -
+        # a mock that charged prefill against TPOT would reject the very
+        # slow-prefill/fast-decode candidates the bounds now (correctly) admit,
+        # and the oracle-agreement test would validate a bug instead of catching
+        # it. Aggregated/single/mixed carry only Role.AGGREGATED assignments, so
+        # decode_tpot == max over all of them and behaviour is unchanged.
+        decode_tpot: list[float] = []
+        prefill_tpot: list[float] = []
         decode_tps = 0.0
         all_powered = True
         for a in candidate.assignments:
@@ -104,13 +114,18 @@ class MockPredictor(Predictor):
             active = max(1, min(seqs, report.kv_tokens // max(1, median_len)))
             bytes_per_step = report.weight_bytes + active * report.kv_bytes_per_token
             roofline_ms = (bytes_per_step / (profile.memory_bandwidth_gbps * 1e9)) * 1e3
-            tpot_i = roofline_ms * MOCK_ROOFLINE_SLACK
-            per_tpot.append(tpot_i)
-            decode_tps += (active / (tpot_i / 1e3)) * a.dp_replicas
+            latency_i = roofline_ms * MOCK_ROOFLINE_SLACK
+            if a.role is Role.PREFILL:
+                prefill_tpot.append(latency_i)
+            else:
+                decode_tpot.append(latency_i)
+                decode_tps += (active / (latency_i / 1e3)) * a.dp_replicas
             if cluster.node(island.node_id).power is None:
                 all_powered = False
 
-        tpot = max(per_tpot)
+        # A P/D candidate always carries exactly one decode assignment; fall back
+        # to prefill only in the degenerate case of no decode assignment at all.
+        tpot = max(decode_tpot) if decode_tpot else max(prefill_tpot)
         offered_tps = spec.traffic.arrival_rate_rps * spec.traffic.output_tokens.p50
         utilization = offered_tps / decode_tps if decode_tps > 0 else float("inf")
         attainment = min(1.0, 1.0 / utilization) if utilization > 0 else 1.0
@@ -120,7 +135,10 @@ class MockPredictor(Predictor):
         # infeasible, and the real simulator does show the blow-up (a saturated
         # A5000 measured 102s mean TTFT against 7s on an unsaturated card).
         queue_factor = 1.0 / max(0.02, 1.0 - min(utilization, 0.98))
-        ttft = (tpot * 8.0 + seqs * 0.5) * queue_factor
+        # TTFT is set by the prefill work; with disaggregation that is the
+        # prefill engine's roofline, otherwise the (aggregated) decode roofline.
+        prefill_ms = max(prefill_tpot) if prefill_tpot else tpot
+        ttft = (prefill_ms * 8.0 + seqs * 0.5) * queue_factor
 
         tokens = 20_000
         # Mirror the real simulator: power modeling is disabled wholesale

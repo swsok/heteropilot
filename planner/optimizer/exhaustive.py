@@ -26,6 +26,7 @@ from planner.plan import (
     Rejection,
     RejectionStage,
     RoutingPolicy,
+    ServingArch,
     UnscoredPlan,
     summarize_rejections,
 )
@@ -58,6 +59,21 @@ class SearchResult:
 
 def _plan_id(index: int) -> str:
     return f"hp-{index:05d}"
+
+
+def _routing_for(candidate: CandidateConfig) -> RoutingPolicy:
+    """Pick the routing policy the deployer/simulator should use.
+
+    A P/D-split deployment routes prefill and decode to different engines, so it
+    always carries `PD_SPLIT`. Everything else keeps the Phase 2 rule: a single
+    replica needs no router (`SINGLE`), several replicas are load-balanced
+    (`LOAD`).
+    """
+    if candidate.serving_arch is ServingArch.PD_SPLIT:
+        return RoutingPolicy.PD_SPLIT
+    if candidate.total_devices == candidate.assignments[0].devices_per_replica:
+        return RoutingPolicy.SINGLE
+    return RoutingPolicy.LOAD
 
 
 def evaluate_candidates(
@@ -108,11 +124,7 @@ def evaluate_candidates(
             model=spec.model,
             candidate=candidate,
             predicted=sim.metrics,
-            routing=(
-                RoutingPolicy.SINGLE
-                if candidate.total_devices == candidate.assignments[0].devices_per_replica
-                else RoutingPolicy.LOAD
-            ),
+            routing=_routing_for(candidate),
             robust_margin_ttft_percent=ttft_margin_percent,
             robust_margin_tpot_percent=tpot_margin_percent,
         )
@@ -210,6 +222,7 @@ def search(
     predictor: Predictor,
     *,
     enable_bound_pruning: bool = True,
+    enable_pd: bool = False,
     cache: EnvelopeCache | None = None,
     gpu_memory_utilization: float = 0.90,
     activation_reserve_gb: float = 0.0,
@@ -228,6 +241,7 @@ def search(
         activation_reserve_gb=activation_reserve_gb,
         enable_prefix_caching=False,
         enable_bound_pruning=enable_bound_pruning,
+        enable_pd=enable_pd,
     )
     generation = generator.generate()
 

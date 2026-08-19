@@ -190,6 +190,7 @@ def cmd_plan(args: argparse.Namespace) -> int:
             "activation_reserve_gb": args.activation_reserve_gb,
             "enable_prefix_caching": False,
             "bound_pruning": not args.oracle,
+            "enable_pd": args.enable_pd,
         },
     )
     missing = prov.note_missing(provenance)
@@ -228,6 +229,7 @@ def cmd_plan(args: argparse.Namespace) -> int:
         runner = exhaustive.oracle if args.oracle else exhaustive.search
         output = runner(
             spec, cluster, islands, profiles, predictor,
+            enable_pd=args.enable_pd,
             cache=cache,
             gpu_memory_utilization=args.gpu_memory_utilization,
             activation_reserve_gb=args.activation_reserve_gb,
@@ -456,6 +458,10 @@ def build_parser() -> argparse.ArgumentParser:
     plan.add_argument("--keep-artifacts", action="store_true")
     plan.add_argument("--oracle", action="store_true",
                       help="Disable bound-based pruning and simulate every candidate.")
+    plan.add_argument("--enable-pd", action=argparse.BooleanOptionalAction, default=False,
+                      help="Also enumerate Prefill/Decode-split candidates across islands "
+                           "(work order §5.3). Off by default; note it grows the candidate "
+                           "space roughly quadratically in the number of islands.")
     plan.add_argument("--quiet", action="store_true")
     plan.set_defaults(func=cmd_plan)
 
