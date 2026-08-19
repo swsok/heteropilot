@@ -216,3 +216,37 @@ expected-vs-observed D10 gap (§4) is written up in `phase0_bench_plan.md` as a
 new section (mirroring §2b), with the KV-matched provenance flipped to
 `measured`. Only then does the A40 half of the Phase 4 calibration table
 (`HANDOVER.md` §4) get its two rows.
+
+## 9. Results — nominal pass (2026-08-19)
+
+Ran the nominal pass on GPU 0 (`CUDA_VISIBLE_DEVICES=0 SKIP_KVMATCHED=1
+./experiments/scripts/run_a40_sim_vs_real.sh`): real vLLM bench
+(NousResearch/Meta-Llama-3.1-8B mirror, prefix off, 300 sharegpt reqs) vs the
+simulator at nominal `mem_size: 45`. Artifacts (committed subset): the bench run
+under `outputs/phase0_bench/A40/vllm/` and the validation summary; the sim under
+`outputs/phase0_bench/A40-nominal/`.
+
+**A40 nominal mean |error| = 1.32% over 16 metrics** (TTFT/TPOT/Latency mean +
+P50/P90/P95/P99, all within ~2%: TTFT −1.5..−1.9%, TPOT −0.8..−1.4%, Latency
+−1.2..−1.5%). The sim slightly under-predicts across the board.
+
+This is far tighter than the A5000 nominal (22.54%). The reason is regime, not
+luck: at these settings the 300-request burst saturates the A40 (both real and
+sim TTFT ≈ 40 s, queue-dominated), so latency is set by scheduling/throughput,
+which both model alike — the D10 KV over-estimation barely moves the metrics
+because the run is not KV-capacity-bound on a roomy 45 GB card. On the 24 GB
+A5000 the same workload sat near the KV boundary, so D10 dominated. **Conclusion:
+the KV-matched pass is not needed to validate the A40 predictor at this regime**
+(nominal already agrees); it is retained as a scaffold for a future,
+non-saturated load where D10 could re-emerge. The KV-matched `mem_size` sentinel
+is therefore left unmeasured on purpose (would need a non-saturated bench + the
+vLLM startup KV-cache figure).
+
+Runner fixes made while landing this result (all in
+`experiments/scripts/run_a40_sim_vs_real.sh`): (a) `BENCH_MODEL` split so the
+real bench uses the ungated mirror while the sim keeps the gated id its perf
+bundle is under; (b) the sim call runs with the sim venv on `PATH` because
+`serving` spawns Chakra as a bare `python -m chakra...` subprocess; (c)
+per-label validate `--output-subdir` so nominal/kvmatched don't overwrite each
+other under the shared bench dir; (d) a `set -e` footgun on the final
+conditional `note` that made a successful run exit 1.

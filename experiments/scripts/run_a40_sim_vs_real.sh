@@ -36,7 +36,15 @@ cd "$REPO_ROOT"
 #  docs/phase0_bench_plan.md §1/§2b). Change only with reason.
 # =============================================================================
 HARDWARE="${HARDWARE:-A40}"
+# MODEL drives the SIMULATOR side: it must match a profiler/perf/<HW>/<MODEL>/
+# bundle and a configs/model/<MODEL>.json, so it stays the canonical (gated) id.
 MODEL="${MODEL:-meta-llama/Llama-3.1-8B}"
+# BENCH_MODEL drives the REAL vLLM side, which loads weights. meta-llama is gated
+# and its weights are not cached here, so default to the ungated NousResearch
+# mirror (identical weights + tokenizer -> identical compute, a valid
+# comparison). Override to MODEL once the gated weights are available. The bench
+# runs with HF_HUB_OFFLINE by default since the mirror is already cached.
+BENCH_MODEL="${BENCH_MODEL:-NousResearch/Meta-Llama-3.1-8B}"
 DATASET="${DATASET:-workloads/sharegpt-llama-3.1-8b-300-sps10.jsonl}"
 
 TP="${TP:-1}"
@@ -134,9 +142,10 @@ note "CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-<unset — vLLM will use all 
 # against prefix-on vLLM would compare two different systems.
 # =============================================================================
 mkdir -p "$VLLM_DIR"
-note "STEP 1/4: real vLLM bench (prefix caching OFF) -> $VLLM_DIR"
+note "STEP 1/4: real vLLM bench (prefix caching OFF, model=$BENCH_MODEL) -> $VLLM_DIR"
+HF_HUB_OFFLINE="${HF_HUB_OFFLINE:-1}" \
 "$VLLM_VENV/bin/python" experiments/scripts/bench_run_no_prefix_cache.py \
-    --model "$MODEL" \
+    --model "$BENCH_MODEL" \
     --dataset "$DATASET" \
     --output-dir "$VLLM_DIR" \
     --tensor-parallel-size "$TP" \
@@ -159,6 +168,11 @@ run_sim_and_validate() {
 
     mkdir -p "$out_dir"
     note "  sim ($label): config=$config -> $out_dir/sim.csv"
+    # serving spawns Chakra as a bare `python -m chakra...` subprocess
+    # (serving/core/graph_generator.py), so the sim venv must be on PATH or that
+    # nested call falls back to a system python without chakra. Calling the venv
+    # python by full path alone is not enough.
+    PATH="$REPO_ROOT/$SIM_VENV/bin:$PATH" \
     "$SIM_VENV/bin/python" -m serving \
         --cluster-config "$config" \
         --dataset "$DATASET" \
@@ -180,11 +194,14 @@ run_sim_and_validate() {
     # memory-bound kvmatched config).
 
     note "  validate ($label): $VLLM_DIR vs $out_dir/sim.csv"
+    # bench validate writes to <bench-dir>/<output-subdir>/. bench-dir is the
+    # shared vLLM run, so the subdir must be per-label or nominal and kvmatched
+    # overwrite each other.
     "$SIM_VENV/bin/python" -m bench validate \
         --bench-dir "$VLLM_DIR" \
         --sim-csv "$out_dir/sim.csv" \
         --sim-log "$out_dir/sim.log" \
-        --output-subdir validation \
+        --output-subdir "validation-$label" \
         --title "vLLM vs LLMServingSim - $HARDWARE $label" \
         --log-level INFO
 }
@@ -211,12 +228,16 @@ fi
 if [[ "$KV_NEEDED" == "1" ]]; then
     note "STEP 4/4: nominal vs KV-matched comparison"
     "$SIM_VENV/bin/python" experiments/scripts/compare_validations.py \
-        "nominal=$NOMINAL_DIR/validation/summary.txt" \
-        "kvmatched=$KVMATCHED_DIR/validation/summary.txt"
+        "nominal=$VLLM_DIR/validation-nominal/summary.txt" \
+        "kvmatched=$VLLM_DIR/validation-kvmatched/summary.txt"
 else
     note "STEP 4/4: skipped (need the KV-matched run for the comparison)"
 fi
 
 note "done. Summaries:"
-note "  nominal:   $NOMINAL_DIR/validation/summary.txt"
-[[ "$KV_NEEDED" == "1" ]] && note "  kvmatched: $KVMATCHED_DIR/validation/summary.txt"
+note "  nominal:   $VLLM_DIR/validation-nominal/summary.txt"
+# Guard the conditional note so a false test does not become the script's exit
+# status under `set -e` (the trailing `&& note` would otherwise return 1).
+if [[ "$KV_NEEDED" == "1" ]]; then
+    note "  kvmatched: $VLLM_DIR/validation-kvmatched/summary.txt"
+fi
