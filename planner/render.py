@@ -8,7 +8,12 @@ rather than just say no.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from planner.plan import DeploymentPlan, PlannerOutput, ScoredPlan
+
+if TYPE_CHECKING:
+    from planner.deploy.base import DeploymentHandle, DeploymentMetrics
 
 WIDTH = 78
 
@@ -59,6 +64,54 @@ def render_metrics(plan: DeploymentPlan, indent: str = "  ") -> str:
             f"{indent}energy            : not simulated "
             f"(no power: block in the cluster spec - see deviations D2)"
         )
+    return "\n".join(lines)
+
+
+def render_deployment_metrics(metrics: DeploymentMetrics, indent: str = "  ") -> str:
+    """Measured runtime metrics, mirroring `render_metrics` for the sim side."""
+    lines = [
+        f"{indent}TTFT  p50/p95/p99 : "
+        f"{_fmt(metrics.p50_ttft_ms)} / {_fmt(metrics.p95_ttft_ms)} / "
+        f"{_fmt(metrics.p99_ttft_ms)} ms",
+        f"{indent}TPOT  p50/p95/p99 : "
+        f"{_fmt(metrics.p50_tpot_ms)} / {_fmt(metrics.p95_tpot_ms)} / "
+        f"{_fmt(metrics.p99_tpot_ms)} ms",
+        f"{indent}throughput        : {_fmt(metrics.throughput_tps)} tok/s",
+        f"{indent}completed         : {metrics.completed_requests} req, "
+        f"{metrics.completed_tokens} tok",
+    ]
+    if metrics.has_energy:
+        lines += [
+            f"{indent}energy            : {_fmt(metrics.total_energy_j, ' J')}  "
+            f"(avg {_fmt(metrics.average_power_w, ' W')}, "
+            f"peak {_fmt(metrics.peak_power_w, ' W')})",
+            f"{indent}tokens/J          : {_fmt(metrics.tokens_per_joule, '', 3)}",
+        ]
+    else:
+        lines.append(
+            f"{indent}energy            : not sampled "
+            f"(no nvidia-smi or no device indices recorded)"
+        )
+    lines.append(
+        f"{indent}sampling          : {metrics.sample_count} power sample(s) over "
+        f"{_fmt(metrics.window_seconds, ' s')}"
+    )
+    return "\n".join(lines)
+
+
+def render_deployment_handle(handle: DeploymentHandle, indent: str = "  ") -> str:
+    """One-block summary of a launched deployment."""
+    lines = [
+        f"{indent}deployment id : {handle.deployment_id}",
+        f"{indent}backend       : {handle.backend}",
+        f"{indent}plan          : {handle.plan_id}",
+        f"{indent}endpoint      : {handle.base_url}",
+        f"{indent}pid           : {handle.pid if handle.pid is not None else 'n/a'}",
+        f"{indent}started       : {handle.started_at}",
+    ]
+    devices = handle.extra.get("cuda_visible_devices")
+    if devices is not None:
+        lines.append(f"{indent}CUDA devices  : {devices}")
     return "\n".join(lines)
 
 

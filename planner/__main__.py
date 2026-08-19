@@ -25,16 +25,16 @@ from planner.inventory import (
     load_profiles_for,
 )
 from planner.optimizer import exhaustive
-from planner.plan import PlannerOutput
+from planner.plan import DeploymentPlan, PlannerOutput
 from planner.predictor.llmservingsim import LLMServingSimPredictor
-from planner.render import render
+from planner.render import render, render_deployment_handle, render_deployment_metrics
 from planner.spec import ServiceSpec, SpecError, load_service_spec
 from planner.topology import TopologyGraph
 from planner.util import memory as memutil
 from planner.util import provenance as prov
 from planner.util.workload import generate_trace
 
-_NOT_YET = {"deploy": "Phase 4", "status": "Phase 4"}
+_NOT_YET: dict[str, str] = {}
 
 DEFAULT_TRACE_REQUESTS = 300
 DEFAULT_SEED = 42
@@ -297,6 +297,109 @@ def cmd_validate_plan(args: argparse.Namespace) -> int:
 
 
 # --------------------------------------------------------------------------
+# deploy / status (Phase 4)
+# --------------------------------------------------------------------------
+
+def _load_deployment_plan(path: Path) -> DeploymentPlan:
+    """Load a DeploymentPlan from a plan file.
+
+    Accepts both a full `PlannerOutput` (what `plan --output` writes, we take its
+    recommendation) and a bare `DeploymentPlan`.
+    """
+    raw = yaml.safe_load(path.read_text())
+    if not isinstance(raw, dict):
+        raise SpecError(f"{path}: expected a YAML mapping at the top level")
+    if "candidate" in raw and "predicted" in raw:
+        return DeploymentPlan.model_validate(raw)
+    output = PlannerOutput.model_validate(raw)
+    if output.recommended is None:
+        raise SpecError(f"{path}: this plan file carries no recommendation to deploy")
+    return output.recommended.plan
+
+
+def cmd_deploy(args: argparse.Namespace) -> int:
+    from planner.deploy import DeploymentError, VllmCudaBackend
+
+    plan = _load_deployment_plan(args.plan)
+    cluster = load_cluster_spec(args.cluster)
+    profiles = load_profiles_for(cluster, args.root)
+    islands = {i.id: i for i in detect_islands(cluster, profiles)}
+
+    backend = VllmCudaBackend(
+        root=args.root, host=args.host, port=args.port, profiles=profiles
+    )
+    problems = backend.validate(plan, cluster, islands)
+
+    print(f"plan    : {plan.plan_id} ({plan.model})")
+    print(f"cluster : {cluster.cluster_id}")
+    print(f"backend : {backend.name} (host={args.host}, port={args.port})")
+    print()
+
+    from planner.deploy.vllm_cuda import build_serve_command
+
+    print("resolved serve command(s):")
+    for assignment in plan.candidate.assignments:
+        island = islands.get(assignment.island_id)
+        if island is None:
+            print(f"  {assignment.island_id}: UNKNOWN island; cannot resolve")
+            continue
+        command = build_serve_command(plan, assignment, island, port=args.port)
+        print(f"  [{island.id}] devices -> {command.env['CUDA_VISIBLE_DEVICES']}")
+        print(f"    {command.as_shell()}")
+    print()
+
+    if problems:
+        print("validation problems:")
+        for p in problems:
+            print(f"  - {p}")
+        print()
+    else:
+        print("validation: OK")
+        print()
+
+    if args.dry_run:
+        print("dry run: nothing was launched. Re-run with --no-dry-run to launch locally.")
+        return 0 if not problems else 3
+
+    if problems:
+        print("error: refusing to launch a plan with validation problems", file=sys.stderr)
+        return 3
+    try:
+        handle = backend.launch(plan, cluster, islands)
+    except (DeploymentError, NotImplementedError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    print("launched:")
+    print(render_deployment_handle(handle))
+    return 0
+
+
+def cmd_status(args: argparse.Namespace) -> int:
+    from planner.deploy import DeploymentError, VllmCudaBackend
+
+    backend = VllmCudaBackend(root=args.root)
+    try:
+        handle = backend.read_handle(args.deployment)
+    except DeploymentError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    print(render_deployment_handle(handle))
+    print()
+    if not backend.is_running(args.deployment):
+        print(f"deployment '{args.deployment}' is not running (no live process).")
+        return 0
+    try:
+        metrics = backend.metrics(args.deployment)
+    except DeploymentError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    print("live metrics:")
+    print(render_deployment_metrics(metrics))
+    return 0
+
+
+# --------------------------------------------------------------------------
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -351,6 +454,31 @@ def build_parser() -> argparse.ArgumentParser:
     validate.add_argument("--gpu-memory-utilization", type=float, default=0.90)
     validate.add_argument("--activation-reserve-gb", type=float, default=0.0)
     validate.set_defaults(func=cmd_validate_plan)
+
+    deploy = sub.add_parser(
+        "deploy",
+        help="Validate a plan against a cluster and (optionally) launch it locally.",
+    )
+    deploy.add_argument("--plan", required=True, type=Path)
+    deploy.add_argument("--cluster", required=True, type=Path)
+    deploy.add_argument("--root", type=Path, default=Path("."))
+    deploy.add_argument("--host", default="local",
+                        help="'local' launches a subprocess; any other value is an SSH "
+                             "hook point and is not implemented in this increment.")
+    deploy.add_argument("--port", type=int, default=8000)
+    deploy.add_argument("--dry-run", action=argparse.BooleanOptionalAction, default=True,
+                        help="Print the resolved command without launching (default). "
+                             "Pass --no-dry-run to launch locally.")
+    deploy.set_defaults(func=cmd_deploy)
+
+    status = sub.add_parser(
+        "status",
+        help="Read a launched deployment's live TTFT/TPOT/throughput/power.",
+    )
+    status.add_argument("--deployment", required=True,
+                        help="Deployment id (defaults to the plan_id at launch time).")
+    status.add_argument("--root", type=Path, default=Path("."))
+    status.set_defaults(func=cmd_status)
 
     for name, phase in _NOT_YET.items():
         p = sub.add_parser(name, help=f"({phase}) not implemented yet")
