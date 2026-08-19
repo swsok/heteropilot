@@ -56,6 +56,13 @@ power:
 supported_models:
   - pattern: "meta-llama/Llama-3.1-*"
     dtypes: [bfloat16]
+  # NousResearch/Meta-Llama-3.1-8B is an UNGATED mirror with weights + tokenizer
+  # identical to the gated meta-llama repo. This host's HF token lacks the Llama
+  # license, so real vLLM deployment uses the mirror; the compute (and thus the
+  # A40 compatibility claim) is the same model. Not a separate model - a repo
+  # path that dodges gating. It shares the meta-llama/Llama-3.1-8B perf bundle.
+  - pattern: "NousResearch/Meta-Llama-3.1-*"
+    dtypes: [bfloat16]
   - pattern: "Qwen/Qwen3-32B"
     dtypes: [bfloat16]
   - pattern: "Qwen/Qwen3-30B-A3B-*"

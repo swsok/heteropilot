@@ -126,3 +126,18 @@ vllm:time_to_first_token_seconds_bucket{le="1.0",m="b"} 4
 vllm:time_to_first_token_seconds_bucket{le="+Inf",m="b"} 5
 """
     assert parse_vllm_metrics(single).p95_ttft_ms == parse_vllm_metrics(split).p95_ttft_ms
+
+
+def test_tpot_reads_inter_token_latency_metric() -> None:
+    # vLLM >= 0.19 renamed per-output-token latency to inter_token_latency_seconds.
+    # A live A40 run surfaced this as all-nan TPOT under the old name; the parser
+    # must fall back to the new name. (Regression guard.)
+    text = """
+vllm:inter_token_latency_seconds_bucket{le="0.05"} 0
+vllm:inter_token_latency_seconds_bucket{le="0.1"} 8
+vllm:inter_token_latency_seconds_bucket{le="+Inf"} 10
+vllm:inter_token_latency_seconds_count 10
+"""
+    scrape = parse_vllm_metrics(text)
+    assert not math.isnan(scrape.p50_tpot_ms)
+    assert scrape.p50_tpot_ms > 0.0

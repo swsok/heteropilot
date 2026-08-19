@@ -130,10 +130,16 @@ class VllmScrape:
     prompt_tokens: int
 
 
-#: vLLM histogram metric base names (v0.6+). ``_bucket``/``_sum``/``_count``
-#: are the three series each histogram exposes.
-_TTFT_METRIC = "vllm:time_to_first_token_seconds"
-_TPOT_METRIC = "vllm:time_per_output_token_seconds"
+#: vLLM histogram metric base names. ``_bucket``/``_sum``/``_count`` are the
+#: three series each histogram exposes. Names drift across vLLM versions, so
+#: each metric is a candidate list tried in order (first one with data wins) -
+#: e.g. vLLM 0.19 renamed per-output-token latency to inter_token_latency, which
+#: a live A40 run surfaced as an all-nan TPOT under the old name.
+_TTFT_METRICS = ("vllm:time_to_first_token_seconds",)
+_TPOT_METRICS = (
+    "vllm:inter_token_latency_seconds",       # vLLM >= 0.19
+    "vllm:time_per_output_token_seconds",     # older vLLM
+)
 _GEN_TOKENS = "vllm:generation_tokens_total"
 _PROMPT_TOKENS = "vllm:prompt_tokens_total"
 _REQ_SUCCESS = "vllm:request_success_total"
@@ -155,6 +161,17 @@ def _buckets_for(samples: Sequence[Sample], metric: str) -> list[tuple[float, fl
     return sorted(by_edge.items())
 
 
+def _first_present_buckets(
+    samples: Sequence[Sample], metrics: Sequence[str]
+) -> list[tuple[float, float]]:
+    """Buckets for the first candidate metric name that has any samples."""
+    for metric in metrics:
+        buckets = _buckets_for(samples, metric)
+        if buckets:
+            return buckets
+    return []
+
+
 def _counter_total(samples: Sequence[Sample], metric: str) -> float:
     return sum(s.value for s in samples if s.name == metric)
 
@@ -170,8 +187,8 @@ def _percentiles_ms(buckets: Sequence[tuple[float, float]]) -> tuple[float, floa
 def parse_vllm_metrics(text: str) -> VllmScrape:
     """Reduce raw ``/metrics`` text to a `VllmScrape`. Pure function."""
     samples = parse_prometheus(text)
-    p50_ttft, p95_ttft, p99_ttft = _percentiles_ms(_buckets_for(samples, _TTFT_METRIC))
-    p50_tpot, p95_tpot, p99_tpot = _percentiles_ms(_buckets_for(samples, _TPOT_METRIC))
+    p50_ttft, p95_ttft, p99_ttft = _percentiles_ms(_first_present_buckets(samples, _TTFT_METRICS))
+    p50_tpot, p95_tpot, p99_tpot = _percentiles_ms(_first_present_buckets(samples, _TPOT_METRICS))
     return VllmScrape(
         p50_ttft_ms=p50_ttft,
         p95_ttft_ms=p95_ttft,

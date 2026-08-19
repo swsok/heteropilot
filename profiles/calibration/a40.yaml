@@ -1,0 +1,30 @@
+hardware:
+  A40:
+    hardware: A40
+    ttft:
+      alpha: 1.0160908512357272
+      beta: 150.74452702298004
+      sample_count: 5
+      source: measured
+    tpot:
+      alpha: 1.0080789194619637
+      beta: 0.301857174750225
+      sample_count: 5
+      source: measured
+    errors:
+      sharegpt-llama31-8b-300:
+        workload_bucket: sharegpt-llama31-8b-300
+        ttft:
+          mean_error: 0.01836858442184115
+          p95_abs_error: 0.019657086983189066
+          worst_error: 0.019681220029555906
+          sample_count: 5
+        tpot:
+          mean_error: 0.010935716694232631
+          p95_abs_error: 0.013487030521233937
+          worst_error: 0.013501350135013503
+          sample_count: 5
+provenance:
+  fitted_from:
+    A40:
+    - outputs/phase0_bench/A40/vllm/validation/summary.txt

@@ -399,6 +399,23 @@ def cmd_status(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_stop(args: argparse.Namespace) -> int:
+    from planner.deploy import DeploymentError, VllmCudaBackend
+
+    backend = VllmCudaBackend(root=args.root)
+    was_running = backend.is_running(args.deployment)
+    try:
+        backend.stop(args.deployment)
+    except DeploymentError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    if was_running:
+        print(f"stopped deployment '{args.deployment}'.")
+    else:
+        print(f"deployment '{args.deployment}' was not running; cleared its pidfile.")
+    return 0
+
+
 # --------------------------------------------------------------------------
 
 def build_parser() -> argparse.ArgumentParser:
@@ -479,6 +496,11 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Deployment id (defaults to the plan_id at launch time).")
     status.add_argument("--root", type=Path, default=Path("."))
     status.set_defaults(func=cmd_status)
+
+    stop = sub.add_parser("stop", help="Stop a launched deployment and free its devices.")
+    stop.add_argument("--deployment", required=True, help="Deployment id.")
+    stop.add_argument("--root", type=Path, default=Path("."))
+    stop.set_defaults(func=cmd_stop)
 
     for name, phase in _NOT_YET.items():
         p = sub.add_parser(name, help=f"({phase}) not implemented yet")
