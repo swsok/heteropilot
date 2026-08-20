@@ -101,9 +101,46 @@ NOT network-blind, though: a TP=2 control (`single_node_4_instance_2TP.json`,
 *does* charge TP-collective cost. It just does not charge the prefill→decode KV
 transfer to the cross-instance dimension.
 
-**Decision: DEFER.** Level-2 path-aware cross-instance bandwidth is inert for P/D
-on the analytical backend, so building the (planner-only, byte-identical) plumbing
-would be dormant *and* useless. Not implemented.
+**Root cause (2026-08-20, decisive).** It is NOT a config issue and NOT
+specifically an "analytical backend" issue — the simulator does not model the P/D
+KV transfer *cost* at all. At `serving/__main__.py:597`, when prefill requests
+finish, `router.transfer_prefill_request()` → `scheduler.add_decode()`
+(`serving/core/scheduler.py:829`) simply appends the request to the decode
+scheduler and `allocate()`s its KV on the decode NPU — **zero simulated-time
+delay, no send/recv collective emitted to the Chakra/ASTRA graph**. The prefill→
+decode handoff is instantaneous. The `config_builder` "sender NPU" doubling is
+memory/topology accounting, not a costed transfer. So no `link_bw` on any
+dimension can move a P/D run — the transfer that Level-2 would price simply
+isn't simulated.
+
+**Decision: the "feed the sim a path-aware link_bw" form of Level-2 is DEAD** (the
+sim ignores it). But the finding reopens increment 2 in a better, planner-only
+form — see below.
+
+## Increment 2 (redirected) — planner-side P/D KV-transfer cost
+Since the simulator omits the P/D KV-transfer cost, the *planner* adds it, which
+is squarely HeteroPilot's job (work order §5's "KV transfer estimator") and needs
+no upstream edit:
+- `planner/util/kv_transfer.py` already computes `(time_ms, energy_j)` for a KV
+  transfer over a topology path (path-aware, `contention_group`-adjusted). Promote
+  it from "informational" to the actual P/D transfer-cost term.
+- For a `ServingArch.PD_SPLIT` candidate, after the sim returns compute metrics,
+  add the KV-transfer penalty to the predicted first-token path (TTFT += transfer
+  time; total_energy += transfer energy) using the prefill→decode island path and
+  a workload-derived prompt-token count. Apply it identically in oracle and pruned
+  modes so oracle-agreement is untouched (it is a post-predict adjustment of a
+  selected candidate, not a pruning stage).
+- This makes the §5.9 adoption gate computable (`Benefit_of_split > KV_transfer_
+  latency + energy + queueing_penalty`) and makes the increment-4 network sweep
+  reproducible **at the planning level**: sweeping the fabric bandwidth moves the
+  planner's P/D TTFT via `kv_transfer.py`, even though the sim itself is flat.
+- Honesty: every P/D plan must carry a caveat that the transfer cost is a
+  planner-side analytical add-on, not simulated (the sim models it as free), with
+  the bandwidth/path/flow assumptions recorded in provenance.
+Open alternative (bigger, later): teach the simulator to charge the transfer
+(add a delay in `transfer_prefill_request` or emit a send/recv over the
+cross-instance dim) — a real upstream serving/ change; only worth it if a
+sim-level (not planner-level) transfer model is needed.
 
 **Implication for increment 4 (the headline network sweep).** The §5.9 experiment
 — "sweep 25/100/200/400G and find the bandwidth where the P/D benefit vanishes" —
