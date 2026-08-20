@@ -1,0 +1,59 @@
+# Service spec for the Phase 5 increment 4 P/D network sweep (docs/phase5_plan.md).
+#
+# Derived from examples/service_specs/llama31-8b-light.yaml. The regime is chosen so
+# the P/D-vs-aggregated recommendation is a real decision on the two-A5000
+# pd-network-sweep fixture:
+#   - 2.5 rps saturates a SINGLE A5000 (exp2: single-A5000 tp1-dp1 TTFT p99 ~94-110s
+#     vs the 15s budget => infeasible), so the two-device placements decide it.
+#   - Both live two-device placements (mixed 1+1 aggregated, and pd_split across the
+#     two islands) use the SAME two devices => near-equal energy, so the objective is
+#     decided by SLO goodput, which is where disaggregation can help.
+#   - maximize_slo_goodput_per_joule differentiates only where attainment differs,
+#     which is exactly the regime the planner-side P/D transfer term creates as the
+#     swept fabric bandwidth drops.
+#
+# Token distributions approximate the bundled sharegpt-300 workload. Everything the
+# planner reports from this spec is a simulator prediction, not a measurement.
+
+service:
+  model: meta-llama/Llama-3.1-8B
+  dtype: bfloat16
+  kv_cache_dtype: auto
+
+traffic:
+  arrival_rate_rps: 2.5
+  input_tokens:
+    p50: 731
+    p95: 2470
+    p99: 2884
+  output_tokens:
+    p50: 632
+    p95: 780
+    # p99 caps the sampled output length so the P/D DECODE instance's KV cache fits
+    # the simulator's ~42k-token A5000 budget. Unlike the aggregated scheduler, the
+    # simulator's P/D decode path has no KV admission control and hard-crashes on
+    # overflow (serving/core/memory_model.py), so the sweep runs at max_num_seqs=8
+    # with a bounded tail (8 x (2884+800) < 42k tokens). This knob restriction is
+    # documented in the results doc; the crossing does not need the full knob grid.
+    p99: 800
+  burstiness: 1.0
+  prefix_share_ratio: 0.07
+
+slo:
+  # TTFT budget chosen to sit in the adoption window this fixture creates: a SINGLE
+  # RTXPRO6000 misses it (simulated p99 TTFT 165.8 ms) but TWO devices meet it
+  # (mixed 108.8 ms, P/D 133.4 ms). This is the §5.9 regime where the P/D-vs-aggregated
+  # choice is real. The crossing bandwidth depends on this budget: P/D stays feasible
+  # while 133.4 ms + (378 MB prompt-KV / fabric_bw) < 155 ms, i.e. fabric_bw > ~17 GB/s.
+  # A looser TTFT budget always adopts P/D (the <=378 ms transfer term never bites); a
+  # tighter one never does. The results doc reports this SLO sensitivity explicitly.
+  ttft:
+    percentile: 99
+    max_ms: 155
+  tpot:
+    percentile: 99
+    max_ms: 100
+
+objective:
+  primary: maximize_slo_goodput_per_joule
+  secondary: minimize_active_accelerators

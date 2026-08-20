@@ -1,0 +1,86 @@
+# SIMULATOR-ONLY 4-combo P/D fixture (Phase 5 increment 4, docs/phase5_plan.md §12 Exp 5).
+#
+# PROVENANCE (absolute rule 3):
+#   - node_gpu0 / node_gpu1 carry the RTXPRO6000 profile (GPU islands; source:
+#     vendor_spec, perf bundle profiled by upstream). No RTX PRO 6000 exists here.
+#   - node_npu0 / node_npu1 carry the SIM-PROXY NPU profile
+#     (experiments/configs/clusters/ascend-sim-proxy.yaml), which is the RTXPRO6000
+#     compute model wearing an NPU label. THESE ARE NOT NPU MEASUREMENTS; every
+#     NPU-touching combo is byte-identical to the corresponding GPU combo by
+#     construction (see that file's header).
+#   - Topology is hypothetical; every link is source: placeholder. Power blocks are
+#     upstream placeholder host power, present only so the simulator emits energy.
+#
+# Four single-accelerator islands (two GPU, two NPU-proxy), all 96 GB so the
+# simulator's P/D-decode KV never overflows. All four role x backend P/D combos are
+# realizable as CROSS-ISLAND, same-tp (tp1) pairs:
+#   GPU-P + GPU-D   -> node_gpu*  <-> node_gpu*   (real RTXPRO6000 profile)
+#   NPU-P + NPU-D   -> node_npu*  <-> node_npu*   (SIM-PROXY)
+#   GPU-P + NPU-D   -> node_gpu*  ->  node_npu*   (SIM-PROXY)
+#   NPU-P + GPU-D   -> node_npu*  ->  node_gpu*   (SIM-PROXY)
+# A full mesh of fabric links between the four representative accelerators
+# (accelerator_ids[0] on each node) gives every P/D pair a declared path, so the
+# transfer cost is priced on a real link rather than an interconnect class default.
+
+cluster_id: pd-4combo-sim
+
+nodes:
+  - id: node_gpu0
+    accelerators:
+      - id: gpu0
+        type: GPU
+        vendor: NVIDIA
+        model: RTXPRO6000
+        backend: cuda
+        memory_gb: 96
+        state: FREE
+        profile: profiles/accelerators/rtxpro6000.yaml
+    nics: [{id: nic0, type: infiniband, speed_gbps: 400}]
+    power: {source: placeholder}
+
+  - id: node_gpu1
+    accelerators:
+      - id: gpu0
+        type: GPU
+        vendor: NVIDIA
+        model: RTXPRO6000
+        backend: cuda
+        memory_gb: 96
+        state: FREE
+        profile: profiles/accelerators/rtxpro6000.yaml
+    nics: [{id: nic0, type: infiniband, speed_gbps: 400}]
+    power: {source: placeholder}
+
+  - id: node_npu0
+    accelerators:
+      - id: npu0
+        type: NPU
+        vendor: Huawei
+        model: ASCEND-SIM-PROXY
+        backend: ascend
+        memory_gb: 96
+        state: FREE
+        profile: experiments/configs/clusters/ascend-sim-proxy.yaml
+    nics: [{id: nic0, type: infiniband, speed_gbps: 400}]
+    power: {source: placeholder}
+
+  - id: node_npu1
+    accelerators:
+      - id: npu0
+        type: NPU
+        vendor: Huawei
+        model: ASCEND-SIM-PROXY
+        backend: ascend
+        memory_gb: 96
+        state: FREE
+        profile: experiments/configs/clusters/ascend-sim-proxy.yaml
+    nics: [{id: nic0, type: infiniband, speed_gbps: 400}]
+    power: {source: placeholder}
+
+links:
+  - {id: f-gpu0-gpu1, src: node_gpu0/gpu0, dst: node_gpu1/gpu0, type: INFINIBAND, bandwidth_gbps: 400, latency_ns: 5000, energy_per_bit_pj: 5.0, source: placeholder}
+  - {id: f-gpu0-npu0, src: node_gpu0/gpu0, dst: node_npu0/npu0, type: INFINIBAND, bandwidth_gbps: 400, latency_ns: 5000, energy_per_bit_pj: 5.0, source: placeholder}
+  - {id: f-gpu0-npu1, src: node_gpu0/gpu0, dst: node_npu1/npu0, type: INFINIBAND, bandwidth_gbps: 400, latency_ns: 5000, energy_per_bit_pj: 5.0, source: placeholder}
+  - {id: f-gpu1-npu0, src: node_gpu1/gpu0, dst: node_npu0/npu0, type: INFINIBAND, bandwidth_gbps: 400, latency_ns: 5000, energy_per_bit_pj: 5.0, source: placeholder}
+  - {id: f-gpu1-npu1, src: node_gpu1/gpu0, dst: node_npu1/npu0, type: INFINIBAND, bandwidth_gbps: 400, latency_ns: 5000, energy_per_bit_pj: 5.0, source: placeholder}
+  - {id: f-npu0-npu1, src: node_npu0/npu0, dst: node_npu1/npu0, type: INFINIBAND, bandwidth_gbps: 400, latency_ns: 5000, energy_per_bit_pj: 5.0, source: placeholder}

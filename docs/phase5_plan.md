@@ -189,6 +189,39 @@ finding for the Phase 5 paper story and should be resolved before increment 4.
   where the P/D benefit disappears (the §5.9 adoption condition crossing). This is
   the headline Phase 5 paper result.
 
+**Status: DONE (planner-side, 2026-08-20).** Both experiments built, run, and
+documented; `serving/` untouched; pytest 239 / ruff / mypy clean.
+
+- Driver `experiments/scripts/pd_network_sweep.py` + runner `run_exp_pd.sh`.
+  Efficiency requirement met: the simulator is bandwidth-invariant for P/D transfer
+  (increment 2), so it simulates each candidate **once**, caches the raw metrics,
+  then re-runs only the planner-side transfer cost + feasibility + ranking per
+  bandwidth (the envelope cache is bypassed because its key bands the network
+  class). One 5-candidate simulation served all six bandwidths.
+- **The crossing is observed.** On two RTXPRO6000 islands (Llama-3.1-8B, 2.5 rps,
+  TTFT p99 budget 155 ms, objective goodput/J), the recommendation is `pd_split` at
+  400/200/100/25 GB/s and flips to aggregated (mixed 1+1) at 10 and 1 GB/s —
+  **crossing bandwidth 10 GB/s**. Mechanism: the planner-side transfer term
+  (~378/BW ms for the p99 prompt) pushes P/D's p99 TTFT over budget below ~17 GB/s.
+  The crossing is TTFT-driven (energy moves negligibly) and its bandwidth is a clean
+  function of the SLO slack, `378/(SLO-133.4)`, with a crossing existing only for a
+  TTFT budget in `(133.4, 165.8) ms` (below: P/D never meets it; above: the single
+  card meets it and wins on tok/J). Full analysis + provenance:
+  `experiments/results/exp_pd_summary.md`, figure
+  `experiments/figures/pd_network_sweep.png`.
+- **4-combo comparison** (`pd_combo_compare.py`): GPU-P+GPU-D runs end-to-end on the
+  real RTXPRO6000 profile; the three NPU-touching combos are SIM-PROXY (the NPU
+  islands borrow the RTXPRO6000 compute model, `ascend-sim-proxy.yaml`), so every NPU
+  row is byte-identical to the GPU row by construction and is labeled as such — no
+  NPU numbers are invented (absolute rule 3). What a real NPU result needs is
+  documented in the results doc; the planner already enumerates all four combos
+  structurally.
+- Two simulator facts that shaped the fixtures: (1) the P/D **decode** path has no KV
+  admission control and hard-crashes on overflow, so a 24 GB A5000 decode is
+  unusable for this workload and RTXPRO6000 (96 GB) is used; (2) the crossing lives
+  in a narrow TTFT window because a single strong card is very energy-efficient, so
+  P/D is only preferred once a single card misses the SLO.
+
 ## Cross-vendor / NPU constraint
 No NPU hardware exists here, and the ATOM/RNGD stub profiles have empty
 `supported_models` so they are excluded from candidate generation by design. The

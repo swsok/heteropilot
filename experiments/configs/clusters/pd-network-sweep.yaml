@@ -1,0 +1,78 @@
+# P/D network-sweep fixture (Phase 5 increment 4, docs/phase5_plan.md).
+#
+# PROVENANCE (absolute rule 3): both nodes carry the RTXPRO6000 profile
+# (profiles/accelerators/rtxpro6000.yaml, source: vendor_spec; its perf bundle was
+# profiled by UPSTREAM, not by us). No RTX PRO 6000 exists on this machine and the
+# two-node fabric topology is hypothetical, so every link and power number here is
+# source: placeholder. Everything the planner reports from this fixture is a
+# simulator prediction, not a measurement.
+#
+# Why RTXPRO6000 and not the local A5000: the simulator's P/D DECODE path has no KV
+# admission control and hard-crashes when the decode instance's KV overflows
+# (serving/core/memory_model.py). A 24 GB A5000 decode overflows this workload; a
+# 96 GB RTXPRO6000 decode does not, so P/D actually simulates. Two IDENTICAL cards
+# keep P/D and mixed-aggregated on the same two devices (equal energy), so the
+# P/D-vs-aggregated recommendation is decided by latency/goodput and the swept
+# fabric link is what moves it.
+#
+# Unlike examples/clusters/heterogeneous-lab.yaml (GPUs not wired to their NICs, so
+# the prefill->decode path is undeclared and priced at an interconnect class
+# default), this fixture declares a DIRECT link between the two islands'
+# representative accelerators (node0/gpu0 <-> node1/gpu0). That link,
+# `fabric-node0-node1`, is what experiments/scripts/pd_network_sweep.py sweeps.
+#
+# One accelerator per node keeps the single simulation pass small: island size 1 =>
+# tp1/dp1 only. Candidates: 2 single-island aggregated, 1 mixed (1+1) aggregated,
+# and 2 pd_split (both role directions).
+
+cluster_id: pd-network-sweep
+
+nodes:
+  - id: node0
+    accelerators:
+      - id: gpu0
+        type: GPU
+        vendor: NVIDIA
+        model: RTXPRO6000
+        backend: cuda
+        memory_gb: 96
+        state: FREE
+        profile: profiles/accelerators/rtxpro6000.yaml
+    nics:
+      - id: nic0
+        type: infiniband
+        speed_gbps: 400
+    power:
+      source: placeholder
+
+  - id: node1
+    accelerators:
+      - id: gpu0
+        type: GPU
+        vendor: NVIDIA
+        model: RTXPRO6000
+        backend: cuda
+        memory_gb: 96
+        state: FREE
+        profile: profiles/accelerators/rtxpro6000.yaml
+    nics:
+      - id: nic0
+        type: infiniband
+        speed_gbps: 400
+    power:
+      source: placeholder
+
+links:
+  # The swept inter-island fabric link. Declared directly between the two islands'
+  # representative accelerators (accelerator_ids[0] on each) so TopologyGraph.path()
+  # returns exactly this link and the P/D transfer cost tracks its bandwidth. The
+  # 400 GB/s / 5 pJ-per-bit values are the sweep's high-bandwidth anchor; the driver
+  # overrides bandwidth_gbps per point.
+  - id: fabric-node0-node1
+    src: node0/gpu0
+    dst: node1/gpu0
+    type: INFINIBAND
+    bandwidth_gbps: 400
+    latency_ns: 5000
+    energy_per_bit_pj: 5.0
+    source: placeholder

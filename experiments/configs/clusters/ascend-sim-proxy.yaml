@@ -1,0 +1,64 @@
+# SIMULATOR-ONLY NPU proxy profile (Phase 5 increment 4, docs/phase5_plan.md §12 Exp 5).
+#
+# =============================== READ THIS FIRST ===============================
+# THIS IS NOT AN NPU MEASUREMENT AND MUST NEVER BE CITED AS ONE (absolute rule 3).
+#
+# No NPU hardware exists on this machine and no external NPU profile has been
+# imported. The real Ascend stub (profiles/accelerators/ascend_target.yaml)
+# therefore keeps sim_hardware: null so it FAILS LOUDLY instead of fabricating
+# numbers. That stub cannot be simulated, which is correct.
+#
+# To exercise the 4-combo P/D comparison (GPU/NPU x prefill/decode) end-to-end at
+# all, this experiment-only profile stands an NPU in with the RTXPRO6000 compute
+# model (sim_hardware: RTXPRO6000) -- the SAME model the GPU islands use. Every
+# "NPU" number produced with this profile is therefore BYTE-IDENTICAL to the GPU
+# number for the same role/placement. That is deliberate: it makes the proxy
+# undeniable. The NPU is a relabeled GPU, source: placeholder, and the results doc
+# labels every NPU-touching row "SIM-PROXY (RTXPRO6000 model)".
+#
+# What a REAL NPU result needs (and this file fakes): a genuine profiler/perf/<HW>/
+# bundle for the NPU (attention/dense/per_sequence/skew CSVs), sim_hardware set to
+# that bundle, measured memory_bandwidth_gbps and power, and supported_models from
+# the real kernel coverage. Phase 3's CsvProfileImporter (deviations D4) is the path.
+# ==============================================================================
+
+profile_id: ascend-sim-proxy
+vendor: Huawei
+model: ASCEND-SIM-PROXY
+backend: ascend
+
+# Placeholder device geometry, copied from the borrowed RTXPRO6000 model for
+# consistency. NOT an NPU spec. The 96 GB avoids the simulator's P/D-decode KV
+# overflow (a 24 GB decode instance hard-crashes on this workload).
+memory_gb: 96
+memory_bandwidth_gbps: 1597
+
+# The borrowed compute model: profiler/perf/RTXPRO6000/. This is the whole point of
+# the proxy and the whole reason the numbers are not NPU numbers.
+sim_hardware: RTXPRO6000
+perf_data: profiler/perf/RTXPRO6000/
+
+source: placeholder
+
+# Placeholder power (copied from the RTXPRO6000 block; describes a GPU, not an NPU).
+# Present only so the simulator emits energy for these islands.
+power:
+  idle_power: 35
+  standby_power: 300
+  active_power: 600
+  standby_duration: 18
+  source: placeholder
+
+# Match the model the borrowed RTXPRO6000 bundle has (Llama-3.1-8B bf16), so
+# candidate generation admits these islands and the sim can run.
+supported_models:
+  - pattern: "meta-llama/Llama-3.1-8B"
+    dtypes: [bfloat16]
+
+max_tp_size: 1
+
+notes: >
+  SIMULATOR-ONLY NPU proxy backed by the RTXPRO6000 compute model. Not a
+  measurement, not an NPU spec. Exists solely to drive the Phase 5 4-combo P/D
+  comparison; every number it yields is RTXPRO6000 physics relabeled and is reported
+  as SIM-PROXY. NPU rows are identical to GPU rows by construction.
