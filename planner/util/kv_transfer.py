@@ -7,14 +7,17 @@ built topology path between the two islands.
 
 Pure arithmetic, no I/O, so it is unit-testable in isolation. It is **not** a
 pruning stage: §5.6 declares no P/D constraint, so nothing here may remove a
-candidate (the two-invariants rule). It feeds the future §5.9 adoption analysis
+candidate (the two-invariants rule). It feeds the §5.9 adoption analysis
 (`Benefit_of_split > KV_transfer_latency + KV_transfer_energy + queueing`) and
-the Level-2 path-aware model; the adoption gate itself needs post-simulation
-benefit numbers and is deferred to the experiments, out of candidate generation.
+the Level-2 path-aware model.
 
-NOTE: `kv_transfer_cost` is currently informational only. It is reserved for the
-§5.9 post-simulation adoption analysis and is deliberately NOT called anywhere in
-the candidate-generation / pruning path - nothing here may remove a candidate.
+NOTE: `kv_transfer_cost` is no longer informational only. As of Phase 5 increment
+2 (docs/phase5_plan.md) it is the P/D transfer-cost term: `evaluate_candidates`
+(via `apply_pd_transfer_cost` in planner/optimizer/exhaustive.py) calls it to add
+the prefill->decode transfer penalty to a pd_split candidate's predicted TTFT and
+energy, which the simulator leaves free. This is a post-predict metric adjustment
+applied identically in oracle and pruned modes - it still removes no candidate,
+so oracle-agreement is untouched.
 """
 
 from __future__ import annotations

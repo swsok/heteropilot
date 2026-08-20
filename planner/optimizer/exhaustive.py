@@ -23,8 +23,10 @@ from planner.plan import (
     CandidateConfig,
     DeploymentPlan,
     PlannerOutput,
+    PredictedMetrics,
     Rejection,
     RejectionStage,
+    Role,
     RoutingPolicy,
     ServingArch,
     UnscoredPlan,
@@ -32,6 +34,25 @@ from planner.plan import (
 )
 from planner.predictor import Predictor
 from planner.spec import ServiceSpec
+from planner.topology import TopologyError, TopologyGraph
+from planner.util import kv_transfer
+
+PD_TRANSFER_CAVEAT = (
+    "P/D KV-transfer cost is a planner-side analytical add-on; the simulator models "
+    "the prefill->decode handoff as free (docs/phase5_plan.md increment 2). Reported "
+    "TTFT and energy for pd_split plans include it. TTFT offsets are per-percentile "
+    "(p99 uses the p99 prompt length, etc.); the energy offset is a p50/median "
+    "approximation of the mean, so it is slightly low on skewed prompt distributions. "
+    "TPOT is unchanged (the transfer is one-time, pre-decode) and transfer power is not "
+    "modeled. Bandwidth/path/prompt assumptions are recorded in provenance['pd_transfer']."
+)
+
+PD_TRANSFER_CLASS_DEFAULT_CAVEAT = (
+    "The recommended P/D plan's prefill and decode islands are NOT joined by any "
+    "declared link, so its KV-transfer cost was charged an interconnect class-default "
+    "bandwidth (the same fallback the simulator's compiler uses), not a measured or "
+    "declared path. Declare the fabric link between these islands to price it properly."
+)
 
 PHASE2_PREFIX_CACHE_CAVEAT = (
     "Prefix caching is disabled for every candidate. With it enabled the simulator's "
@@ -55,10 +76,133 @@ class SearchResult:
     #: Reported as a provenance count, not as caveats - one line per cached
     #: candidate would bury the caveat that actually matters.
     cache_hits: list[str] = field(default_factory=list)
+    #: One entry per P/D-split candidate whose predicted metrics were adjusted
+    #: for the KV transfer. Surfaced into provenance so the assumptions behind
+    #: the (analytical, un-simulated) transfer cost travel with the plan.
+    pd_transfers: list[dict] = field(default_factory=list)
 
 
 def _plan_id(index: int) -> str:
     return f"hp-{index:05d}"
+
+
+def apply_pd_transfer_cost(
+    candidate: CandidateConfig,
+    metrics: PredictedMetrics,
+    spec: ServiceSpec,
+    cluster: ClusterSpecV2,
+    islands: dict[str, ExecutionIsland],
+    topology: TopologyGraph,
+) -> tuple[PredictedMetrics, dict]:
+    """Add the prefill->decode KV-transfer cost to a P/D candidate's metrics.
+
+    The simulator models the P/D handoff as free (`transfer_prefill_request`
+    reallocates KV with zero simulated time; docs/phase5_plan.md increment 2), so
+    HeteroPilot prices the transfer itself. This runs *after* prediction and
+    outside the predictor, identically in oracle and pruned modes, so it is a
+    metric adjustment of an already-selected candidate, never a pruning stage -
+    oracle-agreement is untouched (§5.6 declares no P/D constraint).
+
+    TTFT offsets are computed **per percentile**: transfer time scales with prompt
+    length and the SLO is gated at a percentile, so p99 uses `input_tokens.p99`
+    (falling back to p50 when that percentile is unset), p95 uses `input_tokens.p95`,
+    p50 uses `input_tokens.p50`. Using the median for the p99 tail would understate
+    it and could admit a P/D that really violates the SLO. TPOT is left alone: the
+    transfer is one-time, before decode begins. Energy adds a per-request transfer
+    term (a p50/median approximation of the mean, slightly low on skewed prompt
+    distributions) times the request count; average/peak power are left unmodeled.
+
+    When no declared link joins the two islands the transfer is **not** free: it is
+    charged the same interconnect class-default the simulator's compiler uses
+    (`topology._inter_island` -> `reduce_for_simulator`), so a P/D over an undeclared
+    fabric cannot look artificially cheap and win the ranking silently. The
+    class-default assumption is recorded. Non-P/D candidates are returned unchanged
+    with an empty info.
+    """
+    if candidate.serving_arch is not ServingArch.PD_SPLIT:
+        return metrics, {}
+
+    prefills = [a for a in candidate.assignments if a.role is Role.PREFILL]
+    decodes = [a for a in candidate.assignments if a.role is Role.DECODE]
+    if len(prefills) != 1 or len(decodes) != 1:
+        # _build_pd emits exactly one of each today; fail loud if a future
+        # multi-assignment generator change would silently under-charge here.
+        raise ValueError(
+            f"PD_SPLIT candidate {candidate.id!r} must have exactly one PREFILL and "
+            f"one DECODE assignment, got {len(prefills)} prefill / {len(decodes)} decode"
+        )
+    prefill, decode = prefills[0], decodes[0]
+    pf_island = islands[prefill.island_id]
+    dc_island = islands[decode.island_id]
+    prefill_ep = f"{pf_island.node_id}/{pf_island.accelerator_ids[0]}"
+    decode_ep = f"{dc_island.node_id}/{dc_island.accelerator_ids[0]}"
+
+    assumptions: list[str] = []
+    class_default = False
+    try:
+        path = topology.path(prefill_ep, decode_ep)
+        bw_gbps = TopologyGraph.effective_bandwidth_gbps(path)
+        latency_ns = TopologyGraph.path_latency_ns(path)
+        energy_carrying = any(link.energy_per_bit_pj is not None for link in path)
+    except TopologyError:
+        # No path in the spec. Match the compiler rather than charging zero: the
+        # sim's link_bw for this pair is the class default, not 0, so our transfer
+        # must be too (otherwise an undeclared-fabric P/D looks free and can win).
+        class_default = True
+        bw_gbps, latency_ns, notes = topology._inter_island(pf_island, dc_island)
+        assumptions.extend(notes)
+        # An unpriced (class-default) hop carries no per-link energy figure.
+        energy_carrying = False
+
+    kv_per_token = kv_transfer._kv_bytes_per_token(
+        spec.model, spec.service.dtype, spec.service.kv_cache_dtype
+    )
+
+    def _xfer_ms(prompt_tokens: int) -> float:
+        return latency_ns / 1e6 + (kv_per_token * prompt_tokens / (bw_gbps * 1e9)) * 1e3
+
+    tok = spec.traffic.input_tokens
+    p50_tok = tok.p50
+    p95_tok = tok.p95 if tok.p95 is not None else tok.p50
+    p99_tok = tok.p99 if tok.p99 is not None else tok.p50
+    xfer_p50, xfer_p95, xfer_p99 = _xfer_ms(p50_tok), _xfer_ms(p95_tok), _xfer_ms(p99_tok)
+
+    # Energy from the median prompt over the priced path only; an undeclared-fabric
+    # (class-default) hop has no per-link energy, so it contributes none.
+    energy_j = 0.0
+    if energy_carrying:
+        _, energy_j = kv_transfer.kv_transfer_cost(
+            spec.model, spec.service.dtype, p50_tok, path,
+            kv_cache_dtype=spec.service.kv_cache_dtype,
+        )
+
+    updates: dict[str, object] = {
+        "p50_ttft_ms": metrics.p50_ttft_ms + xfer_p50,
+        "p95_ttft_ms": metrics.p95_ttft_ms + xfer_p95,
+        "p99_ttft_ms": metrics.p99_ttft_ms + xfer_p99,
+    }
+    if metrics.total_energy_j is not None:
+        new_energy = metrics.total_energy_j + energy_j * metrics.completed_requests
+        updates["total_energy_j"] = new_energy
+        updates["tokens_per_joule"] = (
+            metrics.completed_tokens / new_energy if new_energy > 0 else None
+        )
+    adjusted = metrics.model_copy(update=updates)
+
+    info = {
+        "candidate_id": candidate.id,
+        "xfer_ms_p50": xfer_p50,
+        "xfer_ms_p95": xfer_p95,
+        "xfer_ms_p99": xfer_p99,
+        "energy_j_per_req": energy_j,
+        "energy_prompt_tokens_p50": p50_tok,
+        "prompt_tokens": {"p50": p50_tok, "p95": p95_tok, "p99": p99_tok},
+        "path_bw_gbps": bw_gbps,
+        "path_latency_ns": latency_ns,
+        "class_default": class_default,
+        "assumptions": assumptions,
+    }
+    return adjusted, info
 
 
 def _routing_for(candidate: CandidateConfig) -> RoutingPolicy:
@@ -91,6 +235,7 @@ def evaluate_candidates(
 ) -> SearchResult:
     """Simulate every candidate and split by feasibility."""
     result = SearchResult()
+    topology = TopologyGraph(cluster)
 
     for index, candidate in enumerate(candidates):
         if progress is not None:
@@ -119,11 +264,22 @@ def evaluate_candidates(
             continue
 
         assert sim.metrics is not None
+        # Price the prefill->decode KV transfer the simulator leaves free, before
+        # building the plan so feasibility checks the SLO *with* it included: a
+        # P/D whose transfer blows the TTFT budget must become infeasible. Applied
+        # identically here in oracle and pruned modes, so oracle-agreement holds.
+        metrics = sim.metrics
+        if candidate.serving_arch is ServingArch.PD_SPLIT:
+            metrics, pd_info = apply_pd_transfer_cost(
+                candidate, metrics, spec, cluster, islands, topology
+            )
+            result.pd_transfers.append(pd_info)
+
         plan = DeploymentPlan(
             plan_id=_plan_id(index),
             model=spec.model,
             candidate=candidate,
-            predicted=sim.metrics,
+            predicted=metrics,
             routing=_routing_for(candidate),
             robust_margin_ttft_percent=ttft_margin_percent,
             robust_margin_tpot_percent=tpot_margin_percent,
@@ -268,10 +424,21 @@ def search(
             "valid candidate was simulated. Slow by design."
         )
 
+    if evaluation.pd_transfers:
+        caveats.append(PD_TRANSFER_CAVEAT)
+
     prov = dict(provenance or {})
     if evaluation.cache_hits:
         prov["envelope_cache_hits"] = len(evaluation.cache_hits)
         prov["envelope_cache_hit_ids"] = sorted(evaluation.cache_hits)
+    if evaluation.pd_transfers:
+        prov["pd_transfer"] = {
+            "note": (
+                "planner-side analytical KV-transfer cost added to pd_split metrics; "
+                "the simulator models the prefill->decode handoff as free"
+            ),
+            "candidates": evaluation.pd_transfers,
+        }
 
     # Split before ranking: a plan the objective cannot score must be surfaced,
     # not sorted to the bottom where it silently disappears.
@@ -304,6 +471,14 @@ def search(
             for rep, dupes in collapsed[1:]
         ]
 
+        # If the recommendation's KV transfer was priced on a class-default (no
+        # declared link) rather than a real path, surface that prominently - it is
+        # the difference between a measured cost and a fallback guess.
+        feasible_caveats = list(caveats)
+        by_cand = {t["candidate_id"]: t for t in evaluation.pd_transfers}
+        if by_cand.get(best.plan.candidate.id, {}).get("class_default"):
+            feasible_caveats.insert(0, PD_TRANSFER_CLASS_DEFAULT_CAVEAT)
+
         return PlannerOutput(
             feasible=True,
             service_model=spec.model,
@@ -315,7 +490,7 @@ def search(
             evaluated_candidates=evaluation.evaluated,
             generated_candidates=generation.generated,
             provenance=prov,
-            caveats=caveats + evaluation.notes,
+            caveats=feasible_caveats + evaluation.notes,
         )
 
     closest_pair = min(

@@ -142,6 +142,29 @@ Open alternative (bigger, later): teach the simulator to charge the transfer
 cross-instance dim) — a real upstream serving/ change; only worth it if a
 sim-level (not planner-level) transfer model is needed.
 
+**Status: DONE (planner-side, 2026-08-20).** `planner/optimizer/exhaustive.py::
+apply_pd_transfer_cost` adds the KV-transfer penalty to PD_SPLIT candidates'
+predicted metrics inside `evaluate_candidates` (the path shared by `search()` and
+`oracle()`), using `planner/util/kv_transfer.py` over the prefill→decode topology
+path. Per-percentile: `p{50,95,99}_ttft += xfer_ms(input_tokens.p{50,95,99})`;
+`total_energy += energy_per_req·completed_requests`; TPOT/power untouched. A
+disconnected pair falls back to `topology._inter_island` (interconnect class
+default, byte-consistent with `reduce_for_simulator`, never an optimistic 0), and
+a recommended plan relying on that default gets a prominent caveat. Verified:
+oracle-agreement holds with non-zero transfer (post-predict, feasibility-only,
+identical in both modes — it only *strengthens* feasibility, so it can never
+prune the optimum); a P/D whose transfer blows the p99 TTFT SLO becomes
+infeasible; the **network sweep is reproducible at the planning level** (p99 TTFT
+rises monotonically as fabric bandwidth drops); and the **§5.9 adoption crossing**
+is observable (P/D recommended at high bandwidth, aggregated at low). pytest 239 /
+ruff / mypy clean; serving/ untouched.
+
+This unblocks increment 4 (the network-sweep headline) **at the planning level**
+without the ns3 backend: the sweep now moves the planner's P/D TTFT via the
+transfer term, even though the simulator itself is flat on P/D transfer. A
+sim-level transfer model (upstream) remains the only way to make the *simulator's*
+own P/D numbers bandwidth-sensitive.
+
 **Implication for increment 4 (the headline network sweep).** The §5.9 experiment
 — "sweep 25/100/200/400G and find the bandwidth where the P/D benefit vanishes" —
 **cannot be reproduced on the analytical backend**, because the P/D KV-transfer
