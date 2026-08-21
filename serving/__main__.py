@@ -291,6 +291,12 @@ def main():
                         help='KV cache data type: auto (use default profile.csv) or fp8 (use profile_fp8.csv, halves KV cache memory)')
     parser.add_argument('--network-backend', type=str, choices=['analytical', 'ns3'], default='analytical',
                         help='network simulation backend: analytical (fast, default) or ns3 (detailed, WIP)')
+    parser.add_argument('--pd-transfer-model', type=str, choices=['none', 'bandwidth'], default='none',
+                        help="prefill->decode KV-cache transfer cost model for P/D-split clusters: "
+                        "'none' (default, legacy zero-delay handoff) or 'bandwidth' (delay decode "
+                        "eligibility by KV_bytes / cross-instance link_bw + link_latency). 'bandwidth' "
+                        "makes the simulator's own P/D TTFT-unaffected latency/TPOT bandwidth-sensitive; "
+                        "it changes nothing for non-P/D clusters")
 
     args = parser.parse_args()
     
@@ -466,7 +472,20 @@ def main():
     # Controller for astra-sim process communication
     controller = Controller(total_npu)
     # Global Request Router
-    router = Router(num_instances, schedulers, num_req, request_routing_policy)
+    # Prefill->decode KV-transfer delay model (opt-in via --pd-transfer-model).
+    # The cross-instance dimension is the last network dim, so a list link_bw /
+    # link_latency uses its trailing entry; a scalar is used directly.
+    if args.pd_transfer_model == "bandwidth":
+        _lb = cluster["link_bw"]
+        _ll = cluster["link_latency"]
+        pd_transfer_bw_gbps = _lb[-1] if isinstance(_lb, (list, tuple)) else _lb
+        pd_transfer_latency_ns = _ll[-1] if isinstance(_ll, (list, tuple)) else _ll
+    else:
+        pd_transfer_bw_gbps = None
+        pd_transfer_latency_ns = 0
+    router = Router(num_instances, schedulers, num_req, request_routing_policy,
+                    pd_transfer_bw_gbps=pd_transfer_bw_gbps,
+                    pd_transfer_latency_ns=pd_transfer_latency_ns)
     # Power Modeling if enabled
     if power_modeling:
         power_model = PowerModel(power_configs)
@@ -561,6 +580,14 @@ def main():
         if dataset is not None:
             router.route_arrived_requests(current)
 
+        # Prefill->decode: admit any transferred request whose KV has finished
+        # crossing the cross-instance link by now. Deferring add_decode to here
+        # (rather than at prefill completion) is what makes the simulator's P/D
+        # metrics bandwidth-sensitive. With the transfer model off the queue is
+        # always empty, so this loop is a no-op and behavior is byte-identical.
+        for _req, _dec_idx in router.pop_ready_transfers(current):
+            router.decode_schedulers[_dec_idx].add_decode(_req)
+
         instance_id = npu2inst_mapping[sys]  # get instance id from NPU id
         node_id = inst2node_mapping[instance_id] # get node id from instance id
 
@@ -594,7 +621,7 @@ def main():
 
         # Add prefill ended requests to decode instance
         if instances[instance_id]["pd_type"] == "prefill" and len(finished_reqs) > 0:
-            router.transfer_prefill_request(finished_reqs)
+            router.transfer_prefill_request(finished_reqs, current)
 
         # schedule requests
         new_req = schedulers[instance_id].schedule(current, sys, id)
@@ -894,7 +921,12 @@ def main():
                 )
         # check if all requests are done for current instance#
         # NOTE: 'instance_id' could occur in duplicate, because 'npu2inst_mapping[sys]' is not one-to-one mapping
-        if (instance_id not in decode_instance or is_prefill_done) and instance_id not in done_instance and schedulers[instance_id].is_request_empty() and not router.has_pending_requests() and not router.has_deferred_sessions():
+        # not router.has_pending_transfers(): a request whose prefill->decode KV
+        # is still crossing the link is not yet in any decode scheduler, so it
+        # would be invisible to is_request_empty() and could let every instance
+        # be marked done and the run exit before the request is admitted. With
+        # the transfer model off the queue is always empty, so this is a no-op.
+        if (instance_id not in decode_instance or is_prefill_done) and instance_id not in done_instance and schedulers[instance_id].is_request_empty() and not router.has_pending_requests() and not router.has_deferred_sessions() and not router.has_pending_transfers():
             # For DP groups: only mark done when ALL members of the group are empty
             dg = inst_dp_group.get(instance_id)
             if dg is not None:
@@ -933,13 +965,23 @@ def main():
                 break
             controller.write_flush(p, "done") # make done instances to sleep
         elif new_req == None and not responded:
-            # If all instances are idle but deferred sessions have pending
-            # requests with future arrival times (tool calls still running),
-            # advance current time so the next iteration can pick them up.
+            # If all instances are idle, advance current time to the earliest
+            # future event so the next iteration can pick it up, instead of
+            # busy-passing. Two sources of future events:
+            #   - deferred agentic sub-requests with future arrival times, and
+            #   - P/D-transferred decode requests still waiting for their KV to
+            #     cross the cross-instance link (decode_ready_time).
+            # Take the minimum so neither source is starved when both are live.
+            next_events = []
             if router.has_deferred_sessions() or router.has_pending_requests():
                 next_arrival = router.get_next_pending_arrival()
                 if next_arrival is not None and next_arrival > current:
-                    current = next_arrival
+                    next_events.append(next_arrival)
+            next_ready = router.get_next_transfer_ready_time(current)
+            if next_ready is not None:
+                next_events.append(next_ready)
+            if next_events:
+                current = min(next_events)
             controller.write_flush(p, "pass")
         
         # flush
