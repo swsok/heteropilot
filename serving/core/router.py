@@ -1,5 +1,6 @@
 import bisect
 import json
+import math
 import random
 from .logger import get_logger
 
@@ -10,9 +11,24 @@ class Router:
             num_instances,
             schedulers, req_num,
             routing_policy="RR",
-            seed=42
+            seed=42,
+            pd_transfer_bw_gbps=None,
+            pd_transfer_latency_ns=0,
     ):
         self.schedulers = schedulers
+        # Cross-instance bandwidth (GB/s) and latency (ns) used to model the
+        # prefill->decode KV-cache transfer as a deferred handoff. None disables
+        # the model (legacy zero-delay handoff), which is the default. The model
+        # lives entirely in the router and the main loop: serving/core/scheduler.py
+        # is left pristine per work order section 7 (docs/deviations.md D15).
+        self.pd_transfer_bw_gbps = pd_transfer_bw_gbps
+        self.pd_transfer_latency_ns = pd_transfer_latency_ns
+        # Prefill->decode handoffs waiting for their KV to cross the link. Each
+        # entry is (ready_time_ns, req_id, req, decode_index), kept sorted by
+        # ready_time; req_id is the tiebreaker so tuples never compare Request
+        # objects. The request is withheld from the decode scheduler (and its KV
+        # is therefore not yet allocated) until ready_time.
+        self._pending_transfers = []
         self.num_instances = num_instances
         self.prefill_schedulers = [s for s in schedulers if s.pd_type != "decode"]
         self.prefill_instances = len(self.prefill_schedulers)
@@ -321,7 +337,52 @@ class Router:
                 scheduler.pd_type
             )
 
-    def transfer_prefill_request(self, requests):
+    def transfer_prefill_request(self, requests, current=0):
         for req in requests:
             instance_id = self._select_instance(self.decode_schedulers, "decode")
-            self.decode_schedulers[instance_id].add_decode(req)
+            if not self.pd_transfer_bw_gbps:
+                # Legacy zero-delay handoff: hand the request to the decode
+                # scheduler immediately. Byte-identical to the previous behavior.
+                # Both None (model disabled, the default) and 0.0 (a nonsensical
+                # zero bandwidth that would divide by zero) take this path.
+                self.decode_schedulers[instance_id].add_decode(req)
+                continue
+            # Bandwidth model: defer the handoff until the KV cache has finished
+            # crossing the cross-instance link. get_total_kv sizes the request's
+            # prompt KV (num_computed_tokens) with the decode scheduler's own
+            # memory model, so it matches what add_decode later allocates. bytes
+            # / (GB/s) yields nanoseconds directly (bytes / (bytes/ns * 1e0)).
+            sched = self.decode_schedulers[instance_id]
+            kv_bytes = sched.memory.get_total_kv(req)
+            transfer_ns = self.pd_transfer_latency_ns + kv_bytes / self.pd_transfer_bw_gbps
+            # Round the ready time up to an integer cycle: the simulator's clock
+            # is integer-valued, a transfer cannot complete early, and this keeps
+            # the advanced ``current`` an int during idle "pass" stretches.
+            ready_time = current + int(math.ceil(transfer_ns))
+            bisect.insort(self._pending_transfers,
+                          (ready_time, req.id, req, instance_id))
+
+    def pop_ready_transfers(self, current):
+        """Return (req, decode_index) for every pending handoff whose KV has
+        finished transferring by ``current``, removing them from the queue. The
+        main loop hands each to the decode scheduler's add_decode at this point,
+        so the KV is allocated only once it has arrived."""
+        ready = []
+        while self._pending_transfers and self._pending_transfers[0][0] <= current:
+            _, _, req, idx = self._pending_transfers.pop(0)
+            ready.append((req, idx))
+        return ready
+
+    def has_pending_transfers(self):
+        """True if any prefill->decode handoff is still in flight."""
+        return bool(self._pending_transfers)
+
+    def get_next_transfer_ready_time(self, current):
+        """Earliest pending transfer completion time strictly after ``current``,
+        or None. When an in-flight KV transfer is the only remaining work and
+        every NPU is idle, the global clock has no event to advance it; the main
+        loop uses this to jump the clock to the KV-arrival instant instead of
+        busy-waiting (the P/D counterpart of get_next_pending_arrival)."""
+        if self._pending_transfers and self._pending_transfers[0][0] > current:
+            return self._pending_transfers[0][0]
+        return None

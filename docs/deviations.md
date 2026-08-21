@@ -540,6 +540,71 @@ Practical consequence: mixed candidates have energy metrics only once *every* no
 a measured power block, which makes the A5000 power measurement a prerequisite for energy-ranked
 Exp 2.
 
+## D15 — The simulator charges the P/D KV handoff as free; we make it bandwidth-sensitive (first sanctioned `serving/` edit) · Resolved (opt-in, default byte-identical)
+
+**Context.** D12's earlier `serving/` edits were reverted, so `serving/` had stayed pristine. This is
+the **first authorized upstream edit** (Phase 5, work order §7). Increment 2 (`docs/phase5_plan.md`)
+root-caused that the simulator prices the prefill→decode KV transfer at **zero**: `__main__.py:597`
+→ `router.transfer_prefill_request()` → `scheduler.add_decode()` allocates the decode KV with no
+delay and emits no collective, so a cross-instance bandwidth sweep left simulator output
+byte-identical. HeteroPilot had worked around it with a *planner-side* add-on
+(`apply_pd_transfer_cost`); D15 adds the **simulator-side** model so the sim's own P/D numbers move
+with bandwidth.
+
+**Work order §7 constraint — scheduler.py is off-limits.** §7 marks `serving/core/scheduler.py`
+"수정하지 않고 그대로 사용" (use as-is, do not modify), while `request.py` and `router.py` are the
+files sanctioned for Phase 5+ P/D extension. The architect's first design edited the scheduler's
+batch filter and `add_decode`; that was **reverted** to keep scheduler.py pristine. The shipped
+design confines the change to the two orchestration files:
+
+- `serving/core/router.py`: a **deferred-transfer queue**. In bandwidth mode
+  `transfer_prefill_request` does *not* hand the request to the decode scheduler at prefill
+  completion; it enqueues `(ready_time, req_id, req, decode_index)` with
+  `ready_time = current + link_latency + KV_bytes / link_bw`, and exposes `pop_ready_transfers`,
+  `has_pending_transfers`, `get_next_transfer_ready_time`.
+- `serving/__main__.py`: the main loop **drains** ready transfers (calling `add_decode` only once
+  the KV has "arrived", so the decode-side KV allocation is deferred too — physically it lands on
+  arrival, not send); the idle **clock-advance** jumps to the next `ready_time` (the P/D counterpart
+  of the agentic `get_next_pending_arrival`); and the **done-detection** condition gains
+  `not router.has_pending_transfers()` so a run cannot exit while a request's KV is still in flight
+  (that request is not in any scheduler yet and would otherwise be silently lost).
+
+`serving/core/scheduler.py` and `serving/core/request.py` are **untouched**.
+
+**Metric bucket (decided).** This simulator emits the first token on the *prefill* instance
+(`request.py::set_ttft`), so a delayed decode start lands in end-to-end **latency, ITL[0] and
+(smeared) TPOT — never TTFT**. We adopt this sim-honest bucket deliberately. It **differs from the
+planner-side add-on** (increment 2), which charges the transfer to **TTFT** (a DistServe/Mooncake
+client-TTFT convention). Consequence: the sim-level §5.9 adoption crossing is latency/TPOT-driven,
+the planner-level one is TTFT-driven; they will not coincide. This is accepted and recorded rather
+than reconciled, because aligning them would require moving where `set_ttft` fires (a large,
+metric-corrupting change).
+
+**Double-counting.** `LLMServingSimPredictor` does **not** pass `--pd-transfer-model`, so the
+planner always simulates in `none` mode and its add-on remains the sole transfer price — no double
+count today. If a future change makes the predictor use `bandwidth` mode, `apply_pd_transfer_cost`
+**must** be disabled for that run.
+
+**Back-compat.** New CLI flag `--pd-transfer-model {none,bandwidth}`, default `none`. In `none`
+mode the queue is always empty, so the drain, clock-advance and done-guard are no-ops. Verified
+byte-identical against the pinned baseline for a non-P/D config (bench-class) and for the P/D config
+with no flag. `UPSTREAM_COMMIT` is unchanged (this is our own fork edit, tracked in git — not a
+rebase onto newer upstream).
+
+**Modeling limits (honesty).** `transfer_ns` is a hand-computed `KV_bytes / link_bw` over one
+cross-instance link (the trailing network dim for a list `link_bw`); `KV_bytes` comes from the
+decode scheduler's own `memory.get_total_kv`, which is **per-NPU** (the memory model divides by
+`num_npus`), i.e. it models the TP shards moving in parallel over per-rank links. It does **not**
+model contention between the KV transfer and concurrent TP collectives on a shared link — that
+would need a real send/recv node in the Chakra/ASTRA graph (approach "B", rejected for now: the
+analytical backend does not cost a P2P hop, so it would drag in the unbuilt ns3 backend). At
+realistic P/D bandwidths (≥25 GB/s) and short prompts the transfer is sub-millisecond, consistent
+with the increment-2 finding; the effect grows as `1/bw` and is clearly visible below ~4 GB/s.
+
+**Verification.** `experiments/scripts/pd_sim_network_sweep.py` (latency & TPOT monotonic ↑ as bw
+drops, TTFT flat, `none`-mode control flat — all PASS) and `tests/test_sim_pd_transfer.py`
+(router-side queue arithmetic and clock behavior).
+
 ---
 
 ## Open items summary
@@ -550,3 +615,4 @@ Exp 2.
 | D3 | Phase 5 | **Decided** — Level-1 compile for Phase 2; revisit after adding the link graph and compare the two |
 | D4 | Phase 3 | **Resolution path secured** — A5000 measured locally; A40/ATOM/RNGD hardware reachable from 2026-08-17 (see `docs/hardware_roadmap.md`) |
 | D10 | Phase 2 | **Open** — derating factor for the memory feasibility filter; nominal vs KV-matched config for the A5000 comparison |
+| D15 | Phase 5 | **Resolved** — sim-level P/D KV-transfer model, opt-in `--pd-transfer-model bandwidth`, default byte-identical; first sanctioned `serving/` edit (router.py + __main__.py only, scheduler.py pristine) |

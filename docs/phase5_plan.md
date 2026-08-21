@@ -165,6 +165,20 @@ transfer term, even though the simulator itself is flat on P/D transfer. A
 sim-level transfer model (upstream) remains the only way to make the *simulator's*
 own P/D numbers bandwidth-sensitive.
 
+**Status: sim-level model DONE (2026-08-21, deviations D15).** The first sanctioned
+`serving/` edit adds `--pd-transfer-model bandwidth`: the router defers the
+prefill→decode handoff by `link_latency + KV_bytes / cross_instance_link_bw` and
+the main loop drains it, so the **simulator's own** P/D latency/TPOT now move with
+bandwidth (TTFT stays flat — this sim emits the first token on prefill, so the
+delay is not a TTFT charge, unlike the planner-side add-on above; the two buckets
+are deliberately different, D15). Confined to `router.py` + `__main__.py`;
+`scheduler.py` and `request.py` are pristine per work order §7. Default `none` is
+byte-identical to the pin. Verified by `experiments/scripts/pd_sim_network_sweep.py`
+and `tests/test_sim_pd_transfer.py`. This does **not** yet model transfer/collective
+contention on a shared link (that needs a real send/recv in the Chakra graph → ns3,
+still deferred), but it removes the "analytical backend cannot reproduce the sweep"
+blocker below at the sim level.
+
 **Implication for increment 4 (the headline network sweep).** The §5.9 experiment
 — "sweep 25/100/200/400G and find the bandwidth where the P/D benefit vanishes" —
 **cannot be reproduced on the analytical backend**, because the P/D KV-transfer
