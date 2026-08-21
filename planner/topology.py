@@ -66,6 +66,61 @@ class TopologyReduction:
         }
 
 
+@dataclass(frozen=True)
+class PerDimReduction:
+    """Per-ASTRA-dimension bandwidth/latency for the Level-2 compile (§5.3).
+
+    ASTRA-Sim's network config is dimensional, not a link graph (deviations D3):
+    dim 0 is the intra-group (TP) FullyConnected dimension, dim 1 (when present)
+    is the cross-instance dimension. Level 1 collapses both into one scalar
+    bottleneck, so a fast intra-island interconnect (e.g. NVLink) is dragged down
+    by a slow cross-instance fabric. This keeps them apart: each dimension gets
+    its own bottleneck. `cross_*` is None when the placement never crosses to a
+    distinct island, in which case the intra value serves both dimensions and the
+    result is byte-identical to Level 1.
+
+    This is dimension-resolved, NOT per-flow path-aware: the analytical backend
+    cannot represent `contention_group` sharing, so it is dropped here just as in
+    Level 1 (`contention_modeled` stays False).
+    """
+
+    intra_bw_gbps: float
+    intra_lat_ns: float
+    cross_bw_gbps: float | None
+    cross_lat_ns: float | None
+    assumptions: list[str] = field(default_factory=list)
+
+    def as_provenance(self) -> dict[str, object]:
+        perdim_bw = [self.intra_bw_gbps]
+        perdim_lat = [self.intra_lat_ns]
+        # cross_bw_gbps and cross_lat_ns are always both set or both None.
+        if self.cross_bw_gbps is not None and self.cross_lat_ns is not None:
+            perdim_bw.append(self.cross_bw_gbps)
+            perdim_lat.append(self.cross_lat_ns)
+        return {
+            "model_level": 2,
+            "resolution": "per-dimension",
+            # Still False: dimension-resolved is a weaker, honest claim than
+            # per-flow path-aware, which ASTRA-Sim's analytical backend cannot do.
+            "path_aware": False,
+            "contention_modeled": False,
+            "link_bw_gbps_perdim": perdim_bw,
+            "link_latency_ns_perdim": perdim_lat,
+            "dim_semantics": {
+                "0": "intra-group (TP all-reduce/all-gather)",
+                "1": "cross-instance (PP / independent instances)",
+            },
+            "basis": (
+                "Level-2 per-dimension bottleneck: intra = min bandwidth / max "
+                "latency over the selected islands' island_interconnect; cross = "
+                "min bandwidth / max latency over the inter-island paths. "
+                "Dimension-resolved, not per-flow path-aware: ASTRA-Sim's "
+                "dimensional model cannot represent contention_group (deviations D3)."
+            ),
+            "assumptions": list(self.assumptions),
+        }
+
+
 class TopologyGraph:
     """Undirected graph over `<node>/<device>` endpoints.
 
@@ -251,6 +306,65 @@ class TopologyGraph:
             "are dropped here (deviations D3)."
         )
         return TopologyReduction(bw, lat, basis, assumptions)
+
+    def reduce_for_simulator_perdim(
+        self, islands: list[ExecutionIsland]
+    ) -> PerDimReduction:
+        """Level-2 reduction: separate intra-TP and cross-instance bottlenecks.
+
+        Unlike `reduce_for_simulator`, which collapses everything into one scalar,
+        this keeps the two ASTRA-Sim dimensions apart. `islands` is the per-
+        assignment list, so it repeats the same island when two assignments land
+        on it (a same-island P/D split); DP replicas live inside one assignment
+        and do not repeat. Only pairs that actually cross to a distinct island
+        contribute a cross bottleneck. When none do, `cross_*` is None and the
+        caller emits a scalar, so single-island placements stay identical to
+        Level 1 (deviations D3).
+        """
+        if not islands:
+            raise TopologyError("cannot reduce topology for an empty island set")
+
+        assumptions: list[str] = []
+        intra_bws: list[float] = []
+        intra_lats: list[float] = []
+        for island in islands:
+            bw, lat, notes = self.island_interconnect(island)
+            assumptions.extend(notes)
+            intra_bws.append(bw)
+            intra_lats.append(lat)
+
+        finite_intra = [b for b in intra_bws if b != float("inf")]
+        if finite_intra:
+            intra_bw = min(finite_intra)
+        else:
+            # Every selected island is a single device (tp=1): the intra/TP
+            # dimension carries no collective. ASTRA-Sim still needs a finite
+            # bandwidth for a dimension that will see no traffic; emit the NVLINK
+            # class default as an inert placeholder and record that it is inert.
+            intra_bw = CLASS_DEFAULT_GBPS[LinkType.NVLINK]
+            assumptions.append(
+                "intra/TP dimension has size 1 on every selected island "
+                f"(no collective); emitted the NVLINK class default {intra_bw} GB/s "
+                "as an inert placeholder, source=placeholder"
+            )
+        intra_lat = max(intra_lats) if intra_lats else 0.0
+
+        # Cross bottleneck: only pairs whose path is non-empty, i.e. that cross to
+        # a distinct island. A same-island pair (DP replicas, same-island P/D)
+        # yields an empty path -> inf -> no cross hop, so it is excluded here.
+        cross_bw: float | None = None
+        cross_lat: float | None = None
+        finite_cross: list[tuple[float, float]] = []
+        for a, b in itertools.pairwise(islands):
+            bw, lat, notes = self._inter_island(a, b)
+            assumptions.extend(notes)
+            if bw != float("inf"):
+                finite_cross.append((bw, lat))
+        if finite_cross:
+            cross_bw = min(bw for bw, _ in finite_cross)
+            cross_lat = max(lat for _, lat in finite_cross)
+
+        return PerDimReduction(intra_bw, intra_lat, cross_bw, cross_lat, assumptions)
 
     def _inter_island(
         self, a: ExecutionIsland, b: ExecutionIsland

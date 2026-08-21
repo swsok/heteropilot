@@ -33,6 +33,11 @@ from planner.util.percentile import percentile
 from planner.util.power_parse import PowerParseError, parse_power
 from planner.util.workload import WorkloadTrace
 
+# Reuse the simulator's own (pinned) dimension inference so the per-dimension
+# link_bw list the Level-2 compile emits always matches the length ASTRA-Sim
+# expects; replicating the logic here would risk drifting from upstream (D14).
+from serving.core.config_builder import _compute_network_dims
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 #: Per-request CSV columns, verified against real output. Names contain spaces.
@@ -143,6 +148,7 @@ def compile_to_sim_config(
     topology: TopologyGraph,
     gpu_memory_utilization: float = 0.90,
     activation_reserve_gb: float = 0.0,
+    topology_level: int = 1,
 ) -> tuple[dict, TopologyReduction]:
     """CandidateConfig + ClusterSpecV2 -> the simulator's cluster-config dict.
 
@@ -227,10 +233,33 @@ def compile_to_sim_config(
     if not nodes:
         raise CompileError(f"candidate {candidate.id} placed no instances on any node")
 
+    # Level 1 (default): one scalar bottleneck serves every ASTRA-Sim dimension.
+    # Level 2: emit a per-dimension list so intra-island (TP) collectives keep
+    # their real bandwidth instead of being dragged down by a slow cross-instance
+    # fabric. The list length must equal ASTRA-Sim's dimension count, so size it
+    # from the pinned _compute_network_dims over the instances in the same order
+    # config_builder flattens them (node order, then instance order).
+    link_bw: float | list[float] = reduction.link_bw_gbps
+    link_latency: float | list[float] = reduction.link_latency_ns
+    if topology_level == 2:
+        perdim = topology.reduce_for_simulator_perdim(selected)
+        flattened = [inst for node in nodes for inst in node["instances"]]
+        num_dims = len(_compute_network_dims(flattened))
+        if perdim.cross_bw_gbps is not None and num_dims == 2:
+            assert perdim.cross_lat_ns is not None  # set together with cross_bw
+            link_bw = [perdim.intra_bw_gbps, perdim.cross_bw_gbps]
+            link_latency = [perdim.intra_lat_ns, perdim.cross_lat_ns]
+        else:
+            # Single distinct island (DP replicas / same-island P/D), or a single
+            # network dimension: intra serves everything and normalizes exactly
+            # like the Level-1 scalar for this placement (byte-identical).
+            link_bw = perdim.intra_bw_gbps
+            link_latency = perdim.intra_lat_ns
+
     config = {
         "num_nodes": len(nodes),
-        "link_bw": reduction.link_bw_gbps,
-        "link_latency": reduction.link_latency_ns,
+        "link_bw": link_bw,
+        "link_latency": link_latency,
         "nodes": nodes,
     }
     return config, reduction
@@ -250,11 +279,14 @@ class LLMServingSimPredictor(Predictor):
         python: str | None = None,
         retry_once: bool = True,
         keep_artifacts: bool = False,
+        topology_level: int = 1,
     ) -> None:
         self.trace = trace
         self.timeout_s = timeout_s
         self.gpu_memory_utilization = gpu_memory_utilization
         self.activation_reserve_gb = activation_reserve_gb
+        # 1 = one scalar link_bw (default); 2 = per-dimension list (Level-2, D3).
+        self.topology_level = topology_level
         self.python = python or sys.executable
         self.retry_once = retry_once
         self.keep_artifacts = keep_artifacts
@@ -290,6 +322,7 @@ class LLMServingSimPredictor(Predictor):
                 topology=TopologyGraph(cluster),
                 gpu_memory_utilization=self.gpu_memory_utilization,
                 activation_reserve_gb=self.activation_reserve_gb,
+                topology_level=self.topology_level,
             )
         except CompileError as exc:
             return SimResult(candidate.id, SimOutcome.CRASHED, detail=f"compile failed: {exc}")
