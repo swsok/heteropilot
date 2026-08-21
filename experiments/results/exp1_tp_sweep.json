@@ -1,0 +1,119 @@
+{
+  "planner_metrics": {
+    "generated_candidates": 7,
+    "prune_ratio": 0.0,
+    "rejected_candidates": 0,
+    "survivors": 7
+  },
+  "provenance": {
+    "backend_version": null,
+    "cluster_spec_hash": "221807875202e738f5739435f3c6b8945bb1b95438a050d745f95da4d7b080be",
+    "command": "exp1_tp_sweep.py --service experiments/configs/services/llama31-8b-goodputj.yaml --cluster experiments/configs/clusters/exp1-a40-tp-sweep.yaml --tp 1,2,4 --num-requests 300 --seed 42 --max-num-seqs 256 --max-num-batched-tokens 2048 --work-dir outputs/exp1 --output-dir experiments/results",
+    "cpu_count": 64,
+    "dataset_hash": "e9dd5a8476087bdbeb6cdcfb0cfa762092abea25b417e13cd158e0bded37d540",
+    "experiment": "exp1_tp_sweep",
+    "git_commit": "6d0751e43f9e0372f58f007bebb91359b6a6d7a7",
+    "git_dirty": true,
+    "hardware_profile_hash": "583cefd9ea27b940d25be0e96832631a2ef25a3aa7c89d3ae4ae2513b0f4d2d9",
+    "hostname": "s8",
+    "intra_bandwidth_note": "size-4 A40 island intra bandwidth = PCIe bottleneck 64 GB/s (vendor_spec); the TP=2 row is conservative vs a dedicated NVLink pair",
+    "knobs": {
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 256
+    },
+    "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
+    "model_revision": null,
+    "planner_metrics": {
+      "generated_candidates": 7,
+      "prune_ratio": 0.0,
+      "rejected_candidates": 0,
+      "survivors": 7
+    },
+    "platform": "Linux-5.4.0-216-generic-x86_64-with-glibc2.31",
+    "python_version": "3.10.20",
+    "random_seed": 42,
+    "service_spec_hash": "ba2df801985f46bc19ff5e115c687deea41e6995bfb004ec40545049d4534730",
+    "timestamp": "2026-08-21T11:16:21.070920+00:00",
+    "tp_degrees": [
+      1,
+      2,
+      4
+    ],
+    "vllm_version": null,
+    "workload": {
+      "horizon_s": 30.301,
+      "num_requests": 300,
+      "path": "outputs/exp1/workload.jsonl",
+      "random_seed": 42,
+      "total_input_tokens": 262617,
+      "total_output_tokens": 190920
+    }
+  },
+  "rows": [
+    {
+      "average_power_w": 564.1852486187839,
+      "devices": 1,
+      "feasible": false,
+      "j_per_request": 342.1,
+      "p50_tpot_ms": 160.23892,
+      "p50_ttft_ms": 6898.4442899999995,
+      "p99_tpot_ms": 224.97307354999998,
+      "p99_ttft_ms": 106109.40267153,
+      "peak_power_w": 724.28,
+      "sim_wall_seconds": 167.2,
+      "slo_attainment": 0.0,
+      "slo_goodput_rps": 0.0,
+      "throughput_tps": 2495.9707446809875,
+      "tokens_per_joule": 1.8602747734580531,
+      "total_energy_j": 102630.0,
+      "tp": 1,
+      "violations": [
+        "p99_ttft_ms=106109.4 vs 25000.0",
+        "p99_tpot_ms=225.0 vs 50.0"
+      ]
+    },
+    {
+      "average_power_w": 830.7541111111112,
+      "devices": 2,
+      "feasible": false,
+      "j_per_request": 250.96666666666667,
+      "p50_tpot_ms": 89.7646525,
+      "p50_ttft_ms": 988.820449,
+      "p99_tpot_ms": 100.33294277,
+      "p99_ttft_ms": 35229.69526651,
+      "peak_power_w": 854.79,
+      "sim_wall_seconds": 103.3,
+      "slo_attainment": 0.0,
+      "slo_goodput_rps": 0.0,
+      "throughput_tps": 5007.723187439099,
+      "tokens_per_joule": 2.535794926285031,
+      "total_energy_j": 75290.0,
+      "tp": 2,
+      "violations": [
+        "p99_ttft_ms=35229.7 vs 25000.0",
+        "p99_tpot_ms=100.3 vs 50.0"
+      ]
+    },
+    {
+      "average_power_w": 1291.4503921568626,
+      "devices": 4,
+      "feasible": false,
+      "j_per_request": 221.06666666666666,
+      "p50_tpot_ms": 43.537844,
+      "p50_ttft_ms": 165.21251949999998,
+      "p99_tpot_ms": 52.14772362999999,
+      "p99_ttft_ms": 4532.49985298,
+      "peak_power_w": 1385.54,
+      "sim_wall_seconds": 129.2,
+      "slo_attainment": 0.94,
+      "slo_goodput_rps": 5.497784941111771,
+      "throughput_tps": 8842.017336301451,
+      "tokens_per_joule": 2.878769601930036,
+      "total_energy_j": 66320.0,
+      "tp": 4,
+      "violations": [
+        "p99_tpot_ms=52.1 vs 50.0"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,93 @@
+# Exp 1 cluster — same-GPU TP=1/2/4 sweep (work order §12 Exp 1).
+#
+# PURPOSE: validate the planner pipeline across tensor-parallel degrees on ONE
+# real accelerator class (A40). Not a heterogeneous or P/D experiment.
+#
+# PROVENANCE (absolute rule 3): this describes a subset of the real A40x8 server
+# (see experiments/configs/clusters/a40x8.yaml, verified 2026-08-18). We take the
+# four NUMA0 GPUs (gpu0-gpu3) and declare enough links to form ONE size-4 island
+# so TP=4 is reachable — the a40x8 production model uses NVLink-pair (size-2)
+# islands, which cap TP at 2, so a dedicated Exp-1 cluster is needed for TP=4.
+#
+# TOPOLOGY HONESTY: on this box a 4-GPU tensor-parallel group cannot stay on
+# NVLink — nvidia-smi topo -m shows NVLink (NV4) only within the pairs
+# (gpu0-gpu1, gpu2-gpu3); the pairs are bridged by the PCIe host bridge (NODE).
+# So a size-4 island's intra bandwidth is PCIe-limited. island_interconnect()
+# takes the MIN over the island's internal links, so every candidate on this
+# island is charged the PCIe bottleneck (64 GB/s) for its collectives. This is
+# realistic for TP=4; it makes the TP=2 row CONSERVATIVE, because a production
+# TP=2 engine would sit on a dedicated NVLink pair (112.5 GB/s, the a40x8 model)
+# rather than share this island's PCIe floor. The results doc repeats this.
+
+cluster_id: exp1-a40-tp-sweep-node0
+
+nodes:
+  - id: node0
+    accelerators:
+      # memory_gb: measured - nvidia-smi reports 46068 MiB (44.99 GiB) per card.
+      - id: gpu0
+        type: GPU
+        vendor: NVIDIA
+        model: A40
+        backend: cuda
+        memory_gb: 45.0
+        state: FREE
+        profile: profiles/accelerators/a40.yaml
+      - id: gpu1
+        type: GPU
+        vendor: NVIDIA
+        model: A40
+        backend: cuda
+        memory_gb: 45.0
+        state: FREE
+        profile: profiles/accelerators/a40.yaml
+      - id: gpu2
+        type: GPU
+        vendor: NVIDIA
+        model: A40
+        backend: cuda
+        memory_gb: 45.0
+        state: FREE
+        profile: profiles/accelerators/a40.yaml
+      - id: gpu3
+        type: GPU
+        vendor: NVIDIA
+        model: A40
+        backend: cuda
+        memory_gb: 45.0
+        state: FREE
+        profile: profiles/accelerators/a40.yaml
+    cpu_memory_gb: 503.0
+    power:
+      source: placeholder
+
+links:
+  # NVLink within each real pair (measured, from a40x8.yaml).
+  - id: nvlink-node0-gpu0-gpu1
+    src: node0/gpu0
+    dst: node0/gpu1
+    type: NVLINK
+    bandwidth_gbps: 112.5
+    latency_ns: 1000
+    contention_group: node0-nvlink-pair0
+    source: measured
+  - id: nvlink-node0-gpu2-gpu3
+    src: node0/gpu2
+    dst: node0/gpu3
+    type: NVLINK
+    bandwidth_gbps: 112.5
+    latency_ns: 1000
+    contention_group: node0-nvlink-pair1
+    source: measured
+  # PCIe host bridge linking the two pairs into one size-4 island.
+  # bandwidth_gbps: vendor_spec - PCIe 4.0 x16 is 64 GB/s bidirectional (A40 is a
+  #   PCIe 4.0 card). NOT a measured p2p bandwidth; it is the standard link rate.
+  # latency_ns: placeholder - not measured; PCIe class representative value.
+  - id: pcie-node0-gpu0-gpu2
+    src: node0/gpu0
+    dst: node0/gpu2
+    type: PCIE
+    bandwidth_gbps: 64.0
+    latency_ns: 1500
+    contention_group: node0-pcie-numa0
+    source: vendor_spec

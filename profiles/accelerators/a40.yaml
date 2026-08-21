@@ -15,9 +15,12 @@ sim_hardware: A40
 #                           ~3 GB. Feasibility must use the real usable figure.
 #   memory_bandwidth_gbps : vendor_spec - NVIDIA published figure (48 GB GDDR6,
 #                           696 GB/s). Not measured; no bandwidth microbenchmark.
-#   perf_data             : measured - profiled on the A40x8 server 2026-08-19,
-#                           vLLM 0.19.0, torch 2.10.0+cu128, sm_86, one A40 per
-#                           run (GPU 0/1), tp1 and tp2, with skew.
+#   perf_data             : measured - profiled on the A40x8 server, vLLM 0.19.0,
+#                           torch 2.10.0+cu128, sm_86, one A40 per run, with skew.
+#                           Llama-3.1-8B: tp1+tp2 (2026-08-19) and tp4 (2026-08-21,
+#                           added for the §12 Exp 1 TP sweep). Qwen3-32B: tp1+tp2.
+#                           TP is emulated by shrinking layer dims on one GPU, so
+#                           tp4 needs no 4-GPU group (see docs profiling notes).
 #   power                 : measured - see the power: block below.
 source: measured
 
@@ -49,7 +52,7 @@ power:
 
 # A40 is Ampere sm_86 like the locally boot-tested A5000, same vLLM CUDA path.
 # Llama-3.1-8B and Qwen3-32B are now profiled on the real A40 (dummy-weight
-# layerwise profiling, tp1+tp2); the broader Llama-3.1-* / Qwen3-30B-A3B-*
+# layerwise profiling; Llama tp1/tp2/tp4, Qwen tp1/tp2); the broader Llama-3.1-* / Qwen3-30B-A3B-*
 # patterns remain a vendor_spec-level compatibility claim (kernels load on
 # sm_86) and have no A40 perf bundle yet - a candidate using one would need its
 # own profile before the simulator can trace it.
@@ -74,6 +77,8 @@ notes: >
   A40x8 single-node server, reachable from 2026-08-18 (docs/hardware_roadmap.md).
   Qwen3-32B bf16 (~61 GB weights) serves at TP=2 on the 45 GB usable devices
   (TP=1 does not fit), making this the Phase 4 calibration target for the work
-  order's headline model. Profiled at TP=1 and TP=2; the island model for this
-  server is four NVLink pairs (experiments/configs/clusters/a40x8.yaml), so only
-  TP in {1,2} is reachable per island.
+  order's headline model. Llama-3.1-8B is profiled at TP=1/2/4 (tp4 added for the
+  §12 Exp 1 sweep, experiments/configs/clusters/exp1-a40-tp-sweep.yaml); Qwen3-32B
+  at TP=1/2. The production island model for this server is four NVLink pairs
+  (experiments/configs/clusters/a40x8.yaml), so only TP in {1,2} is reachable per
+  island there; TP=4 requires the dedicated Exp-1 size-4 island (PCIe-bridged).
