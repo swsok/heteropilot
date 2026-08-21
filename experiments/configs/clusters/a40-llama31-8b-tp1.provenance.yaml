@@ -1,0 +1,120 @@
+# Provenance for a40-llama31-8b-tp1.json and a40-llama31-8b-tp1-kvmatched.json
+#
+# The simulator's cluster-config JSON has nowhere to record where a number came
+# from (deviations.md D3 / D7), so every non-obvious value is sourced here.
+# Absolute rule 3: nothing below is invented, and nothing unmeasured is labelled
+# as measured. Where a value must come from a measurement that has not happened
+# yet, it is marked `source: to_be_measured` with the exact command that produces
+# it.
+#
+# Mirrors experiments/configs/clusters/a5000-llama31-8b-tp1.provenance.yaml. The
+# only intended differences from the A5000 configs are the hardware class, its
+# memory size/bandwidth, and (for the KV-matched variant) the derated mem_size.
+
+configs:
+  - experiments/configs/clusters/a40-llama31-8b-tp1.json            # nominal mem_size
+  - experiments/configs/clusters/a40-llama31-8b-tp1-kvmatched.json  # KV-matched mem_size (placeholder)
+purpose: >
+  A40 sim-vs-real validation (Phase 4 entry, docs/hardware_roadmap.md step 4 /
+  HANDOVER.md §7 step 4). Repeats the A5000 protocol on the real A40x8 migration
+  server: compare a NOMINAL mem_size run against a KV-MATCHED mem_size run so the
+  D10 memory-accounting error is separated from profile error. Mirrors
+  bench/examples/configs/Llama-3.1-8B.json so the only intended difference from
+  the upstream reference is the hardware class.
+created: 2026-08-18
+upstream_pin: 2c2042ce
+mirrors: experiments/configs/clusters/a5000-llama31-8b-tp1.provenance.yaml
+
+fields:
+  instances[0].hardware:
+    value: A40
+    source: to_be_measured
+    note: >
+      Folder label for profiler/perf/A40/, produced by
+      `python -m profiler profile meta-llama/Llama-3.1-8B --hardware A40 --tp 1,2,4,8`
+      (HANDOVER.md §7 step 2). GPU string reported by the driver is "NVIDIA A40"
+      (nvidia-smi -L, verified 2026-08-18 on the migration server). The A40 perf
+      bundle does NOT exist yet, so this cluster config fails upstream validation
+      until profiler/perf/A40/ is produced and profiles/accelerators/a40.yaml has
+      `sim_hardware: A40` written in (currently null, by design).
+
+  instances[0].npu_mem.mem_size (nominal, a40-llama31-8b-tp1.json):
+    value: 45
+    unit: GB
+    source: measured
+    note: >
+      Real usable memory. nvidia-smi reports 46068 MiB (44.99 GiB) per A40 card
+      with ECC Enabled (measured 2026-08-18, same figure recorded in
+      experiments/configs/clusters/a40x8.yaml). 48 GB is the marketing nominal;
+      ECC reserves ~3 GB. Feasibility must use the real usable figure. Rounded to
+      whole GB to mirror the A5000 config's rounding of 24564 MiB -> 24.
+
+  instances[0].npu_mem.mem_size (KV-matched, a40-llama31-8b-tp1-kvmatched.json):
+    value: "TODO_MEASURE_A40_KV_BUDGET_GB"   # string sentinel, NOT a number
+    unit: GB
+    source: to_be_measured
+    note: >
+      MUST be filled in AFTER the real A40 KV budget is measured. Do NOT invent
+      it. Derivation, mirroring how the A5000 KV-matched 20.81 was produced
+      (deviations.md D10, phase0_bench_plan.md §2b):
+
+        kv_matched_mem_size = weights_GiB + observed_A40_KV_GiB
+
+      where:
+        - weights_GiB = 14.96  (Llama-3.1-8B bf16, from D10; the A5000 figure,
+          hardware-independent for the same model+dtype, reused as-is)
+        - observed_A40_KV_GiB = the "Available KV cache memory: <X> GiB" line
+          that vLLM prints at engine startup on a REAL A40, captured under the
+          EXACT bench engine settings (max_model_len=8192, CUDA graphs on, i.e.
+          NOT enforce_eager). D10 warns the KV figure varies with engine
+          settings, so it must be read from the same run that produces the bench
+          artifacts, not a separate enforce_eager probe.
+
+      The A5000 arithmetic that this mirrors: 14.96 + 5.85 = 20.81 GB
+      (5.85 GiB was the A5000 observed KV under bench settings, D10). On a 45 GB
+      A40 the KV budget is far larger, so the sharegpt-300 workload will NOT
+      saturate as it did on the A5000; the nominal-vs-KV-matched gap is expected
+      to be SMALLER here than the A5000's 22.54% -> 9.26%. That expectation is
+      itself a finding to record, not a reason to skip the comparison.
+
+      Fill both this note's value and the string in
+      a40-llama31-8b-tp1-kvmatched.json (replace "TODO_MEASURE_A40_KV_BUDGET_GB"
+      with the numeric GB value), then flip source to `measured` and record the
+      raw vLLM startup line and the run it came from.
+
+  instances[0].npu_mem.mem_bw:
+    value: 696
+    unit: GB/s
+    source: vendor_spec
+    note: >
+      NVIDIA published figure for A40 (384-bit GDDR6), matching
+      profiles/accelerators/a40.yaml memory_bandwidth_gbps: 696. NOT measured on
+      the migration server. Replace with a measured value if a bandwidth
+      microbenchmark is ever run. (The A5000 config uses 768 the same way.)
+
+  instances[0].npu_mem.mem_latency:
+    value: 0
+    unit: ns
+    source: inherited
+    note: 0 in every bundled upstream config; kept for comparability.
+
+  cpu_mem, link_bw, link_latency:
+    source: inherited
+    note: >
+      Copied verbatim from bench/examples/configs/Llama-3.1-8B.json (via the
+      A5000 config) so the A40 run differs from the reference in hardware only.
+      These are NOT measurements of the migration server's actual CPU memory
+      (measured host RAM is 503 GiB, a40x8.yaml) or interconnect. This single-A40
+      TP=1 config exercises no inter-device link, so link_bw/link_latency do not
+      affect the run.
+
+not_recorded_here:
+  power:
+    status: absent
+    note: >
+      No `power:` block, so this config produces no energy output, exactly like
+      the A5000 config. A40 accelerator power is not yet measured (HANDOVER.md §7
+      step 3; profiles/accelerators/a40.yaml has no power: block yet) and D2
+      records that power is stdout-only anyway. Sim-vs-real validation here is on
+      latency/throughput (the 15 metrics of bench validate), not energy. Add a
+      power: block only after step 3 measures idle/active/standby on the A40.

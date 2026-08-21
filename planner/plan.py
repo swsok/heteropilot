@@ -69,6 +69,11 @@ class VllmKnobs(_Strict):
     prioritize_prefill: bool = False
     block_size: int = Field(default=16, gt=0)
     kv_cache_dtype: str = "auto"
+    #: vLLM `--max-model-len`. None = the model's own max (max_position_embeddings),
+    #: which is also what the simulator uses (it has no separate max_model_len; it
+    #: caps at max_position_embeddings). Set it to pin a deployment's context/KV
+    #: budget; leave None to match the simulator's effective context.
+    max_model_len: int | None = Field(default=None, gt=0)
 
 
 class IslandAssignment(_Strict):

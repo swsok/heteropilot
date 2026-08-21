@@ -2,26 +2,66 @@ profile_id: a40-48gb
 vendor: NVIDIA
 model: A40
 backend: cuda
-memory_gb: 48
+memory_gb: 45
 memory_bandwidth_gbps: 696
 
-# NO sim_hardware yet: profiler/perf/A40/ does not exist. Any cluster config
-# naming this accelerator fails upstream validation until the bundle is
-# profiled on the real nodes (docs/hardware_roadmap.md step 2).
-sim_hardware: null
+# Simulator `hardware` key. Must match a directory under profiler/perf/.
+sim_hardware: A40
 
-#   memory_gb, memory_bandwidth_gbps : NVIDIA published figures (48 GB GDDR6,
-#     696 GB/s). Not measured by us.
-#   perf_data : none yet.
-source: vendor_spec
+# Per-field provenance, because a single top-level `source` cannot describe a
+# profile whose numbers come from different places (absolute rule 3).
+#   memory_gb             : measured - nvidia-smi reports 46068 MiB (44.99 GiB)
+#                           usable per card; 48 GB nominal, ECC Enabled reserves
+#                           ~3 GB. Feasibility must use the real usable figure.
+#   memory_bandwidth_gbps : vendor_spec - NVIDIA published figure (48 GB GDDR6,
+#                           696 GB/s). Not measured; no bandwidth microbenchmark.
+#   perf_data             : measured - profiled on the A40x8 server 2026-08-19,
+#                           vLLM 0.19.0, torch 2.10.0+cu128, sm_86, one A40 per
+#                           run (GPU 0/1), tp1 and tp2, with skew.
+#   power                 : measured - see the power: block below.
+source: measured
 
-perf_data: null
+perf_data: profiler/perf/A40/
 
-# A40 is Ampere sm_86 like the locally boot-tested A5000, same vLLM CUDA path,
-# so declaring the same model support is a vendor_spec-level claim, not a
-# measurement. Confirm with a real boot at bring-up before relying on it.
+# Measured 2026-08-19 on this server's GPU 2 via nvidia-smi power.draw polling at
+# 10 Hz under a real vLLM bench (NousResearch/Meta-Llama-3.1-8B, an ungated
+# mirror with weights identical to the gated meta-llama repo; 300 sharegpt
+# requests). Raw data + method: experiments/results/a40_power/. Method mirrors
+# the A5000 protocol (deviations D7):
+#   active_power     = mean at util >= 90% during load (1737 samples; p95 301.3,
+#                      max 305.6 W - near the 300 W board TDP)
+#   standby_power    = mean of the first 2 s after load ended (20 samples)
+#   idle_power       = mean of the idle baseline, no CUDA context (320 samples,
+#                      31.76 W bare idle; the A40 is a larger board than the
+#                      A5000, whose bare idle was 8.2 W)
+#   standby_duration = A5000-protocol elevated-draw window (2 s). A40 decays
+#                      152->83->69->53->37 W over 0-30 s post-load, slower than
+#                      the A5000 (~4 s); the sharp window is the first ~2 s.
+# nvidia-smi reports board power internally averaged over ~1 s; treat standby as
+# first-order (deviations D7). Host/node power is NOT measured (no ipmitool on
+# this host); NodePower stays source: placeholder.
+power:
+  idle_power: 31.76
+  standby_power: 152.28
+  active_power: 297.83
+  standby_duration: 2000000000   # ns (2 s)
+  source: measured
+
+# A40 is Ampere sm_86 like the locally boot-tested A5000, same vLLM CUDA path.
+# Llama-3.1-8B and Qwen3-32B are now profiled on the real A40 (dummy-weight
+# layerwise profiling, tp1+tp2); the broader Llama-3.1-* / Qwen3-30B-A3B-*
+# patterns remain a vendor_spec-level compatibility claim (kernels load on
+# sm_86) and have no A40 perf bundle yet - a candidate using one would need its
+# own profile before the simulator can trace it.
 supported_models:
   - pattern: "meta-llama/Llama-3.1-*"
+    dtypes: [bfloat16]
+  # NousResearch/Meta-Llama-3.1-8B is an UNGATED mirror with weights + tokenizer
+  # identical to the gated meta-llama repo. This host's HF token lacks the Llama
+  # license, so real vLLM deployment uses the mirror; the compute (and thus the
+  # A40 compatibility claim) is the same model. Not a separate model - a repo
+  # path that dodges gating. It shares the meta-llama/Llama-3.1-8B perf bundle.
+  - pattern: "NousResearch/Meta-Llama-3.1-*"
     dtypes: [bfloat16]
   - pattern: "Qwen/Qwen3-32B"
     dtypes: [bfloat16]
@@ -31,7 +71,9 @@ supported_models:
 max_tp_size: 8
 
 notes: >
-  Up to 8 nodes x 8 devices expected reachable from the week of 2026-08-17
-  (docs/hardware_roadmap.md). Qwen3-32B bf16 (~64 GB weights) serves at TP=2 on
-  48 GB devices, making this the Phase 4 calibration target for the work
-  order's headline model.
+  A40x8 single-node server, reachable from 2026-08-18 (docs/hardware_roadmap.md).
+  Qwen3-32B bf16 (~61 GB weights) serves at TP=2 on the 45 GB usable devices
+  (TP=1 does not fit), making this the Phase 4 calibration target for the work
+  order's headline model. Profiled at TP=1 and TP=2; the island model for this
+  server is four NVLink pairs (experiments/configs/clusters/a40x8.yaml), so only
+  TP in {1,2} is reachable per island.

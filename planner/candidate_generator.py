@@ -20,6 +20,7 @@ test exists to catch (§9).
 from __future__ import annotations
 
 import itertools
+import logging
 from dataclasses import dataclass
 
 from planner.inventory import (
@@ -46,6 +47,8 @@ from planner.util import memory as memutil
 #: candidates" rather than a sweep.
 DEFAULT_MAX_NUM_SEQS = (32, 128, 256)
 DEFAULT_MAX_NUM_BATCHED_TOKENS = (2048, 8192)
+
+_log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -77,6 +80,7 @@ class CandidateGenerator:
         enable_prefix_caching: bool = False,
         enable_bound_pruning: bool = True,
         enable_mixed: bool = True,
+        enable_pd: bool = False,
     ) -> None:
         self.spec = spec
         self.cluster = cluster
@@ -97,6 +101,11 @@ class CandidateGenerator:
         #: Enumerate two-island replica placements (work order §1.3). Pairs
         #: only, uniform devices-per-replica - see _mixed_candidates and D14.
         self.enable_mixed = enable_mixed
+        #: Enumerate Prefill/Decode-split placements (work order §5.3, Phase 5
+        #: increment 1). Cross-island, both directions, uniform instance size -
+        #: see _pd_candidates and D14. Off by default so Phase 2 behaviour and
+        #: the frozen golden outputs are unchanged.
+        self.enable_pd = enable_pd
         self._rejections: list[Rejection] = []
         self._generated = 0
 
@@ -118,8 +127,22 @@ class CandidateGenerator:
             if opts:
                 island_opts[island.id] = (island, profile, opts)
 
+        single_count = len(survivors)
         if self.enable_mixed:
             survivors.extend(self._mixed_candidates(island_opts))
+        mixed_count = len(survivors) - single_count
+        if self.enable_pd:
+            survivors.extend(self._pd_candidates(island_opts))
+        pd_count = len(survivors) - single_count - mixed_count
+
+        # Make the P/D blow-up visible: P/D roughly squares the island-pairing
+        # space (work order §5.3 risk note), so log the breakdown for anyone
+        # watching the candidate count grow.
+        _log.info(
+            "generated %d candidate(s): %d single-island, %d mixed, %d pd-split "
+            "(%d structurally enumerated)",
+            len(survivors), single_count, mixed_count, pd_count, self._generated,
+        )
 
         return GenerationResult(survivors, list(self._rejections), self._generated)
 
@@ -163,9 +186,13 @@ class CandidateGenerator:
     ) -> list[tuple[int, memutil.MemoryReport]]:
         """Knob-independent (tp, memory report) options for one island.
 
-        Runs stages 2-4 once per TP degree; the surviving options feed both
-        single-island and mixed enumeration so the two can never disagree on
-        what an island supports.
+        Runs the *role-agnostic* stages 2-3 (parallelism + memory) once per TP
+        degree; the surviving options feed single-island, mixed and P/D
+        enumeration so they can never disagree on what an island supports. The
+        remaining bounds (stage 4 topology, stage 5 analytical) are role- and
+        assignment-specific - a prefill engine runs no decode steps, so its
+        decode-oriented TPOT floors do not apply - and are therefore evaluated
+        per assignment in `_assignment_ok`, not here.
         """
         out: list[tuple[int, memutil.MemoryReport]] = []
         per_device_gb = island.total_memory_gb / island.size
@@ -203,8 +230,6 @@ class CandidateGenerator:
                 )
                 continue
 
-            if not self._stage4_topology_ok(island, tp):
-                continue
             out.append((tp, report))
         return out
 
@@ -223,7 +248,9 @@ class CandidateGenerator:
                 ):
                     self._generated += 1
                     cand = self._build(island, tp, dp, seqs, tokens)
-                    if not self._stage5_analytical_ok(cand, island, profile, report, seqs):
+                    if not self._assignment_ok(
+                        cand, cand.assignments[0], island, profile, report, seqs
+                    ):
                         continue
                     out.append(cand)
         return out
@@ -268,11 +295,12 @@ class CandidateGenerator:
                                 (island_a, tp_a, dp_a), (island_b, tp_b, dp_b), seqs, tokens
                             )
                             ok = True
-                            for isl, prof, rep in (
-                                (island_a, prof_a, rep_a),
-                                (island_b, prof_b, rep_b),
+                            for i, (isl, prof, rep) in enumerate(
+                                ((island_a, prof_a, rep_a), (island_b, prof_b, rep_b))
                             ):
-                                if not self._stage5_analytical_ok(cand, isl, prof, rep, seqs):
+                                if not self._assignment_ok(
+                                    cand, cand.assignments[i], isl, prof, rep, seqs
+                                ):
                                     ok = False
                                     break
                             if ok:
@@ -310,6 +338,116 @@ class CandidateGenerator:
             knobs=knobs,
         )
 
+    # -- P/D-split (cross-island role) enumeration -------------------------
+
+    def _pd_candidates(
+        self,
+        island_opts: dict[str, tuple[ExecutionIsland, AcceleratorProfile, list]],
+    ) -> list[CandidateConfig]:
+        """Prefill/Decode-split placements across two islands (work order §5.3).
+
+        Heterogeneity at *role* granularity rather than replica granularity: the
+        prefill role runs on island A, the decode role on island B, each an
+        independent vLLM engine, with the KV cache shipped A->B per request. The
+        simulator models this natively via per-instance `pd_type`
+        (serving/core/config_builder.py), so no upstream edit is needed - the
+        generator only has to emit the right role pairs.
+
+        Restrictions, all deliberate:
+        - Cross-island only, and BOTH directions. Prefill-on-A/decode-on-B is a
+          different deployment from prefill-on-B/decode-on-A (different hardware
+          does the prefill vs the decode work), so ordered pairs are enumerated -
+          `itertools.permutations`, not the unordered `combinations`
+          `_mixed_candidates` uses. Cross-vendor P/D (GPU-P + NPU-D, etc.)
+          therefore emerges naturally whenever two islands run different
+          backends; on a single-backend cluster only same-backend P/D appears.
+        - Same-island P/D is deferred: prefill and decode engines would then
+          share one island's devices, which needs device-overlap accounting the
+          MVP does not do. Enumerating it here would double-book hardware.
+        - Equal devices-per-replica across the two islands (`tp_p == tp_d`). Same
+          reason as `_mixed_candidates`: the simulator infers its network
+          topology as [npus_per_group, num_instances] by integer division over
+          the total device count, which silently mis-scopes collectives when
+          instance sizes differ (deviations D14). Unequal sizes are
+          unrepresentable, so they are not enumerated.
+
+        Bounds run per assignment via `_assignment_ok`, and that check is
+        role-aware: the prefill assignment skips the decode-oriented TPOT floors
+        (stage-4 all-reduce, stage-5 memory roofline) because a disaggregated
+        prefill engine runs no decode steps - TPOT is set by the decode island.
+        Charging the prefill side a decode TPOT floor would reject
+        slow-prefill/fast-decode candidates that the real simulator accepts,
+        violating "a pruning stage must be a relaxation of feasibility". The
+        bounds that do apply stay gated by `enable_bound_pruning`, so oracle mode
+        sees the same P/D candidates minus only the bound rejections.
+        """
+        out: list[CandidateConfig] = []
+        for p_id, d_id in itertools.permutations(sorted(island_opts), 2):
+            island_p, prof_p, opts_p = island_opts[p_id]
+            island_d, prof_d, opts_d = island_opts[d_id]
+            for (tp_p, rep_p), (tp_d, rep_d) in itertools.product(opts_p, opts_d):
+                if tp_p != tp_d:  # D14: uniform instance size required
+                    continue
+                # dp_p == dp_d for now. Asymmetric prefill/decode replica counts
+                # produce a prefill<->decode instance pairing that is not yet
+                # validated against the simulator's config_builder (a D14-style
+                # representability limit); unlock it in Phase 5 increment 2 once
+                # the Level-2 network model can express the pairing.
+                for dp in range(1, min(island_p.size // tp_p, island_d.size // tp_d) + 1):
+                    for seqs, tokens in itertools.product(
+                        self.max_num_seqs, self.max_num_batched_tokens
+                    ):
+                        self._generated += 1
+                        cand = self._build_pd(
+                            (island_p, tp_p, dp), (island_d, tp_d, dp), seqs, tokens
+                        )
+                        ok = True
+                        for i, (isl, prof, rep) in enumerate(
+                            ((island_p, prof_p, rep_p), (island_d, prof_d, rep_d))
+                        ):
+                            if not self._assignment_ok(
+                                cand, cand.assignments[i], isl, prof, rep, seqs
+                            ):
+                                ok = False
+                                break
+                        if ok:
+                            out.append(cand)
+        return out
+
+    def _build_pd(
+        self,
+        prefill: tuple[ExecutionIsland, int, int],
+        decode: tuple[ExecutionIsland, int, int],
+        seqs: int,
+        tokens: int,
+    ) -> CandidateConfig:
+        knobs = VllmKnobs(
+            max_num_seqs=seqs,
+            max_num_batched_tokens=tokens,
+            enable_prefix_caching=self.enable_prefix_caching,
+            kv_cache_dtype=self.spec.service.kv_cache_dtype,
+        )
+        island_p, tp_p, dp_p = prefill
+        island_d, tp_d, dp_d = decode
+        return CandidateConfig(
+            id=(
+                f"pd({island_p.id}-tp{tp_p}-dp{dp_p} P + "
+                f"{island_d.id}-tp{tp_d}-dp{dp_d} D)-s{seqs}-t{tokens}"
+            ),
+            model=self.spec.model,
+            dtype=self.spec.service.dtype,
+            assignments=[
+                IslandAssignment(
+                    island_id=island_p.id, role=Role.PREFILL, tp_size=tp_p, dp_replicas=dp_p
+                ),
+                IslandAssignment(
+                    island_id=island_d.id, role=Role.DECODE, tp_size=tp_d, dp_replicas=dp_d
+                ),
+            ],
+            serving_arch=ServingArch.PD_SPLIT,
+            knobs=knobs,
+        )
+
     def _build(
         self, island: ExecutionIsland, tp: int, dp: int, seqs: int, tokens: int
     ) -> CandidateConfig:
@@ -332,18 +470,50 @@ class CandidateGenerator:
             knobs=knobs,
         )
 
+    # -- per-assignment bounds (stages 4-5) --------------------------------
+
+    def _assignment_ok(
+        self,
+        cand: CandidateConfig,
+        assignment: IslandAssignment,
+        island: ExecutionIsland,
+        profile: AcceleratorProfile,
+        report: memutil.MemoryReport,
+        seqs: int,
+    ) -> bool:
+        """Run the bound-based lower bounds (stages 4-5) for one assignment.
+
+        Both stages read the assignment's own role and tp rather than
+        `cand.assignments[0]`, so a decode assignment is scored against its own
+        island/tp and a prefill assignment is exempted from the decode-oriented
+        TPOT floors. Stages 2-3 already ran (role-agnostic) in
+        `_parallelism_options`.
+        """
+        if not self._stage4_topology_ok(cand, assignment, island):
+            return False
+        return self._stage5_analytical_ok(cand, assignment, island, profile, report, seqs)
+
     # -- stage 4: topology lower bound -------------------------------------
 
-    def _stage4_topology_ok(self, island: ExecutionIsland, tp: int) -> bool:
+    def _stage4_topology_ok(
+        self, cand: CandidateConfig, assignment: IslandAssignment, island: ExecutionIsland
+    ) -> bool:
         """Reject only if TP collectives alone already blow the TPOT budget.
 
         Per decode step every transformer block runs two all-reduces over the
         hidden state. A ring all-reduce moves 2(N-1)/N x bytes. Compute is
-        assumed free here - that is what makes it a lower bound. Knob- and
-        replica-independent, so it runs once per (island, tp) option.
+        assumed free here - that is what makes it a lower bound.
+
+        This is a *decode* floor, so it does not apply to a disaggregated prefill
+        engine (`Role.PREFILL`): prefill runs no decode steps, and pruning it on
+        a decode-step cost would remove candidates the simulator accepts. For
+        `Role.DECODE` and `Role.AGGREGATED` it applies as before.
         """
         if not self.enable_bound_pruning:
             return True
+        if assignment.role is Role.PREFILL:
+            return True
+        tp = assignment.tp_size
         if tp == 1:
             return True
 
@@ -363,12 +533,11 @@ class CandidateGenerator:
 
         budget = self.spec.slo.tpot.max_ms
         if floor_ms > budget:
-            self._generated += 1
             self._reject(
-                f"{island.id}/tp{tp}",
+                cand.id,
                 RejectionStage.TOPOLOGY_INFEASIBLE,
-                f"TP={tp} all-reduce floor {floor_ms:.1f}ms exceeds the TPOT budget "
-                f"{budget:.1f}ms even with zero compute "
+                f"TP={tp} all-reduce floor {floor_ms:.1f}ms on {island.id} exceeds the "
+                f"TPOT budget {budget:.1f}ms even with zero compute "
                 f"({bw_gbps:g} GB/s, {lat_ns:g} ns per hop)",
             )
             return False
@@ -379,6 +548,7 @@ class CandidateGenerator:
     def _stage5_analytical_ok(
         self,
         cand: CandidateConfig,
+        assignment: IslandAssignment,
         island: ExecutionIsland,
         profile: AcceleratorProfile,
         report: memutil.MemoryReport,
@@ -389,9 +559,21 @@ class CandidateGenerator:
         A decode step must at minimum stream the weights and the live KV through
         HBM once. `memory_bandwidth_gbps` is a peak figure, so the resulting time
         is a genuine lower bound.
+
+        Role-aware: the roofline-vs-TPOT floor is a *decode*-step cost and is
+        skipped for `Role.PREFILL` (a disaggregated prefill engine runs no decode
+        steps). The KV-capacity check is exact and always runs, but a prefill
+        engine holds only the prompt KV, so it sizes against the input length
+        alone; decode and aggregated engines hold input+output.
         """
-        tp = cand.assignments[0].tp_size
-        median_len = self.spec.traffic.input_tokens.p50 + self.spec.traffic.output_tokens.p50
+        tp = assignment.tp_size
+        is_prefill = assignment.role is Role.PREFILL
+        if is_prefill:
+            median_len = self.spec.traffic.input_tokens.p50
+        else:
+            median_len = (
+                self.spec.traffic.input_tokens.p50 + self.spec.traffic.output_tokens.p50
+            )
 
         # Concurrency the KV budget actually supports, versus what the knob asks
         # for. This one is exact rather than a bound - a placement with no room
@@ -403,11 +585,11 @@ class CandidateGenerator:
                 cand.id,
                 RejectionStage.MEMORY_INFEASIBLE,
                 f"KV space holds {report.kv_tokens:,} tokens, below one median "
-                f"request of {median_len:,} tokens",
+                f"{'prompt' if is_prefill else 'request'} of {median_len:,} tokens",
             )
             return False
 
-        if not self.enable_bound_pruning:
+        if not self.enable_bound_pruning or is_prefill:
             return True
 
         active = min(seqs, kv_capacity)

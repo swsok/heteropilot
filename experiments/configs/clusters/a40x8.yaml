@@ -1,0 +1,150 @@
+# A40 x8 single-node cluster - the real migration server (reachable 2026-08-18).
+#
+# NOTE ON PROVENANCE (absolute rule 3)
+# This file describes hardware that PHYSICALLY EXISTS and is inventoried:
+#   - 8 x NVIDIA A40, one host, verified with nvidia-smi 2026-08-18.
+#   - Every number is labelled measured / vendor_spec / placeholder below.
+# Nothing here is hypothetical, unlike examples/clusters/heterogeneous-lab.yaml.
+#
+# ISLAND MODEL (decided with the user, 2026-08-18): four NVLink-pair islands.
+#   nvidia-smi topo -m shows NVLink (NV4) bonding only the pairs
+#   (gpu0-gpu1, gpu2-gpu3, gpu4-gpu5, gpu6-gpu7). Cross-pair-within-NUMA is
+#   NODE (PCIe host bridge) and cross-NUMA is SYS (UPI). We deliberately declare
+#   ONLY the NVLINK links, so detect_islands() yields four TP<={1,2} islands and
+#   every TP=2 engine sits on a real NVLink bridge - honest under the current
+#   Level-1 topology model (Level-2 path/contention awareness is Phase 5).
+#   Consequence: TP>2 is expressed as DP replicas placed across islands, not as
+#   a single wide TP group over PCIe/UPI. The cross-pair NODE/SYS paths are real
+#   but intentionally NOT modelled as intra-island links (that would merge the
+#   pairs into one 8-GPU island).
+
+cluster_id: a40x8-node0
+
+nodes:
+  - id: node0
+    # Host: 2 x AMD EPYC 7313 (16c), 2 NUMA nodes (measured, lscpu). NUMA0 hosts
+    # gpu0-gpu3, NUMA1 hosts gpu4-gpu7 (measured, nvidia-smi topo CPU affinity).
+    accelerators:
+      # memory_gb: measured - nvidia-smi reports 46068 MiB (44.99 GiB) per card.
+      #   48 GB nominal; ECC is Enabled (measured), reserving ~3 GB. Feasibility
+      #   must use the real usable figure, not the 48 GB marketing number.
+      - id: gpu0
+        type: GPU
+        vendor: NVIDIA
+        model: A40
+        backend: cuda
+        memory_gb: 45.0
+        state: FREE
+        profile: profiles/accelerators/a40.yaml
+      - id: gpu1
+        type: GPU
+        vendor: NVIDIA
+        model: A40
+        backend: cuda
+        memory_gb: 45.0
+        state: FREE
+        profile: profiles/accelerators/a40.yaml
+      - id: gpu2
+        type: GPU
+        vendor: NVIDIA
+        model: A40
+        backend: cuda
+        memory_gb: 45.0
+        state: FREE
+        profile: profiles/accelerators/a40.yaml
+      - id: gpu3
+        type: GPU
+        vendor: NVIDIA
+        model: A40
+        backend: cuda
+        memory_gb: 45.0
+        state: FREE
+        profile: profiles/accelerators/a40.yaml
+      - id: gpu4
+        type: GPU
+        vendor: NVIDIA
+        model: A40
+        backend: cuda
+        memory_gb: 45.0
+        state: FREE
+        profile: profiles/accelerators/a40.yaml
+      - id: gpu5
+        type: GPU
+        vendor: NVIDIA
+        model: A40
+        backend: cuda
+        memory_gb: 45.0
+        state: FREE
+        profile: profiles/accelerators/a40.yaml
+      - id: gpu6
+        type: GPU
+        vendor: NVIDIA
+        model: A40
+        backend: cuda
+        memory_gb: 45.0
+        state: FREE
+        profile: profiles/accelerators/a40.yaml
+      - id: gpu7
+        type: GPU
+        vendor: NVIDIA
+        model: A40
+        backend: cuda
+        memory_gb: 45.0
+        state: FREE
+        profile: profiles/accelerators/a40.yaml
+    nics:
+      # measured: ibstat - mlx5_0 is MT4123 (ConnectX-6), State Active, LinkUp,
+      # Rate 100 (InfiniBand). Interface ibs8.
+      - id: mlx5_0
+        type: infiniband
+        speed_gbps: 100
+    # measured: free -g reports 503 GiB total host RAM.
+    cpu_memory_gb: 503.0
+    # Host-side power components. source: placeholder - host wall/IPMI power has
+    # NOT been measured yet (roadmap step 3). Present so the compiler emits a
+    # power: block; note the A40 accelerator power figures are also still missing
+    # (profiles/accelerators/a40.yaml has no power: block until it is profiled),
+    # so energy output from this cluster is incomplete until then.
+    power:
+      source: placeholder
+
+links:
+  # Four NVLink bridges, one per GPU pair.
+  # bandwidth_gbps: measured (active) - nvidia-smi nvlink --status reports each
+  #   pair as 4 links x 14.062 GB/s/direction = 56.25 GB/s per direction, i.e.
+  #   112.5 GB/s bidirectional. P2P supported: true (nvidia-smi nvlink -c).
+  # latency_ns: placeholder - NVLink latency was not measured; 1000 ns is a
+  #   representative value. (The Link schema has a single source field; bandwidth
+  #   is measured, latency is not - see this comment for the split.)
+  - id: nvlink-node0-gpu0-gpu1
+    src: node0/gpu0
+    dst: node0/gpu1
+    type: NVLINK
+    bandwidth_gbps: 112.5
+    latency_ns: 1000
+    contention_group: node0-nvlink-pair0
+    source: measured
+  - id: nvlink-node0-gpu2-gpu3
+    src: node0/gpu2
+    dst: node0/gpu3
+    type: NVLINK
+    bandwidth_gbps: 112.5
+    latency_ns: 1000
+    contention_group: node0-nvlink-pair1
+    source: measured
+  - id: nvlink-node0-gpu4-gpu5
+    src: node0/gpu4
+    dst: node0/gpu5
+    type: NVLINK
+    bandwidth_gbps: 112.5
+    latency_ns: 1000
+    contention_group: node0-nvlink-pair2
+    source: measured
+  - id: nvlink-node0-gpu6-gpu7
+    src: node0/gpu6
+    dst: node0/gpu7
+    type: NVLINK
+    bandwidth_gbps: 112.5
+    latency_ns: 1000
+    contention_group: node0-nvlink-pair3
+    source: measured
