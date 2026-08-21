@@ -106,6 +106,32 @@ reasoning substrate for pruning and for the topology lower-bound filter. At comp
 to `link_bw`/`link_latency` by taking the bottleneck along the relevant path, and record the
 reduction in provenance so results are never mistaken for path-aware ones. Do not silently average.
 
+**Phase 5 update — Level-2 shipped as opt-in `--topology-level 2` (2026-08-21).** The stock ASTRA-Sim
+config accepts a *per-dimension* `link_bw`/`link_latency` list (`config_builder.py::
+_normalize_network_dim_values`), where dim 0 is the intra-group (TP) FullyConnected dimension and
+dim 1 is the cross-instance dimension. The Level-2 compile emits `[intra_bottleneck,
+cross_bottleneck]` instead of the single global scalar, so a fast intra-island interconnect is no
+longer dragged down by a slow cross-instance fabric (or vice-versa — the `heterogeneous-lab` example
+has PCIe islands on a faster InfiniBand fabric, so Level 2 raises the *cross* dim from 64 → 400
+GB/s). Key points:
+
+- **No `config_builder.py` edit was needed.** The stock config already consumes lists; the planner
+  compiler (`planner/predictor/llmservingsim.py`) sizes the list by reusing the pinned
+  `serving.core.config_builder._compute_network_dims`, so the "adapter §7 unlocks in
+  config_builder" is satisfied *functionally, planner-side* — no upstream `serving/` change, no D12
+  exposure. The work order's literal file location is deliberately not followed.
+- **Default stays Level 1**, so this is the D3 "compare the two" mechanism, not a silent flip.
+  Level 2 changes predictions *only for multi-island placements*; single-island and same-island
+  P/D compile byte-identically (the intra value serves the one dimension).
+- **Still not per-flow path-aware.** ASTRA-Sim's dimensional model cannot represent
+  `contention_group` sharing, so it is dropped exactly as in Level 1 — the cross dim is single-flow.
+  Provenance records `model_level: 2, resolution: per-dimension, path_aware: false,
+  contention_modeled: false` so a Level-2 result is never mistaken for a per-flow one.
+- **Oracle-agreement is untouched**: the reduction feeds only the sim config and the top-level
+  provenance summary, never a pruning stage (stage-4 uses `island_interconnect` directly), and the
+  mock predictor ignores it. The envelope cache key folds in `topology_level` so Level-1 and
+  Level-2 results cannot collide (Level-1 keys unchanged). Verified by `tests/test_topology_perdim.py`.
+
 ---
 
 ## D4 — Only one hardware profile exists · **Resolution path secured 2026-08-14** (real hardware incoming)

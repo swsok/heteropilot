@@ -200,7 +200,10 @@ def cmd_plan(args: argparse.Namespace) -> int:
 
     topology = TopologyGraph(cluster)
     reduction = topology.reduce_for_simulator(islands)
-    provenance["topology"] = reduction.as_provenance()
+    if args.topology_level == 2:
+        provenance["topology"] = topology.reduce_for_simulator_perdim(islands).as_provenance()
+    else:
+        provenance["topology"] = reduction.as_provenance()
 
     cache = None
     if args.cache_dir:
@@ -210,6 +213,7 @@ def cmd_plan(args: argparse.Namespace) -> int:
             accelerator_of={i.id: i.accelerator_model for i in islands},
             link_bw_gbps=reduction.link_bw_gbps,
             trace_digest=prov.hash_file(trace.path),
+            topology_level=args.topology_level,
         )
 
     predictor = LLMServingSimPredictor(
@@ -219,6 +223,7 @@ def cmd_plan(args: argparse.Namespace) -> int:
         gpu_memory_utilization=args.gpu_memory_utilization,
         activation_reserve_gb=args.activation_reserve_gb,
         keep_artifacts=args.keep_artifacts,
+        topology_level=args.topology_level,
     )
 
     def progress(i: int, total: int, candidate) -> None:
@@ -458,6 +463,12 @@ def build_parser() -> argparse.ArgumentParser:
     plan.add_argument("--keep-artifacts", action="store_true")
     plan.add_argument("--oracle", action="store_true",
                       help="Disable bound-based pruning and simulate every candidate.")
+    plan.add_argument("--topology-level", type=int, choices=[1, 2], default=1,
+                      help="Network model level compiled into the simulator: 1 (default) "
+                      "collapses the link graph to one scalar link_bw; 2 emits a "
+                      "per-dimension list so intra-island (TP) collectives keep their real "
+                      "bandwidth instead of the slowest cross-instance link. Level 2 changes "
+                      "predictions only for multi-island placements (deviations D3).")
     plan.add_argument("--enable-pd", action=argparse.BooleanOptionalAction, default=False,
                       help="Also enumerate Prefill/Decode-split candidates across islands "
                            "(work order §5.3). Off by default; note it grows the candidate "

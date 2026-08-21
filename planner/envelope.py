@@ -129,6 +129,7 @@ class EnvelopeCache:
         link_bw_gbps: float,
         trace_digest: str | None = None,
         enabled: bool = True,
+        topology_level: int = 1,
     ) -> None:
         self.root = Path(root)
         self.spec = spec
@@ -136,6 +137,10 @@ class EnvelopeCache:
         self.link_bw_gbps = link_bw_gbps
         self.trace_digest = trace_digest
         self.enabled = enabled
+        # Level-2 compiles the same candidate to different per-dimension link_bw
+        # than Level 1, so the two must not share cache entries. Folded into the
+        # key only when != 1, keeping existing (Level-1) cache files valid.
+        self.topology_level = topology_level
         self.hits = 0
         self.misses = 0
         if self.enabled:
@@ -152,6 +157,8 @@ class EnvelopeCache:
         name = key.digest()
         if self.trace_digest:
             name = prov.hash_object([name, self.trace_digest])
+        if self.topology_level != 1:
+            name = prov.hash_object([name, f"topology_level={self.topology_level}"])
         return self.root / f"{name}.json"
 
     def get(self, candidate: CandidateConfig) -> SimResult | None:

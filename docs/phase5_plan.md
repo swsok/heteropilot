@@ -35,6 +35,19 @@ every P/D KV transfer is charged the same representative link, regardless of whi
 islands the prefill and decode sides sit on. Level-2 fixes this and is the reason
 §7 unlocks `config_builder.py` at Phase 5.
 
+**Status: Level-2 per-dimension topology DONE (2026-08-21, deviations D3 update).**
+`--topology-level 2` emits a per-ASTRA-dimension `link_bw`/`link_latency` list
+`[intra_bottleneck, cross_bottleneck]` instead of the single scalar, so intra-island
+TP collectives and the cross-instance fabric are resolved separately (e.g.
+`heterogeneous-lab`: level 1 = 64, level 2 = [64, 400]). Achieved **planner-side with
+no `config_builder.py` edit** — the stock config already accepts per-dim lists, and the
+compiler sizes the list by reusing the pinned `_compute_network_dims`. Default stays
+level 1 (the D3 "compare the two" toggle); level 2 changes predictions only for
+multi-island placements. Still dimension-resolved, not per-flow path-aware
+(`contention_modeled: false`); true per-flow contention would need ns3. Verified by
+`tests/test_topology_perdim.py`; oracle-agreement untouched (reduction never feeds
+pruning), envelope cache key folds in the level.
+
 ## Increment 1 — P/D candidate generation (PLANNER-ONLY, no upstream edit) ★ start here
 Goal: the planner enumerates and evaluates P/D-split deployments; the existing
 compile+sim path scores them.
