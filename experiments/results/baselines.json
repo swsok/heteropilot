@@ -1,0 +1,225 @@
+{
+  "planner_metrics": {
+    "excluded_placeholder": 0,
+    "feasible": 8,
+    "generated_oracle": 13,
+    "generated_pruned": 13,
+    "oracle_goodput_per_joule": 3.137577255871446,
+    "prune_ratio": 0.0,
+    "select_wall_seconds": 0.013,
+    "sim_wall_seconds": 2149.8,
+    "simulatable": 13
+  },
+  "provenance": {
+    "backend_version": null,
+    "cluster_spec_hash": "c8cd3bdc3a98499e452baffe2ffd544fe7b67ac10c06d30f169e33d00dc15f73",
+    "command": "exp_baselines.py --service experiments/configs/services/llama31-8b-goodputj.yaml --cluster experiments/configs/clusters/exp2-local-lab.yaml --num-requests 120 --seed 42 --max-num-seqs 256 --max-num-batched-tokens 2048 --work-dir outputs/exp_baselines --output-dir experiments/results",
+    "cpu_count": 64,
+    "dataset_hash": "cbd7f6d5b61f27fd3bdce005f176d515f380e1a524d5c2a55cd7e906280348b5",
+    "experiment": "exp_baselines_ablation",
+    "git_commit": "c7fcf1456688f1350290a5691dbf0444a36bdbab",
+    "git_dirty": true,
+    "hardware_profile_hash": "555b4bf1734064537362f7e34abf40c9ed148463264490e5d2aeeadd90edec46",
+    "hostname": "s8",
+    "knobs": {
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 256
+    },
+    "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
+    "model_revision": null,
+    "planner_metrics": {
+      "excluded_placeholder": 0,
+      "feasible": 8,
+      "generated_oracle": 13,
+      "generated_pruned": 13,
+      "oracle_goodput_per_joule": 3.137577255871446,
+      "prune_ratio": 0.0,
+      "select_wall_seconds": 0.013,
+      "sim_wall_seconds": 2149.8,
+      "simulatable": 13
+    },
+    "platform": "Linux-5.4.0-216-generic-x86_64-with-glibc2.31",
+    "python_version": "3.10.20",
+    "random_seed": 42,
+    "service_spec_hash": "ba2df801985f46bc19ff5e115c687deea41e6995bfb004ec40545049d4534730",
+    "timestamp": "2026-08-24T03:37:38.509085+00:00",
+    "vllm_version": null,
+    "workload": {
+      "horizon_s": 11.372,
+      "num_requests": 120,
+      "path": "outputs/exp_baselines/workload.jsonl",
+      "random_seed": 42,
+      "total_input_tokens": 98130,
+      "total_output_tokens": 76149
+    }
+  },
+  "rows": [
+    {
+      "chosen_id": "cuda-rtxpro6000-node1-tp1-dp1-s256-t2048",
+      "devices": 1,
+      "goodput_per_joule": 3.137577255871446,
+      "group": "optimizer",
+      "note": "argmax objective over ALL simulatable feasible candidates (reference)",
+      "p99_tpot_ms": 29.182783190000002,
+      "p99_ttft_ms": 267.04311663000004,
+      "regret": 0.0,
+      "status": "feasible",
+      "strategy": "exhaustive-oracle"
+    },
+    {
+      "chosen_id": "cuda-rtxpro6000-node1-tp1-dp1-s256-t2048",
+      "devices": 1,
+      "goodput_per_joule": 3.137577255871446,
+      "group": "optimizer",
+      "note": "sim-guided pruned search + lexicographic rank",
+      "p99_tpot_ms": 29.182783190000002,
+      "p99_ttft_ms": 267.04311663000004,
+      "regret": 0.0,
+      "status": "feasible",
+      "strategy": "proposed"
+    },
+    {
+      "chosen_id": "cuda-rtxpro6000-node1-tp1-dp1-s256-t2048",
+      "devices": 1,
+      "goodput_per_joule": 3.137577255871446,
+      "group": "optimizer",
+      "note": "analytical roofline goodput/J proxy, NO simulation",
+      "p99_tpot_ms": 29.182783190000002,
+      "p99_ttft_ms": 267.04311663000004,
+      "regret": 0.0,
+      "status": "feasible",
+      "strategy": "greedy"
+    },
+    {
+      "chosen_id": "cuda-rtxpro6000-node1-tp1-dp1-s256-t2048",
+      "devices": 1,
+      "goodput_per_joule": 3.137577255871446,
+      "group": "resource",
+      "note": "only candidates on max-memory-bandwidth class ['RTXPRO6000'] (proxy)",
+      "p99_tpot_ms": 29.182783190000002,
+      "p99_ttft_ms": 267.04311663000004,
+      "regret": 0.0,
+      "status": "feasible",
+      "strategy": "fastest-only"
+    },
+    {
+      "chosen_id": null,
+      "group": "resource",
+      "note": "only candidates on max bandwidth-per-watt class ['RTX-A5000'] (proxy)",
+      "status": "n/a",
+      "strategy": "most-efficient-only"
+    },
+    {
+      "chosen_id": "cuda-rtxpro6000-node1-tp1-dp1-s256-t2048",
+      "devices": 1,
+      "goodput_per_joule": 3.137577255871446,
+      "group": "resource",
+      "note": "fewest active accelerators, tie-broken by objective",
+      "p99_tpot_ms": 29.182783190000002,
+      "p99_ttft_ms": 267.04311663000004,
+      "regret": 0.0,
+      "status": "feasible",
+      "strategy": "least-device"
+    },
+    {
+      "chosen_id": "cuda-rtxpro6000-node1-tp1-dp2-s256-t2048",
+      "devices": 2,
+      "goodput_per_joule": 2.111730449251248,
+      "group": "resource",
+      "note": "fixed provisioning rule (fastest class, smallest TP, most replicas), no sim",
+      "p99_tpot_ms": 20.00208075,
+      "p99_ttft_ms": 146.42299795000002,
+      "regret": 0.326955074875208,
+      "status": "feasible",
+      "strategy": "simulator-blind"
+    },
+    {
+      "chosen_id": "cuda-rtxpro6000-node1-tp1-dp1-s256-t2048",
+      "devices": 1,
+      "goodput_per_joule": 3.137577255871446,
+      "group": "architecture",
+      "note": "aggregated only",
+      "p99_tpot_ms": 29.182783190000002,
+      "p99_ttft_ms": 267.04311663000004,
+      "regret": 0.0,
+      "status": "feasible",
+      "strategy": "aggregated"
+    },
+    {
+      "chosen_id": "pd(cuda-rtx-a5000-node0-tp1-dp1 P + cuda-rtxpro6000-node1-tp1-dp1 D)-s256-t2048",
+      "devices": 2,
+      "goodput_per_joule": 2.1000827357970215,
+      "group": "architecture",
+      "note": "P/D with same backend on both roles",
+      "p99_tpot_ms": 22.22049407,
+      "p99_ttft_ms": 4942.40411018,
+      "regret": 0.3306674020959735,
+      "status": "feasible",
+      "strategy": "homogeneous-P/D"
+    },
+    {
+      "chosen_id": null,
+      "group": "architecture",
+      "note": "P/D with different backends across roles",
+      "status": "n/a",
+      "strategy": "heterogeneous-P/D"
+    },
+    {
+      "chosen_id": "cuda-rtxpro6000-node1-tp1-dp1-s256-t2048",
+      "devices": 1,
+      "goodput_per_joule": 3.137577255871446,
+      "group": "ablation",
+      "note": "P/D candidates removed from the search",
+      "p99_tpot_ms": 29.182783190000002,
+      "p99_ttft_ms": 267.04311663000004,
+      "regret": 0.0,
+      "status": "feasible",
+      "strategy": "No-PD-Specialization"
+    },
+    {
+      "chosen_id": "pd(cuda-rtx-a5000-node0-tp1-dp2 P + cuda-rtxpro6000-node1-tp1-dp2 D)-s256-t2048",
+      "devices": 4,
+      "goodput_per_joule": 1.6615535675321842,
+      "group": "ablation",
+      "note": "select by SLO-goodput (ignore energy); scored on true goodput/J",
+      "p99_tpot_ms": 18.041455910000003,
+      "p99_ttft_ms": 982.7832082000001,
+      "regret": 0.47043421339733793,
+      "status": "feasible",
+      "strategy": "No-Energy"
+    },
+    {
+      "chosen_id": "cuda-rtxpro6000-node1-tp1-dp1-s256-t2048",
+      "devices": 1,
+      "goodput_per_joule": 3.137577255871446,
+      "group": "ablation",
+      "note": "P/D KV-transfer cost dropped at selection; scored on true (transfer-priced) metrics",
+      "p99_tpot_ms": 29.182783190000002,
+      "p99_ttft_ms": 267.04311663000004,
+      "regret": 0.0,
+      "status": "feasible",
+      "strategy": "No-Topology"
+    },
+    {
+      "chosen_id": null,
+      "group": "ablation",
+      "note": "N/A: calibration is opt-in and not in the plan path, so the default already is no-calibration (needs a non-identity Phase-4 fit to contrast)",
+      "status": "n/a",
+      "strategy": "No-Calibration"
+    },
+    {
+      "chosen_id": null,
+      "group": "ablation",
+      "note": "N/A: robust margins default to 0 (needs non-zero Phase-4 calibration margins)",
+      "status": "n/a",
+      "strategy": "No-Uncertainty"
+    },
+    {
+      "chosen_id": null,
+      "group": "ablation",
+      "note": "N/A: no-replanning is a Phase-6 concept; pre-Phase-6 every plan is static",
+      "status": "n/a",
+      "strategy": "Static"
+    }
+  ]
+}
