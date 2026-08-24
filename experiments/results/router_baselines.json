@@ -1,0 +1,80 @@
+{
+  "candidate_id": "mix(cuda-rtx-a5000-node0-tp1-dp2+cuda-rtxpro6000-node1-tp1-dp2)-s256-t2048",
+  "provenance": {
+    "backend_version": null,
+    "candidate_id": "mix(cuda-rtx-a5000-node0-tp1-dp2+cuda-rtxpro6000-node1-tp1-dp2)-s256-t2048",
+    "cluster_spec_hash": "c8cd3bdc3a98499e452baffe2ffd544fe7b67ac10c06d30f169e33d00dc15f73",
+    "command": "exp_router.py --service experiments/configs/services/llama31-8b-goodputj.yaml --cluster experiments/configs/clusters/exp2-local-lab.yaml --num-requests 120 --seed 42 --max-num-seqs 256 --max-num-batched-tokens 2048 --work-dir outputs/exp_router --output-dir experiments/results",
+    "cpu_count": 64,
+    "dataset_hash": "cbd7f6d5b61f27fd3bdce005f176d515f380e1a524d5c2a55cd7e906280348b5",
+    "experiment": "exp_router_baselines",
+    "git_commit": "e6790ba46f7c6c47cb2ed52f866672fc24f5ba9f",
+    "git_dirty": true,
+    "hardware_profile_hash": "555b4bf1734064537362f7e34abf40c9ed148463264490e5d2aeeadd90edec46",
+    "hostname": "s8",
+    "knobs": {
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 256
+    },
+    "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
+    "model_revision": null,
+    "platform": "Linux-5.4.0-216-generic-x86_64-with-glibc2.31",
+    "policies": [
+      "RR",
+      "RAND",
+      "LOAD"
+    ],
+    "python_version": "3.10.20",
+    "random_seed": 42,
+    "replicas": 4,
+    "service_spec_hash": "ba2df801985f46bc19ff5e115c687deea41e6995bfb004ec40545049d4534730",
+    "timestamp": "2026-08-24T04:34:17.678476+00:00",
+    "vllm_version": null,
+    "workload": {
+      "horizon_s": 11.372,
+      "num_requests": 120,
+      "path": "outputs/exp_router/workload.jsonl",
+      "random_seed": 42,
+      "total_input_tokens": 98130,
+      "total_output_tokens": 76149
+    }
+  },
+  "rows": [
+    {
+      "p50_tpot_ms": 22.3115795,
+      "p50_ttft_ms": 78.8974175,
+      "p99_tpot_ms": 35.26456653,
+      "p99_ttft_ms": 344.29974582000006,
+      "policy": "RR",
+      "slo_attainment": 1.0,
+      "slo_goodput_rps": 3.676893426586005,
+      "throughput_tps": 5340.044245766519,
+      "tokens_per_joule": 1.2383964872336966,
+      "total_energy_j": 61490.0
+    },
+    {
+      "p50_tpot_ms": 31.3284065,
+      "p50_ttft_ms": 102.6914765,
+      "p99_tpot_ms": 37.02290945,
+      "p99_ttft_ms": 644.2717951100001,
+      "policy": "RAND",
+      "slo_attainment": 1.0,
+      "slo_goodput_rps": 3.559041638527743,
+      "throughput_tps": 5168.885147674804,
+      "tokens_per_joule": 1.2491633858267717,
+      "total_energy_j": 60960.0
+    },
+    {
+      "p50_tpot_ms": 15.091857,
+      "p50_ttft_ms": 67.18551550000001,
+      "p99_tpot_ms": 34.2372208,
+      "p99_ttft_ms": 314.33605296,
+      "policy": "LOAD",
+      "slo_attainment": 1.0,
+      "slo_goodput_rps": 3.7546014936304606,
+      "throughput_tps": 5452.901614236859,
+      "tokens_per_joule": 1.244264705882353,
+      "total_energy_j": 61200.0
+    }
+  ]
+}
