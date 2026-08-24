@@ -1,0 +1,66 @@
+{
+  "provenance": {
+    "backend_version": null,
+    "cluster_spec_hash": "c8cd3bdc3a98499e452baffe2ffd544fe7b67ac10c06d30f169e33d00dc15f73",
+    "command": "exp2_selection.py --service examples/service_specs/llama31-8b-light.yaml --cluster experiments/configs/clusters/exp2-local-lab.yaml --num-requests 300 --seed 42 --work-dir outputs/exp2_selection --output-dir experiments/results",
+    "cpu_count": 64,
+    "dataset_hash": "2c39e2ae0c5d2a05b7f33c5d91ae366fe09817d3f99839d2274eba5a353ffc79",
+    "experiment": "exp2_heterogeneous_selection",
+    "feasible": 42,
+    "generated": 54,
+    "git_commit": "80adbd731fe9b9969b33206ecffe38e6b999fc01",
+    "git_dirty": true,
+    "hardware_profile_hash": "555b4bf1734064537362f7e34abf40c9ed148463264490e5d2aeeadd90edec46",
+    "hostname": "s8",
+    "knobs": "generator default sweep (max_num_seqs / max_num_batched_tokens)",
+    "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
+    "model_revision": null,
+    "platform": "Linux-5.4.0-216-generic-x86_64-with-glibc2.31",
+    "python_version": "3.10.20",
+    "random_seed": 42,
+    "service_spec_hash": "347904f686dc3c9a12ac459dd94a326d6857a85378556b47d0fd3924c77991b1",
+    "simulatable": 54,
+    "timestamp": "2026-08-24T20:08:00.562259+00:00",
+    "vllm_version": null,
+    "workload": {
+      "horizon_s": 121.203,
+      "num_requests": 300,
+      "path": "outputs/exp2_selection/workload.jsonl",
+      "random_seed": 42,
+      "total_input_tokens": 262617,
+      "total_output_tokens": 190920
+    }
+  },
+  "rows": [
+    {
+      "candidate_id": "cuda-rtxpro6000-node1-tp1-dp1-s32-t2048",
+      "devices": 1,
+      "goodput_per_joule": 1.6969158297040263,
+      "p99_tpot_ms": 17.39394956,
+      "p99_ttft_ms": 1468.2324584199996,
+      "peak_power_w": 896.56,
+      "placement_class": "RTXPRO6000",
+      "slo_attainment": 1.0
+    },
+    {
+      "candidate_id": "cuda-rtx-a5000-node0-tp1-dp2-s128-t8192",
+      "devices": 2,
+      "goodput_per_joule": 1.6338896020539153,
+      "p99_tpot_ms": 40.73092331,
+      "p99_ttft_ms": 405.31434294999957,
+      "peak_power_w": 951.59,
+      "placement_class": "RTX-A5000",
+      "slo_attainment": 1.0
+    },
+    {
+      "candidate_id": "mix(cuda-rtx-a5000-node0-tp1-dp1+cuda-rtxpro6000-node1-tp1-dp1)-s32-t8192",
+      "devices": 2,
+      "goodput_per_joule": 1.043449745859977,
+      "p99_tpot_ms": 33.24027578,
+      "p99_ttft_ms": 367.33090233999997,
+      "peak_power_w": 1418.06,
+      "placement_class": "mixed(RTX-A5000+RTXPRO6000)",
+      "slo_attainment": 1.0
+    }
+  ]
+}

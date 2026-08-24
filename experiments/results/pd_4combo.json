@@ -1,0 +1,104 @@
+{
+  "provenance": {
+    "backend_version": null,
+    "cluster_spec_hash": "3273a4f4a6f0ff2cbfe7c17a3eeddb767098f2fec578e5a7ec6575c43ea524cd",
+    "command": "pd_combo_compare.py --service experiments/configs/services/pd-sweep-llama31-8b.yaml --cluster experiments/configs/clusters/pd-4combo-sim.yaml --max-num-seqs 128 --max-num-batched-tokens 2048 --num-requests 120 --seed 42 --output-dir experiments/results",
+    "cpu_count": 64,
+    "dataset_hash": "332f3d452b55819bdbaa270f34dfd5505e8a50044d407a4a0ccdd2ceda9c28c9",
+    "experiment": "phase5_increment4_pd_4combo",
+    "git_commit": "80adbd731fe9b9969b33206ecffe38e6b999fc01",
+    "git_dirty": true,
+    "hardware_profile_hash": "9feecf551a175837f29c424ba5f6842f7cf86f4ac3e95018d21a2487bc31162a",
+    "hostname": "s8",
+    "knobs": {
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 128
+    },
+    "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
+    "model_revision": null,
+    "npu_is_sim_proxy": true,
+    "npu_proxy_note": "NPU islands use the A5000 compute model (ascend-sim-proxy.yaml); every NPU-touching combo is simulator-only proxy data, not an NPU measurement",
+    "platform": "Linux-5.4.0-216-generic-x86_64-with-glibc2.31",
+    "python_version": "3.10.20",
+    "random_seed": 42,
+    "service_spec_hash": "3f2706ed5061de54c39e7b2596f107e8ea37e1d585d2e840df26050c769653a0",
+    "timestamp": "2026-08-24T20:31:16.303925+00:00",
+    "vllm_version": null,
+    "workload": {
+      "horizon_s": 45.489,
+      "num_requests": 120,
+      "path": "outputs/.hp-pd-combo/work/workload.jsonl",
+      "random_seed": 42,
+      "total_input_tokens": 98130,
+      "total_output_tokens": 75911
+    }
+  },
+  "rows": [
+    {
+      "candidate_id": "pd(cuda-rtxpro6000-node_gpu0-tp1-dp1 P + cuda-rtxpro6000-node_gpu1-tp1-dp1 D)-s128-t2048",
+      "combo": "GPU-P + GPU-D",
+      "feasible": true,
+      "p99_tpot_ms": 16.01422872,
+      "p99_ttft_ms": 134.36877862000003,
+      "provenance": "sim (RTXPRO6000, vendor_spec)",
+      "slo_attainment": 0.9916666666666667,
+      "tokens_per_joule": 1.0805765556864144,
+      "total_energy_j": 70250.4599054336,
+      "xfer_class_default": false,
+      "xfer_ms_p99": 0.95002912
+    },
+    {
+      "candidate_id": "pd(cuda-rtxpro6000-node_gpu0-tp1-dp1 P + ascend-ascend-sim-proxy-node_npu0-tp1-dp1 D)-s128-t2048",
+      "combo": "GPU-P + NPU-D",
+      "feasible": true,
+      "p99_tpot_ms": 16.01422872,
+      "p99_ttft_ms": 134.36877862000003,
+      "provenance": "SIM-PROXY (RTXPRO6000 model)",
+      "slo_attainment": 0.9916666666666667,
+      "tokens_per_joule": 1.0805765556864144,
+      "total_energy_j": 70250.4599054336,
+      "xfer_class_default": false,
+      "xfer_ms_p99": 0.95002912
+    },
+    {
+      "candidate_id": "pd(ascend-ascend-sim-proxy-node_npu0-tp1-dp1 P + cuda-rtxpro6000-node_gpu0-tp1-dp1 D)-s128-t2048",
+      "combo": "NPU-P + GPU-D",
+      "feasible": true,
+      "p99_tpot_ms": 16.01567348,
+      "p99_ttft_ms": 134.36763344000002,
+      "provenance": "SIM-PROXY (RTXPRO6000 model)",
+      "slo_attainment": 0.9916666666666667,
+      "tokens_per_joule": 1.0805765556864144,
+      "total_energy_j": 70250.4599054336,
+      "xfer_class_default": false,
+      "xfer_ms_p99": 0.95002912
+    },
+    {
+      "candidate_id": "pd(ascend-ascend-sim-proxy-node_npu0-tp1-dp1 P + ascend-ascend-sim-proxy-node_npu1-tp1-dp1 D)-s128-t2048",
+      "combo": "NPU-P + NPU-D",
+      "feasible": true,
+      "p99_tpot_ms": 16.01422872,
+      "p99_ttft_ms": 134.36877862000003,
+      "provenance": "SIM-PROXY (RTXPRO6000 model)",
+      "slo_attainment": 0.9916666666666667,
+      "tokens_per_joule": 1.0805765556864144,
+      "total_energy_j": 70250.4599054336,
+      "xfer_class_default": false,
+      "xfer_ms_p99": 0.95002912
+    },
+    {
+      "candidate_id": "cuda-rtxpro6000-node_gpu0-tp1-dp1-s128-t2048",
+      "combo": "aggregated (GPU baseline)",
+      "feasible": false,
+      "p99_tpot_ms": 18.808744920000002,
+      "p99_ttft_ms": 165.79973740000008,
+      "provenance": "sim (RTXPRO6000, vendor_spec)",
+      "slo_attainment": 0.9833333333333333,
+      "tokens_per_joule": 1.6552769297863061,
+      "total_energy_j": 45860.0,
+      "violations": [
+        "p99_ttft_ms=165.8 vs 155.0"
+      ]
+    }
+  ]
+}
