@@ -15,6 +15,7 @@ experiments/scripts/make_figures.py --only exp1
 | --- | --- | --- | --- |
 | `exp1_tp_sweep.png` | Exp 1 — same-GPU (A40) TP=1/2/4 sweep | `experiments/results/exp1_tp_sweep.json` | `make_figures.py` |
 | `baselines_regret.png` | §12 baselines + ablation | `experiments/results/baselines.json` | `make_figures.py` |
+| `router_baselines.png` | §12 router baselines (RR/RAND/LOAD) | `experiments/results/router_baselines.json` | `make_figures.py` |
 | `pd_network_sweep.png` | Exp 3 — P/D network bandwidth sweep | `experiments/results/pd_network_sweep_table.md` | `pd_network_sweep.py` (produced inline by `run_exp_pd.sh`) |
 
 ## What each figure shows
@@ -30,6 +31,9 @@ experiments/scripts/make_figures.py --only exp1
   `simulator-blind` (0.33). N/A strategies (`most-efficient-only`,
   `heterogeneous-P/D`, `No-Calibration`, `No-Uncertainty`, `Static`) are shown as
   labeled zero-length bars, never fabricated (see `exp_baselines_summary.md`).
+- **`router_baselines.png`** — p99 TTFT bars + SLO-goodput line per routing policy
+  on a heterogeneous 4-replica deployment; LOAD wins the tail, RAND is worst (see
+  `exp_router_summary.md`).
 - **`pd_network_sweep.png`** — the §5.9 adoption crossing at the planning level
   (see `exp_pd_summary.md`).
 

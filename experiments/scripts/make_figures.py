@@ -128,9 +128,40 @@ def make_baselines(data: dict) -> Path:
     return out
 
 
+def make_router(data: dict) -> Path:
+    """Router policy comparison: tail latency + SLO goodput per policy."""
+    rows = [r for r in data["rows"] if "p99_ttft_ms" in r]
+    pols = [r["policy"] for r in rows]
+    x = list(range(len(pols)))
+    ttft = [r["p99_ttft_ms"] for r in rows]
+    goodput = [r["slo_goodput_rps"] for r in rows]
+
+    fig, ax = plt.subplots(figsize=(7, 4.2))
+    w = 0.5
+    bars = ax.bar(x, ttft, w, color="#4c72b0", label="p99 TTFT (ms)")
+    ax.set_ylabel("p99 TTFT (ms)", color="#4c72b0")
+    ax.set_xticks(x)
+    ax.set_xticklabels(pols)
+    ax.set_xlabel("request-routing policy")
+    for b, v in zip(bars, ttft, strict=True):
+        ax.text(b.get_x() + b.get_width() / 2, v, f"{v:,.0f}", ha="center",
+                va="bottom", fontsize=8)
+    axg = ax.twinx()
+    axg.plot(x, goodput, "o-", color="#c44e52", label="SLO goodput (rps)")
+    axg.set_ylabel("SLO goodput (rps)", color="#c44e52")
+    axg.set_ylim(bottom=0)
+    ax.set_title(f"Router baselines (heterogeneous 4-replica)  |  {CAPTION}", fontsize=9)
+    fig.tight_layout()
+    out = FIGURES / "router_baselines.png"
+    fig.savefig(out, dpi=150)
+    plt.close(fig)
+    return out
+
+
 FIGURE_SPECS = {
     "exp1": ("exp1_tp_sweep.json", make_exp1),
     "baselines": ("baselines.json", make_baselines),
+    "router": ("router_baselines.json", make_router),
 }
 
 

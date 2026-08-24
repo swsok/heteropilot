@@ -280,6 +280,7 @@ class LLMServingSimPredictor(Predictor):
         retry_once: bool = True,
         keep_artifacts: bool = False,
         topology_level: int = 1,
+        routing_policy: str = "LOAD",
     ) -> None:
         self.trace = trace
         self.timeout_s = timeout_s
@@ -287,6 +288,10 @@ class LLMServingSimPredictor(Predictor):
         self.activation_reserve_gb = activation_reserve_gb
         # 1 = one scalar link_bw (default); 2 = per-dimension list (Level-2, D3).
         self.topology_level = topology_level
+        # Request-routing policy passed to the simulator (RR/RAND/LOAD/CUSTOM).
+        # Default LOAD keeps the Phase-2 behavior byte-identical; the §12 router
+        # baseline varies it. Router choice only affects multi-replica candidates.
+        self.routing_policy = routing_policy
         self.python = python or sys.executable
         self.retry_once = retry_once
         self.keep_artifacts = keep_artifacts
@@ -387,7 +392,7 @@ class LLMServingSimPredictor(Predictor):
             "--block-size", str(candidate.knobs.block_size),
             "--max-num-seqs", str(candidate.knobs.max_num_seqs),
             "--max-num-batched-tokens", str(candidate.knobs.max_num_batched_tokens),
-            "--request-routing-policy", "LOAD",
+            "--request-routing-policy", self.routing_policy,
             "--network-backend", "analytical",
             "--log-level", "WARNING",
             "--log-interval", "1.0",
