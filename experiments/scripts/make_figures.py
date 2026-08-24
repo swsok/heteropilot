@@ -158,10 +158,66 @@ def make_router(data: dict) -> Path:
     return out
 
 
+def make_exp2(data: dict) -> Path:
+    """Heterogeneous selection: best goodput/J per placement class."""
+    rows = sorted(data["rows"], key=lambda r: -r["goodput_per_joule"])
+    labels = [r["placement_class"].replace("mixed(", "mixed\n(").replace("+", "+\n")
+              for r in rows]
+    gpj = [r["goodput_per_joule"] for r in rows]
+    x = list(range(len(rows)))
+    fig, ax = plt.subplots(figsize=(8, 4.4))
+    bars = ax.bar(x, gpj, 0.55, color="#55a868")
+    for b, r in zip(bars, rows, strict=True):
+        ax.text(b.get_x() + b.get_width() / 2, r["goodput_per_joule"],
+                f"{r['goodput_per_joule']:.3f}\n({r['devices']} dev)",
+                ha="center", va="bottom", fontsize=8)
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, fontsize=8)
+    ax.set_ylabel("SLO-goodput / J (tokens/J)")
+    ax.set_ylim(top=max(gpj) * 1.2)
+    ax.set_title(f"Exp 2 - best goodput/J per placement class  |  {CAPTION}", fontsize=9)
+    fig.tight_layout()
+    out = FIGURES / "exp2_selection.png"
+    fig.savefig(out, dpi=150)
+    plt.close(fig)
+    return out
+
+
+def make_exp5(data: dict) -> Path:
+    """P/D 4-combo vs aggregated baseline: tok/J, feasibility, SIM-PROXY labels."""
+    rows = data["rows"]
+    labels = [r.get("combo", "?") for r in rows]
+    tpj = [r.get("tokens_per_joule") or 0.0 for r in rows]
+    x = list(range(len(rows)))
+    colors = ["#4c72b0" if r.get("feasible") else "#bbbbbb" for r in rows]
+    fig, ax = plt.subplots(figsize=(9, 4.6))
+    bars = ax.bar(x, tpj, 0.6, color=colors)
+    for b, r in zip(bars, rows, strict=True):
+        tags = []
+        tags.append("feasible" if r.get("feasible") else "INFEASIBLE")
+        if "SIM-PROXY" in str(r.get("provenance", "")):
+            tags.append("SIM-PROXY")
+        ax.text(b.get_x() + b.get_width() / 2, (r.get("tokens_per_joule") or 0.0),
+                f"{(r.get('tokens_per_joule') or 0.0):.3f}\n" + "\n".join(tags),
+                ha="center", va="bottom", fontsize=7)
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, fontsize=7, rotation=15, ha="right")
+    ax.set_ylabel("tokens / J")
+    ax.set_ylim(top=max(tpj) * 1.35 if tpj else 1)
+    ax.set_title(f"Exp 5 - P/D 4-combo vs aggregated  |  {CAPTION}", fontsize=9)
+    fig.tight_layout()
+    out = FIGURES / "pd_4combo.png"
+    fig.savefig(out, dpi=150)
+    plt.close(fig)
+    return out
+
+
 FIGURE_SPECS = {
     "exp1": ("exp1_tp_sweep.json", make_exp1),
+    "exp2": ("exp2_selection.json", make_exp2),
     "baselines": ("baselines.json", make_baselines),
     "router": ("router_baselines.json", make_router),
+    "exp5": ("pd_4combo.json", make_exp5),
 }
 
 
