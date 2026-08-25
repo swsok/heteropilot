@@ -135,6 +135,13 @@ class RejectionStage(str, enum.Enum):
     PARALLELISM_INFEASIBLE = "parallelism_infeasible"
     TOPOLOGY_INFEASIBLE = "topology_infeasible"
     ANALYTICAL_LOWER_BOUND = "analytical_lower_bound"
+    #: Stage-6 surrogate top-K (§5.4). Heuristic, NOT a sound bound: unlike the
+    #: stages above it CAN drop the true optimum. That loss is *surrogate error*,
+    #: measured against the exhaustive oracle (experiments/scripts/exp_surrogate.py),
+    #: never a correctness bug. Do not "fix" an oracle-agreement test by folding
+    #: this in - the "pruning must be a relaxation" rule is for the sound stages
+    #: 4-5 only. Only appears when the caller opts in via top_k.
+    SURROGATE_PRUNED = "surrogate_pruned"
     SLO_VIOLATED = "slo_violated"
     POWER_VIOLATED = "power_violated"
     EFFICIENCY_VIOLATED = "efficiency_violated"

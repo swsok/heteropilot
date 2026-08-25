@@ -55,6 +55,7 @@ from planner.predictor.llmservingsim import LLMServingSimPredictor
 from planner.spec import ServiceSpec, load_service_spec
 from planner.topology import TopologyGraph
 from planner.util import provenance as prov
+from planner.util.parallel import predict_all
 from planner.util.workload import generate_trace
 
 DEFAULT_SEED = 42
@@ -302,13 +303,15 @@ def run(args: argparse.Namespace) -> int:
                            num_requests=args.num_requests, seed=args.seed)
 
     predictor = LLMServingSimPredictor(trace, work_dir=work_root / "sims", timeout_s=args.timeout)
-    raw: dict[str, SimResult] = {}
     t_sim = time.monotonic()
+
+    def _progress(i, total, cand):
+        if not args.quiet:
+            print(f"  [{i + 1}/{total}] simulating {cand.id}", file=sys.stderr)
+
     try:
-        for i, cand in enumerate(simulatable):
-            if not args.quiet:
-                print(f"  [{i + 1}/{len(simulatable)}] simulating {cand.id}", file=sys.stderr)
-            raw[cand.id] = predictor.predict(cand, spec, cluster, islands_by_id, profiles)
+        raw = predict_all(predictor, simulatable, spec, cluster, islands_by_id, profiles,
+                          progress=_progress)
     finally:
         predictor.close()
     sim_wall = time.monotonic() - t_sim

@@ -19,6 +19,7 @@ from planner.candidate_generator import CandidateGenerator
 from planner.envelope import EnvelopeCache
 from planner.inventory import AcceleratorProfile, ClusterSpecV2, ExecutionIsland
 from planner.optimizer import feasibility, pareto
+from planner.optimizer.surrogate import SurrogateRanker
 from planner.plan import (
     CandidateConfig,
     DeploymentPlan,
@@ -32,10 +33,11 @@ from planner.plan import (
     UnscoredPlan,
     summarize_rejections,
 )
-from planner.predictor import Predictor
+from planner.predictor import Predictor, SimResult
 from planner.spec import ServiceSpec
 from planner.topology import TopologyError, TopologyGraph
 from planner.util import kv_transfer
+from planner.util.parallel import predict_all
 
 PD_TRANSFER_CAVEAT = (
     "P/D KV-transfer cost is a planner-side analytical add-on; the simulator models "
@@ -60,6 +62,15 @@ PHASE2_PREFIX_CACHE_CAVEAT = (
     "enough to saturate (docs/deviations.md D12). Consequence: "
     "ServiceSpec.traffic.prefix_share_ratio has no effect on these predictions, and "
     "TTFT is pessimistic for workloads with genuinely shared prefixes."
+)
+
+SURROGATE_TOPK_CAVEAT = (
+    "Stage-6 surrogate top-K was active: only the K candidates the analytical "
+    "roofline ranked best were fully simulated; the rest were HEURISTICALLY dropped "
+    "(not a sound bound - this can drop the true optimum). Metrics come from full "
+    "simulation of the survivors only. If this search is infeasible or the "
+    "recommendation looks weak, re-run with --oracle or a larger --top-k to rule out "
+    "surrogate error (measured by experiments/scripts/exp_surrogate.py)."
 )
 
 
@@ -231,23 +242,77 @@ def evaluate_candidates(
     cache: EnvelopeCache | None = None,
     ttft_margin_percent: float = 0.0,
     tpot_margin_percent: float = 0.0,
+    max_workers: int | None = None,
     progress: Callable[[int, int, CandidateConfig], None] | None = None,
 ) -> SearchResult:
-    """Simulate every candidate and split by feasibility."""
+    """Simulate every candidate and split by feasibility.
+
+    The expensive simulations run concurrently (``max_workers``), but the result
+    ASSEMBLY stays sequential in candidate order, so plan_ids (assigned by index)
+    and every appended list are byte-identical to a sequential run - parallelism
+    only speeds it up. §9 reproducibility is a property of the assembly order, not
+    of the simulation order. The envelope cache is read before and written after
+    the parallel phase, never from a worker thread, so no locking is needed.
+    """
     result = SearchResult()
     topology = TopologyGraph(cluster)
 
+    # Phase 1: resolve a SimResult for every candidate. Cache hits are free; the
+    # misses are simulated concurrently, then their ok results are memoized.
+    sims: dict[str, SimResult] = {}
+    cached_ids: set[str] = set()
+    to_sim: list[CandidateConfig] = []
+    for candidate in candidates:
+        hit = cache.get(candidate) if cache else None
+        if hit is not None:
+            sims[candidate.id] = hit
+            cached_ids.add(candidate.id)
+        else:
+            to_sim.append(candidate)
+
+    if to_sim:
+        # Dedup misses that share an envelope-cache entry (two islands of the same
+        # accelerator model map to the same key): simulate ONE representative per
+        # key, then serve its result to the twins. This reproduces exactly what the
+        # sequential get/predict/put loop did - the second same-key candidate was a
+        # cache hit - so cache-hit accounting stays byte-identical AND a homogeneous
+        # multi-island cluster memoizes instead of re-simulating.
+        rep_by_key: dict[str, CandidateConfig] = {}
+        reps: list[CandidateConfig] = []
+        twins: list[CandidateConfig] = []
+        for candidate in to_sim:
+            key = cache.cache_key(candidate) if cache is not None else None
+            if key is not None and key in rep_by_key:
+                twins.append(candidate)
+            else:
+                if key is not None:
+                    rep_by_key[key] = candidate
+                reps.append(candidate)
+        sims.update(predict_all(
+            predictor, reps, spec, cluster, islands, profiles,
+            max_workers=max_workers, progress=progress,
+        ))
+        if cache is not None:
+            for rep in reps:
+                if sims[rep.id].ok:
+                    cache.put(rep, sims[rep.id])
+            for twin in twins:
+                served = cache.get(twin)  # hits iff the representative's sim was ok
+                if served is not None:
+                    sims[twin.id] = served
+                    cached_ids.add(twin.id)
+                else:
+                    # The representative's sim failed (nothing memoized), so this
+                    # twin would also miss and re-run to the same deterministic
+                    # failure; reuse it rather than re-simulate.
+                    key = cache.cache_key(twin)
+                    assert key is not None  # a twin is only formed when it has a key
+                    sims[twin.id] = sims[rep_by_key[key].id]
+
+    # Phase 2: assemble in candidate order (deterministic plan_ids and lists).
     for index, candidate in enumerate(candidates):
-        if progress is not None:
-            progress(index, len(candidates), candidate)
-
-        sim = cache.get(candidate) if cache else None
-        cached = sim is not None
-        if sim is None:
-            sim = predictor.predict(candidate, spec, cluster, islands, profiles)
-            if cache is not None and sim.ok:
-                cache.put(candidate, sim)
-
+        sim = sims[candidate.id]
+        cached = candidate.id in cached_ids
         result.evaluated += 1
 
         if not sim.ok:
@@ -365,6 +430,12 @@ def _suggestions(
             "some islands were excluded for missing or incompatible profiles - check "
             "supported_models and sim_hardware in profiles/accelerators/"
         )
+    if rejected.get(RejectionStage.SURROGATE_PRUNED.value):
+        out.append(
+            "surrogate top-K was active and dropped candidates heuristically - this "
+            "'infeasible' may be surrogate error; re-run with --oracle or a larger "
+            "--top-k before trusting it"
+        )
     if not out:
         out.append("no candidates were generated at all; check the cluster spec and profiles")
     return out
@@ -384,6 +455,9 @@ def search(
     activation_reserve_gb: float = 0.0,
     ttft_margin_percent: float = 0.0,
     tpot_margin_percent: float = 0.0,
+    surrogate: SurrogateRanker | None = None,
+    top_k: int | None = None,
+    max_workers: int | None = None,
     provenance: dict | None = None,
     progress: Callable[[int, int, CandidateConfig], None] | None = None,
 ) -> PlannerOutput:
@@ -402,8 +476,35 @@ def search(
     generation = generator.generate()
 
     by_id = {island.id: island for island in islands}
+
+    # Stage-6 surrogate top-K (opt-in, HEURISTIC). The surrogate order only
+    # chooses WHICH candidates to simulate; it never REORDERS them, because
+    # evaluate_candidates assigns plan_ids by index (see _plan_id) - reordering
+    # would renumber plans and break byte-identity for the surviving subset. So
+    # we build a keep-set from the surrogate's top-K, then filter in generation
+    # order. When surrogate/top_k is unset this block is skipped entirely, so the
+    # default path is byte-identical.
+    candidates = generation.candidates
+    surrogate_rejections: list[Rejection] = []
+    if surrogate is not None and top_k is not None and top_k < len(candidates):
+        ordered = surrogate.order(
+            candidates, spec, by_id, profiles,
+            gpu_memory_utilization=gpu_memory_utilization,
+        )
+        keep = {c.id for c in ordered[:top_k]}
+        surrogate_rejections = [
+            Rejection(
+                candidate_id=c.id,
+                stage=RejectionStage.SURROGATE_PRUNED,
+                reason=f"surrogate rank below top-{top_k}; heuristically dropped "
+                       f"(NOT a sound bound - this stage can drop the optimum)",
+            )
+            for c in candidates if c.id not in keep
+        ]
+        candidates = [c for c in candidates if c.id in keep]
+
     evaluation = evaluate_candidates(
-        generation.candidates,
+        candidates,
         spec,
         cluster,
         by_id,
@@ -412,10 +513,11 @@ def search(
         cache=cache,
         ttft_margin_percent=ttft_margin_percent,
         tpot_margin_percent=tpot_margin_percent,
+        max_workers=max_workers,
         progress=progress,
     )
 
-    all_rejections = generation.rejections + evaluation.rejections
+    all_rejections = generation.rejections + surrogate_rejections + evaluation.rejections
     summary = summarize_rejections(all_rejections)
     caveats = [PHASE2_PREFIX_CACHE_CAVEAT]
     if not enable_bound_pruning:
@@ -423,6 +525,9 @@ def search(
             "Oracle mode: bound-based pruning was disabled, so every structurally "
             "valid candidate was simulated. Slow by design."
         )
+
+    if surrogate_rejections:
+        caveats.append(SURROGATE_TOPK_CAVEAT)
 
     if evaluation.pd_transfers:
         caveats.append(PD_TRANSFER_CAVEAT)
@@ -525,4 +630,8 @@ def oracle(*args, **kwargs) -> PlannerOutput:
     empty feasible set.
     """
     kwargs["enable_bound_pruning"] = False
+    # The oracle simulates EVERYTHING by definition, so it can never be limited by
+    # the heuristic surrogate top-K - hard-strip it even if a caller passes it.
+    kwargs["surrogate"] = None
+    kwargs["top_k"] = None
     return search(*args, **kwargs)

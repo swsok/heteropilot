@@ -1,0 +1,111 @@
+{
+  "candidates": 78,
+  "oracle_best_id": "cuda-rtxpro6000-node1-tp1-dp1-s128-t8192",
+  "oracle_goodput_per_joule": 1.6604666375926733,
+  "provenance": {
+    "backend_version": null,
+    "candidates": 78,
+    "cluster_spec_hash": "c8cd3bdc3a98499e452baffe2ffd544fe7b67ac10c06d30f169e33d00dc15f73",
+    "command": "exp_surrogate.py --service examples/service_specs/llama31-8b-light.yaml --cluster experiments/configs/clusters/exp2-local-lab.yaml --num-requests 120 --seed 42 --k-values 1 2 3 5 10 20 40 --work-dir outputs/exp_surrogate --output-dir experiments/results",
+    "cpu_count": 64,
+    "dataset_hash": "44444b0d700d183c6922a44f14c3864411899c67d494eddfd5f5df2c20109c31",
+    "experiment": "exp_surrogate_topk",
+    "git_commit": "3c46df61b9b46f11f45ede0f7f4dc9385c92b452",
+    "git_dirty": true,
+    "hardware_profile_hash": "555b4bf1734064537362f7e34abf40c9ed148463264490e5d2aeeadd90edec46",
+    "hostname": "s8",
+    "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
+    "model_revision": null,
+    "oracle_best_id": "cuda-rtxpro6000-node1-tp1-dp1-s128-t8192",
+    "oracle_goodput_per_joule": 1.6604666375926733,
+    "platform": "Linux-5.4.0-216-generic-x86_64-with-glibc2.31",
+    "python_version": "3.10.20",
+    "random_seed": 42,
+    "service_spec_hash": "347904f686dc3c9a12ac459dd94a326d6857a85378556b47d0fd3924c77991b1",
+    "surrogate": "roofline",
+    "timestamp": "2026-08-25T02:46:40.655165+00:00",
+    "vllm_version": null,
+    "workload": {
+      "horizon_s": 45.489,
+      "num_requests": 120,
+      "path": "outputs/exp_surrogate/workload.jsonl",
+      "random_seed": 42,
+      "total_input_tokens": 98130,
+      "total_output_tokens": 76149
+    }
+  },
+  "rows": [
+    {
+      "false_infeasible": false,
+      "k": 1,
+      "recall": 0.0,
+      "regret": 0.0004359197907584214,
+      "speedup": 78.0,
+      "surrogate_best_id": "cuda-rtxpro6000-node1-tp1-dp1-s256-t2048",
+      "surrogate_goodput_per_joule": 1.6597428073234526
+    },
+    {
+      "false_infeasible": false,
+      "k": 2,
+      "recall": 0.0,
+      "regret": 0.0,
+      "speedup": 39.0,
+      "surrogate_best_id": "cuda-rtxpro6000-node1-tp1-dp1-s256-t8192",
+      "surrogate_goodput_per_joule": 1.6604666375926733
+    },
+    {
+      "false_infeasible": false,
+      "k": 3,
+      "recall": 0.0,
+      "regret": 0.0,
+      "speedup": 26.0,
+      "surrogate_best_id": "cuda-rtxpro6000-node1-tp1-dp1-s256-t8192",
+      "surrogate_goodput_per_joule": 1.6604666375926733
+    },
+    {
+      "false_infeasible": false,
+      "k": 5,
+      "recall": 0.0,
+      "regret": 0.0,
+      "speedup": 15.6,
+      "surrogate_best_id": "cuda-rtxpro6000-node1-tp1-dp1-s256-t8192",
+      "surrogate_goodput_per_joule": 1.6604666375926733
+    },
+    {
+      "false_infeasible": false,
+      "k": 10,
+      "recall": 0.0,
+      "regret": 0.0,
+      "speedup": 7.8,
+      "surrogate_best_id": "cuda-rtxpro6000-node1-tp1-dp1-s256-t8192",
+      "surrogate_goodput_per_joule": 1.6604666375926733
+    },
+    {
+      "false_infeasible": false,
+      "k": 20,
+      "recall": 1.0,
+      "regret": 0.0,
+      "speedup": 3.9,
+      "surrogate_best_id": "cuda-rtxpro6000-node1-tp1-dp1-s128-t8192",
+      "surrogate_goodput_per_joule": 1.6604666375926733
+    },
+    {
+      "false_infeasible": false,
+      "k": 40,
+      "recall": 1.0,
+      "regret": 0.0,
+      "speedup": 1.95,
+      "surrogate_best_id": "cuda-rtxpro6000-node1-tp1-dp1-s128-t8192",
+      "surrogate_goodput_per_joule": 1.6604666375926733
+    },
+    {
+      "false_infeasible": false,
+      "k": 78,
+      "recall": 1.0,
+      "regret": 0.0,
+      "speedup": 1.0,
+      "surrogate_best_id": "cuda-rtxpro6000-node1-tp1-dp1-s128-t8192",
+      "surrogate_goodput_per_joule": 1.6604666375926733
+    }
+  ]
+}

@@ -212,12 +212,40 @@ def make_exp5(data: dict) -> Path:
     return out
 
 
+def make_surrogate(data: dict) -> Path:
+    """Surrogate top-K: recall & regret vs K, with the speedup each K buys."""
+    rows = sorted(data["rows"], key=lambda r: r["k"])
+    ks = [r["k"] for r in rows]
+    recall = [r["recall"] for r in rows]
+    regret = [(r["regret"] if r["regret"] is not None else 0.0) for r in rows]
+    x = list(range(len(ks)))
+    fig, ax = plt.subplots(figsize=(8, 4.4))
+    ax.plot(x, recall, "o-", color="#55a868", label="recall@K (optimum kept)")
+    ax.plot(x, regret, "s--", color="#c44e52", label="regret@K (goodput/J lost)")
+    ax.set_xticks(x)
+    ax.set_xticklabels([f"K={k}\n({r['speedup']:g}x)" for k, r in zip(ks, rows, strict=True)],
+                       fontsize=8)
+    ax.set_xlabel("top-K (simulation speedup vs oracle)")
+    ax.set_ylabel("recall / regret")
+    ax.set_ylim(-0.05, 1.1)
+    n = data.get("candidates")
+    ax.set_title(f"Surrogate top-K accuracy (N={n})  |  {CAPTION}", fontsize=9)
+    ax.legend(fontsize=8, loc="center right")
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    out = FIGURES / "surrogate.png"
+    fig.savefig(out, dpi=150)
+    plt.close(fig)
+    return out
+
+
 FIGURE_SPECS = {
     "exp1": ("exp1_tp_sweep.json", make_exp1),
     "exp2": ("exp2_selection.json", make_exp2),
     "baselines": ("baselines.json", make_baselines),
     "router": ("router_baselines.json", make_router),
     "exp5": ("pd_4combo.json", make_exp5),
+    "surrogate": ("surrogate.json", make_surrogate),
 }
 
 

@@ -25,6 +25,7 @@ from planner.predictor import Predictor, SimResult
 from planner.predictor.llmservingsim import LLMServingSimPredictor
 from planner.spec import load_service_spec
 from planner.util import provenance as prov
+from planner.util.parallel import predict_all
 from planner.util.workload import generate_trace
 
 DEFAULT_SEED = 42
@@ -62,12 +63,14 @@ def run(args: argparse.Namespace) -> int:
                            num_requests=args.num_requests, seed=args.seed)
 
     predictor = LLMServingSimPredictor(trace, work_dir=work_root / "sims", timeout_s=args.timeout)
-    raw: dict[str, SimResult] = {}
+
+    def _progress(i, total, c):
+        if not args.quiet:
+            print(f"  [{i + 1}/{total}] {c.id}", file=sys.stderr)
+
     try:
-        for i, c in enumerate(simulatable):
-            if not args.quiet:
-                print(f"  [{i + 1}/{len(simulatable)}] {c.id}", file=sys.stderr)
-            raw[c.id] = predictor.predict(c, spec, cluster, islands_by_id, profiles)
+        raw = predict_all(predictor, simulatable, spec, cluster, islands_by_id, profiles,
+                          progress=_progress)
     finally:
         predictor.close()
 

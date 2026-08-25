@@ -18,6 +18,7 @@ experiments/scripts/make_figures.py --only exp1
 | `baselines_regret.png` | §12 baselines + ablation | `experiments/results/baselines.json` | `make_figures.py` |
 | `router_baselines.png` | §12 router baselines (RR/RAND/LOAD) | `experiments/results/router_baselines.json` | `make_figures.py` |
 | `pd_4combo.png` | Exp 5 — P/D 4-combo vs aggregated | `experiments/results/pd_4combo.json` | `make_figures.py` |
+| `surrogate.png` | §5.4 stage-6 surrogate top-K accuracy | `experiments/results/surrogate.json` | `make_figures.py` |
 | `pd_network_sweep.png` | Exp 3 — P/D network bandwidth sweep | `experiments/results/pd_network_sweep_table.md` | `pd_network_sweep.py` (produced inline by `run_exp_pd.sh`) |
 
 ## What each figure shows
@@ -47,5 +48,10 @@ experiments/scripts/make_figures.py --only exp1
   NPU-touching combo is SIM-PROXY (RTXPRO6000 model — labeled, absolute rule 3);
   the aggregated baseline has higher tokens/J (1.655) but is INFEASIBLE, so P/D
   pays here by meeting the SLO (see `pd_4combo_table.md`).
+- **`surrogate.png`** — stage-6 surrogate top-K: recall@K (does the exact optimum
+  survive) and regret@K (goodput/J lost) vs K, with the N/K speedup each K buys.
+  On this workload regret is 0 even at K=1 (78x) although recall only reaches 1 at
+  K=20 — the objective has ties, so the surrogate picks a different candidate of
+  equal value (see `exp_surrogate_summary.md`).
 - **`pd_network_sweep.png`** — the §5.9 adoption crossing at the planning level
   (see `exp_pd_summary.md`).
