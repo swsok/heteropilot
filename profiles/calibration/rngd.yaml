@@ -1,0 +1,30 @@
+hardware:
+  RNGD:
+    hardware: RNGD
+    ttft:
+      alpha: 1.335565141094366
+      beta: 182.99761507322773
+      sample_count: 5
+      source: measured
+    tpot:
+      alpha: 0.6855295068714633
+      beta: 4.070250606305578
+      sample_count: 5
+      source: measured
+    errors:
+      sharegpt-llama31-8b-20-tp8:
+        workload_bucket: sharegpt-llama31-8b-20-tp8
+        ttft:
+          mean_error: 0.4733534510496232
+          p95_abs_error: 0.5810886785038171
+          worst_error: 0.5893104403212407
+          sample_count: 5
+        tpot:
+          mean_error: -0.20414601056427722
+          p95_abs_error: 0.21080997844163846
+          worst_error: -0.21204188481675396
+          sample_count: 5
+provenance:
+  fitted_from:
+    RNGD:
+    - outputs/rngd_bench/rngd-tp8_summary.txt
