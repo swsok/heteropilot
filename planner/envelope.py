@@ -146,6 +146,14 @@ class EnvelopeCache:
         if self.enabled:
             self.root.mkdir(parents=True, exist_ok=True)
 
+    def cache_key(self, candidate: CandidateConfig) -> str | None:
+        """Stable string identifying a candidate's cache entry, or None if it has
+        no computable key. Two candidates share an entry iff this is equal - used
+        to dedup within-run same-key simulations so a homogeneous multi-island
+        cluster memoizes instead of re-simulating (parallel evaluate_candidates)."""
+        path = self._path(candidate)
+        return str(path) if path is not None else None
+
     def _path(self, candidate: CandidateConfig) -> Path | None:
         try:
             key = key_for(

@@ -154,6 +154,10 @@ def _write_output(output: PlannerOutput, path: Path) -> None:
 
 
 def cmd_plan(args: argparse.Namespace) -> int:
+    if args.oracle and args.top_k is not None:
+        print("error: --oracle simulates everything; --top-k is a heuristic subset - "
+              "they are mutually exclusive", file=sys.stderr)
+        return 1
     spec = load_service_spec(args.service)
     cluster = load_cluster_spec(args.cluster)
     profiles = load_profiles_for(cluster, args.root)
@@ -191,6 +195,8 @@ def cmd_plan(args: argparse.Namespace) -> int:
             "enable_prefix_caching": False,
             "bound_pruning": not args.oracle,
             "enable_pd": args.enable_pd,
+            "surrogate": args.surrogate if args.top_k is not None else None,
+            "top_k": args.top_k,
         },
     )
     missing = prov.note_missing(provenance)
@@ -230,6 +236,11 @@ def cmd_plan(args: argparse.Namespace) -> int:
         if not args.quiet:
             print(f"  [{i + 1}/{total}] simulating {candidate.id}", file=sys.stderr)
 
+    surrogate = None
+    if args.top_k is not None:
+        from planner.optimizer.surrogate import AnalyticalRooflineRanker
+        surrogate = AnalyticalRooflineRanker()
+
     try:
         runner = exhaustive.oracle if args.oracle else exhaustive.search
         output = runner(
@@ -238,6 +249,9 @@ def cmd_plan(args: argparse.Namespace) -> int:
             cache=cache,
             gpu_memory_utilization=args.gpu_memory_utilization,
             activation_reserve_gb=args.activation_reserve_gb,
+            surrogate=surrogate,
+            top_k=args.top_k,
+            max_workers=args.workers,
             provenance=provenance,
             progress=progress,
         )
@@ -473,6 +487,20 @@ def build_parser() -> argparse.ArgumentParser:
                       help="Also enumerate Prefill/Decode-split candidates across islands "
                            "(work order §5.3). Off by default; note it grows the candidate "
                            "space roughly quadratically in the number of islands.")
+    plan.add_argument("--top-k", type=int, default=None,
+                      help="Stage-6 surrogate top-K (§5.4): score all survivors with the "
+                           "analytical roofline and fully simulate only the K best. HEURISTIC "
+                           "- it can drop the optimum (measured by exp_surrogate.py). Default: "
+                           "simulate all survivors. Mutually exclusive with --oracle.")
+    plan.add_argument("--surrogate", choices=["roofline"], default="roofline",
+                      help="Surrogate ranker for --top-k. 'roofline' reuses the greedy "
+                           "analytical proxy (a learned/xgboost ranker is a corpus-gated "
+                           "future option).")
+    plan.add_argument("--workers", type=int, default=None,
+                      help="Concurrent candidate simulations (default: ~half the CPUs, "
+                           "capped 32). Each candidate is an isolated subprocess, so this "
+                           "only speeds the search up - the result is byte-identical. Use "
+                           "--workers 1 to force sequential.")
     plan.add_argument("--quiet", action="store_true")
     plan.set_defaults(func=cmd_plan)
 
