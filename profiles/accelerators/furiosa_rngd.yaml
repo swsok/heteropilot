@@ -37,7 +37,8 @@ sim_hardware: RNGD
 #   memory_gb             : measured - see above
 #   memory_bandwidth_gbps : measured (achieved, derived from DMA span scaling)
 #   perf_data             : measured - layerwise on RNGD npu3/npu0-2 PEs, see below
-#   power                 : card total measured, per-PE split NOT measured
+#   power                 : measured - per-PE cost fitted from a 0..8 loaded-PE
+#                           board-power sweep (R^2 0.996); see the power: block
 #   supported_models      : layer-level verification only, see below
 source: measured
 
@@ -69,33 +70,53 @@ perf_data: profiler/perf/RNGD/
 #   - The attention grid stops short at its largest decode corner; see the
 #     bundle summary JSON for the exact shots.
 
-# Measured 2026-08-25 on npu1 with ALL EIGHT PEs loaded, by
-# experiments/scripts/rngd_device_facts.py. Loading one PE is not enough to
-# characterise the board: a single busy PE draws 68 W against 285 W for the full
-# card, because 7/8 of the card stays idle. Protocol mirrors deviations D7 (the
-# A5000/A40 protocol): idle with no device context, active mean under sustained
-# load excluding the first second, standby as the elevated draw in the 2 s after
-# the load stops.
-#   MEASURED CARD TOTALS: idle 39.0 W (n=28, dead steady), active 285.53 W
-#   (n=64, max 294), standby 265.0 W (n=3).
+# Measured 2026-08-25 on npu1 by experiments/scripts/rngd_device_facts.py
+# --pe-sweep, which loads 0..8 PEs of one card and reads board power at each
+# point. That sweep is what turns this block from an assumption into a
+# measurement: board power is only observable per *card*, but the simulator
+# applies this block per NPU instance and one accelerator here is one PE, so the
+# per-PE cost has to be separated from the card's fixed cost rather than guessed
+# as an even eighth.
 #
-# THE NUMBERS BELOW ARE THOSE TOTALS DIVIDED BY 8, because the simulator applies
-# this block per NPU instance and one accelerator here is one PE. The DIVISION
-# IS AN ASSUMPTION -- an even split across PEs was not measured, and idle draw
-# in particular is largely a board-level cost that does not scale with PE count.
-# Hence source: placeholder on this block even though the card total is measured.
-# To resolve it, measure board power while loading 1..8 PEs and fit the per-PE
-# marginal cost; then this becomes source: measured.
+#   loaded PEs :  0      1      2      3      4      5      6      7      8
+#   board (W)  : 39.35  71.47 102.83 133.91 165.23 203.13 240.39 273.57 290.93
+#   increment  :   -    +32.12 +31.36 +31.08 +31.32 +37.90 +37.26 +33.18 +17.36
+#
+# Least squares over the loaded points: board = 38.01 + 32.71 * PEs, R^2 0.996.
+# The decisive check is that the fitted intercept (38.01 W) lands on the measured
+# 0-PE idle (39.35 W, dead steady, within the tool's 1 W quantisation). So the
+# card's ~38 W is a fixed board cost that does not move when PEs go busy, and
+# 32.71 W is what one busy PE actually adds.
+#
+#   idle_power   0.0    measured - a PE's MARGINAL idle draw is zero. The 39 W
+#                       the card burns at rest is a board cost, and per
+#                       deviations D7 node-level power belongs in ClusterSpecV2
+#                       under nodes[i], not in an accelerator profile. Any RNGD
+#                       ClusterSpecV2 must therefore add 38.01 W per PRESENT
+#                       CARD to base_node_power (4 cards here -> 152.04 W), or
+#                       it will under-count node power by that much.
+#   active_power 32.71  measured - the regression slope above.
+#   standby_power 28.37 measured (derived) - the D7 2 s post-load window read
+#                       265.0 W at the card with 8 PEs loaded; subtracting the
+#                       38.01 W base and dividing by 8 gives the per-PE figure.
+#                       Single window, so weaker than the active fit.
+#
+# KNOWN NON-LINEARITY: the 8th PE adds only +17.4 W and the card plateaus near
+# 291 W (max sample 293 W), so the card saturates - a power or clock ceiling, not
+# a measurement artifact. A linear per-PE model therefore OVER-predicts a fully
+# loaded card by 38.01 + 8*32.71 - 290.93 = 8.8 W, about 3%. Fine for planning,
+# but do not read per-PE power as valid beyond 8 busy PEs, and expect tokens/J on
+# a saturated card to be slightly better than the model says.
 #
 # furiosa-smi reports whole watts, so every figure is quantised to 1 W - coarser
 # than nvidia-smi's reading on the A40. Host/node power is not measured here
-# either, so NodePower stays placeholder as on the A40.
+# either, so the rest of NodePower stays placeholder as on the A40.
 power:
-  idle_power: 4.88
-  standby_power: 33.13
-  active_power: 35.69
+  idle_power: 0.0
+  standby_power: 28.37
+  active_power: 32.71
   standby_duration: 2000000000   # ns (2 s), the D7 window
-  source: placeholder
+  source: measured
 
 # LAYER-LEVEL VERIFICATION ONLY, and that is weaker than the A40 entries.
 # Every canonical Llama-3.x layer in profiler/models/llama.yaml was compiled and
@@ -125,5 +146,7 @@ notes: >
   sweeps (experiments/scripts/run_rngd_profile.py --tp N, ~5 min each across 24
   PEs) before the planner can offer those TP degrees. Vendor positions the part
   on efficiency, which is the tokens/J axis this planner optimizes - prime Exp 4
-  material, but the power block's per-PE split has to be resolved first because
-  tokens/J depends on it directly.
+  material. The per-PE power split is now measured (0..8 loaded-PE sweep), so
+  tokens/J is computable - provided the companion ClusterSpecV2 charges 38.01 W
+  per present card to base_node_power, which this profile deliberately does not
+  carry.

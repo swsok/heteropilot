@@ -1,0 +1,81 @@
+{
+  "device": "rngd:8",
+  "card": "npu1",
+  "measured_at": "2026-08-25T09:59:48+0000",
+  "pe_power_sweep": {
+    "card": "npu1",
+    "first_pe": 8,
+    "table": [
+      {
+        "loaded_pes": 0,
+        "mean_w": 39.35,
+        "min_w": 39.0,
+        "max_w": 40.0,
+        "n": 31
+      },
+      {
+        "loaded_pes": 1,
+        "mean_w": 71.47,
+        "min_w": 69.0,
+        "max_w": 73.0,
+        "n": 45
+      },
+      {
+        "loaded_pes": 2,
+        "mean_w": 102.83,
+        "min_w": 96.0,
+        "max_w": 105.0,
+        "n": 47
+      },
+      {
+        "loaded_pes": 3,
+        "mean_w": 133.91,
+        "min_w": 127.0,
+        "max_w": 136.0,
+        "n": 47
+      },
+      {
+        "loaded_pes": 4,
+        "mean_w": 165.23,
+        "min_w": 154.0,
+        "max_w": 169.0,
+        "n": 47
+      },
+      {
+        "loaded_pes": 5,
+        "mean_w": 203.13,
+        "min_w": 190.0,
+        "max_w": 206.0,
+        "n": 46
+      },
+      {
+        "loaded_pes": 6,
+        "mean_w": 240.39,
+        "min_w": 230.0,
+        "max_w": 244.0,
+        "n": 46
+      },
+      {
+        "loaded_pes": 7,
+        "mean_w": 273.57,
+        "min_w": 260.0,
+        "max_w": 279.0,
+        "n": 46
+      },
+      {
+        "loaded_pes": 8,
+        "mean_w": 290.93,
+        "min_w": 285.0,
+        "max_w": 293.0,
+        "n": 46
+      }
+    ],
+    "fit_over_loaded_points": {
+      "base_w": 38.01,
+      "per_pe_w": 32.71,
+      "r_squared": 0.996,
+      "n_points": 8
+    },
+    "method": "furiosa-smi board power for this card only, polled at 2 Hz. For each n in 0..max, n PEs run a sustained 4096x4096 bf16 matmul; the window starts after a settle delay and after every worker reports READY, so compilation is excluded. Least squares is fitted over n>=1 only, because the n=0 point has no compiled context loaded and sits below the loaded-state intercept."
+  }
+}
