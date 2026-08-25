@@ -57,19 +57,18 @@ Usage::
 from __future__ import annotations
 
 import argparse
-import collections
 import csv
 import gc
 import json
 import subprocess
 import time
+from collections.abc import Callable, Iterable
 from pathlib import Path
-from typing import Any, Callable, Iterable
-
-import torch
-import torch.nn as nn
+from typing import Any
 
 import furiosa.torch as ft
+import torch
+import torch.nn as nn
 from furiosa.torch import config as furiosa_config
 from furiosa.torch.profiler import RNGDProfiler
 
@@ -311,13 +310,19 @@ class Measurer:
             with torch.no_grad():
                 compiled(*dev_inputs)  # compile + warm this shape
                 prof = RNGDProfiler()
-                with furiosa_config.profiler_context(prof):
-                    with prof:
-                        for _ in range(self.reps):
-                            compiled(*dev_inputs)
+                with furiosa_config.profiler_context(prof), prof:
+                    for _ in range(self.reps):
+                        compiled(*dev_inputs)
         finally:
             del compiled, dev_inputs
             module.to("cpu")
+            # Dropping the wrapper is not enough: dynamo caches the compiled
+            # graph, which keeps the loaded EDF -- and therefore its device
+            # buffers -- alive. Without the reset, a large shot that succeeds
+            # leaves the PE too full for the smaller ones after it (measured:
+            # n_decode=128 kv=8192 succeeded, then n_decode=8 kv=8192 failed to
+            # allocate 134 MB).
+            torch._dynamo.reset()
             gc.collect()
         self._n += 1
         path = self.trace_dir / f"trace_{self._n:05d}.json"
@@ -591,6 +596,8 @@ def main() -> None:
     parser.add_argument("--max-tokens", type=int, default=2048)
     parser.add_argument("--max-seqs", type=int, default=256)
     parser.add_argument("--max-kv", type=int, default=8192)
+    parser.add_argument("--kv-decodes", default="",
+                        help="comma-separated kv_decode values; default 128,1024,max-kv")
     parser.add_argument("--layers", default="", help="comma-separated subset, for smoke runs")
     parser.add_argument("--skip-attention", action="store_true")
     parser.add_argument("--shard", type=int, default=0,
@@ -636,7 +643,8 @@ def main() -> None:
         prefill_chunks=x2_grid(16, args.max_tokens),
         kv_prefills=[0],
         n_decodes=x2_grid(1, args.max_seqs),
-        kv_decodes=[128, 1024, args.max_kv],
+        kv_decodes=([int(v) for v in args.kv_decodes.split(",") if v]
+                    or [128, 1024, args.max_kv]),
     ))
     all_tasks = build_tasks(tokens_grid, seq_grid, shots, dense, per_seq)
     tasks = all_tasks[args.shard::args.num_shards]

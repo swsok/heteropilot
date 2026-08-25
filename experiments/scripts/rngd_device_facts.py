@@ -37,9 +37,8 @@ import threading
 import time
 from pathlib import Path
 
-import torch
-
 import furiosa.torch as ft  # noqa: F401  (registers the rngd device)
+import torch
 
 BYTES_PER_ELEMENT = 2  # bfloat16
 

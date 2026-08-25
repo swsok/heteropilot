@@ -186,7 +186,7 @@ def main() -> None:
     remaining = {shard for shard, *_ in procs}
     while remaining:
         time.sleep(args.poll_s)
-        for shard, pe, proc, _handle, shard_out in procs:
+        for shard, pe, proc, _handle, _shard_out in procs:
             if shard not in remaining or proc.poll() is None:
                 continue
             remaining.discard(shard)

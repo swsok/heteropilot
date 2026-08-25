@@ -49,13 +49,17 @@ NOTES = (
     "(experiments/scripts/profile_rngd.py), NOT of vLLM's fused kernels the way "
     "the A40 / A5000 / RTXPRO6000 bundles were measured. A GPU-vs-RNGD "
     "comparison built on this bundle compares the same mathematics executed by "
-    "different software stacks, and must say so. Also: skew.csv / skew_fit.csv "
-    "are absent, so the simulator falls back to uniform-batch attention and "
-    "under-represents ragged decode batches; and the attention grid is capped by "
-    "a KV-memory budget on one PE, so its largest n_decode x kv_decode corners "
-    "are missing (see the summary JSON for the exact skipped shots). A rank here "
-    "is one PE, not one card: furiosa-llm build -tp counts PEs per TP group and "
-    "defaults to 8, so a full card is a TP-8 group."
+    "different software stacks, and must say so. Coverage gaps, all deliberate "
+    "and none silent: skew.csv / skew_fit.csv are absent, so the simulator falls "
+    "back to uniform-batch attention and under-represents ragged decode batches; "
+    "dense.csv is missing act_fn@1 token and rotary_emb@2048 because the "
+    "compiler keeps those two shapes on the CPU reproducibly (retried, same "
+    "result), and the simulator clamps below a layer's lowest key; attention.csv "
+    "is missing exactly one shot, n_decode=256 x kv_decode=8192, whose K+V is "
+    "8.6 GB against the 6.25 GB a single PE can address -- a real device limit, "
+    "not a harness cap. A rank here is one PE, not one card: furiosa-llm build "
+    "-tp counts PEs per TP group and defaults to 8, so a full card is a TP-8 "
+    "group."
 )
 
 
@@ -68,6 +72,8 @@ def main() -> None:
     parser.add_argument("--tp", type=int, action="append", default=None)
     parser.add_argument("--dry-run", action="store_true",
                         help="validate only, write nothing")
+    parser.add_argument("--overwrite", action="store_true",
+                        help="replace an existing bundle; needed when adding TP degrees")
     args = parser.parse_args()
 
     tp_degrees = args.tp or [1]
@@ -77,7 +83,11 @@ def main() -> None:
     if summary_path.is_file():
         summary = json.loads(summary_path.read_text())
         iterations = summary.get("reps")
-        device = summary.get("device")
+        # The parallel driver records every PE it used; a single-worker run
+        # records one device.
+        devices = summary.get("devices") or ([summary["device"]] if summary.get("device") else [])
+        if devices:
+            device = f"FuriosaAI RNGD, PEs {', '.join(devices)}"
 
     importer = CsvProfileImporter()
     try:
@@ -97,7 +107,7 @@ def main() -> None:
             if not file_report.present:
                 continue
             print(f"  tp{tp} {file_report.filename:20s} rows={file_report.rows}")
-            for axis, span in sorted((file_report.axes or {}).items()):
+            for axis, span in sorted((file_report.coverage or {}).items()):
                 print(f"        {axis:16s} min={span.get('min')} max={span.get('max')} "
                       f"n_unique={span.get('n_unique')}")
 
@@ -107,8 +117,8 @@ def main() -> None:
 
     provenance = ImportProvenance(
         measured_by=(
-            "HeteroPilot, measured on this NPU server's FuriosaAI RNGD npu3 "
-            "via experiments/scripts/profile_rngd.py"
+            "HeteroPilot, measured on this NPU server's FuriosaAI RNGD cards via "
+            "experiments/scripts/run_rngd_profile.py (24 workers, one PE each)"
         ),
         source="measured",
         serving_stack="furiosa-llm 2026.2.0 / furiosa-torch 2026.2.0 (torch 2.10.0)",
@@ -126,6 +136,7 @@ def main() -> None:
         variant=args.variant,
         tp_degrees=tp_degrees,
         provenance=provenance,
+        overwrite=args.overwrite,
     )
     print(f"imported -> {dest}")
 

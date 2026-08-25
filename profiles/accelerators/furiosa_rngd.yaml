@@ -1,30 +1,129 @@
-profile_id: furiosa-rngd
+profile_id: furiosa-rngd-pe
 vendor: FuriosaAI
 model: RNGD
 backend: furiosa
-# EVERY number below is a placeholder pending first access to the machine
-# (docs/hardware_roadmap.md). Read the real figures off the device's own tools
-# at bring-up and replace them; do not cite these.
-memory_gb: 48
-memory_bandwidth_gbps: 1500
 
-# No profiler/perf/ bundle and no verified serving stack yet: excluded from
-# candidate generation, and any direct use fails loudly.
-sim_hardware: null
-source: placeholder
-perf_data: null
+# ONE ACCELERATOR HERE IS ONE PE, NOT ONE CARD.
+#
+# A card is 8 PEs sharing 47.5 GiB of HBM, and `furiosa-llm build -tp` counts
+# PEs per tensor-parallel group (default 8), so the vendor's own unit of tensor
+# parallelism is the PE and a full card is a TP-8 group. The perf bundle was
+# measured that way: profiler/perf/RNGD/.../tp<N>/ holds ONE PE's shapes with
+# the model config sharded by N, mirroring profiler/core/engine.py. The
+# simulator picks tp<N> by the number of accelerators in the TP group, so the
+# accelerator must be the PE for the bundle to be read correctly.
+# Consequence for ClusterSpecV2: declare 8 accelerators per card, not 1.
 
-# Deliberately empty. Empty means "unknown", and unknown means excluded from
-# candidates (work order §11 Risk 1) - NPU model/kernel support must be
-# verified on the vendor serving stack (furiosa-llm), never assumed. Fill this
-# from an actual boot per (model, dtype) pair.
-supported_models: []
+# memory_gb: measured 2026-08-25 - largest single bf16 block a PE accepts,
+#   bisected to 0.25 GB by experiments/scripts/rngd_device_facts.py. Consistent
+#   with an even split of the card's 47.5 GiB (5.94 GiB), slightly above it.
+#   This is one allocation, not a total budget; the runtime may still refuse a
+#   sum of smaller blocks that exceeds it.
+memory_gb: 6.25
 
-max_tp_size: 4
+# memory_bandwidth_gbps: measured 2026-08-25, derived from the profiling run's
+#   own DMA spans rather than a vendor sheet. A compiled matmul must read its
+#   whole weight matrix, and the DMA time scales linearly with weight size at
+#   ~5.2 us/MB on one PE: o_proj 32 MB -> 173 us, down_proj 112 MB -> 555 us,
+#   gate_up_proj 224 MB -> 1206 us. That is ~200 GB/s of achieved HBM->PE read
+#   bandwidth. It is an achieved figure for one PE, not a card-level peak.
+memory_bandwidth_gbps: 200
+
+# Simulator `hardware` key. Must match a directory under profiler/perf/.
+sim_hardware: RNGD
+
+# Per-field provenance (absolute rule 3); a single top-level source cannot
+# describe a profile whose numbers come from different measurements.
+#   memory_gb             : measured - see above
+#   memory_bandwidth_gbps : measured (achieved, derived from DMA span scaling)
+#   perf_data             : measured - layerwise on RNGD npu3/npu0-2 PEs, see below
+#   power                 : card total measured, per-PE split NOT measured
+#   supported_models      : layer-level verification only, see below
+source: measured
+
+perf_data: profiler/perf/RNGD/
+
+# Measured 2026-08-25 on this NPU server via
+# experiments/scripts/profile_rngd.py, NOT via `python -m profiler`: RNGD has no
+# vLLM platform plugin (the only vllm.platform_plugins entry point here is
+# rbln), so the vLLM layerwise profiler cannot drive it. Each canonical layer of
+# profiler/models/llama.yaml is compiled on its own through
+# torch.compile(backend=furiosa.torch.backend) inside
+# furiosa.torch.config.profiler_context(RNGDProfiler()), and time_us is the
+# UNION of the resulting device spans (Renegade::TuExec and DMA) -- wall time
+# the device was busy. Summing them overcounts: on down_proj@256 the TuExec sum
+# alone is 1603 us and DMA adds 964 us, but the union is 1250 us and equals the
+# full span of the timeline, so the tensor units run concurrently and DMA
+# overlaps compute.
+#
+# KNOWN LIMITS of this bundle, all recorded in its meta.yaml too:
+#   - The layers are implementations written for that harness, not vLLM's fused
+#     kernels. A GPU-vs-RNGD comparison built on this compares the same
+#     mathematics executed by different software stacks.
+#   - No skew.csv / skew_fit.csv, so the simulator falls back to uniform-batch
+#     attention and under-represents ragged decode batches.
+#   - Two dense points are missing because the compiler keeps them on the CPU
+#     reproducibly, not intermittently: act_fn@1 token and rotary_emb@2048.
+#     The simulator clamps below a layer's lowest key, so act_fn falls back to
+#     its 2-token value.
+#   - The attention grid stops short at its largest decode corner; see the
+#     bundle summary JSON for the exact shots.
+
+# Measured 2026-08-25 on npu1 with ALL EIGHT PEs loaded, by
+# experiments/scripts/rngd_device_facts.py. Loading one PE is not enough to
+# characterise the board: a single busy PE draws 68 W against 285 W for the full
+# card, because 7/8 of the card stays idle. Protocol mirrors deviations D7 (the
+# A5000/A40 protocol): idle with no device context, active mean under sustained
+# load excluding the first second, standby as the elevated draw in the 2 s after
+# the load stops.
+#   MEASURED CARD TOTALS: idle 39.0 W (n=28, dead steady), active 285.53 W
+#   (n=64, max 294), standby 265.0 W (n=3).
+#
+# THE NUMBERS BELOW ARE THOSE TOTALS DIVIDED BY 8, because the simulator applies
+# this block per NPU instance and one accelerator here is one PE. The DIVISION
+# IS AN ASSUMPTION -- an even split across PEs was not measured, and idle draw
+# in particular is largely a board-level cost that does not scale with PE count.
+# Hence source: placeholder on this block even though the card total is measured.
+# To resolve it, measure board power while loading 1..8 PEs and fit the per-PE
+# marginal cost; then this becomes source: measured.
+#
+# furiosa-smi reports whole watts, so every figure is quantised to 1 W - coarser
+# than nvidia-smi's reading on the A40. Host/node power is not measured here
+# either, so NodePower stays placeholder as on the A40.
+power:
+  idle_power: 4.88
+  standby_power: 33.13
+  active_power: 35.69
+  standby_duration: 2000000000   # ns (2 s), the D7 window
+  source: placeholder
+
+# LAYER-LEVEL VERIFICATION ONLY, and that is weaker than the A40 entries.
+# Every canonical Llama-3.x layer in profiler/models/llama.yaml was compiled and
+# executed on real RNGD silicon at bf16 across the whole token grid, so kernel
+# coverage for this architecture is verified by execution rather than assumed
+# (work order §11 Risk 1). What is NOT verified is end-to-end serving: no model
+# has been built with `furiosa-llm build` and served with `furiosa-llm serve` on
+# this machine yet. Treat a candidate placed here as needing that check before
+# any deployment claim; the perf bundle is enough for simulation only.
+supported_models:
+  - pattern: "meta-llama/Llama-3.1-8B"
+    dtypes: [bfloat16]
+
+# 8 PEs per card, and TP must stay inside one card until cross-card PE fusion is
+# verified. /dev/rngd/ exposes fusion nodes for 2 and 4 PEs (npu<N>pe0-1,
+# pe0-3, pe4-7) but none for all 8, and MeshKind is Single here, so a TP-8 group
+# spanning the card uses the mesh path that has not been exercised yet.
+max_tp_size: 8
 
 notes: >
-  4 devices expected reachable from the week of 2026-08-17. Bring-up follows
-  the V1 path: verify serving stack, measure, import via CsvProfileImporter
-  against profiler/CONTRACT.md. Vendor positions the part on efficiency
-  (low-TDP HBM design), which is the tokens/J axis this planner optimizes -
-  prime Exp 4 material once measured.
+  Measured on this NPU server 2026-08-25 (docs/hardware_roadmap.md "First
+  access"). 4 cards x 8 PEs, all four alive at 47.5 GiB and firmware 2026.3.0.
+  Availability on this shared Kubernetes node changes: rngd_pd.serving.cluster
+  pods held npu0/1/2 earlier the same day, so re-check
+  /sys/class/rngd_mgmt/rngd!npu<N>pe<M>/alloc_status before a run.
+  The bundle covers Llama-3.1-8B bf16 at tp1 only; tp2/tp4/tp8 need their own
+  sweeps (experiments/scripts/run_rngd_profile.py --tp N, ~5 min each across 24
+  PEs) before the planner can offer those TP degrees. Vendor positions the part
+  on efficiency, which is the tokens/J axis this planner optimizes - prime Exp 4
+  material, but the power block's per-PE split has to be resolved first because
+  tokens/J depends on it directly.

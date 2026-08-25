@@ -27,3 +27,12 @@ bench/results/
 # committed explicitly with `git add -f`.
 outputs/.hp-*
 outputs/phase0_bench/
+
+# RNGD profiling intermediates. The measured bundle itself lives in
+# profiler/perf/RNGD/, and outputs/rngd_profile/ keeps only what stays
+# auditable: the compute/DMA breakdown behind every union-based time_us, the
+# per-run summaries, and device_facts.json. Per-shard logs and chrome traces are
+# bulky and regenerable (experiments/scripts/run_rngd_profile.py).
+outputs/rngd_profile/shards/
+outputs/rngd_profile/retry_*/
+outputs/rngd_profile/traces/

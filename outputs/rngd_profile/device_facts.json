@@ -1,0 +1,36 @@
+{
+  "device": "rngd:8",
+  "card": "npu1",
+  "measured_at": "2026-08-25T07:48:53+0000",
+  "memory": {
+    "largest_single_alloc_gb": 6.25,
+    "method": "bisected torch.empty(bfloat16) on one PE, 0.25 GB resolution",
+    "note": "one allocation, not the PE's total budget: the runtime may refuse a single block smaller than the sum of several"
+  },
+  "power_w": {
+    "card": "npu1",
+    "load_pes": 8,
+    "idle": {
+      "mean": 39.0,
+      "min": 39.0,
+      "max": 39.0,
+      "n": 28
+    },
+    "active": {
+      "mean": 285.53,
+      "min": 204.0,
+      "max": 294.0,
+      "n": 64
+    },
+    "standby": {
+      "mean": 265.0,
+      "min": 252.0,
+      "max": 278.0,
+      "n": 3
+    },
+    "standby_duration_ns": 2000000000,
+    "sampler_interval_s": 0.5,
+    "resolution_w": 1.0,
+    "method": "furiosa-smi info board power for this card only, polled at 2 Hz; active excludes the first second of the load window; standby is the D7 2 s post-load window"
+  }
+}
