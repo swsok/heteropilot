@@ -61,13 +61,21 @@ PYTHONNOUSERSITE=1 VLLM_PLUGINS="" PYTHONPATH=$PWD python3 -m profiler --help
 #       VLLM_PLUGINS=""    - the auto-loaded rbln platform plugin crashes every vLLM
 #                            import: rebel-compiler 0.10.2 wants a symbol the installed
 #                            tvm 0.20.dev0 does not have
-#     But those escapes only make the CLI import. NEITHER DEVICE CAN BE PROFILED YET:
-#       ATOM - blocked on the rebel-compiler/tvm mismatch (vendor-side fix)
-#       RNGD - has no vLLM platform plugin at all; furiosa_llm is a separate API, so
-#              profiler/core/engine.py's `from vllm import LLM` cannot drive it
-#     Full diagnosis and the three routes forward: docs/hardware_roadmap.md
-#     "First access". Use ONE VENV PER VENDOR - the two stacks cannot share an
-#     interpreter. Do NOT install vLLM into .venv; the planner stays vLLM-free.
+#     But those escapes only make the CLI import. NEITHER DEVICE IS PROFILABLE
+#     THROUGH `profiler/` AS INSTALLED:
+#       ATOM - broken vendor install: rebel-compiler resolves to 0.11.0 while
+#              vllm_rbln/optimum-rbln 0.10.2 expect 0.10.2, and tvm/ is a mix of
+#              both. Fix = one consistent trio in a clean rbln-only venv.
+#       RNGD - no vLLM platform plugin at all; furiosa-llm is its own stack, so
+#              profiler/core/engine.py's `from vllm import LLM` can never drive it.
+#     BUT RNGD IS ALREADY MEASURABLE without vLLM: `furiosa.torch` gives a
+#     torch.compile backend + PrivateUse1 device `rngd:0..31` + RNGDProfiler.
+#     Compiling ONE canonical layer per graph and summing its `Renegade::TuExec`
+#     spans yields exactly the contract's `layer, tokens, time_us`. Verified on
+#     hardware (npu3). That makes the CsvProfileImporter route the cheapest path
+#     to a measured NPU profile - see docs/hardware_roadmap.md "First access".
+#     Use ONE VENV PER VENDOR - the two stacks cannot share an interpreter.
+#     Do NOT install vLLM into .venv; the planner stays vLLM-free.
 ```
 
 Verified on this machine after the above (all four green):
@@ -108,9 +116,10 @@ Notes and traps confirmed here:
 
 The goal: replace every **SIM-PROXY / placeholder** NPU number with a **measured**
 one, then run **Exp 4**. Concrete NPU targets: **Rebellions ATOM (×4, backend
-`rbln`)** and **FuriosaAI RNGD (backend `furiosa`)** — 4 cards are on the PCI bus but
-`furiosa-smi` enumerates only 3 (`44:00.0` reads PCI rev `ff`), so treat the count as
-**3 usable until proven otherwise**. See `docs/hardware_roadmap.md`. Profile stubs already exist:
+`rbln`)** and **FuriosaAI RNGD (×4, backend `furiosa`, 47.5 GiB and 8 PEs each)** — all
+four are alive, but only **npu3 (`rngd:24..31`) is allocatable**; npu0/1/2 return `EBUSY`
+on every PE with no owning process visible. Re-check availability before each run. See
+`docs/hardware_roadmap.md`. Profile stubs already exist:
 `profiles/accelerators/rbln_atom.yaml`, `furiosa_rngd.yaml` (and `ascend_target.yaml`),
 all `sim_hardware: null` so they **fail loud** until profiled.
 
@@ -119,9 +128,16 @@ all `sim_hardware: null` so they **fail loud** until profiled.
    topology links (measured bandwidth/latency), per-field provenance. Absolute rule
    3: label every number measured / vendor_spec / placeholder.
 2. **Profile each NPU model** into `profiler/perf/<HW>/<model>/<variant>/tpN/`.
-   - If the vendor's vLLM fork supports the layerwise profiler: run
-     `PYTHONPATH=$PWD python3 -m profiler profile <model> --hardware <HW> --tp 1,2,...`
-     with the **system** python3 (§2b: the vendor runtimes live there, not in a venv)
+   - **RNGD (do this first, the mechanism is verified):** in a furiosa-only venv,
+     compile each canonical layer of `profiler/models/<model_type>.yaml` through
+     `torch.compile(layer, backend=furiosa.torch.backend)` inside
+     `furiosa.torch.config.profiler_context(RNGDProfiler())`, sweep the contract's
+     grids, sum the exported trace's `Renegade::TuExec` spans as `time_us`, and
+     feed the CSVs to `CsvProfileImporter`. Details and the measured proof:
+     `docs/hardware_roadmap.md` "First access".
+   - **ATOM:** once the `rebel-compiler`/`vllm_rbln`/`optimum-rbln` versions are
+     consistent in an rbln-only venv, the existing vLLM profiler works as-is:
+     `PYTHONPATH=$PWD python -m profiler profile <model> --hardware <HW> --tp 1,2,...`
      — mirror the A40 run in `docs/hardware_roadmap.md`.
    - If not: use the **`CsvProfileImporter`** (Phase 3 V1, `profiler/core/importer.py`)
      to import externally measured CSVs under the `profiler/CONTRACT.md` schema.

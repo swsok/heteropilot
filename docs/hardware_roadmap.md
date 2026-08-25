@@ -101,11 +101,18 @@ report; nothing here is a profile yet, so every accelerator profile stub keeps
   15.7 GiB each, KMD 3.0.0, ~19 W idle. `rbln-stat` also shows leftover 13–14 GiB
   contexts held by other users' `python3.10` processes; clear or avoid those
   devices before profiling.
-- **FuriosaAI RNGD — 4 on the PCI bus, only 3 usable.** `lspci` lists
-  `03/04/44/45:00.0`, but `furiosa-smi info` enumerates `npu0/1/3` only;
-  `44:00.0` reads back PCI rev `ff`. Firmware `2026.3.0`, ~40 W idle. Treat the
-  count as **3 until that card is recovered** — planning around a 4th would
-  violate rule 3.
+- **4 × FuriosaAI RNGD** on PCI `03/04/44/45:00.0`, **47.5 GiB and 8 PEs each**,
+  firmware `2026.3.0`, ~40 W idle, all four `alive`. Torch sees them as
+  PrivateUse1 devices `rngd:0..31` (card × 8 PEs), and `/dev/rngd/npu<N>pe<a>-<b>`
+  nodes allow fusing 2 or 4 PEs (no 8-PE fusion node; `furiosa-llm build`'s
+  `-tp` default of 8 must therefore use the mesh path, `MeshKind` is
+  `Mesh|Single` and currently `Single`).
+  **Availability is partial: only npu3 (`rngd:24..31`) is allocatable.** Every PE
+  on npu0/1/2 returns `EBUSY: Device or resource busy` while `furiosa-smi ps`
+  lists no owning process, so the holder is outside this account's view.
+  Re-check before each run — the driver re-enumerated at 06:26 on 2026-08-25 and
+  changed what was visible (an earlier read of `44:00.0` showed PCI rev `ff` and
+  `furiosa-smi` listed only three cards; both cleared after re-enumeration).
 
 ### The serving stacks are installed, split across two site-packages, and conflict
 
@@ -135,19 +142,75 @@ Three defects follow from that split, all confirmed by running the profiler:
 `PYTHONNOUSERSITE=1 VLLM_PLUGINS="" PYTHONPATH=$PWD python3 -m profiler --help`
 does work today — the CLI is intact; only the device paths are blocked.
 
+### RNGD can be layerwise-profiled without vLLM — verified on hardware
+
+RNGD does not use vLLM at all; `furiosa-llm` is its own stack (`build` compiles a
+bucketed AOT artifact, `serve` serves it, `--prefill-buckets` /
+`--decode-buckets` take `batch_size,context_length`). But underneath it,
+`furiosa.torch` exposes a **torch.compile backend, a PrivateUse1 device, and a
+torch-profiler-compatible `RNGDProfiler`** — and that is enough for the §3.7 CSV
+contract. What was actually run on `rngd:24` (npu3):
+
+- **Eager mode works but is useless for timing.** A module and input move to the
+  device and forward correctly, but `furiosa.torch.backend.eager.run_aten_op`
+  JIT-compiles *every aten op per call* and calls `run_by_rngd(...)` **without**
+  a `profiler=`, so no device spans are recorded and the wall time is the
+  compiler's. Measured: 45.7 s of CPU for 3 forwards of a small attention block,
+  entirely dynamo/AOT-dispatch. Do not time anything this way.
+- **`torch.compile(m, backend=furiosa.torch.backend)` inside
+  `furiosa.torch.config.profiler_context(RNGDProfiler())` does record device
+  spans** — `backend/torch_compile.py` passes `profiler=config.get_profiler()`
+  into `run_by_rngd`, which calls `generate_profiles` → execute →
+  `load_spans_from_profiles`. Measured: 85 device spans over 5 forwards, and the
+  per-iteration CPU cost collapses from 45.7 s to ~2 ms (compile is cached).
+- **The spans are hardware-unit-level, not op-named**: `Renegade::TuExec`
+  (tensor-unit execution, ~12 per forward), `DMA (n)`, `Task`. They carry
+  durations but no aten/nn.Module identity, so you cannot decompose one big graph
+  into canonical layers from the trace. `key_averages()` shows CPU columns only —
+  the device spans live in `prof.tuc_profiles` and are merged on
+  `export_chrome_trace`, so read the exported JSON (or that list), not the table.
+- **Therefore: compile one canonical layer per graph and sum its spans.** That
+  sidesteps the naming problem entirely and produces exactly
+  `layer, tokens, time_us`. Verified with a single `nn.Linear(512, 2048)` bf16 on
+  `rngd:24`, summing `Renegade::TuExec` over 5 reps:
+
+  | tokens | TuExec µs/forward | DMA µs/forward |
+  | ---: | ---: | ---: |
+  | 64 | 4.80 | 12.18 |
+  | 128 | 18.84 | 14.35 |
+  | 256 | 38.67 | 17.09 |
+  | 512 | 59.14 | 22.24 |
+
+  Compute scales with token count as the contract's `dense.csv` assumes; DMA
+  grows far more slowly. **These four numbers are a mechanism proof on a
+  synthetic layer, not a profile** — they must never be written into a profile
+  file or a figure (rule 3). What they establish is that the measurement path
+  exists and returns sane, monotonic device time.
+
 ### Consequence for the §3 NPU work path in `docs/HANDOVER_NPU.md`
 
-The vLLM layerwise profiler cannot profile either device as installed. Ordered
-by how much they unblock:
+The vLLM layerwise profiler cannot profile either device as installed, but the
+cheapest route is no longer the ATOM one. Ordered by how much they unblock:
 
-1. **ATOM via vLLM** — fix the `rebel-compiler`/`tvm` pairing. This is the only
-   device with a vLLM plugin, so it is the cheapest route to a *measured* NPU
-   profile and to Exp 4. Vendor-side dependency work, no HeteroPilot code.
-2. **RNGD via `CsvProfileImporter`** (Phase 3 V1, `profiler/core/importer.py`) —
-   drive `furiosa_llm` in its own venv with a standalone script, emit CSVs under
-   `profiler/CONTRACT.md`, import them. Keeps `profiler/` untouched.
-3. **RNGD via a native adapter** — a `furiosa_llm` engine backend behind
-   `profiler/core/engine.py`. Bigger, and V2 per the bring-up order above; do
+1. **RNGD via `CsvProfileImporter`** (Phase 3 V1, `profiler/core/importer.py`) —
+   a standalone script in a furiosa-only venv walks the canonical layers of
+   `profiler/models/<model_type>.yaml`, compiles each through
+   `furiosa.torch.backend` with an `RNGDProfiler`, sweeps the contract's token /
+   sequence / attention grids, and writes the CSV bundle for import. **The
+   mechanism is verified working on hardware today**, needs no vendor fix, and
+   leaves `profiler/` untouched. This is the shortest path to a *measured* NPU
+   profile and to Exp 4.
+2. **ATOM via vLLM** — blocked on a **broken vendor install**, not a design gap:
+   `importlib.metadata` resolves `rebel-compiler` to **0.11.0** while
+   `vllm_rbln 0.10.2.post1` and `optimum-rbln 0.10.2` expect 0.10.2, and *both*
+   `rebel_compiler-0.10.2.dist-info` and `-0.11.0.dist-info` are present with
+   both RECORDs claiming `tvm/relay/frontend/pytorch.py` — a partial upgrade left
+   `tvm/` mixed. Fix by installing one consistent set of the three packages into
+   a clean rbln-only venv. Cheap once the right wheels are at hand, and it is the
+   only device with a vLLM plugin, so it reuses `profiler/` as-is.
+3. **RNGD via a native adapter** — a `furiosa.torch` engine backend behind
+   `profiler/core/engine.py`, replacing the `from vllm import LLM` dependency.
+   This is what route 1 would graduate into. V2 per the bring-up order above; do
    not start it before V1 produces a working planner loop.
 
 Whichever route: **one venv per vendor**. The two stacks cannot share an

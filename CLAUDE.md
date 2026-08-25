@@ -80,14 +80,21 @@ NPU inventory as reported by the vendor tools (not yet profiled — see below):
 
 - **4 × Rebellions ATOM** — `RBLN-CA22`, `/dev/rbln0..3`, PCI `83/84/c3/c4:00.0`, 15.7 GiB each,
   KMD 3.0.0, ~19 W idle.
-- **4 × FuriosaAI RNGD** on PCI `03/04/44/45:00.0`, ~40 W idle — but `furiosa-smi` enumerates
-  only `npu0/1/3`; `44:00.0` reads back PCI rev `ff`, so **one of the four is not usable** until
-  that is resolved. Do not count it as available.
+- **4 × FuriosaAI RNGD** on PCI `03/04/44/45:00.0`, 47.5 GiB and 8 PEs each, firmware
+  `2026.3.0`, ~40 W idle. All four are `alive`. Torch addresses them as PrivateUse1 device
+  `rngd:0..31` (card × 8 PEs); `/dev/rngd/npu<N>pe<a>-<b>` nodes allow fusing 2 or 4 PEs.
+  **Only npu3 (`rngd:24..31`) is actually allocatable** right now — every PE on npu0/1/2
+  returns `EBUSY`, and `furiosa-smi ps` shows no owning process, so the holder is outside
+  this account's view. Re-check before planning a run; the driver re-enumerated at one
+  point today and changed what was visible.
 
-Vendor runtimes are installed in the **system** `python3` (not in a venv): `vllm 0.13.0+cpu`,
-`vllm_rbln 0.10.2.post1`, `optimum-rbln`/`rebel-compiler` 0.10.2, `furiosa-llm`/`furiosa-torch`
-2026.2.0, `torch 2.10.0+cu128`. So `.venv-vllm` from the handover doc is unnecessary here —
-invoke the profiler with the system interpreter instead.
+Vendor runtimes are already installed, but **split across two site-packages and mutually
+incompatible**: system `dist-packages` holds `vllm 0.13.0+cpu`, `vllm_rbln 0.10.2.post1`,
+`rebel-compiler` 0.10.2, `tvm 0.20.dev0` and `transformers 4.57.6`, while user `~/.local`
+holds `furiosa-llm`/`furiosa-torch` 2026.2.0, `torch 2.10.0+cu128` and `transformers 5.1.0`.
+The user-site `transformers` breaks system vLLM, and the auto-loaded `rbln` vLLM plugin
+breaks on the `rebel-compiler`/`tvm` mismatch. **Use one venv per vendor**; details and the
+routes forward are in `docs/hardware_roadmap.md` "First access".
 
 Consequences:
 
