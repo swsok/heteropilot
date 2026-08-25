@@ -37,8 +37,17 @@ import threading
 import time
 from pathlib import Path
 
-import furiosa.torch as ft  # noqa: F401  (registers the rngd device)
 import torch
+
+# isort: off
+# furiosa.torch MUST be imported after torch. It imports torch itself, and
+# torch's backend autoload then calls furiosa.torch._register while that module
+# is still initialising, which fails with "partially initialized module
+# 'furiosa.torch' has no attribute '_register' (most likely due to a circular
+# import)". isort sorts furiosa before torch alphabetically, so the ordering has
+# to be pinned here or `ruff check --fix` silently breaks every run.
+import furiosa.torch as ft  # noqa: F401  (registers the rngd device)
+# isort: on
 
 BYTES_PER_ELEMENT = 2  # bfloat16
 
@@ -154,6 +163,122 @@ with torch.no_grad():
 """
 
 
+def start_load(first_pe: int, n_pes: int, duration_s: float) -> list:
+    """Spawn one load process per PE and wait until all are past compilation.
+
+    Returning only once every worker has printed READY matters: otherwise the
+    timed window measures concurrent compiles instead of the load.
+    """
+    workers = []
+    for offset in range(n_pes):
+        workers.append(subprocess.Popen(
+            [sys.executable, "-u", "-c", LOAD_WORKER,
+             f"rngd:{first_pe + offset}", str(duration_s)],
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+        ))
+    for worker in workers:
+        assert worker.stdout is not None
+        while True:
+            line = worker.stdout.readline()
+            if not line or line.strip() == "READY":
+                break
+    return workers
+
+
+def stop_load(workers: list) -> None:
+    for worker in workers:
+        worker.terminate()
+    for worker in workers:
+        try:
+            worker.wait(timeout=30)
+        except subprocess.TimeoutExpired:
+            worker.kill()
+
+
+def fit_line(xs: list[float], ys: list[float]) -> dict:
+    """Ordinary least squares ``y = base + slope * x`` with R^2."""
+    n = len(xs)
+    mean_x = sum(xs) / n
+    mean_y = sum(ys) / n
+    sxx = sum((x - mean_x) ** 2 for x in xs)
+    sxy = sum((x - mean_x) * (y - mean_y) for x, y in zip(xs, ys, strict=True))
+    slope = sxy / sxx if sxx else 0.0
+    base = mean_y - slope * mean_x
+    ss_tot = sum((y - mean_y) ** 2 for y in ys)
+    ss_res = sum((y - (base + slope * x)) ** 2 for x, y in zip(xs, ys, strict=True))
+    return {
+        "base_w": round(base, 2),
+        "per_pe_w": round(slope, 2),
+        "r_squared": round(1 - ss_res / ss_tot, 4) if ss_tot else None,
+        "n_points": n,
+    }
+
+
+def sweep_power(device: str, max_pes: int, load_s: float, idle_s: float,
+                settle_s: float, log) -> dict:
+    """Board power against the number of loaded PEs, 0..max_pes.
+
+    This is what separates the card's fixed board cost from the marginal cost of
+    a busy PE. The accelerator unit in the profile is one PE, but board power is
+    only measurable per card, so without this split an even 8-way division is
+    just an assumption -- and it is a bad one if the fixed term is large.
+    """
+    card = card_of(device)
+    first_pe = (int(device.split(":")[1]) // 8) * 8
+    sampler = PowerSampler(card)
+    sampler.start()
+
+    points = []
+    log(f"  idle baseline for {idle_s:.0f}s (0 PEs loaded)")
+    start = time.time()
+    time.sleep(idle_s)
+    idle_samples = sampler.between(start, time.time())
+    points.append({"loaded_pes": 0, "samples": idle_samples})
+
+    for n_pes in range(1, max_pes + 1):
+        workers = start_load(first_pe, n_pes, load_s + 120)
+        time.sleep(settle_s)          # let the board reach steady state
+        start = time.time()
+        time.sleep(load_s)
+        samples = sampler.between(start, time.time())
+        stop_load(workers)
+        mean = statistics.fmean(samples) if samples else None
+        log(f"  {n_pes} PE(s) loaded: mean {mean} W over {len(samples)} samples")
+        points.append({"loaded_pes": n_pes, "samples": samples})
+        time.sleep(settle_s)          # let it fall back before the next point
+
+    sampler.stop()
+
+    table = []
+    for point in points:
+        values = point["samples"]
+        table.append({
+            "loaded_pes": point["loaded_pes"],
+            "mean_w": round(statistics.fmean(values), 2) if values else None,
+            "min_w": min(values) if values else None,
+            "max_w": max(values) if values else None,
+            "n": len(values),
+        })
+
+    loaded = [row for row in table if row["loaded_pes"] > 0 and row["mean_w"] is not None]
+    fit = fit_line([float(r["loaded_pes"]) for r in loaded],
+                   [float(r["mean_w"]) for r in loaded]) if len(loaded) >= 2 else None
+    return {
+        "card": card,
+        "first_pe": first_pe,
+        "table": table,
+        "fit_over_loaded_points": fit,
+        "method": (
+            "furiosa-smi board power for this card only, polled at 2 Hz. For each "
+            "n in 0..max, n PEs run a sustained 4096x4096 bf16 matmul; the window "
+            "starts after a settle delay and after every worker reports READY, so "
+            "compilation is excluded. Least squares is fitted over n>=1 only, "
+            "because the n=0 point has no compiled context loaded and sits below "
+            "the loaded-state intercept."
+        ),
+    }
+
+
 def measure_power(device: str, load_s: float, idle_s: float, load_pes: int, log) -> dict:
     """Idle / active / standby board power for one card.
 
@@ -174,30 +299,13 @@ def measure_power(device: str, load_s: float, idle_s: float, load_pes: int, log)
     idle = sampler.between(idle_start, idle_end)
 
     log(f"  sustained load on {load_pes} PE(s) of {card} for {load_s:.0f}s")
-    workers = []
-    for offset in range(load_pes):
-        worker_device = f"rngd:{first_pe + offset}"
-        workers.append(subprocess.Popen(
-            [sys.executable, "-u", "-c", LOAD_WORKER, worker_device, str(load_s + 60)],
-            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
-        ))
-    # Only start the timed window once every worker is past compilation, so
-    # `active` measures the load and not 24 concurrent compiles.
-    for worker in workers:
-        assert worker.stdout is not None
-        while True:
-            line = worker.stdout.readline()
-            if not line or line.strip() == "READY":
-                break
+    workers = start_load(first_pe, load_pes, load_s + 60)
     log("  all load workers ready")
     load_start = time.time()
     time.sleep(load_s)
     load_end = time.time()
     active = sampler.between(load_start + 1.0, load_end)
-    for worker in workers:
-        worker.terminate()
-    for worker in workers:
-        worker.wait(timeout=30)
+    stop_load(workers)
 
     # Standby: the elevated draw immediately after the load stops. The A5000
     # protocol (D7) uses a 2 s window; keep it so the three profiles compare.
@@ -242,6 +350,11 @@ def main() -> None:
     parser.add_argument("--idle-s", type=float, default=20.0)
     parser.add_argument("--load-pes", type=int, default=8,
                         help="PEs of the card to load; 8 = the whole card")
+    parser.add_argument("--pe-sweep", action="store_true",
+                        help="sweep 0..--load-pes loaded PEs and fit the per-PE cost")
+    parser.add_argument("--settle-s", type=float, default=5.0,
+                        help="pause before and after each sweep point")
+    parser.add_argument("--skip-memory", action="store_true")
     parser.add_argument("--out", type=Path,
                         default=Path("outputs/rngd_profile/device_facts.json"))
     args = parser.parse_args()
@@ -250,20 +363,23 @@ def main() -> None:
         print(message, flush=True)
 
     log(f"=== RNGD device facts on {args.device} ({card_of(args.device)}) ===")
-    power = measure_power(args.device, args.load_s, args.idle_s, args.load_pes, log)
-    memory = measure_usable_memory(args.device, log)
-
     facts = {
         "device": args.device,
         "card": card_of(args.device),
         "measured_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-        "memory": memory,
-        "power_w": power,
     }
+    if args.pe_sweep:
+        facts["pe_power_sweep"] = sweep_power(
+            args.device, args.load_pes, args.load_s, args.idle_s, args.settle_s, log)
+    else:
+        facts["power_w"] = measure_power(
+            args.device, args.load_s, args.idle_s, args.load_pes, log)
+    if not args.skip_memory:
+        facts["memory"] = measure_usable_memory(args.device, log)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(facts, indent=2) + "\n")
     log(f"wrote {args.out}")
-    log(json.dumps(facts["power_w"], indent=2))
+    log(json.dumps(facts.get("pe_power_sweep") or facts.get("power_w"), indent=2))
 
 
 if __name__ == "__main__":

@@ -66,11 +66,20 @@ from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Any
 
-import furiosa.torch as ft
 import torch
 import torch.nn as nn
+
+# isort: off
+# furiosa.torch MUST be imported after torch. It imports torch itself, and
+# torch's backend autoload then calls furiosa.torch._register while that module
+# is still initialising, which fails with "partially initialized module
+# 'furiosa.torch' has no attribute '_register' (most likely due to a circular
+# import)". isort sorts furiosa before torch alphabetically, so the ordering has
+# to be pinned here or `ruff check --fix` silently breaks every run.
+import furiosa.torch as ft
 from furiosa.torch import config as furiosa_config
 from furiosa.torch.profiler import RNGDProfiler
+# isort: on
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
