@@ -1,9 +1,11 @@
-"""Build a self-contained HTML slide deck from the committed figures.
+"""Build self-contained HTML slide decks from the committed figures.
 
-Reads experiments/figures/*.png, base64-embeds them, and writes a single
-self-contained docs/slide_deck.html (no external assets except Google Fonts).
+Reads experiments/figures/*.png, base64-embeds them, and writes two
+self-contained decks (no external assets except Google Fonts):
+docs/slide_deck.html (English) and docs/slide_deck_ko.html (Korean).
 Reproducible: re-run after regenerating figures. Content mirrors
-docs/SLIDE_OUTLINE.md / docs/PROJECT_REPORT.md.
+docs/SLIDE_OUTLINE.md / docs/PROJECT_REPORT.md; the Korean deck is a
+translation of the same slides, with figures, numbers and identifiers shared.
 """
 # ruff: noqa: E501 - this file is mostly inline HTML/CSS template strings.
 
@@ -15,6 +17,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 FIGDIR = REPO / "experiments" / "figures"
 OUT = REPO / "docs" / "slide_deck.html"
+OUT_KO = REPO / "docs" / "slide_deck_ko.html"
 
 
 def data_uri(name: str) -> str:
@@ -198,14 +201,192 @@ SLIDES: list[tuple[str, str, str, bool]] = [
 ]
 
 
-def render() -> str:
+# Korean translation of SLIDES, same shape. Figures, numbers and identifiers
+# (TP, TTFT/TPOT, SLO, goodput/J, SIM-PROXY, spec names) stay in English -
+# they are shared vocabulary with the code and the figures' axis labels.
+SLIDES_KO: list[tuple[str, str, str, bool]] = [
+    ("", "HeteroPilot",
+     """<p class="lede">이기종 GPU/NPU 클러스터에서 SLO-goodput/J 최적 LLM 서빙</p>
+        <p class="sub">보정된 simulator-in-the-loop 제어 평면 &middot; LLMServingSim fork</p>
+        <p class="meta">프로젝트 보고 &middot; 2026-08-25</p>""", False),
+
+    ("문제", "서빙 구성 선택은 어렵고, 잘못 고르면 에너지를 낭비한다",
+     """<ul>
+        <li>서빙 클러스터는 점점 <b>이기종화</b>되고 있다 &mdash; GPU 세대, NPU.</li>
+        <li>모든 배포는 선택이다: <b>어떤 가속기, TP degree, replica 수,
+            aggregated vs Prefill/Decode 분리</b> &mdash; TTFT/TPOT SLO와 전력 상한 아래에서.</li>
+        <li>지연 &times; 에너지 &times; SLO 트레이드오프는 자명하지 않다;
+            잘못 고르면 joule을 태우거나 SLO를 놓친다.</li>
+        </ul>
+        <p class="pull">우리는 원시 처리량이 아니라 <b>SLO 만족 토큰당 에너지</b>를 최적화한다.</p>""",
+     False),
+
+    ("접근", "열거하고, 예측하고, 랭킹한다",
+     """<div class="flow">
+          <span class="node">ServiceSpec + ClusterSpecV2</span><span class="arr">&rarr;</span>
+          <span class="node">후보 열거</span><span class="arr">&rarr;</span>
+          <span class="node accent">LLMServingSim으로 예측</span><span class="arr">&rarr;</span>
+          <span class="node">랭킹 (lexicographic)</span><span class="arr">&rarr;</span>
+          <span class="node good">DeploymentPlan</span>
+        </div>
+        <ul>
+        <li><b>입력:</b> 모델 + 트래픽 + SLO + 전력 상한; 가속기 인벤토리 + 토폴로지.</li>
+        <li><b>목적함수:</b> 전력 상한 아래에서 <b>SLO-goodput / J</b> 최대화; Pareto
+            대안 제시; infeasible이면 진단을 출력.</li>
+        <li>SLO 판정은 평균이 아니라 <b>percentile</b> (P50/P95/P99).</li>
+        </ul>""", False),
+
+    ("핵심 추상화", "Execution island",
+     """<ul>
+        <li><b>Island</b> = 동일 backend를 공유하고, collective로 상호 도달 가능하며,
+            vLLM 엔진 하나를 호스팅하는 가속기 집합.</li>
+        <li><b>TP/PP는 island 내부에만 존재.</b> 이기종성은 <b>replica</b> 또는
+            <b>Prefill/Decode 역할</b> 단위로만 활용 &mdash; cross-vendor TP는 없다.</li>
+        <li>이유: backend 간 collective는 비현실적이다. 이 제약이 모든 후보를
+            실현 가능하게 만들고, 탐색 공간을 열거 가능하게 유지한다.</li>
+        </ul>
+        <p class="pull">Island가 배치의 단위이며, 탐색이 감당 가능해지는 이유다.</p>""",
+     False),
+
+    ("방법론 &middot; 신뢰", "이 수치를 믿을 수 있는 이유",
+     """<ul>
+        <li><b>Simulator-in-the-loop + 보정.</b> A40 sim-vs-real 적합
+            <span class="mono">real = &alpha;&middot;sim + &beta;</span> (TTFT &alpha;=1.02/&beta;=111ms,
+            TPOT &alpha;=1.01) &mdash; <b class="good">평균 오차 ~1.3&ndash;2% (실측)</b>.</li>
+        <li>모든 결과에 <b>provenance</b>: git, 버전, spec 해시, seed, 커맨드라인.</li>
+        <li><b>정직성 규칙:</b> 미측정 하드웨어는 placeholder / SIM-PROXY로 표기하고,
+            실측으로 제시하지 않는다.</li>
+        <li><b>재현성:</b> 동일 spec + seed &rArr; 바이트 동일 plan (테스트로 검증).</li>
+        </ul>""", False),
+
+    ("결과 &middot; Exp 1", "TP 스케일링이 파이프라인을 검증한다",
+     f"""<div class="figrow"><div class="figbox">{fig('exp1_tp_sweep.png', 'TP sweep')}</div>
+        <div class="callout"><span class="ktag">발견</span>
+        동일 A40, TP 1/2/4 (TP=4는 <b>실물에서 프로파일</b>). 단조 개선:
+        p99 TTFT 106s&rarr;35s&rarr;<b>4.5s</b>, p99 TPOT 225&rarr;100&rarr;<b>52ms</b>,
+        tok/J 1.86&rarr;<b>2.88</b>. 포화 상태에서는 TP를 높이는 것이 <b>효율까지</b> 개선한다;
+        SLO 근처에 있는 구성은 TP=4뿐.</div></div>""", True),
+
+    ("결과 &middot; Exp 2", "Right-sizing이 scale-out을 이긴다",
+     f"""<div class="figrow"><div class="figbox">{fig('exp2_selection.png', 'per-class goodput/J')}</div>
+        <div class="callout"><span class="ktag">발견</span>
+        클래스별 최고 goodput/J: <b>RTXPRO6000 1.697 &gt; A5000 1.634 &gt; mixed 1.043</b>.
+        큰 GPU 한 장이 작은 두 장을 근소하게 앞서고, 수요가 단일 클래스에 담기면
+        혼합이 최악이다. 이기종성은 <b>용량 임계를 넘어야</b> 비로소 이득이 된다.</div></div>""", True),
+
+    ("결과 &middot; Exp 3 + 5", "Prefill/Decode 분리는 언제 이득인가?",
+     f"""<div class="figrow"><div class="figbox">{fig('pd_network_sweep.png', 'network sweep')}</div>
+        <div class="callout"><span class="ktag">발견</span>
+        <b>Exp 3:</b> 그 아래에서는 P/D의 이득이 사라지는 대역폭 임계가 존재
+        (planner 수준과 sim 수준 <i>모두</i>에서 재현). <b>Exp 5:</b> aggregated 기준선이
+        더 효율적(1.655 tok/J)이지만 <b class="bad">infeasible</b> &mdash; P/D는
+        <b>SLO를 맞추는 방식으로</b> 이득을 낸다 (1.081, feasible).
+        <span class="warn">NPU 조합은 SIM-PROXY.</span></div></div>""", True),
+
+    ("결과 &middot; Exp 5", "이기종 P/D &mdash; 네 가지 조합",
+     f"""<div class="figrow"><div class="figbox">{fig('pd_4combo.png', '4-combo')}</div>
+        <div class="callout"><span class="ktag">정직성</span>
+        네 P/D 조합이 <b>바이트 동일</b>한 이유는 NPU가 GPU의 라벨만 바꾼 것
+        (<b class="warn">SIM-PROXY</b>)이기 때문 &mdash; 이 동일성은 증명이지 결과가 아니다.
+        진짜 GPU-vs-NPU 효율 스토리에는 <b>NPU 하드웨어가 필요하다</b>.</div></div>""", True),
+
+    ("결과 &middot; 기준선", "시뮬레이터 기반 플래너가 사주는 것",
+     f"""<div class="figrow"><div class="figbox">{fig('baselines_regret.png', 'regret')}</div>
+        <div class="callout"><span class="ktag">발견</span>
+        Exhaustive oracle 대비 regret. <b>proposed = 0.000</b> (pruning이 건전);
+        <b class="bad">No-Energy = 0.470</b> &mdash; 에너지를 무시하면 과잉 프로비저닝,
+        <b>가장 큰 레버</b>다. simulator-blind와 homogeneous-P/D는 &asymp; 0.33.
+        N/A 행은 정직한 공백이지 조작이 아니다.</div></div>""", True),
+
+    ("결과 &middot; 라우팅", "부하 인지 라우팅이 tail을 이긴다",
+     f"""<div class="figrow"><div class="figbox">{fig('router_baselines.png', 'router')}</div>
+        <div class="callout"><span class="ktag">발견</span>
+        이기종 4-replica 구성: <b class="good">LOAD p99 TTFT 314ms</b> vs
+        <b class="bad">RAND 644ms</b> (~2&times; 악화 &mdash; 느린 replica를 과부하시킨다).
+        에너지는 평평하다: 라우팅은 지연을 움직이지, joule을 움직이지 않는다.</div></div>""", True),
+
+    ("스케일링 &middot; 1", "Surrogate top-K &mdash; 시뮬레이션은 줄이고 손실은 없이",
+     f"""<div class="figrow"><div class="figbox">{fig('surrogate.png', 'surrogate')}</div>
+        <div class="callout"><span class="ktag">발견</span>
+        Roofline 랭커가 전체 후보를 점수화하고, top-K만 시뮬레이션한다.
+        <b>K=1(시뮬 78&times; 감소)까지 모든 K에서 regret 0.000</b>; recall은 K=20에서야
+        1이 되는데, 목적함수에 동점이 있어 같은 값의 다른 후보가 선택되기 때문이다.
+        정확도는 <b>단언이 아니라 측정</b>이다.</div></div>""", True),
+
+    ("스케일링 &middot; 2", "후보 병렬 시뮬레이션",
+     """<ul>
+        <li>후보 하나가 <b>격리된 subprocess</b> &rArr; 락 없이 병렬화.</li>
+        <li><b class="good">~5&ndash;7&times; wall 단축</b>: 78 시뮬 ~8분 vs ~40&ndash;60분;
+            64코어 load 2.7&rarr;21.</li>
+        <li>순차 실행과 <b>바이트 동일</b> (시뮬은 병렬, 조립은 후보 순서).</li>
+        </ul>
+        <div class="statrow">
+          <div class="stat"><div class="statnum bad">~40&ndash;60<span>분</span></div><div class="statlab">순차</div></div>
+          <div class="stat"><div class="statnum good">~8<span>분</span></div><div class="statlab">병렬 (32-wide)</div></div>
+          <div class="stat"><div class="statnum accent">78&times;</div><div class="statlab">surrogate의 시뮬 수 절감</div></div>
+        </div>
+        <p class="pull">Surrogate는 시뮬 <i>개수</i>를, 병렬화는 <i>wall time</i>을 줄인다 &mdash; 상보적.</p>""",
+     True),
+
+    ("현황", "작업지시서 대비 구현 현황",
+     """<table class="phase">
+        <tr><th>Phase</th><th>범위</th><th>상태</th></tr>
+        <tr><td>0</td><td>Baseline 재현</td><td class="good">완료</td></tr>
+        <tr><td>1</td><td>Spec / inventory / island</td><td class="good">완료</td></tr>
+        <tr><td>2</td><td>오프라인 플래너 (MVP)</td><td class="good">완료</td></tr>
+        <tr><td>3</td><td>이기종 프로파일</td><td class="good">완료</td></tr>
+        <tr><td>4</td><td>실배포 + 보정</td><td class="good">완료 (CUDA)</td></tr>
+        <tr><td>5</td><td>토폴로지 인지 P/D</td><td class="good">핵심 완료</td></tr>
+        <tr><td>6</td><td>온라인 replanning</td><td class="muted">미착수 (승인 필요)</td></tr>
+        </table>
+        <p class="pull">PR 11건 병합 &middot; 284개 테스트 green &middot; ruff + mypy clean &middot;
+        오늘 기준 실물 GPU에서 end-to-end 실행 가능.</p>""", False),
+
+    ("한계", "우리가 주장하지 않는 것",
+     """<ul>
+        <li><b class="warn">아직 NPU 하드웨어 없음</b> &rarr; Exp 4 (GPU vs NPU) 미실행;
+            Exp-5의 NPU 행은 SIM-PROXY.</li>
+        <li>Analytical 백엔드는 per-flow 링크 경합을 모델링하지 못한다 (ns3 필요).</li>
+        <li>Prefix caching off (upstream 메모리 버그); 보정은 아직 plan 경로에 미반영.</li>
+        </ul>
+        <p class="pull">모든 그림에 이 사실이 명시돼 있다 &mdash; 공개를 통한 신뢰.</p>""",
+     False),
+
+    ("향후", "마지막 정직성 격차를 닫는다: NPU 측정",
+     """<ul>
+        <li><b>Rebellions ATOM (&times;4)과 FuriosaAI RNGD (&times;4)를 측정.</b> Exp 4와
+            Exp-5의 NPU 행을 SIM-PROXY에서 <b class="good">measured</b>로 전환 &mdash;
+            가장 큰 신뢰성 이득.</li>
+        <li>NPU sim-vs-real 보정 &rarr; No-Calibration / No-Uncertainty ablation의 차단 해제.</li>
+        <li>코퍼스가 쌓이면 학습 surrogate; 네트워크 인지 라우팅; Phase 6 replanning.</li>
+        </ul>
+        <p class="sub">이어지는 경로는 <span class="mono">docs/HANDOVER_NPU.md</span>에 정리돼 있다.</p>""",
+     False),
+
+    ("정리", "기억할 세 가지",
+     """<div class="takeaways">
+          <div class="tk"><div class="tknum">1</div><div>이기종성은 <b>도구</b>다:
+             용량 / 대역폭 임계를 넘어야 이득이 된다.</div></div>
+          <div class="tk"><div class="tknum">2</div><div><b>에너지 인지가 지배적 레버</b>
+             &mdash; goodput/J의 ~47%.</div></div>
+          <div class="tk"><div class="tknum">3</div><div>플래너는 <b>oracle과 일치</b>하고
+             surrogate가 이를 저렴하게 만든다; 실측 NPU 수치가 마지막 격차를 닫는다.</div></div>
+        </div>""", False),
+]
+
+_HONESTY = {
+    "en": "LLMServingSim prediction &mdash; measured / SIM-PROXY labelled inline",
+    "ko": "LLMServingSim 예측 &mdash; 실측 / SIM-PROXY 여부는 본문에 표기",
+}
+
+
+def render(slides: list[tuple[str, str, str, bool]], lang: str) -> str:
     parts = []
-    total = len(SLIDES)
-    for i, (eyebrow, title, body, is_data) in enumerate(SLIDES):
+    total = len(slides)
+    for i, (eyebrow, title, body, is_data) in enumerate(slides):
         cls = "slide" + (" title-slide" if i == 0 else "")
         eb = f'<div class="eyebrow">{eyebrow}</div>' if eyebrow else ""
-        foot = ('<div class="honesty">LLMServingSim prediction &mdash; '
-                'measured / SIM-PROXY labelled inline</div>') if is_data else ""
+        foot = f'<div class="honesty">{_HONESTY[lang]}</div>' if is_data else ""
         num = f'<div class="pagenum">{i + 1:02d} / {total:02d}</div>'
         parts.append(
             f'<section class="{cls}" data-i="{i}">{eb}'
@@ -213,7 +394,42 @@ def render() -> str:
         )
     slides_html = "\n".join(parts)
 
-    return _TEMPLATE.replace("__SLIDES__", slides_html).replace("__TOTAL__", str(total))
+    html = _TEMPLATE.replace("__SLIDES__", slides_html).replace("__TOTAL__", str(total))
+    if lang == "ko":
+        html = _localize_ko(html)
+    return html
+
+
+def _localize_ko(html: str) -> str:
+    """Chrome-level localization applied only to the Korean build.
+
+    Kept as post-render replacements (not template placeholders) so the English
+    deck's bytes cannot change: the EN path never touches this function. Each
+    replacement targets a string that exists exactly once in the template.
+    """
+    subs = [
+        ('<html lang="en">', '<html lang="ko">'),
+        # IBM Plex Sans has no Hangul; add the KR family and put it in the stacks.
+        ("family=IBM+Plex+Mono:wght@400;500&display=swap",
+         "family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap"),
+        ('--sans:"IBM Plex Sans",system-ui,sans-serif;',
+         '--sans:"IBM Plex Sans","IBM Plex Sans KR",system-ui,sans-serif;'),
+        ('--cond:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;',
+         '--cond:"IBM Plex Sans Condensed","IBM Plex Sans KR","IBM Plex Sans",system-ui,sans-serif;'),
+        # Korean line breaking: never split inside a word.
+        ("-webkit-font-smoothing:antialiased;line-height:1.5}",
+         "-webkit-font-smoothing:antialiased;line-height:1.5;word-break:keep-all}"),
+        ('<button id="prev" aria-label="Previous slide">&larr; Prev</button>',
+         '<button id="prev" aria-label="이전 슬라이드">&larr; 이전</button>'),
+        ('<button id="next" aria-label="Next slide">Next &rarr;</button>',
+         '<button id="next" aria-label="다음 슬라이드">다음 &rarr;</button>'),
+        ('<span class="hint">&larr;/&rarr; or Space</span>',
+         '<span class="hint">&larr;/&rarr; 또는 Space</span>'),
+    ]
+    for old, new in subs:
+        assert html.count(old) == 1, f"localization anchor not unique: {old[:50]!r}"
+        html = html.replace(old, new)
+    return html
 
 
 _TEMPLATE = r"""<!doctype html>
@@ -407,9 +623,13 @@ __SLIDES__
 
 
 def main() -> int:
-    OUT.write_text(render())
-    kb = OUT.stat().st_size / 1024
-    print(f"wrote {OUT.relative_to(REPO)} ({kb:.0f} KB, {len(SLIDES)} slides)")
+    assert len(SLIDES) == len(SLIDES_KO), (
+        f"deck translations out of sync: en={len(SLIDES)} ko={len(SLIDES_KO)}"
+    )
+    for out, slides, lang in ((OUT, SLIDES, "en"), (OUT_KO, SLIDES_KO, "ko")):
+        out.write_text(render(slides, lang))
+        kb = out.stat().st_size / 1024
+        print(f"wrote {out.relative_to(REPO)} ({kb:.0f} KB, {len(slides)} slides, {lang})")
     return 0
 
 
