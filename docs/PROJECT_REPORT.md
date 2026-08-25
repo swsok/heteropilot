@@ -233,18 +233,34 @@ parallel, assembly in candidate order); `plan --workers N`.
 
 | Item | Status | Blocker |
 | --- | --- | --- |
-| **Exp 4 — GPU vs NPU island (SLO-goodput/J)** | not run | **No NPU hardware.** The only §12 experiment missing |
-| **Measured NPU profiles** (ATOM, RNGD) | placeholder stubs | Hardware access (`docs/hardware_roadmap.md`) |
+| **Exp 4 — GPU vs NPU island (SLO-goodput/J)** | not run | NPU latency is now measured, but the **per-PE power split** is not, and Exp 4's objective is per joule |
+| **Measured NPU profiles** — RNGD | ✅ **done 2026-08-25** | Llama-3.1-8B bf16 at tp1/2/4/8, `profiler/perf/RNGD/`; the first measured NPU number in this project |
+| **Measured NPU profiles** — ATOM | placeholder stub | Broken vendor install (`rebel-compiler` 0.11.0 vs `vllm_rbln` 0.10.2) and no free ATOM |
+| **RNGD tokens/J** | blocked | Board power is per *card*; the per-PE split in the profile is not measured (`docs/hardware_roadmap.md`) |
 | **Ablation extensions** (No-Calibration / No-Uncertainty / Static) | labelled N/A | Need Phase-4 calibration in the plan path / Phase-6 replanning |
 | **Learned (xgboost) surrogate** | analytical shipped | Needs a real multi-hardware training corpus |
 | **Network-aware routing** (`_custom_select`) | deferred | Uncertain value; several upstream+planner edits |
 | **Phase 6 online replanning** | not started | **Requires explicit user approval** |
 
-**The single highest-value unblock is NPU hardware:** it converts Exp 4 and the
-Exp-5 NPU rows from SIM-PROXY into measured results — the largest honesty caveat in
-the current paper story. The concrete NPU targets are **Rebellions ATOM (×4)** and
-**FuriosaAI RNGD (×4)**; because they are physically accessible, their profiles can
-be **measured** (not CSV-imported), which upgrades D4's resolution path.
+**Update 2026-08-25 — the hardware arrived and RNGD is now measured.** The
+project moved to the NPU server (4 × Rebellions ATOM, 4 × FuriosaAI RNGD, no
+NVIDIA GPU). RNGD has no vLLM plugin, so it was profiled through
+`furiosa.torch`'s torch.compile backend instead and imported via the Phase 3
+`CsvProfileImporter`: `profiler/perf/RNGD/meta-llama/Llama-3.1-8B/bf16/` at
+tp1/2/4/8, verified by a 20-request simulation. Details and caveats:
+`docs/hardware_roadmap.md` "First access".
+
+**The remaining blocker for Exp 4 is now narrow and specific: power
+attribution.** Board power reads per card (idle 39.0 W, active 285.5 W with all
+8 PEs loaded), but the simulator applies the profile's power block per NPU
+instance, and one accelerator here is one PE. An even 8-way split is an
+assumption, so that block stays `source: placeholder` and no RNGD tokens/J
+figure should be quoted yet. Fitting the marginal per-PE cost from a 1..8 loaded
+-PE sweep is what unblocks Exp 4 and the Exp-5 NPU rows.
+
+ATOM is separately blocked: `rebel-compiler` resolves to 0.11.0 while
+`vllm_rbln`/`optimum-rbln` expect 0.10.2, and all four ATOMs were occupied by
+another tenant's serving pods.
 
 ---
 
