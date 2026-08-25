@@ -49,13 +49,25 @@ bash scripts/compile.sh                                   # ASTRA-Sim + Chakra
 uv pip install ./astra-sim/extern/graph_frontend/chakra   # compile.sh's bare pip3 misses the venv
 uv pip install "protobuf>=7.35.1"                          # Chakra gencode needs it
 
-# 2b. Profiling env — NO .venv-vllm IS NEEDED HERE.
-#     The vendor runtimes are already installed in the SYSTEM python3:
-#       vllm 0.13.0+cpu · vllm_rbln 0.10.2.post1 · optimum-rbln/rebel-compiler 0.10.2
-#       furiosa-llm/furiosa-torch 2026.2.0 · torch 2.10.0+cu128
-#     Invoke the profiler with `PYTHONPATH=$PWD python3 -m profiler ...` (system python3).
-#     Importing vllm there is slow (tens of seconds) but works. Do NOT install vLLM into
-#     .venv — the analytical planner must stay vLLM-free.
+# 2b. Profiling env — the vendor stacks are ALREADY installed, but SPLIT and CONFLICTING.
+#       system dist-packages: vllm 0.13.0+cpu · vllm_rbln 0.10.2.post1 · rebel-compiler 0.10.2
+#                             · tvm 0.20.dev0 · transformers 4.57.6
+#       user   ~/.local:      furiosa_llm 2026.2.0 · transformers 5.1.0 · torch 2.10.0+cu128
+#
+#     The profiler CLI runs today only with BOTH escapes:
+PYTHONNOUSERSITE=1 VLLM_PLUGINS="" PYTHONPATH=$PWD python3 -m profiler --help
+#       PYTHONNOUSERSITE=1 - user-site transformers 5.1.0 shadows system 4.57.6 and
+#                            breaks vLLM 0.13.0 (ALLOWED_LAYER_TYPES was removed in 5.x)
+#       VLLM_PLUGINS=""    - the auto-loaded rbln platform plugin crashes every vLLM
+#                            import: rebel-compiler 0.10.2 wants a symbol the installed
+#                            tvm 0.20.dev0 does not have
+#     But those escapes only make the CLI import. NEITHER DEVICE CAN BE PROFILED YET:
+#       ATOM - blocked on the rebel-compiler/tvm mismatch (vendor-side fix)
+#       RNGD - has no vLLM platform plugin at all; furiosa_llm is a separate API, so
+#              profiler/core/engine.py's `from vllm import LLM` cannot drive it
+#     Full diagnosis and the three routes forward: docs/hardware_roadmap.md
+#     "First access". Use ONE VENV PER VENDOR - the two stacks cannot share an
+#     interpreter. Do NOT install vLLM into .venv; the planner stays vLLM-free.
 ```
 
 Verified on this machine after the above (all four green):
@@ -67,6 +79,10 @@ Verified on this machine after the above (all four green):
 | `mypy planner/` | no issues, 33 source files |
 | `python -m serving` smoke run | power + TTFT/TPOT summary printed, CSV written |
 | `python -m planner inspect-cluster` | 3 islands, TP candidates, D10 derating shown |
+| `python -m planner plan` (parallel) | 16 workers, isolated `/tmp/hp-*` run roots, no locking |
+
+Not green: NPU profiling. See §2b — the planner stack is complete, the device
+paths are not.
 
 Notes and traps confirmed here:
 

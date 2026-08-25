@@ -84,3 +84,71 @@ tokens/J axis this project optimizes.
   empty means excluded from candidates until verified).
 - Scheduler/queue system on the cluster (SLURM? bare SSH?) — affects the
   Phase 4 `deploy/` launcher design (§5.7 allows local/SSH only).
+
+---
+
+## First access — what the NPU server actually looks like (recorded 2026-08-25)
+
+Access happened. The inventory below is what the machine's own vendor tools
+report; nothing here is a profile yet, so every accelerator profile stub keeps
+`source: placeholder` (absolute rule 3).
+
+- **No NVIDIA GPU.** `nvidia-smi` cannot reach a driver. The A40 and A5000
+  measurements already committed remain valid artifacts of *other* machines and
+  must not be re-run, extended or relabelled here. Exp 4's "GPU" arm therefore
+  has to reuse the committed measured A40 profile, not a fresh run.
+- **4 × Rebellions ATOM** — `RBLN-CA22`, `/dev/rbln0..3`, PCI `83/84/c3/c4:00.0`,
+  15.7 GiB each, KMD 3.0.0, ~19 W idle. `rbln-stat` also shows leftover 13–14 GiB
+  contexts held by other users' `python3.10` processes; clear or avoid those
+  devices before profiling.
+- **FuriosaAI RNGD — 4 on the PCI bus, only 3 usable.** `lspci` lists
+  `03/04/44/45:00.0`, but `furiosa-smi info` enumerates `npu0/1/3` only;
+  `44:00.0` reads back PCI rev `ff`. Firmware `2026.3.0`, ~40 W idle. Treat the
+  count as **3 until that card is recovered** — planning around a 4th would
+  violate rule 3.
+
+### The serving stacks are installed, split across two site-packages, and conflict
+
+| stack | location | version |
+| --- | --- | --- |
+| `vllm`, `vllm_rbln`, `rebel`/`rebel-compiler`, `tvm`, `transformers` | system `/usr/local/lib/python3.10/dist-packages` | 0.13.0+cpu, 0.10.2.post1, 0.10.2, 0.20.dev0, 4.57.6 |
+| `furiosa_llm`, `transformers`, `torch` | user `~/.local/lib/python3.10/site-packages` | 2026.2.0, **5.1.0**, 2.10.0+cu128 |
+
+Three defects follow from that split, all confirmed by running the profiler:
+
+1. **user-site `transformers 5.1.0` shadows system 4.57.6 and breaks system
+   vLLM 0.13.0** — `ImportError: cannot import name 'ALLOWED_LAYER_TYPES' from
+   'transformers.configuration_utils'` (removed in transformers 5.x).
+   Workaround: `PYTHONNOUSERSITE=1`.
+2. **`rebel-compiler 0.10.2` does not match the installed `tvm 0.20.dev0`** —
+   `ImportError: cannot import name 'set_data_ptr_name_overrides' from
+   'tvm.relay.frontend.pytorch'` (the symbol is absent from that file). Because
+   vLLM auto-activates the `rbln` platform plugin, this crashes *every* vLLM
+   import, not just ATOM work. Workaround to get vLLM up at all:
+   `VLLM_PLUGINS=""`. Real fix: install the patched TVM that Rebellions pairs
+   with this `rebel-compiler` (vendor index), or match the two versions.
+3. **RNGD has no vLLM platform plugin.** The only entry point in
+   `vllm.platform_plugins` is `rbln`; `furiosa_llm` is a separate API. So
+   `profiler/core/engine.py`'s `from vllm import LLM` cannot drive an RNGD at
+   all, whatever the env vars.
+
+`PYTHONNOUSERSITE=1 VLLM_PLUGINS="" PYTHONPATH=$PWD python3 -m profiler --help`
+does work today — the CLI is intact; only the device paths are blocked.
+
+### Consequence for the §3 NPU work path in `docs/HANDOVER_NPU.md`
+
+The vLLM layerwise profiler cannot profile either device as installed. Ordered
+by how much they unblock:
+
+1. **ATOM via vLLM** — fix the `rebel-compiler`/`tvm` pairing. This is the only
+   device with a vLLM plugin, so it is the cheapest route to a *measured* NPU
+   profile and to Exp 4. Vendor-side dependency work, no HeteroPilot code.
+2. **RNGD via `CsvProfileImporter`** (Phase 3 V1, `profiler/core/importer.py`) —
+   drive `furiosa_llm` in its own venv with a standalone script, emit CSVs under
+   `profiler/CONTRACT.md`, import them. Keeps `profiler/` untouched.
+3. **RNGD via a native adapter** — a `furiosa_llm` engine backend behind
+   `profiler/core/engine.py`. Bigger, and V2 per the bring-up order above; do
+   not start it before V1 produces a working planner loop.
+
+Whichever route: **one venv per vendor**. The two stacks cannot share an
+interpreter — that is what defect 1 is. `.venv` stays vLLM-free regardless.
