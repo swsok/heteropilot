@@ -84,8 +84,7 @@ NPU inventory as reported by the vendor tools (not yet profiled — see below):
   `2026.3.0`, ~40 W idle. All four are `alive`. Torch addresses them as PrivateUse1 device
   `rngd:0..31` (card × 8 PEs); `/dev/rngd/npu<N>pe<a>-<b>` nodes allow fusing 2 or 4 PEs.
   **Only npu3 (`rngd:24..31`) is actually allocatable** right now — every PE on npu0/1/2
-  returns `EBUSY`, and `furiosa-smi ps` shows no owning process, so the holder is outside
-  this account's view. Re-check before planning a run; the driver re-enumerated at one
+  returns `EBUSY`. Re-check before planning a run; the driver re-enumerated at one
   point today and changed what was visible.
 
 Vendor runtimes are already installed, but **split across two site-packages and mutually
@@ -107,6 +106,14 @@ Consequences:
 - The ATOM/RNGD profile stubs (`profiles/accelerators/rbln_atom.yaml`, `furiosa_rngd.yaml`) keep
   `sim_hardware: null` and empty `supported_models`, so they fail loud and stay out of candidate
   generation until measured.
+
+**This is a shared Kubernetes node and someone else's workload owns most of the NPUs.**
+`rngd_pd.serving.cluster` pods (P/D-disaggregated serving, one pod per chip, running as root
+under `kubepods-burstable-*`) hold RNGD npu0/1/2 via `--chip 0/1/2` and **all four ATOMs**.
+Only RNGD npu3 is free. Do not drain devices or kill those pods; `furiosa-smi ps` and
+`rbln-stat` under-report because the holders are pods. Cheapest pre-flight check:
+`/sys/class/rngd_mgmt/rngd!npu<N>pe<M>/alloc_status` is non-empty iff that PE is claimed.
+Full holder table: `docs/hardware_roadmap.md` "Who holds the NPUs".
 
 ## Architecture: the planning pipeline
 

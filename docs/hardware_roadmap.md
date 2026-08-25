@@ -108,11 +108,46 @@ report; nothing here is a profile yet, so every accelerator profile stub keeps
   `-tp` default of 8 must therefore use the mesh path, `MeshKind` is
   `Mesh|Single` and currently `Single`).
   **Availability is partial: only npu3 (`rngd:24..31`) is allocatable.** Every PE
-  on npu0/1/2 returns `EBUSY: Device or resource busy` while `furiosa-smi ps`
-  lists no owning process, so the holder is outside this account's view.
+  on npu0/1/2 returns `EBUSY: Device or resource busy`.
   Re-check before each run — the driver re-enumerated at 06:26 on 2026-08-25 and
   changed what was visible (an earlier read of `44:00.0` showed PCI rev `ff` and
   `furiosa-smi` listed only three cards; both cleared after re-enumeration).
+
+### Who holds the NPUs — this is a shared, actively used machine
+
+`furiosa-smi ps` and `rbln-stat`'s context table under-report: the holders are
+Kubernetes pods, so they are invisible to a per-user view. Identified from `ps`
++ `/proc/<pid>/cgroup` (all `kubepods-burstable-*` / `cri-containerd-*`, running
+as root):
+
+| PID | command | holds |
+| --- | --- | --- |
+| 17783 | `rngd_pd.serving.cluster --role prefill --backend rngd-full --C 256 --group 2 --chip 0` | RNGD npu0 |
+| 17792 | `rngd_pd.serving.cluster --role decode --backend rngd --chip 1` | RNGD npu1 |
+| 17773 | `rngd_pd.serving.cluster --role decode --backend rngd --B 4 --group 8 --batch-wait 8000 --sched static --admit-min 2 --chip 2` | RNGD npu2 |
+| 10054 | `rngd_pd.serving.cluster --role prefill --backend atom --C 256` | one ATOM |
+| 10137 / 10198 / 10233 | `rngd_pd.serving.cluster --role decode --backend atom --B 1 / 4 / 2` | three ATOMs |
+| 6945 | `rngd_pd.serving.cluster --role gateway --targets-file /cfg/targets.json` | none (router) |
+
+So someone is running a **P/D-disaggregated serving experiment** across both NPU
+vendors on this box, one pod per chip. `--chip 0/1/2` maps 1:1 onto the three
+`EBUSY` RNGD cards, and npu3 has no claimant — which is exactly the card that is
+allocatable. Consequences:
+
+- **Do not free these devices.** They belong to a live workload that is not ours;
+  `furiosa-smi drain` and killing pods are both off-limits without the owner's
+  agreement. npu3 alone is enough for the profiling route above.
+- **All four ATOM cards are occupied.** So route 2 below is blocked on *device
+  availability* as well as on the broken vendor install — fixing the wheels does
+  not by itself give you an ATOM to profile.
+- A RNGD k8s device plugin is registered (`/var/lib/kubelet/device-plugins/rngd.sock`),
+  so allocation is scheduler-driven; the authoritative per-pod device map is
+  `kubelet_internal_checkpoint`, readable only as root.
+- **Unprivileged availability check** (no root, no vendor tool): a PE is claimed
+  iff `/sys/class/rngd_mgmt/rngd!npu<N>pe<M>/alloc_status` returns a non-empty
+  allocation table. npu0/1/2 print a (zeroed) table; npu3 prints nothing. This
+  matched the allocation sweep exactly on two separate runs and is the cheapest
+  pre-flight check before starting a profiling job.
 
 ### The serving stacks are installed, split across two site-packages, and conflict
 
