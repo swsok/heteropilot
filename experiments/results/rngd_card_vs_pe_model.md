@@ -107,10 +107,22 @@ why the abstraction was rejected. That much stands.
 > `experiments/results/rngd_vendor_profiler_vs_layerwise.md`. That is still an
 > upper bound on the reduction alone, because the compiler's Tokenwise stage also
 > contains whatever else it fused in, but it is measured rather than inferred.
+>
+> **And now the reduction itself is measured: 115 µs per decoder layer at TP=8**
+> (`experiments/results/rngd_collective_measured.md`), i.e. 54 % of that 212 µs.
+> Which means **the framing of this whole page — that the residual is mostly the
+> missing collective — is wrong.** 115 µs/layer × 32 layers is 3.68 ms per
+> forward, or ~0.86 ms per token at ~4.3 tokens per forward: about **7 % of the
+> 12.92 ms gap**, not 45 %. The gap was the harness under-measuring per-layer
+> decode by 1.5–1.7×, which the EDF rebuild established independently. The
+> collective was a red herring, and the commit that introduced this page
+> (`4aac7a5`, "decode is collective-bound") overstated it.
 
-The qualitative reframing survives: RNGD's measured strength is bandwidth per watt
-(5.84 GB/s/W at card level, 3.1× an A40), and at TP=8 a large part of that strength
-goes into per-layer work the compute model alone does not see.
+The qualitative reframing survives, but with the mechanism corrected: RNGD's
+measured strength is bandwidth per watt (5.84 GB/s/W at card level, 3.1× an A40),
+and at TP=8 a large part of that strength goes into per-layer work the compute
+model alone does not see — of which the reduction is about half (115 of 212 µs),
+and *not* the whole story it was taken for here.
 
 ## What was kept
 
@@ -145,16 +157,17 @@ goes into per-layer work the compute model alone does not see.
 > 1220-token mean prompt, real TTFT rises 158 → 1894 ms as concurrency goes
 > 1 → 32, so ~90 % of the validation benchmark's 1404 ms is queuing.
 
-- **Partly done already.** FuriosaAI's own EDF profiler localises the gap to
-  212 µs per decoder layer on the real compiled graph
-  (`experiments/results/rngd_vendor_profiler_vs_layerwise.md`), which supersedes
-  the inference this section originally attempted. Isolating the reduction *within*
-  that 212 µs still needs a collective microbenchmark, because the compiler's
-  Tokenwise stage bundles the reduction with whatever else it fused in.
-- **The per-PE model's remaining +25.7 % TPOT error** is now partly explained in the
-  other direction than expected: the harness *under*-measures per-layer decode by
-  1.72×, so the +25.7 % must come from ASTRA-Sim's collective model over-charging,
-  the scheduler, or the buckets. Worth separating.
+- **Done.** The gap is localised to 212 µs per decoder layer on the real compiled
+  graph (`rngd_vendor_profiler_vs_layerwise.md`), and the reduction *within* it is
+  now directly measured at 115 µs/layer at TP=8
+  (`rngd_collective_measured.md`) — 54 % of it, with the remaining ~97 µs being
+  the other work the compiler fused into that stage.
+- **The per-PE model's +25.7 % TPOT error now has a quantified suspect.** The
+  harness *under*-measures per-layer decode by 1.72×, so the over-prediction must
+  come from ASTRA-Sim's collective model. Working back from the TPOT ratio,
+  ASTRA-Sim appears to charge ~340 µs/layer against a measured 115 µs — roughly
+  3× too much. The measured figure is the target to calibrate
+  `link_bw` / `link_latency` against.
 - **The artifact's `tensor_parallel_size: 8` is two fused 4-PE quads, not eight
   ranks** (`leader_device` in the EDF trace is `npu0pe0-3`). A bundle built on
   per-PE `tp8/` shapes therefore models a rank granularity the hardware does not

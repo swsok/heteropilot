@@ -107,6 +107,11 @@ cache writes) — so 212 µs per layer is an upper bound on the reduction, in th
 way 202 µs was, but now measured on the real graph rather than inferred from a
 model residual.
 
+> **Decomposed 2026-08-26.** The reduction has since been measured directly at
+> **115 µs per decoder layer at TP=8** (`rngd_collective_measured.md`), so it is
+> **54 %** of this 212 µs and the remaining ~97 µs is the other fused work. The
+> upper bound held.
+
 ## What this changes
 
 - **The layerwise bundle under-measures decode by 1.72×, and now we know by how

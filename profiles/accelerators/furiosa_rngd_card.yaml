@@ -172,11 +172,19 @@ supported_models:
   - pattern: "meta-llama/Llama-3.1-8B"
     dtypes: [bfloat16]
 
-# ONE. TP across cards is NOT verified: /dev/rngd exposes fusion nodes for 2 and 4
-# PEs but none for 8, MeshKind is Single, and `furiosa-llm build -tp 16` (two
-# cards' worth of PEs) has never been built or served here. Multi-card scaling is
-# therefore DP replicas only, which is also what the hardware supports today.
-# Raise this only after a multi-card artifact is actually served.
+# ONE. TP across cards is NOT verified: MeshKind is Single, and
+# `furiosa-llm build -tp 16` (two cards' worth of PEs) has never been built or
+# served here. Multi-card scaling is therefore DP replicas only, which is also
+# what the hardware supports today. Raise this only after a multi-card artifact
+# is actually served.
+#
+# CORRECTED 2026-08-26: an earlier version of this comment also argued from
+# "/dev/rngd exposes fusion nodes for 2 and 4 PEs but none for 8". That claim is
+# false - set_fusion(8) enumerates and works (24 / 12 / 6 / 3 devices at fusion
+# 1 / 2 / 4 / 8), measured in
+# experiments/results/rngd_collective_measured.md. It was never the load-bearing
+# argument here: 8-PE fusion is INTRA-card, and max_tp_size for a card-as-device
+# profile is about spanning CARDS.
 max_tp_size: 1
 
 notes: >

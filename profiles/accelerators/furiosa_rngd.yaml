@@ -131,9 +131,19 @@ supported_models:
     dtypes: [bfloat16]
 
 # 8 PEs per card, and TP must stay inside one card until cross-card PE fusion is
-# verified. /dev/rngd/ exposes fusion nodes for 2 and 4 PEs (npu<N>pe0-1,
-# pe0-3, pe4-7) but none for all 8, and MeshKind is Single here, so a TP-8 group
-# spanning the card uses the mesh path that has not been exercised yet.
+# verified: MeshKind is Single here, and no multi-card artifact has been built or
+# served, so a TP group spanning two cards uses a path that has not been
+# exercised at all.
+#
+# CORRECTED 2026-08-26. This comment previously said /dev/rngd exposes fusion
+# nodes for 2 and 4 PEs "but none for all 8". That is wrong:
+# furiosa.torch.native_device.set_fusion(8) enumerates and works - device counts
+# go 24 / 12 / 6 / 3 at fusion 1 / 2 / 4 / 8 - and the 8-PE device delivers a real
+# 7.2x per-rank speedup on o_proj (174.76 -> 24.39 us). Measured by
+# experiments/scripts/rngd_collective_probe.py; see
+# experiments/results/rngd_collective_measured.md. The intra-card TP-8 path is
+# exercised, which is what max_tp_size 8 asserts. Only the CROSS-card case is
+# unverified, and that is what the paragraph above is about.
 max_tp_size: 8
 
 notes: >
