@@ -1,0 +1,159 @@
+# Heterogeneous P/D fixture: MEASURED FuriosaAI RNGD islands + A40 GPU islands.
+#
+# Replaces the SIM-PROXY NPU arm of experiments/configs/clusters/pd-4combo-sim.yaml
+# (which was the RTXPRO6000 compute model wearing an NPU label, so every
+# NPU-touching combo came out byte-identical by construction). Here the NPU arm is
+# the real thing: profiler/perf/RNGD/, measured on this machine 2026-08-25.
+#
+# PROVENANCE (absolute rule 3), and the asymmetry matters:
+#   - RNGD islands: MEASURED on this machine. profiles/accelerators/furiosa_rngd.yaml
+#     carries measured memory, achieved bandwidth and per-PE power. The perf bundle
+#     was measured through furiosa.torch (RNGD has no vLLM plugin), one canonical
+#     layer per compiled graph.
+#   - A40 islands: MEASURED, but ON A DIFFERENT MACHINE and BY A DIFFERENT METHOD --
+#     vLLM's own layerwise profiler, i.e. the kernels the server actually runs.
+#     THERE IS NO NVIDIA GPU ON THIS HOST (nvidia-smi cannot reach a driver).
+#     The sim-vs-real check says the A40 bundle predicts reality within ~2% while
+#     the RNGD bundle is off by 25-35% with opposite signs per phase
+#     (experiments/results/rngd_sim_vs_real_summary.md). So a GPU-vs-NPU efficiency
+#     number read off this fixture carries BOTH gaps. Use it for the SHAPE of the
+#     P/D trade-off, not for an absolute efficiency claim.
+#   - The prefill->decode fabric is HOST-MEDIATED and its bandwidth is the whole
+#     question; see the links block.
+#
+# ISLAND MODEL
+#   One RNGD card = 8 PEs = one island, joined by ONPACKAGE links (deviations D16).
+#   An accelerator here is one PE, not one card: `furiosa-llm build -tp` counts PEs
+#   per TP group and defaults to 8, the perf bundle's tp<N> holds one PE's shapes,
+#   and the simulator picks tp<N> by accelerator count. Per-PE memory is 6.25 GB
+#   (measured), so Llama-3.1-8B bf16 (14 GB of weights) needs tp>=4 -- TP=1 on a
+#   single PE is correctly infeasible, which is why the vendor defaults to 8.
+#   A40 islands are NVLink pairs, mirroring experiments/configs/clusters/a40x8.yaml.
+
+cluster_id: pd-rngd-gpu
+
+nodes:
+  - id: node_rngd0
+    # RNGD card npu0. 8 PEs, 47.5 GiB of HBM shared across them; the per-PE 6.25 GB
+    # below is the largest single bf16 block one PE accepts (measured, bisected).
+    accelerators:
+      - {id: pe0, type: NPU, vendor: FuriosaAI, model: RNGD, backend: furiosa, memory_gb: 6.25, state: FREE, profile: profiles/accelerators/furiosa_rngd.yaml}
+      - {id: pe1, type: NPU, vendor: FuriosaAI, model: RNGD, backend: furiosa, memory_gb: 6.25, state: FREE, profile: profiles/accelerators/furiosa_rngd.yaml}
+      - {id: pe2, type: NPU, vendor: FuriosaAI, model: RNGD, backend: furiosa, memory_gb: 6.25, state: FREE, profile: profiles/accelerators/furiosa_rngd.yaml}
+      - {id: pe3, type: NPU, vendor: FuriosaAI, model: RNGD, backend: furiosa, memory_gb: 6.25, state: FREE, profile: profiles/accelerators/furiosa_rngd.yaml}
+      - {id: pe4, type: NPU, vendor: FuriosaAI, model: RNGD, backend: furiosa, memory_gb: 6.25, state: FREE, profile: profiles/accelerators/furiosa_rngd.yaml}
+      - {id: pe5, type: NPU, vendor: FuriosaAI, model: RNGD, backend: furiosa, memory_gb: 6.25, state: FREE, profile: profiles/accelerators/furiosa_rngd.yaml}
+      - {id: pe6, type: NPU, vendor: FuriosaAI, model: RNGD, backend: furiosa, memory_gb: 6.25, state: FREE, profile: profiles/accelerators/furiosa_rngd.yaml}
+      - {id: pe7, type: NPU, vendor: FuriosaAI, model: RNGD, backend: furiosa, memory_gb: 6.25, state: FREE, profile: profiles/accelerators/furiosa_rngd.yaml}
+    nics: [{id: nic0, type: ethernet, speed_gbps: 100}]
+    # base_node_power carries the CARD's fixed 38.01 W (measured): the profile's
+    # power block is per PE and its idle_power is 0, because the 0..8 loaded-PE
+    # sweep showed a PE's marginal idle draw is zero and the ~38 W is a board cost.
+    # One card on this node -> 38.01 W. Omitting this under-counts node power by
+    # exactly that (see profiles/accelerators/furiosa_rngd.yaml).
+    power: {base_node_power: 38.01, source: measured}
+
+  - id: node_rngd1
+    accelerators:
+      - {id: pe0, type: NPU, vendor: FuriosaAI, model: RNGD, backend: furiosa, memory_gb: 6.25, state: FREE, profile: profiles/accelerators/furiosa_rngd.yaml}
+      - {id: pe1, type: NPU, vendor: FuriosaAI, model: RNGD, backend: furiosa, memory_gb: 6.25, state: FREE, profile: profiles/accelerators/furiosa_rngd.yaml}
+      - {id: pe2, type: NPU, vendor: FuriosaAI, model: RNGD, backend: furiosa, memory_gb: 6.25, state: FREE, profile: profiles/accelerators/furiosa_rngd.yaml}
+      - {id: pe3, type: NPU, vendor: FuriosaAI, model: RNGD, backend: furiosa, memory_gb: 6.25, state: FREE, profile: profiles/accelerators/furiosa_rngd.yaml}
+      - {id: pe4, type: NPU, vendor: FuriosaAI, model: RNGD, backend: furiosa, memory_gb: 6.25, state: FREE, profile: profiles/accelerators/furiosa_rngd.yaml}
+      - {id: pe5, type: NPU, vendor: FuriosaAI, model: RNGD, backend: furiosa, memory_gb: 6.25, state: FREE, profile: profiles/accelerators/furiosa_rngd.yaml}
+      - {id: pe6, type: NPU, vendor: FuriosaAI, model: RNGD, backend: furiosa, memory_gb: 6.25, state: FREE, profile: profiles/accelerators/furiosa_rngd.yaml}
+      - {id: pe7, type: NPU, vendor: FuriosaAI, model: RNGD, backend: furiosa, memory_gb: 6.25, state: FREE, profile: profiles/accelerators/furiosa_rngd.yaml}
+    nics: [{id: nic0, type: ethernet, speed_gbps: 100}]
+    power: {base_node_power: 38.01, source: measured}
+
+  - id: node_a40a
+    # NOT PRESENT ON THIS HOST. The A40 profile and perf bundle are measured
+    # artifacts of the A40x8 server (docs/hardware_roadmap.md); this node exists so
+    # the heterogeneous P/D trade-off can be evaluated in simulation.
+    #
+    # FOUR GPUs IN ONE ISLAND, deliberately, and this is not cosmetic. Cross-vendor
+    # P/D requires tp_p == tp_d (deviations D14: the simulator infers topology by
+    # integer division over the device count, so unequal instance sizes are
+    # unrepresentable). RNGD can only reach tp>=4 for Llama-3.1-8B because a PE
+    # holds 6.25 GB against 14 GB of weights, while an NVLink-PAIR A40 island only
+    # offers tp in {1,2}. Those sets are disjoint, so a pair-island fixture emits
+    # NO mixed P/D candidate at all - the first run of this experiment produced
+    # exactly 3 representatives (GPU-P+GPU-D, NPU-P+NPU-D, aggregated) and both
+    # mixed combos were silently absent. Bridging the pairs over PCIe gives
+    # tp in {1,2,4} and makes tp=4 the shared degree where GPU-P+NPU-D exists.
+    accelerators:
+      - {id: gpu0, type: GPU, vendor: NVIDIA, model: A40, backend: cuda, memory_gb: 45.0, state: FREE, profile: profiles/accelerators/a40.yaml}
+      - {id: gpu1, type: GPU, vendor: NVIDIA, model: A40, backend: cuda, memory_gb: 45.0, state: FREE, profile: profiles/accelerators/a40.yaml}
+      - {id: gpu2, type: GPU, vendor: NVIDIA, model: A40, backend: cuda, memory_gb: 45.0, state: FREE, profile: profiles/accelerators/a40.yaml}
+      - {id: gpu3, type: GPU, vendor: NVIDIA, model: A40, backend: cuda, memory_gb: 45.0, state: FREE, profile: profiles/accelerators/a40.yaml}
+    nics: [{id: nic0, type: ethernet, speed_gbps: 100}]
+    power: {source: placeholder}
+
+  - id: node_a40b
+    accelerators:
+      - {id: gpu0, type: GPU, vendor: NVIDIA, model: A40, backend: cuda, memory_gb: 45.0, state: FREE, profile: profiles/accelerators/a40.yaml}
+      - {id: gpu1, type: GPU, vendor: NVIDIA, model: A40, backend: cuda, memory_gb: 45.0, state: FREE, profile: profiles/accelerators/a40.yaml}
+      - {id: gpu2, type: GPU, vendor: NVIDIA, model: A40, backend: cuda, memory_gb: 45.0, state: FREE, profile: profiles/accelerators/a40.yaml}
+      - {id: gpu3, type: GPU, vendor: NVIDIA, model: A40, backend: cuda, memory_gb: 45.0, state: FREE, profile: profiles/accelerators/a40.yaml}
+    nics: [{id: nic0, type: ethernet, speed_gbps: 100}]
+    power: {source: placeholder}
+
+links:
+  # --- intra-island: the 8 PEs of each RNGD card -----------------------------
+  # bandwidth_gbps / latency_ns: PLACEHOLDER. PE-to-PE on-package bandwidth was
+  # NOT measured; what was measured is HBM->PE read (about 219 GB/s per PE, and it
+  # scales to 8 PEs at 104% efficiency, so the card sustains ~1750 GB/s of reads).
+  # The value below is that per-PE read figure used as a stand-in for the fabric,
+  # which is an assumption about the wrong quantity - hence placeholder. It only
+  # affects the TP collective term, which ASTRA-Sim prices; the P/D question below
+  # does not depend on it.
+  - {id: onpkg-rngd0-01, src: node_rngd0/pe0, dst: node_rngd0/pe1, type: ONPACKAGE, bandwidth_gbps: 219, latency_ns: 500, contention_group: rngd0-onpkg, source: placeholder}
+  - {id: onpkg-rngd0-12, src: node_rngd0/pe1, dst: node_rngd0/pe2, type: ONPACKAGE, bandwidth_gbps: 219, latency_ns: 500, contention_group: rngd0-onpkg, source: placeholder}
+  - {id: onpkg-rngd0-23, src: node_rngd0/pe2, dst: node_rngd0/pe3, type: ONPACKAGE, bandwidth_gbps: 219, latency_ns: 500, contention_group: rngd0-onpkg, source: placeholder}
+  - {id: onpkg-rngd0-34, src: node_rngd0/pe3, dst: node_rngd0/pe4, type: ONPACKAGE, bandwidth_gbps: 219, latency_ns: 500, contention_group: rngd0-onpkg, source: placeholder}
+  - {id: onpkg-rngd0-45, src: node_rngd0/pe4, dst: node_rngd0/pe5, type: ONPACKAGE, bandwidth_gbps: 219, latency_ns: 500, contention_group: rngd0-onpkg, source: placeholder}
+  - {id: onpkg-rngd0-56, src: node_rngd0/pe5, dst: node_rngd0/pe6, type: ONPACKAGE, bandwidth_gbps: 219, latency_ns: 500, contention_group: rngd0-onpkg, source: placeholder}
+  - {id: onpkg-rngd0-67, src: node_rngd0/pe6, dst: node_rngd0/pe7, type: ONPACKAGE, bandwidth_gbps: 219, latency_ns: 500, contention_group: rngd0-onpkg, source: placeholder}
+  - {id: onpkg-rngd1-01, src: node_rngd1/pe0, dst: node_rngd1/pe1, type: ONPACKAGE, bandwidth_gbps: 219, latency_ns: 500, contention_group: rngd1-onpkg, source: placeholder}
+  - {id: onpkg-rngd1-12, src: node_rngd1/pe1, dst: node_rngd1/pe2, type: ONPACKAGE, bandwidth_gbps: 219, latency_ns: 500, contention_group: rngd1-onpkg, source: placeholder}
+  - {id: onpkg-rngd1-23, src: node_rngd1/pe2, dst: node_rngd1/pe3, type: ONPACKAGE, bandwidth_gbps: 219, latency_ns: 500, contention_group: rngd1-onpkg, source: placeholder}
+  - {id: onpkg-rngd1-34, src: node_rngd1/pe3, dst: node_rngd1/pe4, type: ONPACKAGE, bandwidth_gbps: 219, latency_ns: 500, contention_group: rngd1-onpkg, source: placeholder}
+  - {id: onpkg-rngd1-45, src: node_rngd1/pe4, dst: node_rngd1/pe5, type: ONPACKAGE, bandwidth_gbps: 219, latency_ns: 500, contention_group: rngd1-onpkg, source: placeholder}
+  - {id: onpkg-rngd1-56, src: node_rngd1/pe5, dst: node_rngd1/pe6, type: ONPACKAGE, bandwidth_gbps: 219, latency_ns: 500, contention_group: rngd1-onpkg, source: placeholder}
+  - {id: onpkg-rngd1-67, src: node_rngd1/pe6, dst: node_rngd1/pe7, type: ONPACKAGE, bandwidth_gbps: 219, latency_ns: 500, contention_group: rngd1-onpkg, source: placeholder}
+
+  # --- intra-island: A40, NVLink pairs bridged over PCIe into one size-4 island
+  # bandwidth_gbps: NVLink measured on the A40x8 server; the PCIe bridge is
+  # vendor_spec (PCIe 4.0 x16, 64 GB/s bidirectional) exactly as
+  # experiments/configs/clusters/exp1-a40-tp-sweep.yaml declares it.
+  - {id: nvlink-a40a-01, src: node_a40a/gpu0, dst: node_a40a/gpu1, type: NVLINK, bandwidth_gbps: 112.5, latency_ns: 1000, contention_group: a40a-pair0, source: measured}
+  - {id: nvlink-a40a-23, src: node_a40a/gpu2, dst: node_a40a/gpu3, type: NVLINK, bandwidth_gbps: 112.5, latency_ns: 1000, contention_group: a40a-pair1, source: measured}
+  - {id: pcie-a40a-02, src: node_a40a/gpu0, dst: node_a40a/gpu2, type: PCIE, bandwidth_gbps: 64.0, latency_ns: 2000, contention_group: a40a-pcie, source: vendor_spec}
+  - {id: nvlink-a40b-01, src: node_a40b/gpu0, dst: node_a40b/gpu1, type: NVLINK, bandwidth_gbps: 112.5, latency_ns: 1000, contention_group: a40b-pair0, source: measured}
+  - {id: nvlink-a40b-23, src: node_a40b/gpu2, dst: node_a40b/gpu3, type: NVLINK, bandwidth_gbps: 112.5, latency_ns: 1000, contention_group: a40b-pair1, source: measured}
+  - {id: pcie-a40b-02, src: node_a40b/gpu0, dst: node_a40b/gpu2, type: PCIE, bandwidth_gbps: 64.0, latency_ns: 2000, contention_group: a40b-pcie, source: vendor_spec}
+
+  # --- inter-island: the prefill -> decode KV path ---------------------------
+  # THIS IS THE VARIABLE THE WHOLE EXPERIMENT TURNS ON, so it is swept rather than
+  # trusted: run experiments/scripts/pd_network_sweep.py over this fixture.
+  #
+  # What is measured, on this machine: host -> RNGD PE transfer is 5.06 GB/s for a
+  # single stream, and it scales almost linearly across the 8 PEs of a card --
+  # 10.39 / 19.10 / 35.47 GB/s aggregate at 2 / 4 / 8 streams (88% of ideal at 8).
+  # A TP=8 decode island shards its KV across those 8 PEs, so the handoff uses the
+  # parallel path and the NPU leg sustains ~35 GB/s. That is well above the ~10 GB/s
+  # P/D adoption crossing Exp 3 found, so the NPU leg is NOT the bottleneck.
+  # See outputs/rngd_profile/host_bandwidth.json.
+  #
+  # What is NOT measured: the GPU -> host leg. There is no NVIDIA GPU on this host,
+  # so a cross-vendor handoff (GPU -> host -> NPU) cannot be measured end to end
+  # here. The declared 35 GB/s below is therefore the measured NPU leg used as an
+  # UPPER BOUND on the whole path, and it is labelled placeholder because it is not
+  # the quantity the planner thinks it is. Measuring the GPU leg on the A40 server
+  # is the open item (docs/HANDOVER_A40.md).
+  - {id: fabric-rngd0-a40a, src: node_rngd0/pe0, dst: node_a40a/gpu0, type: ETHERNET, bandwidth_gbps: 35, latency_ns: 20000, contention_group: host-pcie, source: placeholder}
+  - {id: fabric-rngd0-a40b, src: node_rngd0/pe0, dst: node_a40b/gpu0, type: ETHERNET, bandwidth_gbps: 35, latency_ns: 20000, contention_group: host-pcie, source: placeholder}
+  - {id: fabric-rngd1-a40a, src: node_rngd1/pe0, dst: node_a40a/gpu0, type: ETHERNET, bandwidth_gbps: 35, latency_ns: 20000, contention_group: host-pcie, source: placeholder}
+  - {id: fabric-rngd1-a40b, src: node_rngd1/pe0, dst: node_a40b/gpu0, type: ETHERNET, bandwidth_gbps: 35, latency_ns: 20000, contention_group: host-pcie, source: placeholder}
+  - {id: fabric-rngd0-rngd1, src: node_rngd0/pe0, dst: node_rngd1/pe0, type: ETHERNET, bandwidth_gbps: 35, latency_ns: 20000, contention_group: host-pcie, source: placeholder}
+  - {id: fabric-a40a-a40b, src: node_a40a/gpu0, dst: node_a40b/gpu0, type: ETHERNET, bandwidth_gbps: 35, latency_ns: 20000, contention_group: host-pcie, source: placeholder}

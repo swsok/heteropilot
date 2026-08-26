@@ -1,0 +1,53 @@
+{
+  "device": "rngd:16",
+  "card": "npu2",
+  "measured_at": "2026-08-26T06:08:34+0000",
+  "host_bandwidth": {
+    "device": "rngd:16",
+    "table": [
+      {
+        "size_mb": 1,
+        "h2d_gbps": 3.28,
+        "d2h_gbps": 3.7,
+        "h2d_median_gbps": 2.8,
+        "d2h_median_gbps": 1.72,
+        "reps": 7
+      },
+      {
+        "size_mb": 4,
+        "h2d_gbps": 2.96,
+        "d2h_gbps": 5.13,
+        "h2d_median_gbps": 2.88,
+        "d2h_median_gbps": 1.13,
+        "reps": 7
+      },
+      {
+        "size_mb": 16,
+        "h2d_gbps": 3.25,
+        "d2h_gbps": 5.89,
+        "h2d_median_gbps": 3.21,
+        "d2h_median_gbps": 1.17,
+        "reps": 7
+      },
+      {
+        "size_mb": 64,
+        "h2d_gbps": 4.83,
+        "d2h_gbps": 2.0,
+        "h2d_median_gbps": 4.79,
+        "d2h_median_gbps": 1.84,
+        "reps": 7
+      },
+      {
+        "size_mb": 256,
+        "h2d_gbps": 5.03,
+        "d2h_gbps": 2.35,
+        "h2d_median_gbps": 5.01,
+        "d2h_median_gbps": 2.01,
+        "reps": 7
+      }
+    ],
+    "peak_h2d_gbps": 5.03,
+    "peak_d2h_gbps": 5.89,
+    "method": "torch .to(device) / .cpu() on a contiguous bfloat16 buffer, host-side perf_counter, best and median of N reps after one warm copy. Bounds the cross-vendor P/D KV handoff: GPU->host->NPU is two copies and the GPU leg is not measurable on this machine."
+  }
+}

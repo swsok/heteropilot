@@ -642,3 +642,66 @@ drops, TTFT flat, `none`-mode control flat — all PASS) and `tests/test_sim_pd_
 | D4 | Phase 3 | **Resolution path secured** — A5000 measured locally; A40/ATOM/RNGD hardware reachable from 2026-08-17 (see `docs/hardware_roadmap.md`) |
 | D10 | Phase 2 | **Open** — derating factor for the memory feasibility filter; nominal vs KV-matched config for the A5000 comparison |
 | D15 | Phase 5 | **Resolved** — sim-level P/D KV-transfer model, opt-in `--pd-transfer-model bandwidth`, default byte-identical; first sanctioned `serving/` edit (router.py + __main__.py only, scheduler.py pristine) |
+
+---
+
+## D16 — `LinkType` has no on-package fabric, and cross-vendor P/D needs a shared TP degree · Resolved (one added type) + Open (the TP constraint)
+
+Two problems surfaced together while building the first heterogeneous
+RNGD + GPU P/D fixture (`experiments/configs/clusters/pd-rngd-gpu.yaml`).
+
+### (a) No link type fits an on-package PE fabric — resolved
+
+**Upstream / our schema** offered `NVLINK`, `PCIE`, `INFINIBAND`, `ETHERNET`,
+`HCCS`. A FuriosaAI RNGD card is 8 PEs on one package sharing 47.5 GiB of HBM,
+and an accelerator in our model is one PE (`furiosa-llm build -tp` counts PEs per
+TP group), so the 8 PEs of a card must be joined by an **intra-island** link for
+`detect_islands` to group them. None of the five fits: `NVLINK` and `HCCS` are
+other vendors' names, and `PCIE` is simply false for elements that never leave
+the package — it would also feed the Level-1 topology model the wrong
+interconnect class.
+
+**Adaptation**: added a vendor-neutral `LinkType.ONPACKAGE`, included it in
+`INTRA_ISLAND_LINKS`, and ranked it first in `_dominant_link` so an all-PE island
+reports `ONPACKAGE` rather than falling through to `None`. Existing cluster specs
+are unaffected — nothing else uses it.
+
+Its **bandwidth is `placeholder`** and must stay so until measured: PE-to-PE
+on-package bandwidth was not measured. What *was* measured is HBM→PE read
+(≈219 GB/s per PE, scaling to 8 PEs at 104 % efficiency, so a card sustains
+≈1750 GB/s of reads), and that is a different quantity. It only feeds the TP
+collective term, which ASTRA-Sim prices.
+
+### (b) Cross-vendor P/D is unrepresentable unless the TP degrees overlap — open
+
+`planner/candidate_generator.py::_pd_candidates` requires `tp_p == tp_d`, which
+is D14's constraint: the simulator infers its topology as
+`[npus_per_group, num_instances]` by integer division over the total device
+count, so unequal instance sizes are unrepresentable. That interacts badly with
+heterogeneity in a way neither D14 nor §5.4 anticipated:
+
+- RNGD reaches only **tp ∈ {4, 8}** for Llama-3.1-8B, because a PE holds 6.25 GB
+  (measured) against 14 GB of weights. tp=1 and tp=2 are correctly rejected on
+  memory feasibility.
+- An **NVLink-pair** A40 island offers only **tp ∈ {1, 2}**.
+
+The two sets are disjoint, so **no mixed P/D candidate is generated at all** —
+the first run of the re-done Exp 5 produced 3 representatives (GPU-P+GPU-D,
+NPU-P+NPU-D, aggregated) with both mixed combos silently absent. Nothing errored;
+the candidates simply did not exist, which is the dangerous failure mode: a
+"heterogeneous P/D does not pay" conclusion could be drawn from a search that
+never considered it.
+
+**Adaptation** (fixture-level, not a code change): bridge the A40 NVLink pairs
+over PCIe into **size-4** islands, exactly as
+`experiments/configs/clusters/exp1-a40-tp-sweep.yaml` already does, giving
+tp ∈ {1, 2, 4} so that **tp=4 is a shared degree**. Both mixed combos then
+appear.
+
+**Why this stays open**: the workaround requires the island sizes to be
+*choosable*. On hardware where the per-device memory forces disjoint TP sets and
+the island sizes are fixed by the fabric, heterogeneous P/D remains
+unrepresentable. Lifting it means addressing D14 itself — teaching the compiler
+to emit non-uniform instance sizes — which is a simulator-side change and out of
+scope here. Any claim about cross-vendor P/D must state which TP degree the two
+backends shared, and whether one existed at all.

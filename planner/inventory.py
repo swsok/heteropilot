@@ -57,6 +57,13 @@ class LinkType(str, enum.Enum):
     INFINIBAND = "INFINIBAND"
     ETHERNET = "ETHERNET"
     HCCS = "HCCS"
+    #: Vendor-neutral on-package fabric between processing elements of one
+    #: accelerator die/board, e.g. the 8 PEs of a FuriosaAI RNGD card. Needed
+    #: because NVLINK and HCCS are vendor-specific names and PCIE is simply
+    #: wrong for elements that never leave the package - mislabelling it PCIE
+    #: would also feed the topology model the wrong interconnect class. See
+    #: docs/deviations.md D16.
+    ONPACKAGE = "ONPACKAGE"
 
 
 class Source(str, enum.Enum):
@@ -69,7 +76,9 @@ class Source(str, enum.Enum):
 
 #: Link types that keep accelerators inside one execution island. Anything else
 #: (INFINIBAND, ETHERNET) crosses an island boundary even within a node.
-INTRA_ISLAND_LINKS = frozenset({LinkType.NVLINK, LinkType.PCIE, LinkType.HCCS})
+INTRA_ISLAND_LINKS = frozenset({
+    LinkType.NVLINK, LinkType.PCIE, LinkType.HCCS, LinkType.ONPACKAGE,
+})
 
 
 class Nic(_Strict):
@@ -408,7 +417,7 @@ def _dominant_link(cluster: ClusterSpecV2, node_id: str, accel_ids: list[str]) -
         return None
     # Prefer the fastest class present; a PCIe fallback link alongside NVLink
     # should not downgrade the island's description.
-    for kind in (LinkType.NVLINK, LinkType.HCCS, LinkType.PCIE):
+    for kind in (LinkType.ONPACKAGE, LinkType.NVLINK, LinkType.HCCS, LinkType.PCIE):
         if kind in kinds:
             return kind
     return next(iter(kinds))

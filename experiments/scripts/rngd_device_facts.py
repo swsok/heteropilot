@@ -29,6 +29,7 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import gc
 import json
 import statistics
 import subprocess
@@ -279,6 +280,71 @@ def sweep_power(device: str, max_pes: int, load_s: float, idle_s: float,
     }
 
 
+def measure_host_bandwidth(device: str, sizes_mb: list[int], reps: int, log) -> dict:
+    """Host<->PE transfer bandwidth, both directions.
+
+    This bounds the cross-vendor P/D KV path. A GPU-prefill / NPU-decode split
+    has no direct device-to-device route, so the KV cache goes
+    GPU -> host -> NPU: two copies, and the slower leg sets the ceiling. Only
+    the NPU leg is measurable on this machine (there is no GPU here), so what
+    this produces is an upper bound on the end-to-end handoff rate, not the
+    handoff rate itself.
+
+    Timed host-side with perf_counter, because wall time is what the handoff
+    actually costs the scheduler.
+    """
+    rows = []
+    for size_mb in sizes_mb:
+        elements = size_mb * 1000 ** 2 // BYTES_PER_ELEMENT
+        host = torch.empty(elements, dtype=torch.bfloat16)
+        try:
+            warm = host.to(device)      # first copy pays context setup
+            warm.cpu()
+            h2d, d2h = [], []
+            for _ in range(reps):
+                start = time.perf_counter()
+                on_device = host.to(device)
+                h2d.append(time.perf_counter() - start)
+                start = time.perf_counter()
+                on_device.cpu()
+                d2h.append(time.perf_counter() - start)
+                del on_device
+            del warm
+            gc.collect()
+        except Exception as exc:
+            log(f"  {size_mb:5d} MB FAILED {type(exc).__name__}: "
+                f"{str(exc).splitlines()[0][:100]}")
+            continue
+        bytes_moved = elements * BYTES_PER_ELEMENT
+        row = {
+            "size_mb": size_mb,
+            "h2d_gbps": round(bytes_moved / min(h2d) / 1e9, 2),
+            "d2h_gbps": round(bytes_moved / min(d2h) / 1e9, 2),
+            "h2d_median_gbps": round(bytes_moved / statistics.median(h2d) / 1e9, 2),
+            "d2h_median_gbps": round(bytes_moved / statistics.median(d2h) / 1e9, 2),
+            "reps": reps,
+        }
+        rows.append(row)
+        log(f"  {size_mb:5d} MB  H2D {row['h2d_gbps']:7.2f} GB/s (best) "
+            f"{row['h2d_median_gbps']:7.2f} (median)   "
+            f"D2H {row['d2h_gbps']:7.2f} / {row['d2h_median_gbps']:7.2f}")
+
+    best_h2d = max((r["h2d_gbps"] for r in rows), default=None)
+    best_d2h = max((r["d2h_gbps"] for r in rows), default=None)
+    return {
+        "device": device,
+        "table": rows,
+        "peak_h2d_gbps": best_h2d,
+        "peak_d2h_gbps": best_d2h,
+        "method": (
+            "torch .to(device) / .cpu() on a contiguous bfloat16 buffer, host-side "
+            "perf_counter, best and median of N reps after one warm copy. Bounds "
+            "the cross-vendor P/D KV handoff: GPU->host->NPU is two copies and the "
+            "GPU leg is not measurable on this machine."
+        ),
+    }
+
+
 def measure_power(device: str, load_s: float, idle_s: float, load_pes: int, log) -> dict:
     """Idle / active / standby board power for one card.
 
@@ -355,6 +421,11 @@ def main() -> None:
     parser.add_argument("--settle-s", type=float, default=5.0,
                         help="pause before and after each sweep point")
     parser.add_argument("--skip-memory", action="store_true")
+    parser.add_argument("--host-bandwidth", action="store_true",
+                        help="measure host<->PE transfer bandwidth and nothing else")
+    parser.add_argument("--sizes-mb", default="1,4,16,64,256",
+                        help="transfer sizes for --host-bandwidth")
+    parser.add_argument("--bw-reps", type=int, default=5)
     parser.add_argument("--out", type=Path,
                         default=Path("outputs/rngd_profile/device_facts.json"))
     args = parser.parse_args()
@@ -368,7 +439,11 @@ def main() -> None:
         "card": card_of(args.device),
         "measured_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
     }
-    if args.pe_sweep:
+    if args.host_bandwidth:
+        facts["host_bandwidth"] = measure_host_bandwidth(
+            args.device, [int(v) for v in args.sizes_mb.split(",") if v],
+            args.bw_reps, log)
+    elif args.pe_sweep:
         facts["pe_power_sweep"] = sweep_power(
             args.device, args.load_pes, args.load_s, args.idle_s, args.settle_s, log)
     else:
@@ -379,7 +454,8 @@ def main() -> None:
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(facts, indent=2) + "\n")
     log(f"wrote {args.out}")
-    log(json.dumps(facts.get("pe_power_sweep") or facts.get("power_w"), indent=2))
+    log(json.dumps(facts.get("host_bandwidth") or facts.get("pe_power_sweep")
+                   or facts.get("power_w"), indent=2))
 
 
 if __name__ == "__main__":
