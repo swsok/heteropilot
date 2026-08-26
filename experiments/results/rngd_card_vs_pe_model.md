@@ -69,29 +69,36 @@ there is a lot of speedup to hand over — summed across a decode step, tp1 → 
 A `tp1` instance has no TP group, so the simulator charges nothing for the 64
 all-reduces per token that make that scaling possible.
 
-## What the residual measures: RNGD decode is collective-latency bound
+## What the residual measures
 
 The gap is not noise, and it is the useful part of a failed experiment:
 
 ```
 28.4 ms (real) − 15.5 ms (card model) = 12.92 ms per token step unaccounted
-32 layers × 2 all-reduces            = 64 collectives per token
-                                     → ~202 µs per collective
-all-reduce payload = hidden 4096 × bf16 = 8 KiB
 ```
 
-**8 KiB in 202 µs is latency, not bandwidth.** So RNGD decode at TP=8 is dominated
-by intra-card collective latency — about 45 % of the real TPOT — not by compute.
-That reframes the part: its measured strength is bandwidth per watt (5.84 GB/s/W
-at card level, 3.1× an A40), but at TP=8 that strength is spent behind 64 small
-synchronisations per token.
+Dropping the TP group therefore loses roughly **45 % of real decode**, which is
+why the abstraction was rejected. That much stands.
 
-Treat 202 µs as an **upper bound**. The residual also contains the
-bucket-quantisation (+10.9 % of prefill work) and eager-scheduler effects already
-quantified in the sim-vs-real write-up, so the collective share is at most this.
-It is still the first empirical handle on the `ONPACKAGE` fabric that deviations
-D3/D16 leave as `placeholder`, and it is worth far more than the abstraction it
-came from.
+> **Correction, 2026-08-26.** An earlier version of this section divided the
+> 12.92 ms by "64 collectives per token" (32 layers × 2 all-reduces) to claim
+> ~202 µs per all-reduce. **That arithmetic is invalid**: the 12.92 ms is a
+> per-token TPOT gap measured at concurrency 64, where one forward serves many
+> tokens, so it cannot be divided by a per-forward collective count. The figure
+> was quoted in `profiles/accelerators/furiosa_rngd_card.yaml` and has been
+> retracted there too.
+>
+> FuriosaAI's own EDF profiler gives the direct measurement instead: on the real
+> compiled graph a decode step spends **507 µs per decoder layer**, where our
+> synthetic-layer bundle accounts for **295 µs** — so **212 µs per layer** is work
+> the harness does not capture. See
+> `experiments/results/rngd_vendor_profiler_vs_layerwise.md`. That is still an
+> upper bound on the reduction alone, because the compiler's Tokenwise stage also
+> contains whatever else it fused in, but it is measured rather than inferred.
+
+The qualitative reframing survives: RNGD's measured strength is bandwidth per watt
+(5.84 GB/s/W at card level, 3.1× an A40), and at TP=8 a large part of that strength
+goes into per-layer work the compute model alone does not see.
 
 ## What was kept
 
@@ -99,7 +106,7 @@ came from.
   Keeping the 8 PEs as accelerators is what lets ASTRA-Sim price the dominant term.
 - **`furiosa_rngd_card.yaml` is retained but marked not-the-default-path**, with
   this validation in its header. It is the record of why the abstraction was
-  rejected and the derivation of the collective cost.
+  rejected.
 - **"TP=8 is a must" is right, but belongs in the objective, not the abstraction.**
   With collectives correctly charged, TP=8 wins on its merits — 2× the KV and
   ~7× the dense-layer throughput of tp1 — so the optimizer selects it without
@@ -111,15 +118,20 @@ came from.
 
 ## Open, and where it goes next
 
-- **Measure the on-package all-reduce directly** instead of inferring it. That
-  turns the ~202 µs upper bound into a number, and gives `ONPACKAGE` a real
-  bandwidth/latency pair instead of a placeholder. A multi-PE collective
-  microbenchmark through `furiosa.torch` is the obvious route; nothing about it
-  needs a GPU, so it can be done on this machine.
-- **The per-PE model's remaining +25.7 % TPOT error** is then attributable: if the
-  measured collective cost explains it, the bundle is sound and the residual is
-  scheduler and buckets. If it over-explains, ASTRA-Sim's collective model is
-  mis-parameterised for this fabric.
+- **Partly done already.** FuriosaAI's own EDF profiler localises the gap to
+  212 µs per decoder layer on the real compiled graph
+  (`experiments/results/rngd_vendor_profiler_vs_layerwise.md`), which supersedes
+  the inference this section originally attempted. Isolating the reduction *within*
+  that 212 µs still needs a collective microbenchmark, because the compiler's
+  Tokenwise stage bundles the reduction with whatever else it fused in.
+- **The per-PE model's remaining +25.7 % TPOT error** is now partly explained in the
+  other direction than expected: the harness *under*-measures per-layer decode by
+  1.72×, so the +25.7 % must come from ASTRA-Sim's collective model over-charging,
+  the scheduler, or the buckets. Worth separating.
+- **The artifact's `tensor_parallel_size: 8` is two fused 4-PE quads, not eight
+  ranks** (`leader_device` in the EDF trace is `npu0pe0-3`). A bundle built on
+  per-PE `tp8/` shapes therefore models a rank granularity the hardware does not
+  use, which is a more likely source of error than anything discussed above.
 - **None of this licenses an RNGD P/D deployment claim.** FuriosaAI's own llm-d
   documentation states Furiosa-LLM does not support prefill/decode disaggregation,
   so every RNGD P/D result remains simulator-only regardless of how the accelerator

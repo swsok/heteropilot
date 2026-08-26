@@ -49,16 +49,21 @@ backend: furiosa
 # perfect scaling, and the simulator then charges nothing for the 64 all-reduces
 # per token that make it possible.
 #
-# WHAT THE RESIDUAL SAYS ABOUT THE HARDWARE, which is the useful part:
-#   28.4 - 15.5 = 12.92 ms per token step is unaccounted
-#   32 layers x 2 all-reduces = 64 collectives per token
-#   -> about 202 us per collective, on an 8 KiB payload (hidden 4096 x bf16)
-# 8 KiB in 202 us is LATENCY, not bandwidth. So RNGD decode at TP=8 is dominated
-# by intra-card collective latency, not by compute - roughly 45% of the real TPOT.
-# Treat 202 us as an UPPER BOUND: the residual also contains the bucket-quantisation
-# and scheduler effects quantified in experiments/results/, so the collective share
-# is at most this. It is still the first empirical handle on the ONPACKAGE fabric
-# that deviations D3/D16 leave as placeholder.
+# WHAT THE RESIDUAL SAYS ABOUT THE HARDWARE:
+#   28.4 - 15.5 = 12.92 ms per token step is unaccounted, i.e. dropping the TP
+#   group loses roughly 45% of real decode. The direction and magnitude stand.
+#
+# CORRECTED 2026-08-26 by the vendor profiler. The 202 us figure below divided a
+# per-token residual (measured at concurrency 64, where one forward serves many
+# tokens) by a per-forward collective count, which is not valid arithmetic. Do not
+# quote it. FuriosaAI's own EDF profiler gives the direct per-layer number instead:
+# the real compiled graph spends 507 us per decoder layer on a decode step where
+# our synthetic-layer bundle accounts for 295 us, so 212 us per LAYER is work the
+# harness does not capture (reduction plus whatever else the compiler fused into
+# that stage). See experiments/results/rngd_vendor_profiler_vs_layerwise.md.
+#
+# The residual is still the reason this abstraction was rejected; it is only the
+# per-collective attribution that was wrong.
 #
 # CONSEQUENCE: do NOT use this profile as the default path. Keep the 8 PEs as
 # accelerators so ASTRA-Sim prices the collectives, which is the dominant term.
@@ -156,10 +161,11 @@ notes: >
   and what the vendor's artifact ships. The right way to express that is as a
   preference the optimizer resolves on correctly-priced metrics, not by abstracting
   the card into one device - with collectives charged, TP=8 wins on its merits.
-  This profile is retained for its two by-products: the record of why the
-  card-as-device abstraction was rejected, and the first empirical estimate of the
-  ONPACKAGE collective cost (<= 202 us per all-reduce) that D3/D16 leave as
-  placeholder.
+  This profile is retained for the record of why the card-as-device abstraction
+  was rejected. Its by-product estimate of the ONPACKAGE collective cost has been
+  SUPERSEDED: see experiments/results/rngd_vendor_profiler_vs_layerwise.md, which
+  measures 212 us per decoder layer unaccounted on the real compiled graph instead
+  of inferring a per-collective figure from a residual.
   One further real-world limit that no profile can encode: furiosa-llm does not
   support prefill/decode disaggregation at all today (FuriosaAI's own llm-d
   documentation), so every RNGD P/D result is simulator-only until that lands.

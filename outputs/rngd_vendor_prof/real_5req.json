@@ -1,0 +1,70 @@
+{
+  "base_url": "http://127.0.0.1:8010/v1",
+  "model": "/home/swsok/.cache/huggingface/hub/models--furiosa-ai--Llama-3.1-8B-Instruct/snapshots/231d94fbc03cdd66aaeb2411697064a45f008ec7/",
+  "dataset": "outputs/rngd_vendor_prof/probe5.jsonl",
+  "concurrency": 4,
+  "ignore_eos_requested": true,
+  "requests": 5,
+  "ok": 5,
+  "failed": 0,
+  "wall_s": 21.437,
+  "generated_chunks_total": 3364,
+  "requested_output_toks_total": 3364,
+  "per_request": [
+    {
+      "index": 0,
+      "requested_input_toks": 2358,
+      "requested_output_toks": 531,
+      "streamed_chunks": 531,
+      "ttft_ns": 562121605,
+      "tpot_ns": 21890997.150943395,
+      "latency_ns": 12165656219,
+      "chars": 2252,
+      "error": null
+    },
+    {
+      "index": 1,
+      "requested_input_toks": 1034,
+      "requested_output_toks": 769,
+      "streamed_chunks": 769,
+      "ttft_ns": 405423080,
+      "tpot_ns": 21425600.095052082,
+      "latency_ns": 16861071534,
+      "chars": 2971,
+      "error": null
+    },
+    {
+      "index": 2,
+      "requested_input_toks": 1320,
+      "requested_output_toks": 769,
+      "streamed_chunks": 769,
+      "ttft_ns": 585940734,
+      "tpot_ns": 21243900.302083332,
+      "latency_ns": 16902235482,
+      "chars": 3590,
+      "error": null
+    },
+    {
+      "index": 3,
+      "requested_input_toks": 685,
+      "requested_output_toks": 769,
+      "streamed_chunks": 769,
+      "ttft_ns": 574077817,
+      "tpot_ns": 21242873.388020832,
+      "latency_ns": 16889576644,
+      "chars": 4095,
+      "error": null
+    },
+    {
+      "index": 4,
+      "requested_input_toks": 298,
+      "requested_output_toks": 526,
+      "streamed_chunks": 526,
+      "ttft_ns": 70594664,
+      "tpot_ns": 17523327.78095238,
+      "latency_ns": 9271100149,
+      "chars": 2840,
+      "error": null
+    }
+  ]
+}
