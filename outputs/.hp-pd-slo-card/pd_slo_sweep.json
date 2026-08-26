@@ -1,0 +1,182 @@
+{
+  "service": "examples/service_specs/llama31-8b.yaml",
+  "cluster": "experiments/configs/clusters/pd-rngd-gpu-card.yaml",
+  "num_requests": 300,
+  "seed": 42,
+  "islands": [
+    {
+      "id": "furiosa-rngd-card-node_rngd0",
+      "backend": "furiosa",
+      "size": 1
+    },
+    {
+      "id": "furiosa-rngd-card-node_rngd1",
+      "backend": "furiosa",
+      "size": 1
+    },
+    {
+      "id": "cuda-a40-node_a40a",
+      "backend": "cuda",
+      "size": 4
+    },
+    {
+      "id": "cuda-a40-node_a40b",
+      "backend": "cuda",
+      "size": 4
+    }
+  ],
+  "sweep": [
+    {
+      "ttft_slo_max_ms": 64000.0,
+      "feasible": true,
+      "generated": 468,
+      "evaluated": 468,
+      "recommended": {
+        "plan_id": "hp-00323",
+        "arch": "aggregated",
+        "backend_mix": "agg[furiosa:tp1]",
+        "accelerators": 2,
+        "tokens_per_joule": 3.163545981772991,
+        "slo_goodput_rps": 5.551886357249013,
+        "p99_ttft_ms": 480.09208702,
+        "p99_tpot_ms": 48.409747059999994,
+        "average_power_w": 1116.451296296296,
+        "slo_attainment": 1.0
+      },
+      "reason": ""
+    },
+    {
+      "ttft_slo_max_ms": 32000.0,
+      "feasible": true,
+      "generated": 468,
+      "evaluated": 468,
+      "recommended": {
+        "plan_id": "hp-00323",
+        "arch": "aggregated",
+        "backend_mix": "agg[furiosa:tp1]",
+        "accelerators": 2,
+        "tokens_per_joule": 3.163545981772991,
+        "slo_goodput_rps": 5.551886357249013,
+        "p99_ttft_ms": 480.09208702,
+        "p99_tpot_ms": 48.409747059999994,
+        "average_power_w": 1116.451296296296,
+        "slo_attainment": 1.0
+      },
+      "reason": ""
+    },
+    {
+      "ttft_slo_max_ms": 16000.0,
+      "feasible": true,
+      "generated": 468,
+      "evaluated": 468,
+      "recommended": {
+        "plan_id": "hp-00323",
+        "arch": "aggregated",
+        "backend_mix": "agg[furiosa:tp1]",
+        "accelerators": 2,
+        "tokens_per_joule": 3.163545981772991,
+        "slo_goodput_rps": 5.551886357249013,
+        "p99_ttft_ms": 480.09208702,
+        "p99_tpot_ms": 48.409747059999994,
+        "average_power_w": 1116.451296296296,
+        "slo_attainment": 1.0
+      },
+      "reason": ""
+    },
+    {
+      "ttft_slo_max_ms": 8000.0,
+      "feasible": true,
+      "generated": 468,
+      "evaluated": 468,
+      "recommended": {
+        "plan_id": "hp-00323",
+        "arch": "aggregated",
+        "backend_mix": "agg[furiosa:tp1]",
+        "accelerators": 2,
+        "tokens_per_joule": 3.163545981772991,
+        "slo_goodput_rps": 5.551886357249013,
+        "p99_ttft_ms": 480.09208702,
+        "p99_tpot_ms": 48.409747059999994,
+        "average_power_w": 1116.451296296296,
+        "slo_attainment": 1.0
+      },
+      "reason": ""
+    },
+    {
+      "ttft_slo_max_ms": 4000.0,
+      "feasible": true,
+      "generated": 468,
+      "evaluated": 468,
+      "recommended": {
+        "plan_id": "hp-00323",
+        "arch": "aggregated",
+        "backend_mix": "agg[furiosa:tp1]",
+        "accelerators": 2,
+        "tokens_per_joule": 3.163545981772991,
+        "slo_goodput_rps": 5.551886357249013,
+        "p99_ttft_ms": 480.09208702,
+        "p99_tpot_ms": 48.409747059999994,
+        "average_power_w": 1116.451296296296,
+        "slo_attainment": 1.0
+      },
+      "reason": ""
+    },
+    {
+      "ttft_slo_max_ms": 2000.0,
+      "feasible": true,
+      "generated": 468,
+      "evaluated": 468,
+      "recommended": {
+        "plan_id": "hp-00323",
+        "arch": "aggregated",
+        "backend_mix": "agg[furiosa:tp1]",
+        "accelerators": 2,
+        "tokens_per_joule": 3.163545981772991,
+        "slo_goodput_rps": 5.551886357249013,
+        "p99_ttft_ms": 480.09208702,
+        "p99_tpot_ms": 48.409747059999994,
+        "average_power_w": 1116.451296296296,
+        "slo_attainment": 1.0
+      },
+      "reason": ""
+    },
+    {
+      "ttft_slo_max_ms": 1000.0,
+      "feasible": true,
+      "generated": 468,
+      "evaluated": 468,
+      "recommended": {
+        "plan_id": "hp-00323",
+        "arch": "aggregated",
+        "backend_mix": "agg[furiosa:tp1]",
+        "accelerators": 2,
+        "tokens_per_joule": 3.163545981772991,
+        "slo_goodput_rps": 5.551886357249013,
+        "p99_ttft_ms": 480.09208702,
+        "p99_tpot_ms": 48.409747059999994,
+        "average_power_w": 1116.451296296296,
+        "slo_attainment": 1.0
+      },
+      "reason": ""
+    },
+    {
+      "ttft_slo_max_ms": 500.0,
+      "feasible": true,
+      "generated": 468,
+      "evaluated": 468,
+      "recommended": {
+        "plan_id": "hp-00323",
+        "arch": "aggregated",
+        "backend_mix": "agg[furiosa:tp1]",
+        "accelerators": 2,
+        "tokens_per_joule": 3.163545981772991,
+        "slo_goodput_rps": 5.551886357249013,
+        "p99_ttft_ms": 480.09208702,
+        "p99_tpot_ms": 48.409747059999994,
+        "average_power_w": 1116.451296296296,
+        "slo_attainment": 1.0
+      },
+      "reason": ""
+    }
+  ]
+}

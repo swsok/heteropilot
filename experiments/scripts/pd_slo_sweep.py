@@ -77,10 +77,25 @@ def main() -> int:
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     parser.add_argument("--timeout", type=float, default=1800.0)
     parser.add_argument("--workers", type=int, default=None)
-    parser.add_argument("--work-dir", type=Path, default=Path("outputs/.hp-pd-slo/work"))
-    parser.add_argument("--cache-dir", type=Path, default=Path("outputs/.hp-pd-slo/cache"))
+    # work-dir and cache-dir DERIVE from --output-dir unless given explicitly.
+    # They used to default to literal outputs/.hp-pd-slo/{work,cache}, so passing a
+    # different --output-dir moved only the summary JSON and left the simulations
+    # and the envelope cache in the first run's directories. That was not a
+    # correctness bug - the cache key includes the sim hardware name, so a
+    # RNGD-CARD candidate cannot collide with an RNGD one, and the A40 candidates
+    # SHOULD share entries because both fixtures declare identical A40 islands -
+    # but it made a second sweep's per-candidate results unfindable, which is where
+    # the interesting rows live.
     parser.add_argument("--output-dir", type=Path, default=Path("outputs/.hp-pd-slo"))
+    parser.add_argument("--work-dir", type=Path, default=None,
+                        help="default: <output-dir>/work")
+    parser.add_argument("--cache-dir", type=Path, default=None,
+                        help="default: <output-dir>/cache. Point two sweeps at one "
+                             "cache deliberately to share candidates they have in "
+                             "common; the key guards against false hits.")
     args = parser.parse_args()
+    args.work_dir = args.work_dir or args.output_dir / "work"
+    args.cache_dir = args.cache_dir or args.output_dir / "cache"
 
     ttft_points = sorted((float(v) for v in args.ttft_ms.split(",") if v), reverse=True)
     cluster = load_cluster_spec(args.cluster)

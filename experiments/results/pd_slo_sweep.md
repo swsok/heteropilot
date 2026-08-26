@@ -34,7 +34,10 @@ The SLO is swept because the answer turns out to depend entirely on it.*
 
 **So P/D pays, and heterogeneity does not.** But the second half of that sentence
 needs three caveats, and they are large enough that it should not be quoted
-without them.
+without them. The card-fixture re-run at the end of this page removes the first
+two and narrows the answer: with a profile that can actually simulate RNGD decode,
+cross-vendor P/D reaches 88 % of the winner's energy efficiency instead of 45 %,
+and still does not win — on SLO attainment, not on efficiency.
 
 ## Why "heterogeneous P/D does not pay" is NOT a supported conclusion
 
@@ -106,7 +109,76 @@ of this fixture that a heterogeneous P/D win would depend on is the one measured
 with the least accurate profile, and the error is pessimistic.
 
 A re-run on `experiments/configs/clusters/pd-rngd-gpu-card.yaml` with the same 8
-SLO points is the direct test.
+SLO points is the direct test. **It has been run — see below.**
+
+## The card-fixture re-run: the crash is gone, the ranking flips, and the flip is an artefact
+
+Same 8 SLO points, same trace, `pd-rngd-gpu-card.yaml`, 468 candidates generated
+and 468 evaluated at each point. Raw result:
+
+| TTFT p99 SLO | recommended | arch | acc | tok/J | goodput | p99 TTFT | avg W |
+| ---: | --- | --- | ---: | ---: | ---: | ---: | ---: |
+| all 8 points, 64 s → 0.5 s | `agg[furiosa:tp1]` (2 cards) | aggregated | 2 | 3.164 | 5.55 | **480 ms** | 1116 |
+
+**What genuinely improved — the blocker is gone.** The direction that crashed all
+six times under the per-PE profile now simulates:
+
+| | tok/J | goodput | p99 TTFT | p99 TPOT | SLO att. |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| **A40 tp1 prefill → RNGD-card tp1 decode** | 2.779 | 3.04 | 5817 ms | 60.6 | 0.74 |
+| best pure-RNGD (2-card aggregated) | 3.164 | 5.55 | 480 | 48.4 | 1.00 |
+| `agg[cuda:tp4]` (per-PE sweep, same A40 islands) | 2.963 | 5.92 | 2972 | 49.4 | 1.00 |
+
+Cross-vendor P/D is still not recommended, but it is now *close* — 2.779 against
+the winner's 3.164 tok/J (88 %), where under the per-PE profile it was 2.234
+against 4.956 (45 %) — and, crucially, it **exists as an evaluated candidate**
+rather than a crash. Its SLO attainment of 0.74 is what keeps it out: it satisfies
+both SLOs for only three quarters of requests.
+
+**Why the 480 ms winner must not be quoted.** That row says two RNGD cards meet a
+500 ms p99 TTFT. The real hardware does 1404 ms at concurrency ~20 and 1894 ms at
+32, for the same prompts. This is exactly the −71.3 % TTFT error the card profile
+carries and that its header warns about. Applying the fitted calibration
+(`profiles/calibration/rngd_card_edf.yaml`, `real = 2.089·sim + 646 ms`):
+
+| pure-RNGD candidate | sim p99 TTFT | **calibrated** | sim p99 TPOT | calibrated |
+| --- | ---: | ---: | ---: | ---: |
+| 2-card aggregated, s256-t8192 | 480 ms | **1649 ms** | 48.4 | 45.4 |
+| 2-card aggregated, s256-t2048 | 673 | **2051** | 49.6 | 46.3 |
+| 2-card aggregated, s128-t8192 | 4589 | 10230 | 47.6 | 44.7 |
+| 1 card, s128-t8192 | 36849 | 77606 | 55.1 | 50.8 |
+
+So calibrated, the winner clears roughly a **2 s** TTFT SLO, not 500 ms, and
+**every row in the card sweep at SLO ≤ 1 s is an artefact of the profile's prefill
+error.** The A40 arm needs no such correction (~2 % sim-vs-real), so where the two
+fixtures disagree about TTFT, believe the A40 rows.
+
+Calibrated, the honest side-by-side at the tight end:
+
+| plan | p99 TTFT | tok/J | goodput | notes |
+| --- | ---: | ---: | ---: | --- |
+| A40 tp4 P/D split | **372 ms** | 2.206 | 5.78 | A40 arm, ~2 % accurate |
+| RNGD 2-card aggregated | ~1649 ms | **3.164** | 5.55 | calibrated from 480 ms |
+| A40 tp4 aggregated | 2972 ms | 2.963 | 5.92 | A40 arm |
+| A40-P → RNGD-D cross-vendor | 5817 ms* | 2.779 | 3.04 | *mixed-arm, calibration not applicable |
+
+The three-regime story from the per-PE sweep survives, with the regimes shifted:
+RNGD wins on energy where a ~2 s TTFT is acceptable, A40 P/D owns the sub-second
+end, and the cross-vendor combination sits between them without ever winning.
+
+**One caveat on the cross-vendor row:** its TTFT cannot be calibrated. The fitted
+model is for pure-RNGD placements; a plan whose prefill runs on A40 and decode on
+RNGD mixes a ~2 %-accurate arm with a −71 %-accurate one, and there is no fit for
+that composition. Its 5817 ms is therefore a lower bound of unknown tightness.
+
+**A bug found while reading these results**, recorded because it nearly hid them:
+`pd_slo_sweep.py`'s `--work-dir` and `--cache-dir` defaulted to literal
+`outputs/.hp-pd-slo/{work,cache}` instead of deriving from `--output-dir`, so the
+card sweep wrote its summary to a new directory and its simulations into the first
+sweep's. Not a correctness problem — the envelope key includes the sim hardware
+name, so `RNGD-CARD` cannot collide with `RNGD`, and the A40 candidates *should*
+share entries because both fixtures declare identical A40 islands — but the
+per-candidate rows above appeared to be missing entirely. Now derived.
 
 ## Provenance and what the numbers do not carry
 

@@ -58,17 +58,32 @@ nodes:
     accelerators:
       - {id: card0, type: NPU, vendor: FuriosaAI, model: RNGD-CARD, backend: furiosa, memory_gb: 47.5, state: FREE, profile: profiles/accelerators/furiosa_rngd_card.yaml}
     nics: [{id: nic0, type: ethernet, speed_gbps: 100}]
-    # NO base_node_power here, deliberately. The card profile's power block already
-    # carries CARD TOTALS (idle 39.35 / active 290.93 W, measured by the 0..8
-    # loaded-PE sweep), so the 38.01 W board cost the per-PE fixture had to
-    # hand-carry is already inside them. Adding it again would double-count.
-    power: {source: measured}
+    # base_node_power here is the HOST baseline only, and it is a PLACEHOLDER: it is
+    # the planner's 60 W default (planner/inventory.py), not a measurement of this
+    # machine. Stated explicitly rather than omitted, because omitting it silently
+    # substituted the same 60 W while the block claimed source: measured.
+    #
+    # It must NOT carry the card's 38.01 W board cost the way the per-PE sibling
+    # fixture does. There, the profile's power block is PER PE with idle_power 0, so
+    # the board cost had to be hand-carried into base_node_power. Here the card
+    # profile's power block is CARD TOTALS (idle 39.35 / standby 265 / active
+    # 290.93 W, measured by the 0..8 loaded-PE sweep) and the board cost is already
+    # inside idle_power. Adding it again would double-count it.
+    #
+    # For scale: the simulator reports ~558 W for this node against the card's
+    # measured 290.93 W active, because it prices the whole NODE - accelerator plus
+    # base 60, CPU (10 W idle / 200 W active at util 0.15), DRAM (2 W/DIMM idle plus
+    # 6 pJ/bit), link, NIC and storage. That is the right denominator for
+    # tokens/joule as work order §3 defines it, and the A40 nodes are priced the
+    # same way, so cross-fixture tok/J comparisons are apples-to-apples. Just do not
+    # read 558 W as a card power figure.
+    power: {base_node_power: 60.0, source: placeholder}
 
   - id: node_rngd1
     accelerators:
       - {id: card0, type: NPU, vendor: FuriosaAI, model: RNGD-CARD, backend: furiosa, memory_gb: 47.5, state: FREE, profile: profiles/accelerators/furiosa_rngd_card.yaml}
     nics: [{id: nic0, type: ethernet, speed_gbps: 100}]
-    power: {source: measured}
+    power: {base_node_power: 60.0, source: placeholder}   # host baseline, as node_rngd0
 
   - id: node_a40a
     # NOT PRESENT ON THIS HOST; measured artifacts of the A40x8 server.
