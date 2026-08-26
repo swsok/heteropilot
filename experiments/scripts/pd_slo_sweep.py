@@ -47,20 +47,22 @@ DEFAULT_SEED = 42
 DEFAULT_NUM_REQUESTS = 300
 
 
-def backend_mix(plan) -> str:
-    """Label a plan by the backends its prefill and decode roles land on."""
+def backend_mix(candidate, islands_by_id) -> str:
+    """Label a candidate by the backends its prefill and decode roles land on."""
     roles: dict[str, set[str]] = {}
-    for assignment in plan.islands:
+    for assignment in candidate.assignments:
         role = getattr(assignment.role, "value", str(assignment.role))
-        roles.setdefault(role, set()).add(assignment.backend)
+        island = islands_by_id.get(assignment.island_id)
+        backend = island.backend if island is not None else "?"
+        roles.setdefault(role, set()).add(f"{backend}:tp{assignment.tp_size}")
 
     def one(role: str) -> str:
-        backends = roles.get(role) or set()
-        return "+".join(sorted(backends)) if backends else "-"
+        entries = roles.get(role) or set()
+        return "+".join(sorted(entries)) if entries else "-"
 
     if "prefill" in roles or "decode" in roles:
-        return f"P:{one('prefill')} D:{one('decode')}"
-    return f"agg:{'+'.join(sorted(b for s in roles.values() for b in s))}"
+        return f"P[{one('prefill')}] D[{one('decode')}]"
+    return "agg[" + "+".join(sorted(e for s in roles.values() for e in s)) + "]"
 
 
 def main() -> int:
@@ -97,6 +99,7 @@ def main() -> int:
     # The cache key needs the reduction bandwidth the compiler will use, so the
     # sweep's cached entries match what `plan` would write.
     link_bw_gbps = TopologyGraph(cluster).reduce_for_simulator(islands).link_bw_gbps
+    islands_by_id = {i.id: i for i in islands}
     print(f"{len(islands)} island(s): " + ", ".join(
         f"{i.id}({i.backend},{i.size})" for i in islands))
     print(f"sweeping slo.ttft.max_ms (p{base_spec.slo.ttft.percentile}) over {ttft_points} ms\n")
@@ -129,17 +132,19 @@ def main() -> int:
         best = output.recommended
         if best is not None:
             plan = best.plan
+            cand = plan.candidate
             row["recommended"] = {
                 "plan_id": plan.plan_id,
-                "arch": getattr(plan.arch, "value", str(plan.arch)),
-                "backend_mix": backend_mix(plan),
-                "accelerators": sum(len(a.accelerator_ids) for a in plan.islands),
-                "tokens_per_joule": best.metrics.tokens_per_joule,
-                "slo_goodput_rps": best.metrics.slo_goodput_rps,
-                "p99_ttft_ms": best.metrics.p99_ttft_ms,
-                "p99_tpot_ms": best.metrics.p99_tpot_ms,
-                "avg_power_w": best.metrics.avg_power_w,
-                "slo_attainment": best.metrics.slo_attainment,
+                "arch": getattr(cand.serving_arch, "value", str(cand.serving_arch)),
+                "backend_mix": backend_mix(cand, islands_by_id),
+                "accelerators": sum(
+                    a.tp_size * a.pp_size * a.dp_replicas for a in cand.assignments),
+                "tokens_per_joule": plan.predicted.tokens_per_joule,
+                "slo_goodput_rps": plan.predicted.slo_goodput_rps,
+                "p99_ttft_ms": plan.predicted.p99_ttft_ms,
+                "p99_tpot_ms": plan.predicted.p99_tpot_ms,
+                "average_power_w": plan.predicted.average_power_w,
+                "slo_attainment": plan.predicted.slo_attainment,
             }
             r = row["recommended"]
             print(f"  TTFT <= {ttft:8.0f} ms : {r['backend_mix']:<26} "

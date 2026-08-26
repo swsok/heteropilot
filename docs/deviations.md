@@ -705,3 +705,32 @@ unrepresentable. Lifting it means addressing D14 itself — teaching the compile
 to emit non-uniform instance sizes — which is a simulator-side change and out of
 scope here. Any claim about cross-vendor P/D must state which TP degree the two
 backends shared, and whether one existed at all.
+
+### (c) The constraint is ours, not the world's — verified 2026-08-26
+
+`tp_p == tp_d` is an artifact of `_compute_network_dims`, not a property of P/D
+serving. Asymmetric TP per phase is a **headline feature** of real disaggregated
+systems, and the direction they recommend is the one we cannot express:
+
+- **DistServe** makes independent per-phase parallelism a core contribution.
+- **AWS Neuron** Disaggregated Inference documents `TP=4 for prefill attention
+  and TP=1 for decode` explicitly.
+- **NVIDIA Dynamo** supports differing prefill/decode TP first-class, transposing
+  KV blocks into the receiver's layout between NIXL read and write, and
+  recommends *"a larger TP for the memory-bound decoding phase while a smaller TP
+  for the computation-bound prefill phase"*.
+- **vLLM** `NixlConnector` supports heterogeneous TP (each decode worker computes
+  which remote TP ranks to read, no extra copies); its `MooncakeConnector` does
+  not, so the restriction is per-implementation, not fundamental.
+
+The consequence for our results is concrete. Dynamo's recommendation — big TP on
+decode — is exactly what RNGD needs: tp8 holds 246,079 KV tokens against 61,775
+at tp4. So `GPU tp4 prefill + RNGD tp8 decode` is both the industry-recommended
+shape and the one that uses RNGD's measured bandwidth advantage, and D14 forbids
+it. **Any "heterogeneous P/D does not pay" statement from this repo is therefore
+scoped to the uniform-TP configurations D14 permits, and must say so.**
+
+One further real-world limit, from FuriosaAI's own llm-d documentation:
+**Furiosa-LLM does not support prefill/decode disaggregation at all** today. So
+every RNGD P/D number here is simulator-only until that ships, independently of
+D14.

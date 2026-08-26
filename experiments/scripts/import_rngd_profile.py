@@ -63,10 +63,37 @@ NOTES = (
 )
 
 
+CARD_LEVEL_NOTE = (
+    " CARD-LEVEL MAPPING: this bundle's tp1/ IS the measured tp8/ of the per-PE "
+    "bundle, because one accelerator here is one whole RNGD CARD running at the "
+    "vendor's default -tp 8. The 8 PEs each execute 1/8 of every layer in "
+    "parallel, so the card's per-layer LATENCY equals one PE's sharded latency - "
+    "which is exactly what tp8/ measured. Why model it this way: TP=8 is the only "
+    "configuration that both uses all 8 PEs and keeps the weights sharded once "
+    "(1.87 GiB/PE), so it holds 246,079 KV tokens against 123,550 for tp4xdp2 on "
+    "the same silicon, and tp2xdp4 does not fit at all. It is also the only "
+    "deployable configuration: furiosa-llm build -tp defaults to 8 and the "
+    "vendor's prebuilt artifact is tensor_parallel_size 8. "
+    "THE COST, stated plainly: a tp1 instance has no TP group, so the simulator "
+    "adds NO collective for the intra-card all-reduce after o_proj and down_proj. "
+    "That communication is real and is NOT in these numbers; it is absorbed into "
+    "whatever gap remains against the real furiosa-llm benchmark, and that gap is "
+    "the honest bound on it. "
+    "INPUT QUALITY: tp8 is the sparsest measured grid - 81/13/27 rows against "
+    "107/18/35 at tp4 - because sharding the dims by 8 (intermediate 1792, 4 "
+    "heads, 1 KV head) makes shapes small enough that the compiler stops using "
+    "the tensor unit. Every layer still holds 8-10 of 12 token points, so "
+    "interpolation works, but this bundle is coarser than the per-PE tp4 one."
+)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--src", type=Path, default=Path("outputs/rngd_profile"))
     parser.add_argument("--hardware", default="RNGD")
+    parser.add_argument("--card-level", action="store_true",
+                        help="the bundle models a whole card as ONE accelerator at tp1; "
+                             "adds the mapping and its cost to the notes")
     parser.add_argument("--model", default="meta-llama/Llama-3.1-8B")
     parser.add_argument("--variant", default="bf16")
     parser.add_argument("--tp", type=int, action="append", default=None)
@@ -127,7 +154,7 @@ def main() -> None:
         device=device or "FuriosaAI RNGD (rngd PE)",
         measurement_method=MEASUREMENT_METHOD,
         measurement_iterations=iterations,
-        notes=NOTES,
+        notes=NOTES + (CARD_LEVEL_NOTE if args.card_level else ""),
     )
     dest = importer.import_bundle(
         src=args.src,

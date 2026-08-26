@@ -1,0 +1,165 @@
+profile_id: furiosa-rngd-card
+vendor: FuriosaAI
+model: RNGD-CARD
+backend: furiosa
+
+# ONE ACCELERATOR HERE IS ONE WHOLE RNGD CARD, RUNNING AT TP=8 INTERNALLY.
+#
+# The sibling profile (furiosa_rngd.yaml) models one PE as one accelerator, which
+# mirrors `furiosa-llm build -tp` counting PEs. This one deliberately raises the
+# abstraction, because TP=8 is not one option among several - it is the only
+# configuration worth deploying, and the only one that exists as a vendor artifact:
+#
+#   same 8 PEs, Llama-3.1-8B bf16      replicas   total KV tokens
+#     TP=8                                   1        246,079
+#     TP=4 x DP=2                             2        123,550
+#     TP=2 x DP=4                             -   does not fit (-1.86 GiB/PE)
+#
+#   TP=8 shards the weights ONCE across the 8 PEs (1.87 GiB each) instead of
+#   replicating them per group (3.74 GiB each at TP=4), so it holds twice the KV
+#   on identical silicon. Using fewer than 8 PEs per replica does not just idle
+#   compute - it throws away half the memory that makes decode possible.
+#
+#   `furiosa-llm build -tp` defaults to 8, and the vendor's prebuilt
+#   Llama-3.1-8B-Instruct artifact is tensor_parallel_size 8. TP=8 on one card is
+#   therefore the only RNGD configuration that has ever actually been served here.
+#
+# WHAT THIS BUYS, beyond matching reality: a 47.5 GB device has KV headroom
+# comparable to an A40, which removes the decode-KV exhaustion that crashed the
+# P/D simulations under the per-PE model; and 4 cards give TP candidates {1,2,4},
+# which overlap an A40 island's {1,2,4}, so cross-vendor P/D becomes expressible
+# at TP=1 without the PCIe-bridging fixture hack that deviations D16 describes.
+#
+# WHAT IT COSTS - AND THIS PROFILE FAILED ITS VALIDATION BECAUSE OF IT.
+#
+# A tp1 instance has no TP group, so the simulator adds NO collective for the
+# intra-card all-reduce after o_proj and down_proj. Measured against the real
+# furiosa-llm TP=8 run on this hardware, over the same 20 sharegpt requests:
+#
+#              TTFT mean            TPOT mean
+#   real        1404.1 ms            28.4 ms
+#   per-PE       946.9  (-32.6%)     35.7  (+25.7%)   <- 8 accelerators, tp8
+#   THIS         310.0  (-77.9%)     15.5  (-45.5%)   <- 1 accelerator, tp1
+#
+# The truth sits between the two models, and the per-PE one is both closer and
+# conservative. This profile under-predicts decode by a factor of two, because
+# dropping the TP group hands the model a free 8x parallel speedup with no
+# communication: the measured tp1 -> tp8 per-layer ratio is 6.94x summed over a
+# decode step (qkv 7.29, o_proj 8.04, gate_up 7.78, down_proj 6.42), i.e. almost
+# perfect scaling, and the simulator then charges nothing for the 64 all-reduces
+# per token that make it possible.
+#
+# WHAT THE RESIDUAL SAYS ABOUT THE HARDWARE, which is the useful part:
+#   28.4 - 15.5 = 12.92 ms per token step is unaccounted
+#   32 layers x 2 all-reduces = 64 collectives per token
+#   -> about 202 us per collective, on an 8 KiB payload (hidden 4096 x bf16)
+# 8 KiB in 202 us is LATENCY, not bandwidth. So RNGD decode at TP=8 is dominated
+# by intra-card collective latency, not by compute - roughly 45% of the real TPOT.
+# Treat 202 us as an UPPER BOUND: the residual also contains the bucket-quantisation
+# and scheduler effects quantified in experiments/results/, so the collective share
+# is at most this. It is still the first empirical handle on the ONPACKAGE fabric
+# that deviations D3/D16 leave as placeholder.
+#
+# CONSEQUENCE: do NOT use this profile as the default path. Keep the 8 PEs as
+# accelerators so ASTRA-Sim prices the collectives, which is the dominant term.
+# This profile is retained as (a) the record of why that abstraction was rejected
+# and (b) the derivation of the intra-card collective cost.
+
+# memory_gb: measured - furiosa-smi reports 47.50 GiB per card. Unlike the per-PE
+#   profile's 6.25 GB (a single-allocation bisect on one PE), this is the card's
+#   HBM as the vendor tool reports it, which is the right figure when the whole
+#   card is one accelerator.
+memory_gb: 47.5
+
+# memory_bandwidth_gbps: measured (achieved, card-level). One PE sustains ~219
+#   GB/s of HBM reads, and 8 PEs reading concurrently sustain 218.8 GB/s EACH -
+#   104% scaling efficiency, i.e. no degradation at all (measured: per-PE 537 us
+#   for a 117 MB weight with all 8 busy, against 557 us for one PE alone). So the
+#   card sustains ~1750 GB/s of achieved reads. This is the single most important
+#   measured fact about the part: its decode advantage is real and scales.
+memory_bandwidth_gbps: 1750
+
+sim_hardware: RNGD-CARD
+
+#   memory_gb             : measured - furiosa-smi
+#   memory_bandwidth_gbps : measured (achieved) - 8-PE concurrent read scaling
+#   perf_data             : measured - the per-PE tp8 grid, remapped to tp1; see below
+#   power                 : measured - 0..8 loaded-PE board sweep, card totals
+#   supported_models      : layer-level + one end-to-end serving run, see below
+source: measured
+
+perf_data: profiler/perf/RNGD-CARD/
+
+# The bundle's tp1/ IS the measured tp8/ of profiler/perf/RNGD/. The 8 PEs each
+# execute 1/8 of every layer in parallel, so the card's per-layer LATENCY equals
+# one PE's sharded latency - which is what tp8/ measured. Full derivation and
+# limits in that bundle's meta.yaml.
+#
+# INPUT QUALITY, stated because it is the weakest link: tp8 is the sparsest grid
+# measured - 81/13/27 rows against 107/18/35 at tp4 - because sharding the dims by
+# 8 (intermediate 1792, 4 heads, 1 KV head) leaves shapes small enough that the
+# compiler stops using the tensor unit (40 CPU fallbacks against 1 at tp4). Every
+# layer keeps 8-10 of 12 token points, so interpolation works, but this bundle is
+# coarser than the per-PE tp4 one.
+#
+# VALIDATION: DONE, AND IT FAILED. See the block at the top of this file for the
+# numbers and experiments/results/rngd_card_vs_pe_model.md for the full write-up.
+# The comparison is against the real furiosa-llm TP=8 run recorded in
+# experiments/results/rngd_sim_vs_real_summary.md.
+
+# Card totals, measured 2026-08-25 on npu1 by rngd_device_facts.py --pe-sweep.
+# With the card as one accelerator these go in verbatim - no per-PE split, and no
+# base_node_power bookkeeping. That is a second reason to prefer this abstraction:
+# under the per-PE model the 38.01 W board cost had to be hand-carried into
+# ClusterSpecV2, and forgetting it under-counted node power by exactly that much.
+#   idle_power    39.35  measured - 0 PEs loaded, dead steady (n=31, 39-40 W)
+#   active_power 290.93  measured - all 8 PEs loaded (n=46, max 293 W)
+#   standby_power 265.0  measured - the D7 2 s post-load window
+# The card SATURATES near 291 W: the 8th PE adds only +17.4 W where PEs 1-4 added
+# ~31 W each, so this active figure is a plateau, not an extrapolation.
+# furiosa-smi reports whole watts, so all figures are quantised to 1 W.
+power:
+  idle_power: 39.35
+  standby_power: 265.0
+  active_power: 290.93
+  standby_duration: 2000000000   # ns (2 s), the D7 window
+  source: measured
+
+# Stronger evidence than the per-PE profile carries: besides every canonical
+# Llama-3.x layer compiling and executing on real silicon, this exact model has
+# been BUILT AND SERVED end to end on this card - the vendor's prebuilt
+# furiosa-ai/Llama-3.1-8B-Instruct artifact, served with `furiosa-llm serve`,
+# 20/20 requests, 13,787 generated tokens against 13,787 requested. The base and
+# Instruct checkpoints share architecture and dimensions, so the perf bundle
+# applies to both; the pattern below is the base model the bundle is keyed on.
+supported_models:
+  - pattern: "meta-llama/Llama-3.1-8B"
+    dtypes: [bfloat16]
+
+# ONE. TP across cards is NOT verified: /dev/rngd exposes fusion nodes for 2 and 4
+# PEs but none for 8, MeshKind is Single, and `furiosa-llm build -tp 16` (two
+# cards' worth of PEs) has never been built or served here. Multi-card scaling is
+# therefore DP replicas only, which is also what the hardware supports today.
+# Raise this only after a multi-card artifact is actually served.
+max_tp_size: 1
+
+notes: >
+  NOT THE DEFAULT PATH. Validation against the real furiosa-llm TP=8 run showed
+  this abstraction under-predicts decode by 45% because it silently drops the
+  intra-card all-reduce, which is the dominant term (about 12.9 ms of a 28.4 ms
+  TPOT). Use profiles/accelerators/furiosa_rngd.yaml, which keeps the 8 PEs as
+  accelerators so ASTRA-Sim prices those collectives.
+  The reasoning that motivated this profile still stands and is worth keeping:
+  TP=8 IS the configuration to deploy - it shards the weights once (1.87 GiB/PE)
+  and so holds 246,079 KV tokens against 123,550 for tp4xdp2 on the same 8 PEs,
+  tp2xdp4 does not fit at all, and it is what `furiosa-llm build -tp` defaults to
+  and what the vendor's artifact ships. The right way to express that is as a
+  preference the optimizer resolves on correctly-priced metrics, not by abstracting
+  the card into one device - with collectives charged, TP=8 wins on its merits.
+  This profile is retained for its two by-products: the record of why the
+  card-as-device abstraction was rejected, and the first empirical estimate of the
+  ONPACKAGE collective cost (<= 202 us per all-reduce) that D3/D16 leave as
+  placeholder.
+  One further real-world limit that no profile can encode: furiosa-llm does not
+  support prefill/decode disaggregation at all today (FuriosaAI's own llm-d
+  documentation), so every RNGD P/D result is simulator-only until that lands.
