@@ -1,0 +1,12 @@
+{
+  "segments": 9,
+  "forwards": 16473,
+  "body_sum_us": 16029.0,
+  "tail_us": 1543.7,
+  "union_factor": 0.87,
+  "per_layer_us": 435.78,
+  "attn_1seq_us": 46.91,
+  "dense_per_layer_us": 388.88,
+  "harness_sum_us": 306.6,
+  "head_us": 1343.0
+}

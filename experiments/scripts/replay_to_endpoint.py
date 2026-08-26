@@ -56,7 +56,7 @@ async def _one(client: AsyncOpenAI, model: str, row: dict, cap: int,
             usage = r.usage
             return {"ok": True, "latency_s": time.monotonic() - t0,
                     "completion_tokens": getattr(usage, "completion_tokens", 0) if usage else 0}
-        except Exception as exc:  # noqa: BLE001 - report, don't abort the run
+        except Exception as exc:
             return {"ok": False, "latency_s": time.monotonic() - t0, "error": str(exc)[:200]}
 
 

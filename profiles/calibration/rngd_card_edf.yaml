@@ -1,0 +1,30 @@
+hardware:
+  RNGD-CARD:
+    hardware: RNGD-CARD
+    ttft:
+      alpha: 2.0885353522047376
+      beta: 645.9805575831251
+      sample_count: 5
+      source: measured
+    tpot:
+      alpha: 0.8098125689084903
+      beta: 6.1545755237045014
+      sample_count: 5
+      source: measured
+    errors:
+      sharegpt-llama31-8b-20:
+        workload_bucket: sharegpt-llama31-8b-20
+        ttft:
+          mean_error: 2.339893781106174
+          p95_abs_error: 3.7330765446514973
+          worst_error: 4.045315904139434
+          sample_count: 5
+        tpot:
+          mean_error: 0.024598510964985516
+          p95_abs_error: 0.03467796787526812
+          worst_error: 0.036101083032490974
+          sample_count: 5
+provenance:
+  fitted_from:
+    RNGD-CARD:
+    - outputs/rngd_bench/rngd-card-edf_summary.txt

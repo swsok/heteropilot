@@ -1,5 +1,17 @@
 # RNGD: card-as-device vs PE-as-device, and what the gap measures
 
+> **SUPERSEDED IN PART, 2026-08-26.** This page rejected card-as-device on a
+> −45.5 % TPOT error. That verdict was correct **for the bundle it tested** and
+> wrong about the abstraction. Rebuilding the card bundle from FuriosaAI's own
+> EDF profiler brings TPOT to **−3.1 %** — see
+> `experiments/results/rngd_edf_bundle_notes.md`. The reason is exactly the
+> mechanism this page identified: a `tp1` instance is charged no collective, and
+> an EDF stage time already contains the intra-card reduction, so the
+> measurement pays for the communication once instead of never. **The
+> abstraction was never the problem; the input was.** Everything below stands as
+> the diagnosis that made the fix findable — read it that way, not as a live
+> recommendation.
+
 *Measured 2026-08-26. Settles a modelling question with the real furiosa-llm
 benchmark instead of an argument, and the answer is not the one the reasoning
 predicted.*
@@ -102,6 +114,14 @@ goes into per-layer work the compute model alone does not see.
 
 ## What was kept
 
+> **Revised 2026-08-26.** With the EDF-derived bundle, *neither* profile
+> dominates: card-as-device is 8× better on decode (fitted TPOT error 0.025
+> against 0.204) and much worse on TTFT (−71.3 % against −32.6 %), and the TTFT
+> residual turns out to be queuing, not per-layer cost. Use card-as-device for
+> decode / throughput / energy and cross-vendor P/D; use PE-as-device where TTFT
+> feasibility decides the outcome. `profiles/accelerators/furiosa_rngd_card.yaml`
+> carries the full selection rule.
+
 - **PE-as-device stays the default** (`profiles/accelerators/furiosa_rngd.yaml`).
   Keeping the 8 PEs as accelerators is what lets ASTRA-Sim price the dominant term.
 - **`furiosa_rngd_card.yaml` is retained but marked not-the-default-path**, with
@@ -117,6 +137,13 @@ goes into per-layer work the compute model alone does not see.
   configuration, and only the optimizer knows which model it is looking at.
 
 ## Open, and where it goes next
+
+> **Mostly closed, 2026-08-26.** The bundle was rebuilt from EDF traces
+> (`rngd_edf_bundle_notes.md`), which settles the first and third bullets below
+> and reframes the second. What remains open is the TTFT gap, and the EDF runs
+> show it is a scheduler difference: for the same 24 requests and the same
+> 1220-token mean prompt, real TTFT rises 158 → 1894 ms as concurrency goes
+> 1 → 32, so ~90 % of the validation benchmark's 1404 ms is queuing.
 
 - **Partly done already.** FuriosaAI's own EDF profiler localises the gap to
   212 µs per decoder layer on the real compiled graph

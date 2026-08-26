@@ -5,70 +5,89 @@ backend: furiosa
 
 # ONE ACCELERATOR HERE IS ONE WHOLE RNGD CARD, RUNNING AT TP=8 INTERNALLY.
 #
+# REBUILT 2026-08-26 FROM FURIOSAAI'S OWN EDF PROFILER. Read this block before the
+# rest of the file: the perf bundle behind `perf_data` is NOT the one an earlier
+# version of this profile described, and the conclusion has flipped.
+#
 # The sibling profile (furiosa_rngd.yaml) models one PE as one accelerator, which
-# mirrors `furiosa-llm build -tp` counting PEs. This one deliberately raises the
-# abstraction, because TP=8 is not one option among several - it is the only
-# configuration worth deploying, and the only one that exists as a vendor artifact:
+# mirrors `furiosa-llm build -tp` counting PEs. This one raises the abstraction to
+# the card, because TP=8 is the only configuration worth deploying and the only one
+# that exists as a vendor artifact:
 #
 #   same 8 PEs, Llama-3.1-8B bf16      replicas   total KV tokens
 #     TP=8                                   1        246,079
-#     TP=4 x DP=2                             2        123,550
-#     TP=2 x DP=4                             -   does not fit (-1.86 GiB/PE)
+#     TP=4 x DP=2                            2        123,550
+#     TP=2 x DP=4                            -   does not fit (-1.86 GiB/PE)
 #
 #   TP=8 shards the weights ONCE across the 8 PEs (1.87 GiB each) instead of
 #   replicating them per group (3.74 GiB each at TP=4), so it holds twice the KV
 #   on identical silicon. Using fewer than 8 PEs per replica does not just idle
 #   compute - it throws away half the memory that makes decode possible.
 #
-#   `furiosa-llm build -tp` defaults to 8, and the vendor's prebuilt
-#   Llama-3.1-8B-Instruct artifact is tensor_parallel_size 8. TP=8 on one card is
-#   therefore the only RNGD configuration that has ever actually been served here.
-#
-# WHAT THIS BUYS, beyond matching reality: a 47.5 GB device has KV headroom
-# comparable to an A40, which removes the decode-KV exhaustion that crashed the
-# P/D simulations under the per-PE model; and 4 cards give TP candidates {1,2,4},
-# which overlap an A40 island's {1,2,4}, so cross-vendor P/D becomes expressible
-# at TP=1 without the PCIe-bridging fixture hack that deviations D16 describes.
-#
-# WHAT IT COSTS - AND THIS PROFILE FAILED ITS VALIDATION BECAUSE OF IT.
+# WHY THE ABSTRACTION IS LEGITIMATE NOW AND WAS NOT BEFORE.
 #
 # A tp1 instance has no TP group, so the simulator adds NO collective for the
-# intra-card all-reduce after o_proj and down_proj. Measured against the real
-# furiosa-llm TP=8 run on this hardware, over the same 20 sharegpt requests:
+# intra-card all-reduce after o_proj and down_proj. Fed the per-PE HARNESS bundle,
+# that was fatal: the reduction was simply missing and decode came out 45.5% fast.
+# Fed EDF stage times it is correct BY CONSTRUCTION - an EDF stage time is what the
+# CARD took to execute that stage, reduction included, so the measurement has
+# already paid for the communication and charging it again would double-count.
 #
-#              TTFT mean            TPOT mean
-#   real        1404.1 ms            28.4 ms
-#   per-PE       946.9  (-32.6%)     35.7  (+25.7%)   <- 8 accelerators, tp8
-#   THIS         310.0  (-77.9%)     15.5  (-45.5%)   <- 1 accelerator, tp1
+# The granularity now also matches the hardware. The artifact's
+# tensor_parallel_size 8 is realised as TWO FUSED 4-PE QUADS (leader_device is
+# npu0pe0-3; the serve log confirms DpId(0) -> [npu0pe0-3, npu0pe4-7]), so a
+# per-PE tp8 bundle modelled a rank granularity that does not exist.
 #
-# The truth sits between the two models, and the per-PE one is both closer and
-# conservative. This profile under-predicts decode by a factor of two, because
-# dropping the TP group hands the model a free 8x parallel speedup with no
-# communication: the measured tp1 -> tp8 per-layer ratio is 6.94x summed over a
-# decode step (qkv 7.29, o_proj 8.04, gate_up 7.78, down_proj 6.42), i.e. almost
-# perfect scaling, and the simulator then charges nothing for the 64 all-reduces
-# per token that make it possible.
+# VALIDATION, same 20 sharegpt requests against the real furiosa-llm TP=8 run
+# (experiments/results/rngd_sim_vs_real_summary.md):
 #
-# WHAT THE RESIDUAL SAYS ABOUT THE HARDWARE:
-#   28.4 - 15.5 = 12.92 ms per token step is unaccounted, i.e. dropping the TP
-#   group loses roughly 45% of real decode. The direction and magnitude stand.
+#                          TTFT mean            TPOT mean        latency mean
+#   real                    1404.1 ms            28.4 ms           20941 ms
+#   per-PE harness (tp8)     946.9  (-32.6%)     35.7  (+25.7%)    25453 (+21.5%)
+#   card harness   (tp1)     310.0  (-77.9%)     15.5  (-45.5%)      -
+#   THIS: card EDF (tp1)     403.0  (-71.3%)     27.6   (-3.1%)     19287  (-7.9%)
 #
-# CORRECTED 2026-08-26 by the vendor profiler. The 202 us figure below divided a
-# per-token residual (measured at concurrency 64, where one forward serves many
-# tokens) by a per-forward collective count, which is not valid arithmetic. Do not
-# quote it. FuriosaAI's own EDF profiler gives the direct per-layer number instead:
-# the real compiled graph spends 507 us per decoder layer on a decode step where
-# our synthetic-layer bundle accounts for 295 us, so 212 us per LAYER is work the
-# harness does not capture (reduction plus whatever else the compiler fused into
-# that stage). See experiments/results/rngd_vendor_profiler_vs_layerwise.md.
+#   TPOT error by percentile: -3.4 / -1.5 / -2.4 / -1.4% at p50 / p90 / p95 / p99.
+#   That is the accuracy class of the A40 bundle profiled through vLLM's own
+#   profiler (~2%), reached on hardware with no vLLM plugin at all.
 #
-# The residual is still the reason this abstraction was rejected; it is only the
-# per-collective attribution that was wrong.
+# WHICH PROFILE TO USE - NEITHER DOMINATES, so choose by the question:
 #
-# CONSEQUENCE: do NOT use this profile as the default path. Keep the 8 PEs as
-# accelerators so ASTRA-Sim prices the collectives, which is the dominant term.
-# This profile is retained as (a) the record of why that abstraction was rejected
-# and (b) the derivation of the intra-card collective cost.
+#   * THIS ONE for decode, throughput and energy questions, and for cross-vendor
+#     P/D (4 cards give TP candidates {1,2,4}, which overlap an A40 island's
+#     {1,2,4}, so P/D becomes expressible without the PCIe-bridging fixture that
+#     deviations D16 describes). Fitted TPOT calibration error is 0.025 against
+#     0.204 for the per-PE model - an 8x improvement - and a 47.5 GB device also
+#     removes the decode-KV exhaustion that crashed the P/D simulations.
+#   * THE PER-PE PROFILE where TTFT feasibility decides the outcome. Its TTFT
+#     error is -32.6% against -71.3% here, and its TPOT error is on the
+#     CONSERVATIVE side (+25.7%), so plans it declares SLO-feasible are less
+#     likely to be optimistic. This profile's TTFT calibration is a poor fit
+#     (alpha 2.09, mean relative error 2.34) and should not be leaned on.
+#
+# DECODE IS RIGHT AT BOTH ENDS OF THE LOAD CURVE, which is what makes this a cost
+# model rather than a fit to one point. Simulating the same six requests with
+# arrivals 15 s apart so nothing queues, against the real concurrency-1 run of
+# those same six (1016-token mean prompt):
+#
+#                    real (c1)   sim (sparse)   error
+#   TPOT mean          15.07 ms     15.43 ms    +2.4%
+#   TTFT mean         162.16 ms    102.87 ms   -36.6%
+#
+# So TPOT is +2.4% unloaded and -3.1% loaded - two operating points a factor of
+# two apart in absolute cost, both within 3%.
+#
+# THE TTFT RESIDUAL SPLITS IN TWO, and neither half is a per-layer cost error.
+# -36.6% is present with NO queuing at all: bucket quantisation accounts for ~11%
+# of it and the rest is server-side work no device trace sees (tokenisation,
+# admission, the HTTP hop). The stretch from -36.6% to -71.3% is queuing - reality
+# amplifies TTFT 8.7x from unloaded to loaded (162 -> 1404 ms) where the simulator
+# amplifies it 3.9x (103 -> 403 ms), i.e. upstream's scheduler queues ~2.2x less
+# than furiosa-llm's at the same load. Fixing this needs a scheduler comparison,
+# not more profiling.
+#
+# Full write-up, including what in the bundle is measured and what is inherited:
+# experiments/results/rngd_edf_bundle_notes.md.
 
 # memory_gb: measured - furiosa-smi reports 47.50 GiB per card. Unlike the per-PE
 #   profile's 6.25 GB (a single-allocation bisect on one PE), this is the card's
@@ -88,29 +107,41 @@ sim_hardware: RNGD-CARD
 
 #   memory_gb             : measured - furiosa-smi
 #   memory_bandwidth_gbps : measured (achieved) - 8-PE concurrent read scaling
-#   perf_data             : measured - the per-PE tp8 grid, remapped to tp1; see below
+#   perf_data             : measured - FuriosaAI EDF profiler on the served graph
 #   power                 : measured - 0..8 loaded-PE board sweep, card totals
-#   supported_models      : layer-level + one end-to-end serving run, see below
+#   supported_models      : layer-level + six end-to-end serving runs, see below
 source: measured
 
 perf_data: profiler/perf/RNGD-CARD/
 
-# The bundle's tp1/ IS the measured tp8/ of profiler/perf/RNGD/. The 8 PEs each
-# execute 1/8 of every layer in parallel, so the card's per-layer LATENCY equals
-# one PE's sharded latency - which is what tp8/ measured. Full derivation and
-# limits in that bundle's meta.yaml.
+# The bundle is built by experiments/scripts/rebuild_rngd_bundle_from_edf.py from
+# six `furiosa-llm serve` runs on npu0 (concurrency 1, 2, 4, 8, 16, 32; 24 sharegpt
+# requests each; 1.74 M stage executions) with EDF_PROFILER_OUTPUT_PATH +
+# TUC_PROFILE_LEVEL=info + RUST_LOG=span::tuc=info. Cycles convert at 1.6 GHz,
+# derived from total device cycles over wall time on a saturated card.
 #
-# INPUT QUALITY, stated because it is the weakest link: tp8 is the sparsest grid
-# measured - 81/13/27 rows against 107/18/35 at tp4 - because sharding the dims by
-# 8 (intermediate 1792, 4 heads, 1 KV head) leaves shapes small enough that the
-# compiler stops using the tensor unit (40 CPU fallbacks against 1 at tp4). Every
-# layer keeps 8-10 of 12 token points, so interpolation works, but this bundle is
-# coarser than the per-PE tp4 one.
+# WHAT IS MEASURED: absolute per-decoder-layer latency per token bucket on the real
+# graph; decode and prefill attention; the head at 1 sequence.
+# WHAT IS INHERITED from the per-PE harness bundle, and is NOT a vendor
+# measurement: the split of a decoder layer's stage time across the canonical layer
+# names, and how the head scales with sequence count. The compiler fuses a whole
+# decoder layer into ONE stage; the simulator only sums the per-layer lookups, so
+# the sum is what has to be right, but no single dense row should be quoted as a
+# vendor measurement of that named layer.
 #
-# VALIDATION: DONE, AND IT FAILED. See the block at the top of this file for the
-# numbers and experiments/results/rngd_card_vs_pe_model.md for the full write-up.
-# The comparison is against the real furiosa-llm TP=8 run recorded in
-# experiments/results/rngd_sim_vs_real_summary.md.
+# TWO COMPILED PLANS, both captured. Batch 1 runs a fully-fused `Composed` graph -
+# there is no `input_size: 1` Tokenwise bucket anywhere in the traces - and batch
+# >= 2 runs per-layer `Tokenwise` + `Attention`, exactly 32 Tokenwise per forward.
+#
+# DECODE ATTENTION IS CALIBRATED TO SHAREGPT-LIKE TRAFFIC at mean KV ~2200. The
+# runtime groups a decode batch by KV bucket, so per-layer attention tracks the
+# batch's KV DIVERSITY (1.95 executions per layer at batch 2, 3.08 at batch 29),
+# which the §3.7 contract cannot express. Each concurrency contributes one
+# total-preserving row instead.
+#
+# SELF-CONSISTENCY, the check the harness-derived card bundle could not pass:
+# predicted wall time against measured wall time over a 32x concurrency range is
+# +0.0 / +0.1 / +0.5 / -4.7 / -5.2 / +0.2 % at concurrency 1 / 2 / 4 / 8 / 16 / 32.
 
 # Card totals, measured 2026-08-25 on npu1 by rngd_device_facts.py --pe-sweep.
 # With the card as one accelerator these go in verbatim - no per-PE split, and no
@@ -130,11 +161,11 @@ power:
   standby_duration: 2000000000   # ns (2 s), the D7 window
   source: measured
 
-# Stronger evidence than the per-PE profile carries: besides every canonical
-# Llama-3.x layer compiling and executing on real silicon, this exact model has
-# been BUILT AND SERVED end to end on this card - the vendor's prebuilt
-# furiosa-ai/Llama-3.1-8B-Instruct artifact, served with `furiosa-llm serve`,
-# 20/20 requests, 13,787 generated tokens against 13,787 requested. The base and
+# The strongest model evidence in the repo for any NPU: this exact model was BUILT
+# AND SERVED end to end on this card - the vendor's prebuilt
+# furiosa-ai/Llama-3.1-8B-Instruct artifact, `furiosa-llm serve` - across seven
+# runs (the 20-request validation plus the six EDF concurrency passes), 164/164
+# requests, every generated-token count matching what was requested. The base and
 # Instruct checkpoints share architecture and dimensions, so the perf bundle
 # applies to both; the pattern below is the base model the bundle is keyed on.
 supported_models:
@@ -149,23 +180,27 @@ supported_models:
 max_tp_size: 1
 
 notes: >
-  NOT THE DEFAULT PATH. Validation against the real furiosa-llm TP=8 run showed
-  this abstraction under-predicts decode by 45% because it silently drops the
-  intra-card all-reduce, which is the dominant term (about 12.9 ms of a 28.4 ms
-  TPOT). Use profiles/accelerators/furiosa_rngd.yaml, which keeps the 8 PEs as
-  accelerators so ASTRA-Sim prices those collectives.
-  The reasoning that motivated this profile still stands and is worth keeping:
-  TP=8 IS the configuration to deploy - it shards the weights once (1.87 GiB/PE)
-  and so holds 246,079 KV tokens against 123,550 for tp4xdp2 on the same 8 PEs,
-  tp2xdp4 does not fit at all, and it is what `furiosa-llm build -tp` defaults to
-  and what the vendor's artifact ships. The right way to express that is as a
-  preference the optimizer resolves on correctly-priced metrics, not by abstracting
-  the card into one device - with collectives charged, TP=8 wins on its merits.
-  This profile is retained for the record of why the card-as-device abstraction
-  was rejected. Its by-product estimate of the ONPACKAGE collective cost has been
-  SUPERSEDED: see experiments/results/rngd_vendor_profiler_vs_layerwise.md, which
-  measures 212 us per decoder layer unaccounted on the real compiled graph instead
-  of inferring a per-collective figure from a residual.
-  One further real-world limit that no profile can encode: furiosa-llm does not
-  support prefill/decode disaggregation at all today (FuriosaAI's own llm-d
-  documentation), so every RNGD P/D result is simulator-only until that lands.
+  Card-as-device, rebuilt 2026-08-26 from FuriosaAI's own EDF profiler traces of
+  the graph furiosa-llm actually serves. Decode is now accurate to -3.1% on TPOT
+  mean and within 3.4% at every percentile, against +25.7% for the per-PE harness
+  profile and -45.5% for the earlier harness-fed version of THIS profile. The
+  abstraction was never the problem: a tp1 instance gets no simulator collective,
+  and an EDF stage time already contains the intra-card reduction, so the
+  measurement pays for the communication exactly once.
+  NEITHER RNGD PROFILE DOMINATES. Use this one for decode, throughput, energy and
+  cross-vendor P/D (its TP set {1,2,4} overlaps an A40 island's, and 47.5 GB
+  removes the decode-KV exhaustion that crashed the P/D simulations). Use
+  profiles/accelerators/furiosa_rngd.yaml where TTFT feasibility decides the
+  outcome: TTFT here is -71.3% against -32.6% there, and its TPOT error is
+  conservative rather than optimistic.
+  The TTFT residual is not a per-layer cost error: -36.6% of it is present with no
+  queuing at all (bucket quantisation plus server-side overhead no device trace
+  sees), and the rest is the scheduler queuing ~2.2x less than furiosa-llm's at
+  the same load. Decode meanwhile holds at both ends of the curve, +2.4% unloaded
+  and -3.1% loaded. Calibration:
+  profiles/calibration/rngd_card_edf.yaml (TPOT alpha 0.810, mean relative error
+  0.025; TTFT alpha 2.089 but mean relative error 2.34, so the TTFT fit is poor
+  and should not be leaned on).
+  One real-world limit no profile can encode: furiosa-llm does not support
+  prefill/decode disaggregation at all today (FuriosaAI's own llm-d
+  documentation), so every RNGD P/D result stays simulator-only until that lands.

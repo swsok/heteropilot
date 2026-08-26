@@ -87,10 +87,103 @@ CARD_LEVEL_NOTE = (
 )
 
 
+# ---------------------------------------------------------------------------
+# The EDF bundle is a DIFFERENT INSTRUMENT and must not inherit the harness's
+# provenance text. It is built by experiments/scripts/rebuild_rngd_bundle_from_edf.py
+# from FuriosaAI's own profiler, on the graph furiosa-llm actually serves.
+# ---------------------------------------------------------------------------
+
+EDF_MEASUREMENT_METHOD = (
+    "FuriosaAI's own EDF profiler on the real served graph, NOT a layerwise "
+    "harness. `furiosa-llm serve` was run on the vendor's prebuilt "
+    "furiosa-ai/Llama-3.1-8B-Instruct artifact (tensor_parallel_size 8) with "
+    "EDF_PROFILER_OUTPUT_PATH / TUC_PROFILE_LEVEL=info / RUST_LOG=span::tuc=info, "
+    "and driven with 24 sharegpt requests at each of six concurrencies "
+    "(1, 2, 4, 8, 16, 32) - 1.74 M stage executions in total. The trace is CSV "
+    "(leader_device, name, cycle); cycles are converted at 1.6 GHz, derived as "
+    "total device cycles over wall time on a saturated card (1,599.9 MHz, 0.006% "
+    "off a round figure). Each row is one compiler-emitted stage execution named "
+    "by its compiled bucket, so these are the times the vendor's own kernels take "
+    "on the vendor's own graph, WITH THE INTRA-CARD REDUCTION ALREADY INSIDE "
+    "THEM - which is the whole point of the card-as-device mapping below. "
+    "The runtime has TWO compiled plans and both are captured: a fully-fused "
+    "`Composed` graph for batch-1 decode (9 segments partitioning the stack, each "
+    "executing once per forward) and a per-layer `Tokenwise` + `Attention` plan "
+    "for batch >= 2 (exactly 32 Tokenwise executions per forward, one per decoder "
+    "layer). There is no `input_size: 1` Tokenwise bucket anywhere in the traces "
+    "because at batch 1 the bucketed path is not used at all."
+)
+
+EDF_NOTES = (
+    "WHAT IS MEASURED AND WHAT IS INHERITED - the one thing to read before using "
+    "this bundle. (1) MEASURED: absolute per-decoder-layer latency, per token "
+    "bucket, on the real graph; decode and prefill attention; the head. "
+    "(2) INHERITED, NOT MEASURED: the split of a decoder layer's stage time "
+    "across the canonical layer names (layernorm / qkv_proj / rotary_emb / "
+    "o_proj / gate_up_proj / act_fn / down_proj). The compiler fuses a whole "
+    "decoder layer into ONE stage and does not expose the pieces, so the "
+    "magnitude comes from the vendor and the distribution is taken from the "
+    "per-PE harness bundle's shares at the same token count, rescaled to sum to "
+    "the vendor figure. The simulator only ever SUMS the per-layer lookups for an "
+    "iteration, so the sum is what has to be right - but no single row here is a "
+    "vendor measurement of that named layer. The vendor/harness ratio is 1.16x to "
+    "1.65x depending on bucket and is recorded per bucket in "
+    "outputs/rngd_edf_bundle/edf_vs_harness_dense.csv. "
+    "(3) The tokens=1 row comes from the fused Composed graph, corrected three "
+    "ways: its 9 segment times overlap (device cycles are 114.7% of wall at "
+    "concurrency 1), so they are scaled so their sum equals the measured "
+    "wall-clock forward; the terminal segment is moved to per_sequence.csv "
+    "because it is the head, not a layer; and the measured batch-1 attention is "
+    "subtracted so the simulator's separate attention charge is not counted "
+    "twice. (4) DECODE ATTENTION IS CALIBRATED TO THIS TRAFFIC MIX. The runtime "
+    "groups a decode batch by kv bucket, so per-layer attention depends on the "
+    "batch's kv DIVERSITY (1.95 executions per layer at batch 2, 3.08 at batch "
+    "29), which the 4D contract cannot express. Each concurrency therefore "
+    "contributes one row whose time is total decode-attention device time over "
+    "(forwards x 32), which makes the total close but ties the decode attention "
+    "axis to sharegpt-like traffic at mean kv ~2200. "
+    "(5) per_sequence.csv takes its magnitude at 1 sequence from the vendor's "
+    "terminal segment and its SHAPE over sequence count from the harness, which "
+    "is the only source for how the head scales with batch. "
+    "(6) MIXED prefill+decode steps are not in the traces at all: every attention "
+    "bucket is pure prefill or pure decode, so the 4D grid has data only on the "
+    "two axis planes and the simulator's nearest-slice fallback approximates the "
+    "interior, which under-counts continuous-batching steps that do both. "
+    "(7) No skew.csv / skew_fit.csv, so ragged decode batches fall back to the "
+    "uniform-mean attention path. "
+    "SELF-CONSISTENCY, the check that this bundle passes and the synthetic one "
+    "could not: predicted wall time from this bundle against measured wall time "
+    "over a 32x concurrency range is +0.0% / +0.1% / +0.5% / -4.7% / -5.2% / "
+    "+0.2% at concurrency 1 / 2 / 4 / 8 / 16 / 32."
+)
+
+EDF_CARD_LEVEL_NOTE = (
+    " CARD-LEVEL MAPPING, and why it is legitimate HERE where it was not before. "
+    "One accelerator is one whole RNGD card running at the vendor's default "
+    "-tp 8, so the card is a tp1 instance and the simulator adds no collective "
+    "for it. With the per-PE harness bundle that was a fatal omission - the "
+    "intra-card all-reduce was simply missing, and decode came out 45.5% fast. "
+    "Here it is correct BY CONSTRUCTION: an EDF stage time is what the card took "
+    "to execute that stage, reduction included, so the measurement has already "
+    "paid for the communication and charging it again would double-count. The "
+    "granularity also now matches the hardware: the artifact's "
+    "tensor_parallel_size 8 is realised as TWO FUSED 4-PE QUADS (leader_device is "
+    "npu0pe0-3, and the serve log confirms DpId(0) -> [npu0pe0-3, npu0pe4-7]), "
+    "not eight ranks, so a per-PE tp8 bundle modelled a rank granularity that "
+    "does not exist. EDF reports only one leader device, and the two quads run "
+    "concurrently, so these times are one card's. "
+    "max_tp_size stays 1: TP ACROSS cards has never been built or served here."
+)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--src", type=Path, default=Path("outputs/rngd_profile"))
     parser.add_argument("--hardware", default="RNGD")
+    parser.add_argument("--edf", action="store_true",
+                        help="the bundle was built from FuriosaAI's EDF profiler by "
+                             "rebuild_rngd_bundle_from_edf.py, not from the layerwise "
+                             "harness; swaps in the matching provenance")
     parser.add_argument("--card-level", action="store_true",
                         help="the bundle models a whole card as ONE accelerator at tp1; "
                              "adds the mapping and its cost to the notes")
@@ -144,6 +237,10 @@ def main() -> None:
 
     provenance = ImportProvenance(
         measured_by=(
+            "HeteroPilot, built from FuriosaAI's EDF profiler traces of "
+            "`furiosa-llm serve` on this NPU server's RNGD npu0, via "
+            "experiments/scripts/rebuild_rngd_bundle_from_edf.py"
+            if args.edf else
             "HeteroPilot, measured on this NPU server's FuriosaAI RNGD cards via "
             "experiments/scripts/run_rngd_profile.py (24 workers, one PE each)"
         ),
@@ -151,10 +248,14 @@ def main() -> None:
         serving_stack="furiosa-llm 2026.2.0 / furiosa-torch 2026.2.0 (torch 2.10.0)",
         runtime_version="RNGD firmware 2026.3.0, furiosa-smi 2026.1.2",
         backend="furiosa",
-        device=device or "FuriosaAI RNGD (rngd PE)",
-        measurement_method=MEASUREMENT_METHOD,
+        device=("FuriosaAI RNGD card npu0, two fused 4-PE quads "
+                "(npu0pe0-3, npu0pe4-7) at tensor_parallel_size 8"
+                if args.edf else device or "FuriosaAI RNGD (rngd PE)"),
+        measurement_method=EDF_MEASUREMENT_METHOD if args.edf else MEASUREMENT_METHOD,
         measurement_iterations=iterations,
-        notes=NOTES + (CARD_LEVEL_NOTE if args.card_level else ""),
+        notes=(EDF_NOTES + (EDF_CARD_LEVEL_NOTE if args.card_level else ""))
+        if args.edf
+        else NOTES + (CARD_LEVEL_NOTE if args.card_level else ""),
     )
     dest = importer.import_bundle(
         src=args.src,

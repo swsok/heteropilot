@@ -122,6 +122,19 @@ model residual.
   not use. Rebuilding the bundle from EDF traces at the two-quad granularity is the
   obvious next step and needs no new hardware access.
 
+> **DONE, 2026-08-26** — `experiments/results/rngd_edf_bundle_notes.md`. Six
+> concurrency passes (1, 2, 4, 8, 16, 32; 1.74 M stage executions) rebuilt the
+> bundle as `profiler/perf/RNGD-CARD/`, and it predicts the real furiosa-llm run
+> to **−3.1 % on TPOT mean** (within 3.4 % at every percentile) against +25.7 %
+> for the layerwise per-PE bundle. Two things this page inferred from a single
+> 5-request run at one concurrency turned out to be incomplete: the trace has a
+> **third stage kind**, `Composed`, which is 98.8 % of device cycles at batch 1
+> and was invisible here because it is only 1.7 % at concurrency 4; and the
+> attention buckets split into **prefill and decode regimes** by
+> `attention_size − kv_cache_size`, so decode attention is flat in KV rather than
+> the mixture this page saw. The 507 µs / 212 µs figures below are unaffected —
+> they are the batched Tokenwise path, which is where they were measured.
+
 ## Reproducing
 
 ```bash

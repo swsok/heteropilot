@@ -734,3 +734,60 @@ One further real-world limit, from FuriosaAI's own llm-d documentation:
 **Furiosa-LLM does not support prefill/decode disaggregation at all** today. So
 every RNGD P/D number here is simulator-only until that ships, independently of
 D14.
+
+---
+
+## D17 — The §3.7 attention grid cannot express the vendor runtime's per-layer attention cost · Resolved (calibrated per workload, limit recorded)
+
+**Found** 2026-08-26, while rebuilding the RNGD perf bundle from FuriosaAI's EDF
+profiler (`experiments/results/rngd_edf_bundle_notes.md`).
+
+**The work order and the simulator both assume** that per-layer attention cost is
+a function of the batch's *shape*: `attention.csv` is keyed
+`(prefill_chunk, kv_prefill, n_decode, kv_decode)` and `_lookup_attention()`
+returns one number per layer for a given `n_decode` and mean KV.
+
+**Furiosa-LLM's runtime groups a decode batch by KV bucket**, so one forward
+issues as many attention executions per layer as the batch has distinct KV
+buckets — measured over 1.74 M stage executions:
+
+| sequences per forward | 1.95 | 3.91 | 8.91 | 15.16 | 29.09 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| attention executions per layer | 1.95 | 2.40 | 2.87 | 3.03 | 3.08 |
+| per-layer attention (µs) | 88.3 | 131.3 | 198.0 | 254.2 | 329.7 |
+
+Per-layer attention therefore depends on the batch's KV **diversity**, which is a
+property of the traffic, not of `n_decode` and a mean. A single execution's cost
+is *not* the per-layer cost: charging the `n_decode=16` bucket median (86 µs)
+where reality runs three groups (254 µs) under-counts by ~3× at large batch.
+
+**How we adapt.** Each concurrency pass contributes one total-preserving row:
+`time_us` = total decode-attention device time ÷ (forwards × 32 layers). Totals
+then close — predicted against measured wall time is within 5.2 % across a 32×
+concurrency range — but the decode-attention axis is **calibrated to the traffic
+it was measured on** (sharegpt, mean KV ≈ 2200, stable to ±1 % across all five
+batched passes, which is why one calibration serves them all). A workload with a
+very different KV spread would need its own pass.
+
+**Why not extend the schema.** Adding a "KV-bucket count" axis would change
+`serving/core/trace_generator.py`, which is upstream and pristine until Phase 5,
+and it would be RNGD-specific: vLLM's paged attention runs one kernel per layer
+regardless of KV spread, so the existing contract is right for every GPU profile
+in the repo. The calibrated row is the honest local fix.
+
+**Related, same source, recorded so it is not rediscovered:**
+
+- **Mixed prefill+decode steps are absent from the traces.** Every attention
+  bucket is pure prefill or pure decode, so the 4D grid has data only on the two
+  axis planes and `_attn_slice_lookup()`'s nearest-slice fallback approximates
+  the interior — which under-counts continuous-batching steps that do both.
+  Whether the runtime genuinely never mixes them is **not decidable from these
+  traces**: the EDF CSV carries durations, not timestamps, so co-occurrence
+  within one forward is unobservable.
+- **The vendor runtime compiles two plans for the same model.** Batch 1 runs a
+  fully-fused `Composed` graph with no `Tokenwise` and no `Attention` stages at
+  all; batch ≥ 2 runs the per-layer path. So there is no `input_size: 1` bucket
+  anywhere in the traces, and a bundle keyed only on the bucketed path has no
+  `tokens=1` row — the row decode needs most. The builder derives it from the
+  fused graph instead, with the union / head / attention corrections
+  `rngd_edf_bundle_notes.md` sets out.

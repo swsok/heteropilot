@@ -36,3 +36,18 @@ outputs/phase0_bench/
 outputs/rngd_profile/shards/
 outputs/rngd_profile/retry_*/
 outputs/rngd_profile/traces/
+
+# EDF profiler traces from FuriosaAI's own profiler. 155 MB across six
+# concurrency passes, and fully regenerable by
+# `rebuild_rngd_bundle_from_edf.py collect` (which re-serves the artifact), so
+# the raw CSVs stay out. What IS committed is everything derived from them: the
+# §3.7 bundle under profiler/perf/RNGD-CARD/, the per-request client timings,
+# and the audit files (edf_vs_harness_dense.csv, edf_decode_attention.csv,
+# edf_composed.json) that show how each bundle number was obtained.
+outputs/rngd_edf_bundle/edf/edf_c*.csv
+outputs/rngd_edf_bundle/edf/serve_c*.log
+outputs/rngd_edf_bundle/*_sparse.jsonl
+outputs/rngd_vendor_prof/edf.json
+
+# oh-my-claudecode session state.
+.omc/
