@@ -1,13 +1,20 @@
 # Handover — continuing on the A40 server
 
-*Written 2026-08-26 for a Claude Code session that will `git pull` this repo on
-the **A40 server** and continue. Read this first, then
-`experiments/results/rngd_sim_vs_real_summary.md` and
-`docs/hardware_roadmap.md` "First access".*
+*Written 2026-08-26, **revised 2026-08-27 after everything merged to `main`**, for
+a Claude Code session that will `git pull` this repo on the **A40 server** and
+continue. Read this first, then `experiments/results/rngd_edf_bundle_notes.md` and
+`docs/PROJECT_REPORT.md` §4.8.*
 
-> The NPU server work is done and pushed. What is left needs a **GPU**, and there
-> is no NVIDIA GPU on the NPU server (`nvidia-smi` cannot reach a driver). This
-> file says exactly what to measure there and why it matters.
+> The NPU server work is done and **merged to `main`** (PRs #14, #15, #16 — there
+> are no feature branches left to check out; `git pull` on `main` is enough). What
+> remains needs a **GPU**, and there is no NVIDIA GPU on the NPU server
+> (`nvidia-smi` cannot reach a driver). This file says exactly what to measure
+> there and why it matters.
+
+> **One correction to read before anything else.** An earlier version of §2 said
+> RNGD's per-watt advantage was a *lower* bound. **That was backwards on the
+> compute axis** — see the correction box in §2. It changes where mixing might pay,
+> so do not build on the old reading.
 
 ---
 
@@ -51,21 +58,47 @@ crossing depends on the GPU leg, which is what the A40 server has to answer.
 #    the question is whether the GPU leg does too.
 ```
 
-Then set `bandwidth_gbps` on the `fabric-*` links in
-`experiments/configs/clusters/pd-rngd-gpu.yaml` to
+Then set `bandwidth_gbps` on the `fabric-*` links in **both** P/D fixtures to
 `1 / (1/gpu_leg + 1/npu_leg)` for a serialised handoff, or `min(gpu_leg,
 npu_leg)` if the implementation pipelines the two copies — and say in the file
 which one was assumed. Right now those links carry **35 GB/s labelled
-`placeholder`**, i.e. the NPU leg used as an upper bound on the whole path.
+`placeholder`** in both, i.e. the NPU leg used as an upper bound on the whole path.
 
-With a real number, re-run:
+**There are now two fixtures and they are not interchangeable:**
+
+| fixture | RNGD accelerator | TP set | use it for |
+| --- | --- | --- | --- |
+| `pd-rngd-gpu.yaml` | one **PE**, 6.25 GB | {4, 8} | TTFT-feasibility questions (its TTFT error is −32.6 %) |
+| `pd-rngd-gpu-card.yaml` | one **card**, 47.5 GB, tp1 | {1} | decode / energy / goodput, and **the only one where cross-vendor P/D actually simulates** |
+
+Under the per-PE fixture, `A40 prefill → RNGD decode` — the direction that matters
+— **crashes 6/6** on RNGD decode-KV exhaustion. The card fixture is what unblocked
+it. Run both, and expect only the card one to have a cross-vendor row.
+
+With a real bandwidth number, re-run:
 
 ```bash
 ./experiments/scripts/run_exp_pd.sh          # Exp 3 network sweep + Exp 5 combos
-PYTHONPATH=$PWD .venv/bin/python experiments/scripts/pd_slo_sweep.py \
-    --service examples/service_specs/llama31-8b.yaml \
-    --cluster experiments/configs/clusters/pd-rngd-gpu.yaml
+for fx in pd-rngd-gpu pd-rngd-gpu-card; do
+  PYTHONPATH=$PWD .venv/bin/python experiments/scripts/pd_slo_sweep.py \
+      --service examples/service_specs/llama31-8b.yaml \
+      --cluster experiments/configs/clusters/$fx.yaml \
+      --ttft-ms 500,1000,2000,4000,8000,16000,32000,64000 \
+      --num-requests 300 --seed 42 --workers 32 \
+      --output-dir outputs/.hp-slo-$fx
+done
 ```
+
+**Before quoting any TTFT number off the card fixture, apply
+`profiles/calibration/rngd_card_edf.yaml` (`real = 2.089·sim + 646 ms`).** Its raw
+sweep declares a 480 ms p99 TTFT winner; calibrated that is ~1649 ms, and the real
+hardware does 1404 ms at concurrency ~20. Decode, energy and goodput need no such
+correction (TPOT fit error 0.025). The per-PE fixture's calibration is
+`profiles/calibration/rngd.yaml`.
+
+Baseline to compare against — the sweeps as run on the NPU server with placeholder
+bandwidth, so a real GPU leg can only move these *down*:
+`experiments/results/pd_slo_sweep.md`.
 
 ---
 
@@ -103,11 +136,51 @@ binds**, and the candidates are:
 3. **A hard power cap**, where the optimum is "buy the minimum GPU prefill
    capacity that meets TTFT, spend every remaining watt on RNGD decode".
 
-Note the honest direction of the errors: the RNGD figures come from a harness
-that measures **unfused single layers**, which the sim-vs-real check showed is
-~26 % pessimistic on decode. So RNGD's per-watt advantage above is a **lower
-bound**. Absolute latencies, however, carry ±30 % error, so the TTFT threshold in
-(1) must come from simulation with calibration applied, not from these numbers.
+> ### CORRECTION, 2026-08-27 — the error direction was backwards on compute
+>
+> The paragraph that stood here said the RNGD figures come from a harness that is
+> "~26 % pessimistic on decode", so the per-watt advantage was a **lower bound**.
+> That conflated two different things:
+>
+> - the **simulator** was pessimistic on decode (predicted TPOT 35.7 ms against a
+>   real 28.4 ms), because ASTRA-Sim over-charges the intra-card collective;
+> - but the **harness itself under-measures per-layer time**. FuriosaAI's own EDF
+>   profiler puts the real per-layer decode cost at 507 µs where the harness
+>   accounts for 290–307 µs, and the measured vendor/harness ratio runs ×1.16 at
+>   1024 tokens to ×1.61 at 2 tokens
+>   (`outputs/rngd_edf_bundle/edf_vs_harness_dense.csv`).
+>
+> **Times that are too small make derived throughput too large.** So the
+> `GFLOP/s per W` column is an **upper** bound, not a lower one. Correcting the
+> RNGD row by the measured prefill-range ratios:
+>
+> | GFLOP/s per W | value |
+> | --- | ---: |
+> | RNGD as tabulated above | 801 |
+> | ÷1.16 (the ×1.16 ratio at 1024 tokens) | **691** |
+> | ÷1.50 (the ×1.50 ratio at 512 tokens) | **534** |
+> | A40 | 427 |
+> | RTXPRO6000 | 696 |
+>
+> **What survives and what does not.** Against the A40, RNGD still wins the
+> compute axis comfortably (534–691 against 427), so §2's argument holds *for this
+> hardware pair* and the A40 server can proceed on it. Against **RTXPRO6000 (696)
+> the advantage disappears**, so the sentence "if one device dominates both axes,
+> the efficiency optimum is homogeneous" must not be generalised beyond the
+> RNGD/A40 pair.
+>
+> **The bandwidth axis is unaffected.** 5.84 GB/s/W comes from a direct
+> measurement — 8 PEs sustaining 218.8 GB/s each, 104 % scaling — not from
+> `dense.csv` timings, so it stands as measured.
+>
+> A better source now exists for anything per-layer: `profiler/perf/RNGD-CARD/`,
+> rebuilt from the vendor's own EDF traces, predicts real decode to −3.1 % against
+> the per-PE bundle's +25.7 %. **Recompute this table from that bundle** rather
+> than patching the numbers above, if the per-watt comparison is going into the
+> paper.
+
+Absolute latencies carry ±30 % error, so the TTFT threshold in (1) must come from
+simulation with calibration applied, not from these numbers.
 
 ---
 
@@ -141,6 +214,36 @@ fixture detail, and it deserves to be stated wherever cross-vendor P/D is
 claimed. If it becomes limiting, lifting it means addressing D14 — teaching the
 compiler to emit non-uniform instance sizes — which is a simulator-side change.
 
+### Update 2026-08-27 — a second route exists, and the tp=4 bridge is no longer the only fix
+
+Two things changed after this section was written:
+
+1. **`LinkType` had no on-package fabric at all.** Added as `ONPACKAGE`
+   (deviations **D16**), which is what lets an RNGD card be one island rather than
+   8 isolated devices. Before that, the disjoint-TP problem was compounded by the
+   PEs not forming an island in the first place.
+2. **Card-as-device sidesteps the shared-degree problem entirely.** With one
+   accelerator = one 47.5 GB card at tp1, the RNGD TP set is **{1}**, which
+   overlaps an A40 island's {1, 2, 4}. So `pd-rngd-gpu-card.yaml` needs **no
+   PCIe-bridging fixture hack** — cross-vendor P/D exists at tp1 naturally. It
+   also removes the decode-KV exhaustion that made the promising direction crash.
+
+**But be clear about what that is and is not.** Card-as-device does not lift D14;
+it *folds TP=8 inside the device* so the constraint has nothing to bind on. That
+works for RNGD specifically, because the vendor's only deployable configuration
+*is* TP=8 on one card. It is **not a general fix**, and the shape the literature
+recommends — `A40 tp4 prefill + RNGD tp8 decode`, big TP on the memory-bound
+phase (NVIDIA Dynamo, AWS Neuron) — remains unrepresentable.
+
+Also new: **deviation D17.** The §3.7 attention grid cannot express the vendor
+runtime's per-layer attention cost, which tracks the batch's KV **diversity**
+rather than its size (1.95 attention executions per layer at batch 2, 3.08 at
+batch 29). The card bundle works around it with total-preserving rows, which
+**ties its decode-attention axis to sharegpt-like traffic at mean KV ≈ 2200.** If
+the A40 work introduces a workload with a very different KV spread, that axis
+needs its own collection pass on the NPU server — it cannot be re-derived from a
+GPU.
+
 ---
 
 ## 4. What is already measured and needs no repeat
@@ -155,6 +258,11 @@ Do not re-measure these on the A40 server; they are committed.
 | RNGD calibration | `profiles/calibration/rngd.yaml` | scoped to one workload bucket; do not extrapolate |
 | host → RNGD bandwidth | `outputs/rngd_profile/host_bandwidth.json` | the NPU leg of the KV path |
 | A40 profile + calibration | `profiles/accelerators/a40.yaml`, `profiles/calibration/a40.yaml` | measured on the A40 server previously; α 1.017 / 1.011 |
+| **RNGD perf bundle from the vendor's own profiler** | `profiler/perf/RNGD-CARD/` | **the accurate one** — decode −3.1 % against real, vs +25.7 % for the per-PE bundle. Built from 6 `furiosa-llm serve` passes, 1.74 M stage executions |
+| **RNGD card profile** | `profiles/accelerators/furiosa_rngd_card.yaml` | card-as-device, 47.5 GB at tp1, card-total power measured |
+| **RNGD card calibration** | `profiles/calibration/rngd_card_edf.yaml` | TPOT fit error **0.025**; TTFT fit error **2.34 — recorded as unusable, do not lean on it** |
+| **On-package all-reduce** | `experiments/results/rngd_collective_measured.md` | **115 µs per decoder layer at TP=8**, measured directly. Retracts two earlier estimates, one wrong by 40× |
+| **P/D SLO sweeps, both fixtures** | `experiments/results/pd_slo_sweep.md` | 8 TTFT points each, with placeholder bandwidth — the baseline your real number replaces |
 
 **The A40 numbers already in the repo are valid measurements of that server.**
 Re-running the A40 profiler is not required for the P/D question and would only
@@ -180,20 +288,53 @@ For the profiler on CUDA you also need the `.venv-vllm` described in
 server, unlike on the NPU server where the vendor stacks live in the system
 interpreter.
 
-Expect `pytest` to report **284 passed**. If it reports 280 passed / 4 failed in
-`tests/test_calibration.py`, the branch is missing
-`fix/calibration-test-artifact-path` (a stale artifact path, not a real failure).
+Expect `pytest` to report **284 passed** — unconditionally now that
+`fix/calibration-test-artifact-path` is on `main` (PR #14). If it reports
+280 passed / 4 failed in `tests/test_calibration.py`, you are on a stale checkout;
+`git pull`.
+
+**Nothing NPU-specific will break on the A40 server.** `furiosa` imports are
+confined to `experiments/scripts/`, and `pyproject.toml` sets
+`testpaths = ["tests"]`, so no NPU code is imported at collection time. The
+NPU-only scripts (`profile_rngd.py`, `rngd_device_facts.py`,
+`rngd_collective_probe.py`, `rebuild_rngd_bundle_from_edf.py`,
+`bench_furiosa_endpoint.py`) simply will not run there, which is expected — do not
+try to make them work.
+
+Upstream pin to verify after cloning: `UPSTREAM_COMMIT` says `2c2042ce`, submodule
+`astra-sim` at `f82fb3d`.
 
 ---
 
-## 6. Branches pushed from the NPU server
+## 6. Where the work lives — all merged, 2026-08-27
 
-| branch | what |
-| --- | --- |
-| `fix/calibration-test-artifact-path` | stale test path; restores 284 passing |
-| `docs/npu-server-env-setup` | env bring-up log, NPU inventory, who holds the NPUs |
-| `feat/rngd-profiling` | everything RNGD: harness, bundle, power, sim-vs-real, P/D fixture |
+**There are no feature branches to check out. `git checkout main && git pull` is
+the whole story.** All three branches from the NPU server are merged:
 
-`feat/rngd-profiling` is the one to continue from; it is the longest chain and
-contains the P/D fixture and both sweep drivers. Merge order does not matter —
-they touch disjoint files apart from the docs.
+| PR | branch (deleted) | what |
+| ---: | --- | --- |
+| #14 | `fix/calibration-test-artifact-path` | stale test path; restores 284 passing |
+| #15 | `docs/npu-server-env-setup` | env bring-up log, NPU inventory, who holds the NPUs |
+| #16 | `feat/rngd-profiling` | everything RNGD: two profiling instruments, both bundles, power, sim-vs-real, the measured all-reduce, both P/D fixtures, both sweep drivers |
+
+Merge state at handover: `bcb3498`, `main` green (284 passed, `ruff` clean, `mypy`
+clean over `planner/`).
+
+One PR remains open and is unrelated to this work: **#13** (`docs/slide-deck-ko`).
+
+## 7. Suggested order of work on the A40 server
+
+1. **Environment + `git pull`**, confirm 284 passed. (§5)
+2. **Read the §2 correction box before using any per-watt number.** It inverts the
+   error direction the old text claimed.
+3. **Measure the GPU→host leg** — the one thing only that machine can do. (§1)
+4. **Set `bandwidth_gbps` on the `fabric-*` links in BOTH fixtures**, and record in
+   each file whether a serialised or pipelined handoff was assumed.
+5. **Re-run both SLO sweeps** and diff against `experiments/results/pd_slo_sweep.md`.
+   Apply the card calibration before any TTFT claim.
+6. **Optional, and only if the per-watt table goes in the paper:** recompute it
+   from `profiler/perf/RNGD-CARD/` rather than the per-PE bundle.
+
+What is *not* worth doing there: re-measuring the A40 profile (the committed one is
+a valid measurement of that server), and anything RNGD — the hardware is on the
+other machine and every RNGD quantity this project needs is now measured.
