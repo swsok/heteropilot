@@ -51,3 +51,16 @@ outputs/rngd_vendor_prof/edf.json
 
 # oh-my-claudecode session state.
 .omc/
+
+# RNGD staging and diagnostic leftovers. The authoritative bundles live in
+# profiler/perf/RNGD/ and profiler/perf/RNGD-CARD/; outputs/rngd_profile/tp*/ are
+# the pre-import staging copies of the same CSVs, and the probe logs exist so a
+# failed collective-probe worker is diagnosable (they are regenerable per run).
+outputs/rngd_profile/tp[0-9]*/
+outputs/rngd_profile/collective_probe_logs/
+outputs/rngd_card_profile/
+# Smoke-test and verification scratch from environment bring-up.
+outputs/envcheck/smoke.csv
+outputs/envcheck/plan.yaml
+outputs/envcheck/rngd_verify.csv
+outputs/rngd_edf_bundle/sim_sparse*.csv
