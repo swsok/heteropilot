@@ -27,17 +27,28 @@ A GPU-prefill / NPU-decode split has no device-to-device route between vendors.
 The KV cache goes **GPU → host → NPU**: two copies. Only the NPU leg is
 measurable on the NPU server, and it was measured:
 
-| streams | aggregate host → RNGD PE |
+| streams | aggregate host → RNGD PE, sustained |
 | ---: | ---: |
-| 1 | 5.06 GB/s |
-| 2 | 10.39 GB/s |
-| 4 | 19.10 GB/s |
-| 8 | **35.47 GB/s** (median 31.36) |
+| 1 | 3.77 GB/s |
+| 2 | 7.60 GB/s |
+| 4 | 15.36 GB/s |
+| 8 | **26.27 GB/s** (87.1 % of ideal) |
 
-A single stream is only 5 GB/s, which is *below* the ~10 GB/s P/D adoption
+A single stream is only 3.8 GB/s, which is *below* the ~10 GB/s P/D adoption
 crossing Exp 3 found — but a TP=8 decode island shards its KV across 8 PEs, so
-the handoff uses the parallel path and sustains ~35 GB/s at 88 % of ideal
-scaling. Raw data: `outputs/rngd_profile/host_bandwidth.json`.
+the handoff uses the parallel path and sustains ~26 GB/s at 87 % of ideal
+scaling. Raw data: `outputs/rngd_profile/parallel_bandwidth.json`, method and
+full analysis in `experiments/results/rngd_parallel_bandwidth.md`.
+
+> **CORRECTED 2026-08-27.** This table previously read 5.06 / 10.39 / 19.10 /
+> 35.47 GB/s at 88 %, and cited `host_bandwidth.json` — which holds only the
+> single-stream run. The multi-stream figures existed nowhere in the repo but
+> prose. Measured properly, the **scaling law survives** (87.1 % against the
+> claimed 88 %) but every absolute figure was ~25 % high, because the old ones
+> were *peak single transfers* and a KV handoff is a *sustained* bulk copy. The
+> same card still yields 5.06 GB/s under the old best-of-N method, so this is a
+> statistic change, not a hardware change. Details and the decomposition:
+> `experiments/results/rngd_parallel_bandwidth.md`.
 
 So the NPU leg is **not** the bottleneck. Whether the whole path clears the
 crossing depends on the GPU leg, which is what the A40 server has to answer.

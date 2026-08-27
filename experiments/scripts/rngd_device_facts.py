@@ -31,6 +31,7 @@ from __future__ import annotations
 import argparse
 import gc
 import json
+import re
 import statistics
 import subprocess
 import sys
@@ -53,8 +54,40 @@ import furiosa.torch as ft  # noqa: F401  (registers the rngd device)
 BYTES_PER_ELEMENT = 2  # bfloat16
 
 
+PES_PER_CARD = 8
+
+
+def present_cards() -> list[str]:
+    """Cards the driver currently exposes, in ascending npu order.
+
+    NOT every npu0..npu3: the driver re-enumerates, and on 2026-08-27 npu2
+    (PCI 44:00.0) vanished from sysfs entirely while npu0/1/3 stayed. Torch
+    numbers rngd devices densely over the cards that are *present*, so with a
+    hole in the middle ``rngd:16`` is npu3, not npu2 -- confirmed against
+    ``furiosa-smi ps``, which reported ``npu3:0`` for a load pinned to rngd:16.
+    """
+    nodes = Path("/sys/class/rngd_mgmt").glob("rngd!npu*mgmt")
+    return sorted(
+        (f"npu{n}" for n in
+         (int(m.group(1)) for m in
+          (re.match(r"rngd!npu(\d+)mgmt$", p.name) for p in nodes) if m)),
+        key=lambda c: int(c[3:]),
+    )
+
+
 def card_of(device: str) -> str:
-    return f"npu{int(device.split(':')[1]) // 8}"
+    """Physical card backing a torch device index.
+
+    Resolves through the live enumeration rather than ``index // 8``: that
+    assumption holds only when no card is missing, and it silently mislabels
+    the artifact when one is (see :func:`present_cards`). Falls back to the
+    arithmetic when sysfs is unreadable, so the non-NPU paths still import.
+    """
+    slot = int(device.split(":")[1]) // PES_PER_CARD
+    cards = present_cards()
+    if slot < len(cards):
+        return cards[slot]
+    return f"npu{slot}"
 
 
 def sample_power_w(card: str) -> float | None:

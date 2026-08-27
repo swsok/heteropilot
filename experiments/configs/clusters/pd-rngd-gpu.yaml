@@ -137,13 +137,27 @@ links:
   # THIS IS THE VARIABLE THE WHOLE EXPERIMENT TURNS ON, so it is swept rather than
   # trusted: run experiments/scripts/pd_network_sweep.py over this fixture.
   #
-  # What is measured, on this machine: host -> RNGD PE transfer is 5.06 GB/s for a
-  # single stream, and it scales almost linearly across the 8 PEs of a card --
-  # 10.39 / 19.10 / 35.47 GB/s aggregate at 2 / 4 / 8 streams (88% of ideal at 8).
+  # What is measured, on this machine: host -> RNGD PE transfer sustains 3.77 GB/s
+  # for a single stream, and it scales almost linearly across the 8 PEs of a card --
+  # 7.60 / 15.36 / 26.27 GB/s aggregate at 2 / 4 / 8 streams (87.1% of ideal at 8).
   # A TP=8 decode island shards its KV across those 8 PEs, so the handoff uses the
-  # parallel path and the NPU leg sustains ~35 GB/s. That is well above the ~10 GB/s
-  # P/D adoption crossing Exp 3 found, so the NPU leg is NOT the bottleneck.
-  # See outputs/rngd_profile/host_bandwidth.json.
+  # parallel path and the NPU leg sustains ~26 GB/s. That is still well above the
+  # ~10 GB/s P/D adoption crossing Exp 3 found, so the NPU leg is NOT the bottleneck.
+  # See outputs/rngd_profile/parallel_bandwidth.json and
+  # experiments/results/rngd_parallel_bandwidth.md.
+  #
+  # CORRECTED 2026-08-27. This comment previously read 5.06 / 10.39 / 19.10 / 35.47
+  # GB/s at 88% and cited host_bandwidth.json, which holds only the single-stream
+  # run -- the multi-stream figures were prose with no artifact behind them. The
+  # scaling law survived remeasurement (87.1% vs 88%); the absolute figures did not,
+  # because the old ones were peak single transfers and a KV handoff is a sustained
+  # bulk copy. The same card still gives 5.06 GB/s under the old best-of-N method.
+  #
+  # NOT YET APPLIED TO bandwidth_gbps BELOW: the declared 35 is the OLD 8-stream
+  # figure; the corrected upper bound is 26.27. Changing it re-runs both SLO sweeps,
+  # so it is left for whoever lands the GPU leg (branch feat/gpu-host-bandwidth,
+  # which is not on origin and whose composed values this fixture does not carry
+  # yet). experiments/results/rngd_parallel_bandwidth.md has the new compositions.
   #
   # What is NOT measured: the GPU -> host leg. There is no NVIDIA GPU on this host,
   # so a cross-vendor handoff (GPU -> host -> NPU) cannot be measured end to end

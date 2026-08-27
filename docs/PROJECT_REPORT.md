@@ -280,11 +280,21 @@ Phase-3 `CsvProfileImporter`. **Parallelised one worker per PE: 315 s against
 | achieved HBM read, card | **~1750 GB/s** | 8 PEs concurrently sustain 218.8 GB/s **each** — 104 % scaling, no degradation |
 | board power | **`38.01 + 32.71 × PEs` W**, R² 0.996 | 0..8 loaded-PE sweep |
 | card active / idle | 290.93 / 39.35 W | same sweep; the 8th PE adds only +17.4 W where PEs 1–4 add ~31 W, so 291 W is a plateau |
-| host↔PE transfer | 5.06 GB/s single, **35.47 GB/s** at 8 streams | 88 % of ideal |
+| host↔PE transfer, sustained | 3.77 GB/s single, **26.27 GB/s** at 8 streams | 87.1 % of ideal; corrected 2026-08-27, see below |
 | **on-package all-reduce, TP=8** | **115 µs per decoder layer** | §4.8.5 |
 
 A single-PE power reading understated the card by **4×** (68 W against 285.5 W);
 that is why the sweep exists.
+
+The host↔PE row was **corrected on 2026-08-27**. It previously read 5.06 GB/s
+single and 35.47 GB/s at 8 streams, but only the single-stream figure had ever
+been committed; the multi-stream ones existed as prose alone. Measured from
+committed code (`outputs/rngd_profile/parallel_bandwidth.json`) the near-linear
+PE scaling holds — 87.1 % of ideal against the claimed 88 % — while every
+absolute figure drops ~25 %, because the old numbers were peak single transfers
+and a KV handoff is a sustained bulk copy. The old method still reproduces 5.06
+GB/s on the same card, so nothing about the hardware changed.
+`experiments/results/rngd_parallel_bandwidth.md` has the decomposition.
 
 ### 4.8.3 Instrument 2 — FuriosaAI's own EDF profiler, and what it revealed
 

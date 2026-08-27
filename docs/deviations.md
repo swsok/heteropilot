@@ -642,6 +642,7 @@ drops, TTFT flat, `none`-mode control flat — all PASS) and `tests/test_sim_pd_
 | D4 | Phase 3 | **Resolution path secured** — A5000 measured locally; A40/ATOM/RNGD hardware reachable from 2026-08-17 (see `docs/hardware_roadmap.md`) |
 | D10 | Phase 2 | **Open** — derating factor for the memory feasibility filter; nominal vs KV-matched config for the A5000 comparison |
 | D15 | Phase 5 | **Resolved** — sim-level P/D KV-transfer model, opt-in `--pd-transfer-model bandwidth`, default byte-identical; first sanctioned `serving/` edit (router.py + __main__.py only, scheduler.py pristine) |
+| D18 | Phase 5 | **Resolved** (retraction) — NPU-leg multi-stream bandwidth remeasured; scaling law held, levels ~25 % lower. Fixture `bandwidth_gbps` deliberately left at the old value pending the GPU leg |
 
 ---
 
@@ -791,3 +792,59 @@ in the repo. The calibrated row is the honest local fix.
   `tokens=1` row — the row decode needs most. The builder derives it from the
   fused graph instead, with the union / head / attention corrections
   `rngd_edf_bundle_notes.md` sets out.
+
+---
+
+## D18 — The NPU leg's multi-stream bandwidth was quoted as a peak where a sustained figure was needed · Resolved (retraction + remeasurement)
+
+**What was wrong.** Four figures — host → RNGD PE aggregate of 5.06 / 10.39 /
+19.10 / 35.47 GB/s at 1 / 2 / 4 / 8 streams, "88 % of ideal at 8" — appeared in
+`docs/HANDOVER_A40.md` §1, `docs/PROJECT_REPORT.md` §4.8.2 and both P/D fixtures'
+link comments, labelled as measured and citing
+`outputs/rngd_profile/host_bandwidth.json`. **That file holds only the
+single-stream run.** No committed code produced the 2 / 4 / 8-stream figures and
+no artifact recorded them. The citation was false for three of the four numbers.
+
+**What the remeasurement found** (2026-08-27, npu3, `--parallel-bandwidth`,
+`outputs/rngd_profile/parallel_bandwidth.json`):
+
+| streams | measured, sustained | previously quoted | ratio |
+| ---: | ---: | ---: | ---: |
+| 1 | 3.77 | 5.06 | 0.745 |
+| 2 | 7.60 | 10.39 | 0.731 |
+| 4 | 15.36 | 19.10 | 0.804 |
+| 8 | 26.27 (87.1 % of ideal) | 35.47 (88 % of ideal) | 0.741 |
+
+**The scaling law was right; the levels were not.** 87.1 % against 88 % from an
+independent implementation is a genuine confirmation that near-linear PE scaling
+is real. But all four absolute figures were ~25 % high, and uniformly so.
+
+**Why, and why it is not a hardware story.** Re-running the *committed* best-of-N
+method on the same card the same day reproduces 5.06 GB/s exactly
+(`outputs/rngd_profile/host_bandwidth_recheck.json`). The gap is entirely the
+statistic. Decomposed at one PE, 256 MB: the committed method interleaves a
+`.cpu()` between timed `.to()` calls, and the ~160 ms of idle that buys lets the
+device free and recycle its buffer, so the *typical* transfer runs 5.01 GB/s;
+remove the gap and back-to-back copies fall to 4.15; take a 5 s sustained window
+instead of the best of 7 and it falls again to 3.67. A prefill → decode KV
+handoff is a sustained bulk copy with nothing interleaved, so the sustained
+figure is the one the planner should use.
+
+**How we adapt.** The sustained figures replace the peak ones everywhere they
+were quoted, each site carrying an explicit correction note. `card_of()` in
+`experiments/scripts/rngd_device_facts.py` now resolves the physical card through
+live sysfs enumeration rather than `index // 8`, because npu2 left the PCI bus and
+torch renumbers densely over the cards that remain — under the old arithmetic this
+run's artifact would have been stamped `npu2`, a card no longer in the machine.
+
+**Left open deliberately.** `bandwidth_gbps: 35` on the six `fabric-*` links in
+both P/D fixtures is still the old 8-stream figure. The corrected upper bound is
+26.27, and changing it requires re-running both SLO sweeps. It is left for
+whoever lands the GPU leg, because the composed `1/(1/gpu + 1/npu)` values that
+the work order describes were never committed here — branch
+`feat/gpu-host-bandwidth` is not on `origin` and both fixtures still read
+`source: placeholder`. Composing against GPU figures that exist only in prose
+would repeat exactly the error this entry retracts.
+`experiments/results/rngd_parallel_bandwidth.md` tabulates the new compositions;
+the one to watch is `rngd ↔ rngd` at tp4, which falls 9.6 → 7.68 GB/s and so
+crosses *below* the ~10 GB/s P/D adoption threshold.
