@@ -35,7 +35,7 @@
 #     predicts reality within ~2%, so this fixture's GPU arm is now the MORE
 #     accurate one and the NPU arm is close behind - which was not true of the
 #     sibling fixture.
-#   - The prefill->decode fabric is HOST-MEDIATED and PLACEHOLDER; see links.
+#   - The prefill->decode fabric is HOST-MEDIATED; both legs measured, see links.
 #
 # WHAT THIS FIXTURE STILL CANNOT EXPRESS. D14 requires tp_p == tp_d, so
 # `A40 tp4 prefill + RNGD tp8 decode` - big TP on the memory-bound decode phase -
@@ -133,16 +133,30 @@ links:
   - {id: pcie-a40b-02, src: node_a40b/gpu0, dst: node_a40b/gpu2, type: PCIE, bandwidth_gbps: 64.0, latency_ns: 2000, contention_group: a40b-pcie, source: vendor_spec}
 
   # --- inter-island: the prefill -> decode KV path -------------------------
-  # PLACEHOLDER, same value and same reason as the sibling fixture. Measured on
-  # this machine: host -> RNGD is 5.06 GB/s single-stream and 35.47 GB/s across a
-  # card's 8 PEs (88% of ideal), well above the ~10 GB/s P/D adoption crossing
-  # Exp 3 found, so the NPU leg is not the bottleneck. The GPU -> host leg CANNOT
-  # be measured here (no NVIDIA GPU on this host), so 35 GB/s is the measured NPU
-  # leg used as an UPPER BOUND on the whole GPU->host->NPU path. That is not the
-  # quantity the planner thinks it is, hence placeholder. docs/HANDOVER_A40.md.
-  - {id: fabric-rngd0-a40a, src: node_rngd0/card0, dst: node_a40a/gpu0, type: ETHERNET, bandwidth_gbps: 35, latency_ns: 20000, contention_group: host-pcie, source: placeholder}
-  - {id: fabric-rngd0-a40b, src: node_rngd0/card0, dst: node_a40b/gpu0, type: ETHERNET, bandwidth_gbps: 35, latency_ns: 20000, contention_group: host-pcie, source: placeholder}
-  - {id: fabric-rngd1-a40a, src: node_rngd1/card0, dst: node_a40a/gpu0, type: ETHERNET, bandwidth_gbps: 35, latency_ns: 20000, contention_group: host-pcie, source: placeholder}
-  - {id: fabric-rngd1-a40b, src: node_rngd1/card0, dst: node_a40b/gpu0, type: ETHERNET, bandwidth_gbps: 35, latency_ns: 20000, contention_group: host-pcie, source: placeholder}
-  - {id: fabric-rngd0-rngd1, src: node_rngd0/card0, dst: node_rngd1/card0, type: ETHERNET, bandwidth_gbps: 35, latency_ns: 20000, contention_group: host-pcie, source: placeholder}
-  - {id: fabric-a40a-a40b, src: node_a40a/gpu0, dst: node_a40b/gpu0, type: ETHERNET, bandwidth_gbps: 35, latency_ns: 20000, contention_group: host-pcie, source: placeholder}
+  # MEASURED, both legs, composed. A cross-vendor handoff has no device-to-device
+  # route, so the KV cache goes GPU -> host -> NPU: two copies.
+  #   NPU leg  (host -> RNGD): 5.06 GB/s single stream, 35.47 GB/s across a card's
+  #            8 PEs (88% of ideal). outputs/rngd_profile/host_bandwidth.json.
+  #   GPU leg  (A40 -> host):  26.03 GB/s single stream, 79.98 GB/s across 8 GPUs
+  #            (only 38% of ideal -- the host path saturates ~80 GB/s, so unlike
+  #            the NPU leg this one does NOT scale). Pinned host memory; pageable
+  #            is 3.2 GB/s and allocator-bound. outputs/a40_profile/host_bandwidth.json.
+  # Composed as a SERIALISED handoff, 1/(1/gpu + 1/npu) -- the two copies are not
+  # assumed to overlap, because no implementation here pipelines them. A pipelined
+  # handoff would give min(gpu, npu) instead: 26.03 rather than 15.0 on the
+  # rngd<->a40 links. Both stay above the ~10 GB/s P/D adoption crossing Exp 3
+  # found, so the qualitative answer does not turn on the choice.
+  # Per link, at tp1 -- the degree where this fixture's cross-vendor P/D exists:
+  #   rngd <-> a40   1/(1/26.03 + 1/35.47) = 15.0   (GPU 1 stream, card 8 PEs)
+  #   rngd <-> rngd  1/(1/35.47 + 1/35.47) = 17.7
+  #   a40  <-> a40   1/(1/26.03 + 1/26.03) = 13.0
+  # A scalar link cannot vary with the candidate's TP degree, so these are pinned
+  # to tp1; a candidate at another degree is priced with the tp1 path.
+  # Method and raw table: experiments/scripts/gpu_host_bandwidth.py,
+  # experiments/results/gpu_host_bandwidth.md.
+  - {id: fabric-rngd0-a40a, src: node_rngd0/card0, dst: node_a40a/gpu0, type: ETHERNET, bandwidth_gbps: 15.0, latency_ns: 20000, contention_group: host-pcie, source: measured}
+  - {id: fabric-rngd0-a40b, src: node_rngd0/card0, dst: node_a40b/gpu0, type: ETHERNET, bandwidth_gbps: 15.0, latency_ns: 20000, contention_group: host-pcie, source: measured}
+  - {id: fabric-rngd1-a40a, src: node_rngd1/card0, dst: node_a40a/gpu0, type: ETHERNET, bandwidth_gbps: 15.0, latency_ns: 20000, contention_group: host-pcie, source: measured}
+  - {id: fabric-rngd1-a40b, src: node_rngd1/card0, dst: node_a40b/gpu0, type: ETHERNET, bandwidth_gbps: 15.0, latency_ns: 20000, contention_group: host-pcie, source: measured}
+  - {id: fabric-rngd0-rngd1, src: node_rngd0/card0, dst: node_rngd1/card0, type: ETHERNET, bandwidth_gbps: 17.7, latency_ns: 20000, contention_group: host-pcie, source: measured}
+  - {id: fabric-a40a-a40b, src: node_a40a/gpu0, dst: node_a40b/gpu0, type: ETHERNET, bandwidth_gbps: 13.0, latency_ns: 20000, contention_group: host-pcie, source: measured}

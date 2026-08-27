@@ -18,7 +18,30 @@ continue. Read this first, then `experiments/results/rngd_edf_bundle_notes.md` a
 
 ---
 
-## 1. The one measurement that is blocked here
+## 1. The measurement that was blocked here — DONE 2026-08-27
+
+> **Resolved on this server.** Both legs of the cross-vendor KV path are now
+> measured and the two P/D fixtures carry composed values at `source: measured`.
+> Full result: `experiments/results/gpu_host_bandwidth.md`; raw data
+> `outputs/a40_profile/host_bandwidth.json`; method
+> `experiments/scripts/gpu_host_bandwidth.py`. Headlines:
+>
+> - **GPU leg (A40 → host, pinned): 26.03 GB/s single stream, 79.98 GB/s across
+>   8 GPUs.** Single-stream is PCIe 4.0 ×16 line rate. Pageable D2H is
+>   allocator-bound, not link-bound — do not quote it as a link figure.
+> - **The GPU leg does NOT scale like the NPU leg** — 38 % of ideal at 8 streams
+>   against the NPU's 88 %. The host path saturates ~80 GB/s. That answers the
+>   open question below.
+> - **Composed serialised, the cross-vendor links are ~15 GB/s, not 35.** The old
+>   placeholder was ~2.3× too optimistic. It still clears Exp 3's ~10 GB/s
+>   crossing, so P/D stays viable with less headroom.
+> - **At tp1 the GPU leg is the bottleneck, not the NPU leg** (26.03 against
+>   35.47), which inverts the framing in the text below. The "NPU leg is not the
+>   bottleneck" claim holds only when the GPU side is wide.
+>
+> The rest of this section is kept as the record of what was asked for and why.
+
+## 1b. The original statement of the problem
 
 **GPU → host transfer bandwidth**, so the cross-vendor Prefill/Decode KV handoff
 path can be priced end to end.
