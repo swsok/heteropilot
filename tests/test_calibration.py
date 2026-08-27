@@ -1,8 +1,10 @@
 """Calibration tests: linear fit, error stats, robust margins, persistence.
 
-No GPU, no network. The bench-summary fitting path reads a committed real
-summary (`outputs/phase0_bench/A40/vllm/validation/summary.txt`) so it exercises
-real numbers without inventing any (absolute rule 3).
+No GPU, no network. The bench-summary fitting path reads the committed real
+summary (`outputs/phase0_bench/A40/vllm/validation-nominal/summary.txt`) so it
+exercises real numbers without inventing any (absolute rule 3). That file is the
+one `profiles/calibration/a40.yaml` records in its `fitted_from` provenance, and
+refitting it reproduces the shipped coefficients exactly.
 """
 
 from __future__ import annotations
@@ -31,7 +33,7 @@ from planner.predictor.calibration import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
-A40_SUMMARY = ROOT / "outputs/phase0_bench/A40/vllm/validation/summary.txt"
+A40_SUMMARY = ROOT / "outputs/phase0_bench/A40/vllm/validation-nominal/summary.txt"
 
 _METRICS = PredictedMetrics(
     p50_ttft_ms=10.0, p95_ttft_ms=20.0, p99_ttft_ms=30.0,
@@ -126,7 +128,7 @@ def test_parse_validation_summary_real_file() -> None:
     # each pair is (sim, real); the A40 sim slightly under the vLLM figure.
     sim, real = pairs.ttft[0]
     assert sim == pytest.approx(39789.2)
-    assert real == pytest.approx(40572.3)
+    assert real == pytest.approx(40552.4)
 
 
 def test_fit_from_summaries_builds_hardware_entry() -> None:
