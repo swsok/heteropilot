@@ -193,8 +193,61 @@ Three things to carry forward:
    than cross-vendor P/D in that fixture, and worse than it was at the interim
    value of 9.6.
 3. **The cross-vendor links sit just above the crossing** at 12.6–13.0 GB/s, where
-   the placeholder implied 35. The SLO sweeps were re-run at these values; the
-   headroom is thin enough that the regimes should not be assumed to carry over.
+   the placeholder implied 35 — but see below: the SLO sweeps turn out not to be
+   the test that detects this.
+
+## The SLO sweeps are insensitive to the fabric value, and that is structural
+
+Both sweeps were re-run at the corrected values. **All 16 winners are unchanged**,
+same plan ids, same candidate counts (496/492 and 468/468):
+
+| fixture | change |
+| --- | --- |
+| `pd-rngd-gpu` | winners identical; the tight-TTFT `P[cuda:tp4] D[cuda:tp4]` row moves 372 → 371 ms p99 TTFT and 2.206 → 2.205 tok/J |
+| `pd-rngd-gpu-card` | byte-identical at all 8 points |
+
+That is not a null result to be reported as "nothing changed" — it has a cause,
+and the cause limits what these sweeps can be used to argue.
+
+**The fabric value does reach the simulator.** The compiled config for a
+cross-vendor candidate carries `link_bw = 12.6`
+(`outputs/.hp-slo-pd-rngd-gpu/work/mix_cuda-a40-node_a40a-tp4-dp1_furiosa-rngd-node_rngd0-tp4-dp1_-s128-t2048/cluster.json`),
+so this is not a plumbing failure. Three things make it inert anyway:
+
+1. **The simulator prices the P/D KV handoff at zero by default** (deviations
+   **D15**). The bandwidth-sensitive model is opt-in via
+   `--pd-transfer-model bandwidth`, and `pd_slo_sweep.py` does not pass it — only
+   `pd_sim_network_sweep.py` does.
+2. **`link_bw` acts on collectives, and the card fixture has none.** Every
+   candidate there is tp1 on both sides, so there is no TP group for ASTRA-Sim to
+   charge. The one row that *did* move in the per-PE fixture is the tp4 homogeneous
+   A40 P/D split, and it moved in the predicted direction because its `a40 ↔ a40`
+   link went *up*, 31.2 → 35.2.
+3. **The planner-side penalty is a per-request latency term, and it is negligible
+   at these sizes.** `apply_pd_transfer_cost` charges
+   `kv_bytes / bandwidth` with no queueing. Llama-3.1-8B is 128 KiB of KV per
+   token, so:
+
+| prompt | penalty at 35 GB/s | at 13.0 GB/s | share of the cross-vendor candidate's 5817 ms p99 TTFT |
+| ---: | ---: | ---: | ---: |
+| 399 tok | 1.51 ms | 4.04 ms | 0.03 % → 0.07 % |
+| 2048 tok | 7.69 ms | 20.67 ms | 0.13 % → 0.36 % |
+
+The headline cross-vendor candidate — `A40 tp1 prefill → RNGD-card tp1 decode`,
+the 88 %-of-winner row in `pd_slo_sweep.md` — comes back **exactly** as before:
+2.779 tok/J, 3.04 rps, 5817 ms p99 TTFT, 60.6 ms p99 TPOT, 0.74 attainment. A
+2.7× cut in fabric bandwidth changes it in no digit, because a single request's
+prompt KV is 50–260 MB and at 13 GB/s that is 4–21 ms against a multi-second TTFT.
+
+**So Exp 3's ~10 GB/s adoption crossing is not a statement about this term.** It
+must come from aggregate contention under concurrency, which is what the
+simulator-side model (D15, opt-in) produces by deferring and queueing each
+transfer. The test that would show the corrected bandwidth is
+`pd_sim_network_sweep.py` / `run_exp_pd.sh`, not these SLO sweeps.
+
+An earlier draft of this file warned that "the headroom is thin enough that the
+regimes should not be assumed to carry over". That was the wrong caution: the
+regimes are not merely robust here, they are **untested** by this sweep.
 
 ## Provenance
 
