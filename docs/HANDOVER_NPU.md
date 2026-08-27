@@ -114,6 +114,14 @@ Notes and traps confirmed here:
 
 ## 3. The NPU work path (do these in order)
 
+**Progress 2026-08-25: steps 1-2 are DONE for RNGD.** Llama-3.1-8B bf16 is
+measured at tp1/2/4/8 in `profiler/perf/RNGD/`, `profiles/accelerators/
+furiosa_rngd.yaml` carries measured memory and bandwidth, and a 20-request
+simulation runs on the bundle. Step 3 (power) is **partly** done: card totals are
+measured but the per-PE split is not, which is now the one thing standing between
+here and step 4. ATOM is blocked on its broken vendor install. Read
+`docs/hardware_roadmap.md` "First access" before continuing.
+
 The goal: replace every **SIM-PROXY / placeholder** NPU number with a **measured**
 one, then run **Exp 4**. Concrete NPU targets: **Rebellions ATOM (×4, backend
 `rbln`)** and **FuriosaAI RNGD (×4, backend `furiosa`, 47.5 GiB and 8 PEs each)** — all

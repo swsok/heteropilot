@@ -1,0 +1,162 @@
+{
+  "model": "meta-llama/Llama-3.1-8B",
+  "tp": 4,
+  "workers": 24,
+  "devices": [
+    "rngd:0",
+    "rngd:8",
+    "rngd:16",
+    "rngd:24",
+    "rngd:1",
+    "rngd:9",
+    "rngd:17",
+    "rngd:25",
+    "rngd:2",
+    "rngd:10",
+    "rngd:18",
+    "rngd:26",
+    "rngd:3",
+    "rngd:11",
+    "rngd:19",
+    "rngd:27",
+    "rngd:4",
+    "rngd:12",
+    "rngd:20",
+    "rngd:28",
+    "rngd:5",
+    "rngd:13",
+    "rngd:21",
+    "rngd:29"
+  ],
+  "elapsed_s": 195.2,
+  "rows": {
+    "dense.csv": 107,
+    "per_sequence.csv": 18,
+    "attention.csv": 35
+  },
+  "failed_shards": [],
+  "attention_shots_skipped_over_kv_budget": [],
+  "per_worker_power_w": [
+    {
+      "device": "rngd:0",
+      "before": 38.0,
+      "after": 38.0
+    },
+    {
+      "device": "rngd:8",
+      "before": 40.0,
+      "after": 40.0
+    },
+    {
+      "device": "rngd:16",
+      "before": 41.0,
+      "after": 42.0
+    },
+    {
+      "device": "rngd:24",
+      "before": 40.0,
+      "after": 41.0
+    },
+    {
+      "device": "rngd:1",
+      "before": 38.0,
+      "after": 38.0
+    },
+    {
+      "device": "rngd:9",
+      "before": 40.0,
+      "after": 40.0
+    },
+    {
+      "device": "rngd:17",
+      "before": 41.0,
+      "after": 42.0
+    },
+    {
+      "device": "rngd:25",
+      "before": 40.0,
+      "after": 41.0
+    },
+    {
+      "device": "rngd:2",
+      "before": 38.0,
+      "after": 38.0
+    },
+    {
+      "device": "rngd:10",
+      "before": 40.0,
+      "after": 40.0
+    },
+    {
+      "device": "rngd:18",
+      "before": 41.0,
+      "after": 42.0
+    },
+    {
+      "device": "rngd:26",
+      "before": 40.0,
+      "after": 41.0
+    },
+    {
+      "device": "rngd:3",
+      "before": 38.0,
+      "after": 39.0
+    },
+    {
+      "device": "rngd:11",
+      "before": 40.0,
+      "after": 40.0
+    },
+    {
+      "device": "rngd:19",
+      "before": 41.0,
+      "after": 42.0
+    },
+    {
+      "device": "rngd:27",
+      "before": 40.0,
+      "after": 41.0
+    },
+    {
+      "device": "rngd:4",
+      "before": 38.0,
+      "after": 38.0
+    },
+    {
+      "device": "rngd:12",
+      "before": 40.0,
+      "after": 40.0
+    },
+    {
+      "device": "rngd:20",
+      "before": 41.0,
+      "after": 42.0
+    },
+    {
+      "device": "rngd:28",
+      "before": 40.0,
+      "after": 41.0
+    },
+    {
+      "device": "rngd:5",
+      "before": 38.0,
+      "after": 38.0
+    },
+    {
+      "device": "rngd:13",
+      "before": 40.0,
+      "after": 40.0
+    },
+    {
+      "device": "rngd:21",
+      "before": 41.0,
+      "after": 42.0
+    },
+    {
+      "device": "rngd:29",
+      "before": 40.0,
+      "after": 41.0
+    }
+  ],
+  "reps": 5
+}

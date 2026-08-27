@@ -1,0 +1,148 @@
+# Heterogeneous P/D fixture, CARD-AS-DEVICE variant of pd-rngd-gpu.yaml.
+#
+# WHY THIS EXISTS. The per-PE sibling fixture could not answer the question it was
+# built for. Sweeping the TTFT SLO over it (experiments/results/pd_slo_sweep.md)
+# found that the ONE cross-vendor direction worth testing - A40 prefill into RNGD
+# decode, which is the shape NVIDIA Dynamo recommends and AWS Neuron documents -
+# CRASHED in all six configurations:
+#
+#   RuntimeError: [MemoryModel] NPU: tried to load 39.00MB but only 3.49MB
+#   is available.
+#
+# RNGD decode at tp4-dp1 replicates 14 GB of Llama-3.1-8B weights across 4 PEs of
+# 6.25 GB and has no KV headroom left. So the promising combination was never
+# evaluated, and its absence from that ranking is not evidence against it.
+#
+# WHAT CHANGES HERE, and it is one thing: an accelerator is one whole 47.5 GB RNGD
+# CARD running TP=8 internally, not one PE. That
+#   - gives RNGD decode A40-comparable KV headroom, so the crash above disappears;
+#   - makes the TP candidate set {1}, which OVERLAPS the A40 island's {1,2,4} at
+#     tp1, so cross-vendor P/D is expressible without the PCIe-bridging hack that
+#     deviations D16 describes and that the sibling fixture needs;
+#   - and uses the profile whose decode prediction is accurate to -3.1% against
+#     the real furiosa-llm run, against +25.7% for the per-PE bundle. The sibling
+#     fixture therefore OVER-charges RNGD decode by about a quarter, which is the
+#     direction that hurts an RNGD-decode combo most.
+#
+# PROVENANCE (absolute rule 3):
+#   - RNGD: MEASURED on this machine, and measured on the graph furiosa-llm
+#     actually serves - profiles/accelerators/furiosa_rngd_card.yaml, perf bundle
+#     profiler/perf/RNGD-CARD/ built from FuriosaAI's own EDF profiler over six
+#     concurrency passes. See experiments/results/rngd_edf_bundle_notes.md for what
+#     in that bundle is measured and what is inherited.
+#   - A40: MEASURED, but ON A DIFFERENT MACHINE and BY A DIFFERENT METHOD (vLLM's
+#     own layerwise profiler). THERE IS NO NVIDIA GPU ON THIS HOST. The A40 bundle
+#     predicts reality within ~2%, so this fixture's GPU arm is now the MORE
+#     accurate one and the NPU arm is close behind - which was not true of the
+#     sibling fixture.
+#   - The prefill->decode fabric is HOST-MEDIATED and PLACEHOLDER; see links.
+#
+# WHAT THIS FIXTURE STILL CANNOT EXPRESS. D14 requires tp_p == tp_d, so
+# `A40 tp4 prefill + RNGD tp8 decode` - big TP on the memory-bound decode phase -
+# remains unrepresentable. Card-as-device sidesteps it by folding TP=8 inside the
+# device rather than by lifting the constraint: the card IS the tp8 instance. That
+# is the right answer for RNGD specifically and NOT a general fix for D14.
+#
+# KNOWN LIMIT of the card profile, carried here so results are read correctly: its
+# TTFT is -71.3% against the real run (against -32.6% for the per-PE profile),
+# because upstream's scheduler queues ~2.2x less than furiosa-llm's. A TTFT-SLO
+# sweep over this fixture therefore reads RNGD's prefill as more capable than it
+# is. Decode, energy and goodput are the trustworthy axes here.
+
+cluster_id: pd-rngd-gpu-card
+
+nodes:
+  - id: node_rngd0
+    # RNGD card npu0 as ONE accelerator. memory_gb is the card's HBM as furiosa-smi
+    # reports it, not the per-PE 6.25 GB bisect.
+    accelerators:
+      - {id: card0, type: NPU, vendor: FuriosaAI, model: RNGD-CARD, backend: furiosa, memory_gb: 47.5, state: FREE, profile: profiles/accelerators/furiosa_rngd_card.yaml}
+    nics: [{id: nic0, type: ethernet, speed_gbps: 100}]
+    # base_node_power here is the HOST baseline only, and it is a PLACEHOLDER: it is
+    # the planner's 60 W default (planner/inventory.py), not a measurement of this
+    # machine. Stated explicitly rather than omitted, because omitting it silently
+    # substituted the same 60 W while the block claimed source: measured.
+    #
+    # It must NOT carry the card's 38.01 W board cost the way the per-PE sibling
+    # fixture does. There, the profile's power block is PER PE with idle_power 0, so
+    # the board cost had to be hand-carried into base_node_power. Here the card
+    # profile's power block is CARD TOTALS (idle 39.35 / standby 265 / active
+    # 290.93 W, measured by the 0..8 loaded-PE sweep) and the board cost is already
+    # inside idle_power. Adding it again would double-count it.
+    #
+    # For scale: the simulator reports ~558 W for this node against the card's
+    # measured 290.93 W active, because it prices the whole NODE - accelerator plus
+    # base 60, CPU (10 W idle / 200 W active at util 0.15), DRAM (2 W/DIMM idle plus
+    # 6 pJ/bit), link, NIC and storage. That is the right denominator for
+    # tokens/joule as work order §3 defines it, and the A40 nodes are priced the
+    # same way, so cross-fixture tok/J comparisons are apples-to-apples. Just do not
+    # read 558 W as a card power figure.
+    power: {base_node_power: 60.0, source: placeholder}
+
+  - id: node_rngd1
+    accelerators:
+      - {id: card0, type: NPU, vendor: FuriosaAI, model: RNGD-CARD, backend: furiosa, memory_gb: 47.5, state: FREE, profile: profiles/accelerators/furiosa_rngd_card.yaml}
+    nics: [{id: nic0, type: ethernet, speed_gbps: 100}]
+    power: {base_node_power: 60.0, source: placeholder}   # host baseline, as node_rngd0
+
+  - id: node_a40a
+    # NOT PRESENT ON THIS HOST; measured artifacts of the A40x8 server.
+    # Four GPUs in one island, as in the sibling fixture: it keeps tp in {1,2,4}
+    # so the A40 arm can be compared at the same degrees. The tp=4 bridging that
+    # the sibling fixture NEEDED to make any cross-vendor candidate exist is no
+    # longer load-bearing here - tp1 is the shared degree now - but keeping the
+    # island shape identical makes the two sweeps directly comparable.
+    accelerators:
+      - {id: gpu0, type: GPU, vendor: NVIDIA, model: A40, backend: cuda, memory_gb: 45.0, state: FREE, profile: profiles/accelerators/a40.yaml}
+      - {id: gpu1, type: GPU, vendor: NVIDIA, model: A40, backend: cuda, memory_gb: 45.0, state: FREE, profile: profiles/accelerators/a40.yaml}
+      - {id: gpu2, type: GPU, vendor: NVIDIA, model: A40, backend: cuda, memory_gb: 45.0, state: FREE, profile: profiles/accelerators/a40.yaml}
+      - {id: gpu3, type: GPU, vendor: NVIDIA, model: A40, backend: cuda, memory_gb: 45.0, state: FREE, profile: profiles/accelerators/a40.yaml}
+    nics: [{id: nic0, type: ethernet, speed_gbps: 100}]
+    power: {source: placeholder}
+
+  - id: node_a40b
+    accelerators:
+      - {id: gpu0, type: GPU, vendor: NVIDIA, model: A40, backend: cuda, memory_gb: 45.0, state: FREE, profile: profiles/accelerators/a40.yaml}
+      - {id: gpu1, type: GPU, vendor: NVIDIA, model: A40, backend: cuda, memory_gb: 45.0, state: FREE, profile: profiles/accelerators/a40.yaml}
+      - {id: gpu2, type: GPU, vendor: NVIDIA, model: A40, backend: cuda, memory_gb: 45.0, state: FREE, profile: profiles/accelerators/a40.yaml}
+      - {id: gpu3, type: GPU, vendor: NVIDIA, model: A40, backend: cuda, memory_gb: 45.0, state: FREE, profile: profiles/accelerators/a40.yaml}
+    nics: [{id: nic0, type: ethernet, speed_gbps: 100}]
+    power: {source: placeholder}
+
+links:
+  # --- intra-island -------------------------------------------------------
+  # There are NO intra-island RNGD links here, and that is the point: with the
+  # card as one accelerator each RNGD island has size 1, so there is no TP group
+  # for ASTRA-Sim to price. The on-package reduction is not omitted - it is
+  # INSIDE the measured stage times (an EDF stage time is what the card took, with
+  # the reduction already in it), so charging it again would double-count. The
+  # sibling fixture's ONPACKAGE placeholder links exist precisely because its
+  # per-PE bundle does NOT contain the reduction.
+  #
+  # For the record, the reduction is now measured directly rather than assumed:
+  # 115 us per decoder layer at TP=8 (down_proj 49.97 + o_proj 65.11), see
+  # experiments/results/rngd_collective_measured.md.
+
+  # A40: NVLink pairs bridged over PCIe into one size-4 island, identical to the
+  # sibling fixture so the two sweeps are comparable.
+  - {id: nvlink-a40a-01, src: node_a40a/gpu0, dst: node_a40a/gpu1, type: NVLINK, bandwidth_gbps: 112.5, latency_ns: 1000, contention_group: a40a-pair0, source: measured}
+  - {id: nvlink-a40a-23, src: node_a40a/gpu2, dst: node_a40a/gpu3, type: NVLINK, bandwidth_gbps: 112.5, latency_ns: 1000, contention_group: a40a-pair1, source: measured}
+  - {id: pcie-a40a-02, src: node_a40a/gpu0, dst: node_a40a/gpu2, type: PCIE, bandwidth_gbps: 64.0, latency_ns: 2000, contention_group: a40a-pcie, source: vendor_spec}
+  - {id: nvlink-a40b-01, src: node_a40b/gpu0, dst: node_a40b/gpu1, type: NVLINK, bandwidth_gbps: 112.5, latency_ns: 1000, contention_group: a40b-pair0, source: measured}
+  - {id: nvlink-a40b-23, src: node_a40b/gpu2, dst: node_a40b/gpu3, type: NVLINK, bandwidth_gbps: 112.5, latency_ns: 1000, contention_group: a40b-pair1, source: measured}
+  - {id: pcie-a40b-02, src: node_a40b/gpu0, dst: node_a40b/gpu2, type: PCIE, bandwidth_gbps: 64.0, latency_ns: 2000, contention_group: a40b-pcie, source: vendor_spec}
+
+  # --- inter-island: the prefill -> decode KV path -------------------------
+  # PLACEHOLDER, same value and same reason as the sibling fixture. Measured on
+  # this machine: host -> RNGD is 5.06 GB/s single-stream and 35.47 GB/s across a
+  # card's 8 PEs (88% of ideal), well above the ~10 GB/s P/D adoption crossing
+  # Exp 3 found, so the NPU leg is not the bottleneck. The GPU -> host leg CANNOT
+  # be measured here (no NVIDIA GPU on this host), so 35 GB/s is the measured NPU
+  # leg used as an UPPER BOUND on the whole GPU->host->NPU path. That is not the
+  # quantity the planner thinks it is, hence placeholder. docs/HANDOVER_A40.md.
+  - {id: fabric-rngd0-a40a, src: node_rngd0/card0, dst: node_a40a/gpu0, type: ETHERNET, bandwidth_gbps: 35, latency_ns: 20000, contention_group: host-pcie, source: placeholder}
+  - {id: fabric-rngd0-a40b, src: node_rngd0/card0, dst: node_a40b/gpu0, type: ETHERNET, bandwidth_gbps: 35, latency_ns: 20000, contention_group: host-pcie, source: placeholder}
+  - {id: fabric-rngd1-a40a, src: node_rngd1/card0, dst: node_a40a/gpu0, type: ETHERNET, bandwidth_gbps: 35, latency_ns: 20000, contention_group: host-pcie, source: placeholder}
+  - {id: fabric-rngd1-a40b, src: node_rngd1/card0, dst: node_a40b/gpu0, type: ETHERNET, bandwidth_gbps: 35, latency_ns: 20000, contention_group: host-pcie, source: placeholder}
+  - {id: fabric-rngd0-rngd1, src: node_rngd0/card0, dst: node_rngd1/card0, type: ETHERNET, bandwidth_gbps: 35, latency_ns: 20000, contention_group: host-pcie, source: placeholder}
+  - {id: fabric-a40a-a40b, src: node_a40a/gpu0, dst: node_a40b/gpu0, type: ETHERNET, bandwidth_gbps: 35, latency_ns: 20000, contention_group: host-pcie, source: placeholder}

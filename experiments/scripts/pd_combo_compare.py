@@ -160,16 +160,38 @@ def run(args: argparse.Namespace) -> int:
         if r.stage.value == "sim_error"
     }
 
+    # Provenance is DERIVED from the profiles the candidate actually uses, never
+    # hardcoded. The original version of this driver hardwired
+    # "SIM-PROXY (RTXPRO6000 model)" for any NPU row, which was true for
+    # pd-4combo-sim.yaml but silently mislabels a measured RNGD profile as a proxy
+    # the moment the fixture changes - the exact failure absolute rule 3 exists to
+    # prevent, in the direction that understates the evidence.
+    def provenance_of(cand) -> str:
+        parts = []
+        for assignment in cand.assignments:
+            island = islands_by_id[assignment.island_id]
+            profile = profiles.get(island.accelerator_model)
+            source = getattr(getattr(profile, "source", None), "value", "unknown")
+            role = getattr(assignment.role, "value", str(assignment.role))
+            parts.append(f"{island.accelerator_model}:{source}[{role}]")
+        return " + ".join(parts)
+
+    # Any rejection stage, not just sim_error. A candidate rejected at, say, the
+    # analytical bound stage appears in NEITHER plan_by_id NOR infeasible_plans, so
+    # without this its row came out entirely blank - "-" in every column - which
+    # reads as "no result" when the truth is "rejected, and here is why".
+    rejection_by_id = {
+        r.candidate_id: f"{r.stage.value}: {r.reason}"
+        for r in evaluation.rejections
+    }
+
     rows = []
     for cand in selected:
         combo = combo_of.get(cand.id, "?")
-        proxy = "NPU" in combo
         row: dict[str, object] = {
             "combo": combo,
             "candidate_id": cand.id,
-            "provenance": (
-                "SIM-PROXY (RTXPRO6000 model)" if proxy else "sim (RTXPRO6000, vendor_spec)"
-            ),
+            "provenance": provenance_of(cand),
             "feasible": cand.id in feasible_ids,
         }
         if cand.id in sim_error_by_id:
@@ -189,6 +211,9 @@ def run(args: argparse.Namespace) -> int:
             row["violations"] = [
                 f"{v.metric}={v.predicted:.1f} vs {v.target:.1f}" for v in report.violations
             ]
+        elif cand.id in rejection_by_id:
+            row["outcome"] = "rejected"
+            row["detail"] = rejection_by_id[cand.id]
         info = xfer_by_id.get(cand.id)
         if info is not None:
             row["xfer_ms_p99"] = info.get("xfer_ms_p99")

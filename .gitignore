@@ -27,3 +27,40 @@ bench/results/
 # committed explicitly with `git add -f`.
 outputs/.hp-*
 outputs/phase0_bench/
+
+# RNGD profiling intermediates. The measured bundle itself lives in
+# profiler/perf/RNGD/, and outputs/rngd_profile/ keeps only what stays
+# auditable: the compute/DMA breakdown behind every union-based time_us, the
+# per-run summaries, and device_facts.json. Per-shard logs and chrome traces are
+# bulky and regenerable (experiments/scripts/run_rngd_profile.py).
+outputs/rngd_profile/shards/
+outputs/rngd_profile/retry_*/
+outputs/rngd_profile/traces/
+
+# EDF profiler traces from FuriosaAI's own profiler. 155 MB across six
+# concurrency passes, and fully regenerable by
+# `rebuild_rngd_bundle_from_edf.py collect` (which re-serves the artifact), so
+# the raw CSVs stay out. What IS committed is everything derived from them: the
+# §3.7 bundle under profiler/perf/RNGD-CARD/, the per-request client timings,
+# and the audit files (edf_vs_harness_dense.csv, edf_decode_attention.csv,
+# edf_composed.json) that show how each bundle number was obtained.
+outputs/rngd_edf_bundle/edf/edf_c*.csv
+outputs/rngd_edf_bundle/edf/serve_c*.log
+outputs/rngd_edf_bundle/*_sparse.jsonl
+outputs/rngd_vendor_prof/edf.json
+
+# oh-my-claudecode session state.
+.omc/
+
+# RNGD staging and diagnostic leftovers. The authoritative bundles live in
+# profiler/perf/RNGD/ and profiler/perf/RNGD-CARD/; outputs/rngd_profile/tp*/ are
+# the pre-import staging copies of the same CSVs, and the probe logs exist so a
+# failed collective-probe worker is diagnosable (they are regenerable per run).
+outputs/rngd_profile/tp[0-9]*/
+outputs/rngd_profile/collective_probe_logs/
+outputs/rngd_card_profile/
+# Smoke-test and verification scratch from environment bring-up.
+outputs/envcheck/smoke.csv
+outputs/envcheck/plan.yaml
+outputs/envcheck/rngd_verify.csv
+outputs/rngd_edf_bundle/sim_sparse*.csv

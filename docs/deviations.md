@@ -642,3 +642,152 @@ drops, TTFT flat, `none`-mode control flat — all PASS) and `tests/test_sim_pd_
 | D4 | Phase 3 | **Resolution path secured** — A5000 measured locally; A40/ATOM/RNGD hardware reachable from 2026-08-17 (see `docs/hardware_roadmap.md`) |
 | D10 | Phase 2 | **Open** — derating factor for the memory feasibility filter; nominal vs KV-matched config for the A5000 comparison |
 | D15 | Phase 5 | **Resolved** — sim-level P/D KV-transfer model, opt-in `--pd-transfer-model bandwidth`, default byte-identical; first sanctioned `serving/` edit (router.py + __main__.py only, scheduler.py pristine) |
+
+---
+
+## D16 — `LinkType` has no on-package fabric, and cross-vendor P/D needs a shared TP degree · Resolved (one added type) + Open (the TP constraint)
+
+Two problems surfaced together while building the first heterogeneous
+RNGD + GPU P/D fixture (`experiments/configs/clusters/pd-rngd-gpu.yaml`).
+
+### (a) No link type fits an on-package PE fabric — resolved
+
+**Upstream / our schema** offered `NVLINK`, `PCIE`, `INFINIBAND`, `ETHERNET`,
+`HCCS`. A FuriosaAI RNGD card is 8 PEs on one package sharing 47.5 GiB of HBM,
+and an accelerator in our model is one PE (`furiosa-llm build -tp` counts PEs per
+TP group), so the 8 PEs of a card must be joined by an **intra-island** link for
+`detect_islands` to group them. None of the five fits: `NVLINK` and `HCCS` are
+other vendors' names, and `PCIE` is simply false for elements that never leave
+the package — it would also feed the Level-1 topology model the wrong
+interconnect class.
+
+**Adaptation**: added a vendor-neutral `LinkType.ONPACKAGE`, included it in
+`INTRA_ISLAND_LINKS`, and ranked it first in `_dominant_link` so an all-PE island
+reports `ONPACKAGE` rather than falling through to `None`. Existing cluster specs
+are unaffected — nothing else uses it.
+
+Its **bandwidth is `placeholder`** and must stay so until measured: PE-to-PE
+on-package bandwidth was not measured. What *was* measured is HBM→PE read
+(≈219 GB/s per PE, scaling to 8 PEs at 104 % efficiency, so a card sustains
+≈1750 GB/s of reads), and that is a different quantity. It only feeds the TP
+collective term, which ASTRA-Sim prices.
+
+### (b) Cross-vendor P/D is unrepresentable unless the TP degrees overlap — open
+
+`planner/candidate_generator.py::_pd_candidates` requires `tp_p == tp_d`, which
+is D14's constraint: the simulator infers its topology as
+`[npus_per_group, num_instances]` by integer division over the total device
+count, so unequal instance sizes are unrepresentable. That interacts badly with
+heterogeneity in a way neither D14 nor §5.4 anticipated:
+
+- RNGD reaches only **tp ∈ {4, 8}** for Llama-3.1-8B, because a PE holds 6.25 GB
+  (measured) against 14 GB of weights. tp=1 and tp=2 are correctly rejected on
+  memory feasibility.
+- An **NVLink-pair** A40 island offers only **tp ∈ {1, 2}**.
+
+The two sets are disjoint, so **no mixed P/D candidate is generated at all** —
+the first run of the re-done Exp 5 produced 3 representatives (GPU-P+GPU-D,
+NPU-P+NPU-D, aggregated) with both mixed combos silently absent. Nothing errored;
+the candidates simply did not exist, which is the dangerous failure mode: a
+"heterogeneous P/D does not pay" conclusion could be drawn from a search that
+never considered it.
+
+**Adaptation** (fixture-level, not a code change): bridge the A40 NVLink pairs
+over PCIe into **size-4** islands, exactly as
+`experiments/configs/clusters/exp1-a40-tp-sweep.yaml` already does, giving
+tp ∈ {1, 2, 4} so that **tp=4 is a shared degree**. Both mixed combos then
+appear.
+
+**Why this stays open**: the workaround requires the island sizes to be
+*choosable*. On hardware where the per-device memory forces disjoint TP sets and
+the island sizes are fixed by the fabric, heterogeneous P/D remains
+unrepresentable. Lifting it means addressing D14 itself — teaching the compiler
+to emit non-uniform instance sizes — which is a simulator-side change and out of
+scope here. Any claim about cross-vendor P/D must state which TP degree the two
+backends shared, and whether one existed at all.
+
+### (c) The constraint is ours, not the world's — verified 2026-08-26
+
+`tp_p == tp_d` is an artifact of `_compute_network_dims`, not a property of P/D
+serving. Asymmetric TP per phase is a **headline feature** of real disaggregated
+systems, and the direction they recommend is the one we cannot express:
+
+- **DistServe** makes independent per-phase parallelism a core contribution.
+- **AWS Neuron** Disaggregated Inference documents `TP=4 for prefill attention
+  and TP=1 for decode` explicitly.
+- **NVIDIA Dynamo** supports differing prefill/decode TP first-class, transposing
+  KV blocks into the receiver's layout between NIXL read and write, and
+  recommends *"a larger TP for the memory-bound decoding phase while a smaller TP
+  for the computation-bound prefill phase"*.
+- **vLLM** `NixlConnector` supports heterogeneous TP (each decode worker computes
+  which remote TP ranks to read, no extra copies); its `MooncakeConnector` does
+  not, so the restriction is per-implementation, not fundamental.
+
+The consequence for our results is concrete. Dynamo's recommendation — big TP on
+decode — is exactly what RNGD needs: tp8 holds 246,079 KV tokens against 61,775
+at tp4. So `GPU tp4 prefill + RNGD tp8 decode` is both the industry-recommended
+shape and the one that uses RNGD's measured bandwidth advantage, and D14 forbids
+it. **Any "heterogeneous P/D does not pay" statement from this repo is therefore
+scoped to the uniform-TP configurations D14 permits, and must say so.**
+
+One further real-world limit, from FuriosaAI's own llm-d documentation:
+**Furiosa-LLM does not support prefill/decode disaggregation at all** today. So
+every RNGD P/D number here is simulator-only until that ships, independently of
+D14.
+
+---
+
+## D17 — The §3.7 attention grid cannot express the vendor runtime's per-layer attention cost · Resolved (calibrated per workload, limit recorded)
+
+**Found** 2026-08-26, while rebuilding the RNGD perf bundle from FuriosaAI's EDF
+profiler (`experiments/results/rngd_edf_bundle_notes.md`).
+
+**The work order and the simulator both assume** that per-layer attention cost is
+a function of the batch's *shape*: `attention.csv` is keyed
+`(prefill_chunk, kv_prefill, n_decode, kv_decode)` and `_lookup_attention()`
+returns one number per layer for a given `n_decode` and mean KV.
+
+**Furiosa-LLM's runtime groups a decode batch by KV bucket**, so one forward
+issues as many attention executions per layer as the batch has distinct KV
+buckets — measured over 1.74 M stage executions:
+
+| sequences per forward | 1.95 | 3.91 | 8.91 | 15.16 | 29.09 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| attention executions per layer | 1.95 | 2.40 | 2.87 | 3.03 | 3.08 |
+| per-layer attention (µs) | 88.3 | 131.3 | 198.0 | 254.2 | 329.7 |
+
+Per-layer attention therefore depends on the batch's KV **diversity**, which is a
+property of the traffic, not of `n_decode` and a mean. A single execution's cost
+is *not* the per-layer cost: charging the `n_decode=16` bucket median (86 µs)
+where reality runs three groups (254 µs) under-counts by ~3× at large batch.
+
+**How we adapt.** Each concurrency pass contributes one total-preserving row:
+`time_us` = total decode-attention device time ÷ (forwards × 32 layers). Totals
+then close — predicted against measured wall time is within 5.2 % across a 32×
+concurrency range — but the decode-attention axis is **calibrated to the traffic
+it was measured on** (sharegpt, mean KV ≈ 2200, stable to ±1 % across all five
+batched passes, which is why one calibration serves them all). A workload with a
+very different KV spread would need its own pass.
+
+**Why not extend the schema.** Adding a "KV-bucket count" axis would change
+`serving/core/trace_generator.py`, which is upstream and pristine until Phase 5,
+and it would be RNGD-specific: vLLM's paged attention runs one kernel per layer
+regardless of KV spread, so the existing contract is right for every GPU profile
+in the repo. The calibrated row is the honest local fix.
+
+**Related, same source, recorded so it is not rediscovered:**
+
+- **Mixed prefill+decode steps are absent from the traces.** Every attention
+  bucket is pure prefill or pure decode, so the 4D grid has data only on the two
+  axis planes and `_attn_slice_lookup()`'s nearest-slice fallback approximates
+  the interior — which under-counts continuous-batching steps that do both.
+  Whether the runtime genuinely never mixes them is **not decidable from these
+  traces**: the EDF CSV carries durations, not timestamps, so co-occurrence
+  within one forward is unobservable.
+- **The vendor runtime compiles two plans for the same model.** Batch 1 runs a
+  fully-fused `Composed` graph with no `Tokenwise` and no `Attention` stages at
+  all; batch ≥ 2 runs the per-layer path. So there is no `input_size: 1` bucket
+  anywhere in the traces, and a bundle keyed only on the bucketed path has no
+  `tokens=1` row — the row decode needs most. The builder derives it from the
+  fused graph instead, with the union / head / attention corrections
+  `rngd_edf_bundle_notes.md` sets out.

@@ -1,0 +1,178 @@
+# RNGD: card-as-device vs PE-as-device, and what the gap measures
+
+> **SUPERSEDED IN PART, 2026-08-26.** This page rejected card-as-device on a
+> −45.5 % TPOT error. That verdict was correct **for the bundle it tested** and
+> wrong about the abstraction. Rebuilding the card bundle from FuriosaAI's own
+> EDF profiler brings TPOT to **−3.1 %** — see
+> `experiments/results/rngd_edf_bundle_notes.md`. The reason is exactly the
+> mechanism this page identified: a `tp1` instance is charged no collective, and
+> an EDF stage time already contains the intra-card reduction, so the
+> measurement pays for the communication once instead of never. **The
+> abstraction was never the problem; the input was.** Everything below stands as
+> the diagnosis that made the fix findable — read it that way, not as a live
+> recommendation.
+
+*Measured 2026-08-26. Settles a modelling question with the real furiosa-llm
+benchmark instead of an argument, and the answer is not the one the reasoning
+predicted.*
+
+## The question
+
+An accelerator in HeteroPilot's model is whatever the simulator counts when it
+picks a `tp<N>` bundle. For RNGD there are two defensible choices:
+
+- **PE-as-device.** One accelerator = one PE. Mirrors `furiosa-llm build -tp`,
+  which counts PEs and defaults to 8. A card is a TP-8 island of 8 accelerators,
+  and ASTRA-Sim prices the intra-card collectives.
+- **Card-as-device.** One accelerator = one whole card running TP=8 internally.
+  The card is a `tp1` instance; the bundle's `tp1/` is the measured per-PE `tp8/`,
+  because the 8 PEs each do 1/8 of every layer in parallel so the card's per-layer
+  latency equals one PE's sharded latency.
+
+The case for card-as-device was strong, and none of it turned out to be wrong:
+
+| same 8 PEs, Llama-3.1-8B bf16 | replicas | total KV tokens |
+| --- | ---: | ---: |
+| **TP=8** | 1 | **246,079** |
+| TP=4 × DP=2 | 2 | 123,550 |
+| TP=2 × DP=4 | — | does not fit (−1.86 GiB/PE) |
+
+TP=8 shards the weights **once** across the 8 PEs (1.87 GiB each) rather than
+replicating them per group (3.74 GiB at TP=4), so it holds twice the KV on
+identical silicon. So TP<8 does not merely idle compute — it throws away half the
+memory that makes decode possible. TP=8 is also the only configuration that has
+ever been served here: `furiosa-llm build -tp` defaults to 8 and the vendor's
+prebuilt artifact is `tensor_parallel_size: 8`.
+
+Card-as-device also fixes three real annoyances: a 47.5 GB device has KV headroom
+comparable to an A40, which removes the decode-KV exhaustion that crashed the P/D
+simulations; 4 cards give TP candidates {1,2,4} that overlap an A40 island's
+{1,2,4}, so cross-vendor P/D becomes expressible without the PCIe-bridging
+fixture hack of deviations D16; and the power block takes the measured card totals
+verbatim, with no per-PE split and no `base_node_power` hand-carrying.
+
+## The answer: card-as-device is much less accurate
+
+Same 20 sharegpt requests, same TP=8 hardware, against the real furiosa-llm run
+(`experiments/results/rngd_sim_vs_real_summary.md`):
+
+| model | TTFT mean | error | TPOT mean | error |
+| --- | ---: | ---: | ---: | ---: |
+| **real** (furiosa-llm, TP=8) | 1404.1 ms | — | **28.4 ms** | — |
+| per-PE (8 accelerators, tp8) | 946.9 ms | −32.6 % | 35.7 ms | **+25.7 %** |
+| card (1 accelerator, tp1) | 310.0 ms | −77.9 % | 15.5 ms | **−45.5 %** |
+
+The truth sits between the two, and the per-PE model is both closer and
+conservative. Card-as-device under-predicts decode by a factor of two.
+
+**Why.** Dropping the TP group hands the model a free 8× parallel speedup with no
+communication. The per-layer scaling in the measured bundle is nearly perfect, so
+there is a lot of speedup to hand over — summed across a decode step, tp1 → tp8 is
+6.94×:
+
+| layer (1 token) | tp1 | tp8 | ratio |
+| --- | ---: | ---: | ---: |
+| qkv_proj | 259.9 µs | 35.7 µs | 7.29 |
+| o_proj | 174.3 | 21.7 | 8.04 |
+| gate_up_proj | 1197.8 | 153.9 | 7.78 |
+| down_proj | 507.4 | 79.1 | 6.42 |
+| **sum (all dense layers)** | **2160.4** | **311.4** | **6.94** |
+
+A `tp1` instance has no TP group, so the simulator charges nothing for the 64
+all-reduces per token that make that scaling possible.
+
+## What the residual measures
+
+The gap is not noise, and it is the useful part of a failed experiment:
+
+```
+28.4 ms (real) − 15.5 ms (card model) = 12.92 ms per token step unaccounted
+```
+
+Dropping the TP group therefore loses roughly **45 % of real decode**, which is
+why the abstraction was rejected. That much stands.
+
+> **Correction, 2026-08-26.** An earlier version of this section divided the
+> 12.92 ms by "64 collectives per token" (32 layers × 2 all-reduces) to claim
+> ~202 µs per all-reduce. **That arithmetic is invalid**: the 12.92 ms is a
+> per-token TPOT gap measured at concurrency 64, where one forward serves many
+> tokens, so it cannot be divided by a per-forward collective count. The figure
+> was quoted in `profiles/accelerators/furiosa_rngd_card.yaml` and has been
+> retracted there too.
+>
+> FuriosaAI's own EDF profiler gives the direct measurement instead: on the real
+> compiled graph a decode step spends **507 µs per decoder layer**, where our
+> synthetic-layer bundle accounts for **295 µs** — so **212 µs per layer** is work
+> the harness does not capture. See
+> `experiments/results/rngd_vendor_profiler_vs_layerwise.md`. That is still an
+> upper bound on the reduction alone, because the compiler's Tokenwise stage also
+> contains whatever else it fused in, but it is measured rather than inferred.
+>
+> **And now the reduction itself is measured: 115 µs per decoder layer at TP=8**
+> (`experiments/results/rngd_collective_measured.md`), i.e. 54 % of that 212 µs.
+> Which means **the framing of this whole page — that the residual is mostly the
+> missing collective — is wrong.** 115 µs/layer × 32 layers is 3.68 ms per
+> forward, or ~0.86 ms per token at ~4.3 tokens per forward: about **7 % of the
+> 12.92 ms gap**, not 45 %. The gap was the harness under-measuring per-layer
+> decode by 1.5–1.7×, which the EDF rebuild established independently. The
+> collective was a red herring, and the commit that introduced this page
+> (`4aac7a5`, "decode is collective-bound") overstated it.
+
+The qualitative reframing survives, but with the mechanism corrected: RNGD's
+measured strength is bandwidth per watt (5.84 GB/s/W at card level, 3.1× an A40),
+and at TP=8 a large part of that strength goes into per-layer work the compute
+model alone does not see — of which the reduction is about half (115 of 212 µs),
+and *not* the whole story it was taken for here.
+
+## What was kept
+
+> **Revised 2026-08-26.** With the EDF-derived bundle, *neither* profile
+> dominates: card-as-device is 8× better on decode (fitted TPOT error 0.025
+> against 0.204) and much worse on TTFT (−71.3 % against −32.6 %), and the TTFT
+> residual turns out to be queuing, not per-layer cost. Use card-as-device for
+> decode / throughput / energy and cross-vendor P/D; use PE-as-device where TTFT
+> feasibility decides the outcome. `profiles/accelerators/furiosa_rngd_card.yaml`
+> carries the full selection rule.
+
+- **PE-as-device stays the default** (`profiles/accelerators/furiosa_rngd.yaml`).
+  Keeping the 8 PEs as accelerators is what lets ASTRA-Sim price the dominant term.
+- **`furiosa_rngd_card.yaml` is retained but marked not-the-default-path**, with
+  this validation in its header. It is the record of why the abstraction was
+  rejected.
+- **"TP=8 is a must" is right, but belongs in the objective, not the abstraction.**
+  With collectives correctly charged, TP=8 wins on its merits — 2× the KV and
+  ~7× the dense-layer throughput of tp1 — so the optimizer selects it without
+  being told to. Hard-coding TP=8 by collapsing the card into one device buys a
+  preference the search would have reached anyway, and pays for it with a 45 %
+  decode error. Forbidding TP<8 outright would also be wrong in general: for a
+  model small enough that weights fit at TP=4, tp4×dp2 is a legitimate
+  configuration, and only the optimizer knows which model it is looking at.
+
+## Open, and where it goes next
+
+> **Mostly closed, 2026-08-26.** The bundle was rebuilt from EDF traces
+> (`rngd_edf_bundle_notes.md`), which settles the first and third bullets below
+> and reframes the second. What remains open is the TTFT gap, and the EDF runs
+> show it is a scheduler difference: for the same 24 requests and the same
+> 1220-token mean prompt, real TTFT rises 158 → 1894 ms as concurrency goes
+> 1 → 32, so ~90 % of the validation benchmark's 1404 ms is queuing.
+
+- **Done.** The gap is localised to 212 µs per decoder layer on the real compiled
+  graph (`rngd_vendor_profiler_vs_layerwise.md`), and the reduction *within* it is
+  now directly measured at 115 µs/layer at TP=8
+  (`rngd_collective_measured.md`) — 54 % of it, with the remaining ~97 µs being
+  the other work the compiler fused into that stage.
+- **The per-PE model's +25.7 % TPOT error now has a quantified suspect.** The
+  harness *under*-measures per-layer decode by 1.72×, so the over-prediction must
+  come from ASTRA-Sim's collective model. Working back from the TPOT ratio,
+  ASTRA-Sim appears to charge ~340 µs/layer against a measured 115 µs — roughly
+  3× too much. The measured figure is the target to calibrate
+  `link_bw` / `link_latency` against.
+- **The artifact's `tensor_parallel_size: 8` is two fused 4-PE quads, not eight
+  ranks** (`leader_device` in the EDF trace is `npu0pe0-3`). A bundle built on
+  per-PE `tp8/` shapes therefore models a rank granularity the hardware does not
+  use, which is a more likely source of error than anything discussed above.
+- **None of this licenses an RNGD P/D deployment claim.** FuriosaAI's own llm-d
+  documentation states Furiosa-LLM does not support prefill/decode disaggregation,
+  so every RNGD P/D result remains simulator-only regardless of how the accelerator
+  is modelled.

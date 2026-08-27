@@ -227,14 +227,19 @@ contract. What was actually run on `rngd:24` (npu3):
 The vLLM layerwise profiler cannot profile either device as installed, but the
 cheapest route is no longer the ATOM one. Ordered by how much they unblock:
 
-1. **RNGD via `CsvProfileImporter`** (Phase 3 V1, `profiler/core/importer.py`) —
-   a standalone script in a furiosa-only venv walks the canonical layers of
-   `profiler/models/<model_type>.yaml`, compiles each through
-   `furiosa.torch.backend` with an `RNGDProfiler`, sweeps the contract's token /
-   sequence / attention grids, and writes the CSV bundle for import. **The
-   mechanism is verified working on hardware today**, needs no vendor fix, and
-   leaves `profiler/` untouched. This is the shortest path to a *measured* NPU
-   profile and to Exp 4.
+1. **RNGD via `CsvProfileImporter`** — ✅ **DONE 2026-08-25.**
+   `experiments/scripts/profile_rngd.py` walks the canonical layers of
+   `profiler/models/llama.yaml`, compiles each through `furiosa.torch.backend`
+   with an `RNGDProfiler`, and `run_rngd_profile.py` shards the grid one worker
+   per PE (24 workers finish a TP degree in 105–315 s, against 40–60 min
+   serially). Imported to `profiler/perf/RNGD/meta-llama/Llama-3.1-8B/bf16/` at
+   tp1/tp2/tp4/tp8, and a 20-request simulation runs on it. `profiler/` was not
+   touched. **This is the project's first measured NPU number** — everything
+   before it was SIM-PROXY or placeholder.
+
+   What it does *not* settle: the power block's per-PE split (below), end-to-end
+   `furiosa-llm` serving, and whether these layer implementations track vLLM's
+   fused kernels closely enough for a like-for-like GPU-vs-NPU comparison.
 2. **ATOM via vLLM** — blocked on a **broken vendor install**, not a design gap:
    `importlib.metadata` resolves `rebel-compiler` to **0.11.0** while
    `vllm_rbln 0.10.2.post1` and `optimum-rbln 0.10.2` expect 0.10.2, and *both*
@@ -250,3 +255,39 @@ cheapest route is no longer the ATOM one. Ordered by how much they unblock:
 
 Whichever route: **one venv per vendor**. The two stacks cannot share an
 interpreter — that is what defect 1 is. `.venv` stays vLLM-free regardless.
+
+### What the first measured RNGD profile settled, and what it did not
+
+Measured facts now in `profiles/accelerators/furiosa_rngd.yaml`:
+
+| field | value | how |
+| --- | --- | --- |
+| `memory_gb` | 6.25 | largest bf16 block one PE accepts, bisected |
+| `memory_bandwidth_gbps` | 200 | achieved HBM→PE read, from DMA span scaling |
+| card power | idle 39.0 W / active 285.53 W / standby 265.0 W | all 8 PEs loaded |
+
+**One accelerator is one PE, not one card.** `furiosa-llm build -tp` counts PEs
+per TP group (default 8), the bundle's `tp<N>` holds one PE's shapes, and the
+simulator picks `tp<N>` by the accelerator count in the TP group. So
+ClusterSpecV2 must declare 8 accelerators per card. The simulator confirms the
+consequence: TP=1 is refused because Llama-3.1-8B bf16 weights (14 GB) exceed
+one PE's 6.25 GB, exactly why the vendor defaults to `-tp 8`.
+
+**The open blocker for Exp 4 is power attribution, not latency.** Board power is
+only measurable per card, but the simulator applies the profile's power block per
+NPU instance. The profile divides the card totals by 8 and keeps
+`source: placeholder`, because an even split was not measured and idle draw in
+particular is a board cost that does not scale with PE count. Loading a single
+PE reads 68 W against 285 W for the whole card — a 4× gap, so this is not a
+rounding concern. **Resolve it by sweeping 1..8 loaded PEs and fitting the
+marginal per-PE cost**; until then no tokens/J figure for RNGD should be quoted,
+even though the latency bundle is sound.
+
+**Two measurement traps worth not rediscovering.** Timing must use the *union* of
+device spans, not their sum: on down_proj@256 the TuExec sum alone is 1603 µs
+and DMA adds 964 µs, but the union is 1250 µs and equals the full timeline, so
+tensor units run concurrently and DMA overlaps compute. And one process walking a
+grid must free device tensors *and* call `torch._dynamo.reset()` between shots —
+dynamo caches the compiled graph, which keeps the loaded EDF's device buffers
+alive, so a large shot that succeeds leaves the PE too full for smaller ones
+after it.
