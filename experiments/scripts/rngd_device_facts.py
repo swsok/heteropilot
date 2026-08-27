@@ -491,24 +491,34 @@ def measure_parallel_bandwidth(device: str, streams: list[int], size_mb: int,
                                duration_s: float, trials: int, log) -> dict:
     """Aggregate host<->PE bandwidth with N PEs of one card transferring at once.
 
-    **This is the measurement the repo has been quoting without committing.** The
-    figures 10.39 / 19.10 / 35.47 GB/s at 2 / 4 / 8 streams appear in
-    docs/HANDOVER_A40.md, docs/PROJECT_REPORT.md and both P/D fixture comments,
-    but outputs/rngd_profile/host_bandwidth.json holds only the single-stream run.
-    Every composed cross-vendor fabric number rests on them, so they need to be
-    reproducible from committed code.
+    **This closed a provenance gap and retracted four numbers** -- see deviations
+    D18 and experiments/results/rngd_parallel_bandwidth.md. The repo quoted
+    5.06 / 10.39 / 19.10 / 35.47 GB/s at 1 / 2 / 4 / 8 streams while committing
+    only the single-stream run, so three of the four had no artifact behind them.
+    Measured here: **3.77 / 7.60 / 15.36 / 26.27 GB/s**, recorded in
+    outputs/rngd_profile/parallel_bandwidth.json.
+
+    The scaling law survived -- 87.1 % of ideal at 8 streams against the claimed
+    88 % -- but every level was ~25 % high, because the old figures were peak
+    single transfers where a KV handoff is a sustained bulk copy. The same card
+    still yields 5.06 GB/s under the old best-of-N method, so it was a statistic
+    change, not a hardware change.
 
     Aggregate is total bytes across all workers over the wall time of the
-    concurrent region (first start to last finish) -- the same definition the GPU
-    leg uses in experiments/scripts/gpu_host_bandwidth.py, so the two compose.
+    concurrent region (first start to last finish) -- the same definition
+    experiments/scripts/gpu_host_bandwidth.py uses, so the two legs compose.
 
-    The statistic differs from the GPU script deliberately: this one measures
-    **sustained** throughput over a fixed duration rather than best-of-N single
-    transfers, because coordinating a per-transfer barrier across processes is
-    not worth the failure modes. A KV handoff is a sustained bulk transfer, so
-    sustained is the more honest statistic; the ``streams=1`` row exists to be
-    cross-checked against the committed single-stream table, which validates the
-    method against a number that is already trusted.
+    The statistic differs from that script's default deliberately: this one
+    measures **sustained** throughput over a fixed duration rather than best-of-N
+    single transfers, because coordinating a per-transfer barrier across processes
+    is not worth the failure modes. The ``streams=1`` row exists to be
+    cross-checked against the committed single-stream table; that check is what
+    localised the 25 % to the statistic rather than the link.
+
+    Composing against the GPU leg requires the **same** statistic on both sides.
+    The GPU figures measured on branch feat/gpu-host-bandwidth are best-of-N, so
+    they carry the same upward bias this function found on the NPU side; use its
+    sustained mode, not its default, when composing a fabric bandwidth.
     """
     first_pe = (int(device.split(":")[1]) // 8) * 8
     rows = []
