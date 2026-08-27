@@ -26,18 +26,22 @@ continue. Read this first, then `experiments/results/rngd_edf_bundle_notes.md` a
 > `outputs/a40_profile/host_bandwidth.json`; method
 > `experiments/scripts/gpu_host_bandwidth.py`. Headlines:
 >
-> - **GPU leg (A40 → host, pinned): 26.03 GB/s single stream, 79.98 GB/s across
->   8 GPUs.** Single-stream is PCIe 4.0 ×16 line rate. Pageable D2H is
+> - **GPU leg (A40 → host, pinned, sustained): 25.71 GB/s single stream, 82.63
+>   GB/s across 8 GPUs.** Single-stream is PCIe 4.0 ×16 line rate. Pageable D2H is
 >   allocator-bound, not link-bound — do not quote it as a link figure.
-> - **The GPU leg does NOT scale like the NPU leg** — 38 % of ideal at 8 streams
->   against the NPU's 88 %. The host path saturates ~80 GB/s. That answers the
+> - **The GPU leg does NOT scale like the NPU leg** — 40 % of ideal at 8 streams
+>   against the NPU's 87 %. The host path saturates ~83 GB/s. That answers the
 >   open question below.
-> - **Composed serialised, the cross-vendor links are ~15 GB/s, not 35.** The old
->   placeholder was ~2.3× too optimistic. It still clears Exp 3's ~10 GB/s
->   crossing, so P/D stays viable with less headroom.
-> - **At tp1 the GPU leg is the bottleneck, not the NPU leg** (26.03 against
->   35.47), which inverts the framing in the text below. The "NPU leg is not the
->   bottleneck" claim holds only when the GPU side is wide.
+> - **The A40 sustains its peak** (sustained/peak 0.998 at one stream), unlike
+>   RNGD, where the peak overstates a bulk copy by 25 % (D18). Both legs are now
+>   composed from sustained figures so the arithmetic mixes like with like.
+> - **Composed serialised, the cross-vendor links are 12.6–13.0 GB/s, not 35.**
+>   The placeholder was 2.7–4.5× too optimistic across the six links. Still above
+>   Exp 3's ~10 GB/s crossing, but the headroom is thin.
+> - **At tp1 the two legs are balanced, not GPU-bound** — 25.71 against 26.27,
+>   within 2 %. The NPU leg dominates every composition, so the GPU leg's exact
+>   value has low leverage: correcting it from peak to sustained moved the
+>   cross-vendor links by under 15 %.
 >
 > The rest of this section is kept as the record of what was asked for and why.
 

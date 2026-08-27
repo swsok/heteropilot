@@ -137,33 +137,38 @@ links:
   # THIS IS THE VARIABLE THE WHOLE EXPERIMENT TURNS ON, so it is swept rather than
   # trusted: run experiments/scripts/pd_network_sweep.py over this fixture.
   #
-  # BOTH LEGS ARE NOW MEASURED. A cross-vendor handoff has no device-to-device
-  # route, so the KV cache goes GPU -> host -> NPU: two copies.
-  #   NPU leg (host -> RNGD PE): 5.06 GB/s single stream, and it scales almost
-  #           linearly across a card's 8 PEs -- 10.39 / 19.10 / 35.47 GB/s at
-  #           2 / 4 / 8 streams (88% of ideal at 8).
-  #           outputs/rngd_profile/host_bandwidth.json.
-  #   GPU leg (A40 -> host): 26.03 GB/s single stream, 62.42 GB/s across the 4
-  #           GPUs of one island (60% of ideal), saturating ~80 GB/s at 8 GPUs
-  #           (38% of ideal). The GPU leg does NOT scale the way the NPU leg does;
-  #           the host path is the limit. Pinned host memory -- pageable is
-  #           3.2 GB/s and allocator-bound.
-  #           outputs/a40_profile/host_bandwidth.json.
-  # Composed as a SERIALISED handoff, 1/(1/gpu + 1/npu); the two copies are not
-  # assumed to overlap because nothing here pipelines them. Per link, at tp4 --
-  # the shared degree where this fixture's cross-vendor P/D exists:
-  #   rngd <-> a40   1/(1/62.42 + 1/19.10) = 14.6   (4 GPU streams, 4 PEs)
-  #   rngd <-> rngd  1/(1/19.10 + 1/19.10) =  9.6   (below the Exp 3 crossing)
-  #   a40  <-> a40   1/(1/62.42 + 1/62.42) = 31.2
-  # The old value here was 35 GB/s -- the NPU leg alone, used as an upper bound on
-  # the whole path. It was ~2.3x too optimistic on the rngd<->a40 links. This
+  # BOTH LEGS MEASURED, SAME STATISTIC, composed. A cross-vendor handoff has no
+  # device-to-device route, so the KV cache goes GPU -> host -> NPU: two copies.
+  # Both legs are SUSTAINED aggregates over a 5 s window, because a KV handoff is
+  # a sustained bulk copy and mixing a sustained leg with a peak one flatters the
+  # result. On RNGD the peak overstates sustained by 25% (D18); on the A40 it does
+  # not (sustained/peak 0.998 at 1 stream, 1.06 at 4 and 8).
+  #   NPU leg (host -> RNGD PE, sustained): 3.77 GB/s single PE, scaling near
+  #           linearly across a card's 8 PEs -- 7.60 / 15.36 / 26.27 GB/s at
+  #           2 / 4 / 8 streams, 87.1% of ideal at 8. Retracted from
+  #           5.06 / 10.39 / 19.10 / 35.47, which were peak single transfers with
+  #           no committed artifact behind the multi-stream half -- deviations D18,
+  #           outputs/rngd_profile/parallel_bandwidth.json.
+  #   GPU leg (A40 -> host, sustained): 25.71 GB/s single stream, 70.47 GB/s
+  #           across the 4 GPUs of one island, saturating ~83 GB/s at 8 GPUs.
+  #           The GPU leg does NOT scale the way the NPU leg does; the host path
+  #           is the limit. Pinned host memory -- pageable is 3.2 GB/s and
+  #           allocator-bound. outputs/a40_profile/host_bandwidth.json.
+  # Composed as a SERIALISED handoff, 1/(1/gpu + 1/npu). Per link, at tp4 -- the
+  # shared degree where this fixture's cross-vendor P/D exists:
+  #   rngd <-> a40   1/(1/70.47 + 1/15.36) = 12.6   (4 GPU streams, 4 PEs)
+  #   rngd <-> rngd  1/(1/15.36 + 1/15.36) =  7.7   (BELOW the Exp 3 crossing)
+  #   a40  <-> a40   1/(1/70.47 + 1/70.47) = 35.2
+  # The value here was 35 GB/s -- the NPU leg's peak alone, used as an upper bound
+  # on the whole path. It was ~2.8x too optimistic on the rngd<->a40 link. This
   # variable is still worth sweeping (experiments/scripts/pd_network_sweep.py);
   # the value below is the measured operating point, not a substitute for the sweep.
-  # Method and raw table: experiments/scripts/gpu_host_bandwidth.py,
-  # experiments/results/gpu_host_bandwidth.md.
-  - {id: fabric-rngd0-a40a, src: node_rngd0/pe0, dst: node_a40a/gpu0, type: ETHERNET, bandwidth_gbps: 14.6, latency_ns: 20000, contention_group: host-pcie, source: measured}
-  - {id: fabric-rngd0-a40b, src: node_rngd0/pe0, dst: node_a40b/gpu0, type: ETHERNET, bandwidth_gbps: 14.6, latency_ns: 20000, contention_group: host-pcie, source: measured}
-  - {id: fabric-rngd1-a40a, src: node_rngd1/pe0, dst: node_a40a/gpu0, type: ETHERNET, bandwidth_gbps: 14.6, latency_ns: 20000, contention_group: host-pcie, source: measured}
-  - {id: fabric-rngd1-a40b, src: node_rngd1/pe0, dst: node_a40b/gpu0, type: ETHERNET, bandwidth_gbps: 14.6, latency_ns: 20000, contention_group: host-pcie, source: measured}
-  - {id: fabric-rngd0-rngd1, src: node_rngd0/pe0, dst: node_rngd1/pe0, type: ETHERNET, bandwidth_gbps: 9.6, latency_ns: 20000, contention_group: host-pcie, source: measured}
-  - {id: fabric-a40a-a40b, src: node_a40a/gpu0, dst: node_a40b/gpu0, type: ETHERNET, bandwidth_gbps: 31.2, latency_ns: 20000, contention_group: host-pcie, source: measured}
+  # Method and raw tables: experiments/scripts/gpu_host_bandwidth.py,
+  # experiments/results/gpu_host_bandwidth.md,
+  # experiments/results/rngd_parallel_bandwidth.md.
+  - {id: fabric-rngd0-a40a, src: node_rngd0/pe0, dst: node_a40a/gpu0, type: ETHERNET, bandwidth_gbps: 12.6, latency_ns: 20000, contention_group: host-pcie, source: measured}
+  - {id: fabric-rngd0-a40b, src: node_rngd0/pe0, dst: node_a40b/gpu0, type: ETHERNET, bandwidth_gbps: 12.6, latency_ns: 20000, contention_group: host-pcie, source: measured}
+  - {id: fabric-rngd1-a40a, src: node_rngd1/pe0, dst: node_a40a/gpu0, type: ETHERNET, bandwidth_gbps: 12.6, latency_ns: 20000, contention_group: host-pcie, source: measured}
+  - {id: fabric-rngd1-a40b, src: node_rngd1/pe0, dst: node_a40b/gpu0, type: ETHERNET, bandwidth_gbps: 12.6, latency_ns: 20000, contention_group: host-pcie, source: measured}
+  - {id: fabric-rngd0-rngd1, src: node_rngd0/pe0, dst: node_rngd1/pe0, type: ETHERNET, bandwidth_gbps: 7.7, latency_ns: 20000, contention_group: host-pcie, source: measured}
+  - {id: fabric-a40a-a40b, src: node_a40a/gpu0, dst: node_a40b/gpu0, type: ETHERNET, bandwidth_gbps: 35.2, latency_ns: 20000, contention_group: host-pcie, source: measured}

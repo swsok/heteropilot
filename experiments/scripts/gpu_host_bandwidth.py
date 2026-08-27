@@ -2,11 +2,17 @@
 
 A GPU-prefill / NPU-decode split has no device-to-device route between vendors,
 so the KV cache travels **GPU -> host -> NPU**: two copies, and the slower leg
-sets the ceiling. The NPU leg was measured on the NPU server
-(``outputs/rngd_profile/host_bandwidth.json``, and the multi-stream aggregate
-quoted in ``docs/HANDOVER_A40.md`` §1). This script measures the leg that only
-an NVIDIA host can produce, so both P/D fixtures can stop carrying the NPU leg
-as a stand-in for the whole path.
+sets the ceiling. The NPU leg is measured on the NPU server
+(``outputs/rngd_profile/parallel_bandwidth.json``, analysis in
+``experiments/results/rngd_parallel_bandwidth.md``). This script measures the leg
+that only an NVIDIA host can produce, so both P/D fixtures can stop carrying the
+NPU leg as a stand-in for the whole path.
+
+Two statistics are produced. ``measure_host_bandwidth`` / ``measure_parallel``
+take the best of N transfers; ``measure_sustained`` takes a fixed window of
+back-to-back copies. **The fixtures compose from the sustained ones**, because
+the NPU leg is sustained and mixing statistics flatters the result -- see
+``measure_sustained`` for what that cost on RNGD and why it costs nothing here.
 
 **The relevant direction is D2H.** The GPU is the prefill side, so its
 contribution to the handoff is device-to-host. H2D is measured too, because the
@@ -63,11 +69,18 @@ import torch
 
 BYTES_PER_ELEMENT = 2  # bfloat16, matching the RNGD measurement
 
-# The NPU leg, host -> RNGD PE, from the NPU server. Single stream is the
-# committed JSON's peak_h2d_gbps; the 8-stream aggregate is what a TP=8 decode
-# island actually sustains when its KV is sharded across PEs.
-NPU_LEG_SINGLE_GBPS = 5.06
-NPU_LEG_PARALLEL_GBPS = 35.47
+# The NPU leg, host -> RNGD PE, measured on the NPU server across a card's 8 PEs:
+# outputs/rngd_profile/parallel_bandwidth.json, analysis in
+# experiments/results/rngd_parallel_bandwidth.md.
+#
+# SUSTAINED, not peak. These replace 5.06 / 35.47, which were peak single
+# transfers and were retracted as deviations D18: measured properly the scaling
+# law held (87.1 % of ideal at 8 streams against a claimed 88 %) but every level
+# was ~25 % high. Composing a fabric bandwidth needs the same statistic on both
+# legs, which is why measure_sustained() exists below.
+NPU_LEG_SINGLE_GBPS = 3.77
+NPU_LEG_PARALLEL_GBPS = 26.27
+NPU_LEG_4STREAM_GBPS = 15.36
 
 
 def gpu_facts() -> list[dict]:
@@ -265,7 +278,119 @@ def measure_parallel(indices: list[int], size_mb: int, reps: int, trials: int,
         "d2h_trial_min_gbps": round(min(d2h_trials), 2),
         "d2h_trial_max_gbps": round(max(d2h_trials), 2),
     }
-    log(f"  {len(indices)} stream(s) {str(indices):24s} "
+    log(f"  {len(indices)} stream(s) {indices!s:24s} "
+        f"H2D {result['h2d_aggregate_gbps']:7.2f} GB/s "
+        f"[{result['h2d_trial_min_gbps']:.1f}-{result['h2d_trial_max_gbps']:.1f}]  "
+        f"D2H {result['d2h_aggregate_gbps']:7.2f} GB/s "
+        f"[{result['d2h_trial_min_gbps']:.1f}-{result['d2h_trial_max_gbps']:.1f}]")
+    return result
+
+
+def _sustained_trial(indices: list[int], elements: int, duration_s: float,
+                     pinned: bool) -> dict:
+    """One sustained trial: fresh buffers, back-to-back copies for a fixed window.
+
+    Deliberately mirrors the NPU-side implementation
+    (``rngd_device_facts.measure_parallel_bandwidth``): one synchronised start,
+    then copies back to back for ``duration_s``, counting completions. Aggregate
+    is total bytes over the concurrent window, first start to last finish.
+
+    ``torch.cuda.synchronize()`` runs per iteration rather than once at the end,
+    because the NPU's ``.to(device)`` blocks per copy and the counts would not be
+    comparable otherwise. A fully pipelined CUDA implementation could beat this;
+    that is the same serialised-vs-pipelined question the fabric composition
+    already records, not a separate one.
+    """
+    width = len(indices)
+    barrier = threading.Barrier(width)
+    spans: dict[str, dict[int, tuple[int, float, float]]] = {"h2d": {}, "d2h": {}}
+
+    def worker(idx: int) -> None:
+        torch.cuda.set_device(idx)
+        device = f"cuda:{idx}"
+        host = torch.empty(elements, dtype=torch.bfloat16, pin_memory=pinned)
+        dst = (torch.empty(elements, dtype=torch.bfloat16, pin_memory=True)
+               if pinned else None)
+        _transfer_once(host, device, dst)       # warm
+        for direction in ("h2d", "d2h"):
+            on_device = host.to(device) if direction == "d2h" else None
+            torch.cuda.synchronize(device)
+            barrier.wait()
+            first = time.perf_counter()
+            moved = 0
+            last = first
+            while time.perf_counter() - first < duration_s:
+                if direction == "h2d":
+                    staged = host.to(device)
+                    torch.cuda.synchronize(device)
+                    del staged
+                else:
+                    if dst is None:
+                        on_device.cpu()         # type: ignore[union-attr]
+                    else:
+                        dst.copy_(on_device)
+                    torch.cuda.synchronize(device)
+                moved += 1
+                last = time.perf_counter()
+            spans[direction][idx] = (moved, first, last)
+            del on_device
+        del host, dst
+
+    threads = [threading.Thread(target=worker, args=(i,)) for i in indices]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    result = {}
+    for direction in ("h2d", "d2h"):
+        rows = spans[direction]
+        moved = sum(r[0] for r in rows.values()) * elements * BYTES_PER_ELEMENT
+        window = max(r[2] for r in rows.values()) - min(r[1] for r in rows.values())
+        result[direction] = moved / window / 1e9
+    gc.collect()
+    torch.cuda.empty_cache()
+    return result
+
+
+def measure_sustained(indices: list[int], size_mb: int, duration_s: float,
+                      trials: int, pinned: bool, log) -> dict:
+    """Sustained aggregate bandwidth, the statistic the fabric composition needs.
+
+    **Why this exists.** The default single-stream and parallel paths above take
+    the *best* of N transfers. Measuring the NPU leg the same way exposed how far
+    that overstates a bulk copy: on RNGD, best-of-N gave 5.06 GB/s per PE where a
+    5 s sustained window gave 3.77 -- a 25 % gap, of which roughly half is the
+    idle between timed transfers letting the device recycle its buffer and half is
+    best-versus-typical (deviations D18,
+    experiments/results/rngd_parallel_bandwidth.md).
+
+    A prefill -> decode KV handoff is a sustained bulk copy, so composing a
+    fabric bandwidth from peaks overstates it on both legs. This measures the GPU
+    leg with the NPU leg's statistic so ``1/(1/gpu + 1/npu)`` mixes like with
+    like.
+    """
+    elements = size_mb * 1000 ** 2 // BYTES_PER_ELEMENT
+    h2d_trials, d2h_trials = [], []
+    for _ in range(trials):
+        one = _sustained_trial(indices, elements, duration_s, pinned)
+        h2d_trials.append(one["h2d"])
+        d2h_trials.append(one["d2h"])
+    result = {
+        "gpus": indices,
+        "streams": len(indices),
+        "size_mb": size_mb,
+        "duration_s": duration_s,
+        "trials": trials,
+        "host_memory": "pinned" if pinned else "pageable",
+        "h2d_aggregate_gbps": round(statistics.median(h2d_trials), 2),
+        "d2h_aggregate_gbps": round(statistics.median(d2h_trials), 2),
+        "h2d_trial_min_gbps": round(min(h2d_trials), 2),
+        "h2d_trial_max_gbps": round(max(h2d_trials), 2),
+        "d2h_trial_min_gbps": round(min(d2h_trials), 2),
+        "d2h_trial_max_gbps": round(max(d2h_trials), 2),
+    }
+    log(f"  {len(indices)} stream(s) {indices!s:24s} "
         f"H2D {result['h2d_aggregate_gbps']:7.2f} GB/s "
         f"[{result['h2d_trial_min_gbps']:.1f}-{result['h2d_trial_max_gbps']:.1f}]  "
         f"D2H {result['d2h_aggregate_gbps']:7.2f} GB/s "
@@ -308,6 +433,12 @@ def main() -> None:
                              "the median trial is the headline, because host "
                              "buffer NUMA placement is uncontrolled and varies "
                              "run to run")
+    parser.add_argument("--sustained-duration-s", type=float, default=5.0,
+                        help="window for the sustained measurement; matches the "
+                             "NPU leg's --parallel-duration-s")
+    parser.add_argument("--sustained-trials", type=int, default=3,
+                        help="independent buffer allocations per sustained group")
+    parser.add_argument("--skip-sustained", action="store_true")
     parser.add_argument("--fabric-size-mb", type=int, default=256,
                         help="single-stream row used to compose the fabric "
                              "bandwidth; must be one of --sizes-mb")
@@ -340,6 +471,7 @@ def main() -> None:
         "topology": topology(),
         "single_stream": {},
         "parallel": [],
+        "sustained": [],
     }
 
     for pinned in (False, True):
@@ -363,6 +495,25 @@ def main() -> None:
                     group, args.parallel_size_mb, args.reps,
                     args.parallel_trials, pinned, log))
 
+    if not args.skip_sustained:
+        groups = [[int(v) for v in group.split(",") if v]
+                  for group in args.parallel_groups.split("|") if group]
+        # A single GPU is prepended: the tp1 composition needs a one-stream
+        # sustained figure, and the parallel groups start at two.
+        groups = [[args.device_index], *groups]
+        available = torch.cuda.device_count()
+        for pinned in (False, True):
+            label = "pinned" if pinned else "pageable"
+            log(f"-- SUSTAINED, {args.parallel_size_mb} MB, "
+                f"{args.sustained_duration_s:.0f}s window, {label} --")
+            for group in groups:
+                if any(i >= available for i in group):
+                    log(f"  skipping {group}: only {available} GPUs visible")
+                    continue
+                results["sustained"].append(measure_sustained(
+                    group, args.parallel_size_mb, args.sustained_duration_s,
+                    args.sustained_trials, pinned, log))
+
     # The GPU leg of the KV path is D2H: the GPU is the prefill side.
     #
     # Composed at --fabric-size-mb rather than at the peak over all sizes. The
@@ -373,23 +524,52 @@ def main() -> None:
     # 2048-token prompt moves ~262 MB -- so the large-transfer row is the honest
     # one, and it is also where the NPU leg's own peak sits, keeping the two
     # legs like-for-like.
+    #
+    # Both statistics are emitted so the difference is auditable, but **the
+    # sustained rows are the ones the fixtures must use**: the NPU leg is
+    # sustained (D18), and composing a sustained leg with a peak leg mixes
+    # statistics in a way that flatters the result.
+    def sustained_for(label: str, streams: int) -> float | None:
+        row = next((s for s in results["sustained"]
+                    if s["host_memory"] == label and s["streams"] == streams), None)
+        return row["d2h_aggregate_gbps"] if row else None
+
     for label, single in results["single_stream"].items():
-        row = next((r for r in single["table"]
-                    if r["size_mb"] == args.fabric_size_mb), None)
-        if row is None:
-            continue
+        peak_row = next((r for r in single["table"]
+                         if r["size_mb"] == args.fabric_size_mb), None)
         widest = max(
             (p for p in results["parallel"] if p["host_memory"] == label),
             key=lambda p: p["d2h_aggregate_gbps"], default=None)
-        results.setdefault("kv_path", {})[label] = {
-            "composed_at_size_mb": args.fabric_size_mb,
-            "single_stream": compose_fabric(
-                row["d2h_gbps"], NPU_LEG_SINGLE_GBPS),
-            "parallel": compose_fabric(
-                widest["d2h_aggregate_gbps"], NPU_LEG_PARALLEL_GBPS
-            ) if widest else None,
-            "parallel_gpu_group": widest["gpus"] if widest else None,
+        entry: dict = {"composed_at_size_mb": args.fabric_size_mb}
+        if peak_row:
+            entry["peak_single_stream"] = compose_fabric(
+                peak_row["d2h_gbps"], NPU_LEG_SINGLE_GBPS)
+        if widest:
+            entry["peak_parallel"] = compose_fabric(
+                widest["d2h_aggregate_gbps"], NPU_LEG_PARALLEL_GBPS)
+            entry["peak_parallel_gpu_group"] = widest["gpus"]
+
+        # Per-fixture rows, at the TP degree where each fixture's cross-vendor
+        # P/D actually exists. card fixture: tp1, so one GPU stream against the
+        # card's 8 PEs. per-PE fixture: tp4, so four GPU streams against 4 PEs.
+        gpu1, gpu4 = sustained_for(label, 1), sustained_for(label, 4)
+        if gpu1:
+            entry["sustained_card_fixture_tp1"] = {
+                "rngd_a40": compose_fabric(gpu1, NPU_LEG_PARALLEL_GBPS),
+                "a40_a40": compose_fabric(gpu1, gpu1),
+            }
+        if gpu4:
+            entry["sustained_pe_fixture_tp4"] = {
+                "rngd_a40": compose_fabric(gpu4, NPU_LEG_4STREAM_GBPS),
+                "a40_a40": compose_fabric(gpu4, gpu4),
+            }
+        entry["sustained_rngd_rngd"] = {
+            "card_fixture_tp1": compose_fabric(
+                NPU_LEG_PARALLEL_GBPS, NPU_LEG_PARALLEL_GBPS),
+            "pe_fixture_tp4": compose_fabric(
+                NPU_LEG_4STREAM_GBPS, NPU_LEG_4STREAM_GBPS),
         }
+        results.setdefault("kv_path", {})[label] = entry
 
     results["method"] = (
         "torch .to(device) / .cpu() on a contiguous bfloat16 buffer, host-side "
