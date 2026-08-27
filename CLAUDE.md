@@ -69,19 +69,51 @@ Island id convention: `{backend}-{model_slug}-{node_id}` (e.g. `cuda-h100-node0`
 GPU+NPU mixed TP · dynamic migration · multi-tenancy · RL · Kubernetes operator ·
 cross-vendor P/D before Phase 5 · full switch-level congestion modeling.
 
-## This machine
+## This machine — the NPU server (since 2026-08-25)
 
-2 × NVIDIA RTX A5000 (24 GB each), no NPU, Python 3.10.12, `uv`/`cmake`/`g++`/`protoc` available,
-20 cores, 93 GB RAM.
+The project has moved. This box is the NPU server promised in `docs/hardware_roadmap.md`, and
+it has **no NVIDIA GPU at all** (`nvidia-smi` cannot reach a driver).
 
-Consequences: real-vLLM `bench/` runs are possible only at small scale and only on CUDA; every
-Ascend/NPU number in this project is simulated or externally imported until real NPU hardware
-exists. Label it that way in every result file and figure.
+96 cores, 1.5 TB RAM, Python 3.10.12, `cmake` 4.3.2 / `g++` 11.4.0 / `protoc` 3.12.4.
 
-**Incoming remote hardware** (expected from 2026-08-17, not yet reachable): A40x8 GPU nodes (up
-to 8), 4x Rebellions ATOM, 4x FuriosaAI RNGD. Bring-up plan, provenance rules and open questions:
-`docs/hardware_roadmap.md`. Until inventoried, their profile stubs are placeholders with empty
-`supported_models` and are excluded from candidate generation by design.
+NPU inventory as reported by the vendor tools (not yet profiled — see below):
+
+- **4 × Rebellions ATOM** — `RBLN-CA22`, `/dev/rbln0..3`, PCI `83/84/c3/c4:00.0`, 15.7 GiB each,
+  KMD 3.0.0, ~19 W idle.
+- **4 × FuriosaAI RNGD** on PCI `03/04/44/45:00.0`, 47.5 GiB and 8 PEs each, firmware
+  `2026.3.0`, ~40 W idle. All four are `alive`. Torch addresses them as PrivateUse1 device
+  `rngd:0..31` (card × 8 PEs); `/dev/rngd/npu<N>pe<a>-<b>` nodes allow fusing 2 or 4 PEs.
+  **Only npu3 (`rngd:24..31`) is actually allocatable** right now — every PE on npu0/1/2
+  returns `EBUSY`. Re-check before planning a run; the driver re-enumerated at one
+  point today and changed what was visible.
+
+Vendor runtimes are already installed, but **split across two site-packages and mutually
+incompatible**: system `dist-packages` holds `vllm 0.13.0+cpu`, `vllm_rbln 0.10.2.post1`,
+`rebel-compiler` 0.10.2, `tvm 0.20.dev0` and `transformers 4.57.6`, while user `~/.local`
+holds `furiosa-llm`/`furiosa-torch` 2026.2.0, `torch 2.10.0+cu128` and `transformers 5.1.0`.
+The user-site `transformers` breaks system vLLM, and the auto-loaded `rbln` vLLM plugin
+breaks on the `rebel-compiler`/`tvm` mismatch. **Use one venv per vendor**; details and the
+routes forward are in `docs/hardware_roadmap.md` "First access".
+
+Consequences:
+
+- Real-vLLM `bench/` runs on **CUDA are no longer possible on this machine**. The A40 and A5000
+  numbers already committed stay valid as measured artifacts of *other* machines; do not re-run
+  or extend them here, and never relabel them.
+- Every NPU number in the repo is still **SIM-PROXY or placeholder** until step §3 of
+  `docs/HANDOVER_NPU.md` is done. The hardware being physically present changes nothing about
+  the provenance labels until it is actually profiled (absolute rule 3).
+- The ATOM/RNGD profile stubs (`profiles/accelerators/rbln_atom.yaml`, `furiosa_rngd.yaml`) keep
+  `sim_hardware: null` and empty `supported_models`, so they fail loud and stay out of candidate
+  generation until measured.
+
+**This is a shared Kubernetes node and someone else's workload owns most of the NPUs.**
+`rngd_pd.serving.cluster` pods (P/D-disaggregated serving, one pod per chip, running as root
+under `kubepods-burstable-*`) hold RNGD npu0/1/2 via `--chip 0/1/2` and **all four ATOMs**.
+Only RNGD npu3 is free. Do not drain devices or kill those pods; `furiosa-smi ps` and
+`rbln-stat` under-report because the holders are pods. Cheapest pre-flight check:
+`/sys/class/rngd_mgmt/rngd!npu<N>pe<M>/alloc_status` is non-empty iff that PE is claimed.
+Full holder table: `docs/hardware_roadmap.md` "Who holds the NPUs".
 
 ## Architecture: the planning pipeline
 
@@ -138,15 +170,24 @@ Built bare-metal in `.venv` (not Docker) so the planner can launch `python -m se
 subprocess in Phase 2. Already set up; recreate with:
 
 ```bash
+# System prerequisites (not pip-installable). `protoc` + the C++ headers are what
+# scripts/compile.sh feeds to ASTRA-Sim's CMake; without them the build fails outright.
+sudo apt install -y protobuf-compiler libprotobuf-dev
+git submodule update --init --recursive      # astra-sim is a submodule; a plain clone leaves it empty
+
 uv venv --python 3.10 .venv && source .venv/bin/activate
 uv pip install pyyaml pyinstrument transformers datasets msgspec scikit-learn \
   xgboost==3.1.2 matplotlib==3.5.3 pandas==1.5.3 numpy==1.23.5 rich
+uv pip install pydantic                                   # planner/ schemas; not optional
+uv pip install pytest ruff mypy                            # the §Commands quality gates
 bash scripts/compile.sh
 uv pip install ./astra-sim/extern/graph_frontend/chakra   # compile.sh's bare pip3 misses the venv
 uv pip install "protobuf>=7.35.1"                         # Chakra gencode 7.35.1 needs it
 ```
 
 Both post-`compile.sh` lines are required, not optional — see `docs/phase0_formats.md` §1.
+`transformers` warns that PyTorch is absent; that is expected — `.venv` uses it for tokenizers
+only. cmake 4.x builds ASTRA-Sim fine (its `cmake_minimum_required` is 3.22).
 
 ## Commands
 
