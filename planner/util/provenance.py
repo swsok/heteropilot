@@ -93,6 +93,44 @@ def hash_object(obj: Any) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
+def accelerators() -> dict[str, Any]:
+    """What accelerators this machine actually has, probed not assumed.
+
+    Absolute rule 3 forbids claiming results from hardware that is not present,
+    but until this existed the provenance block could not say which hardware WAS
+    present. It recorded ``hostname`` and ``cpu_count`` -- and every node of this
+    project reports the hostname ``s8`` on the same kernel, so the only thing
+    separating an A40-node artifact from an NPU-node one was the incidental 64 vs
+    96 core count. That is not provenance, it is a coincidence.
+
+    Probes are the same ones ``scripts/whichnode.sh`` uses. Each is allowed to
+    fail: a missing tool means "not detectable here", which is recorded as such
+    rather than as an absence of hardware.
+    """
+    found: dict[str, Any] = {"cuda": None, "rngd_cards": None, "atom_devices": None}
+
+    listing = _run(["nvidia-smi", "-L"])
+    if listing is not None:
+        gpus = [line for line in listing.splitlines() if line.startswith("GPU ")]
+        if gpus:
+            model = gpus[0].split(": ", 1)[-1].split(" (UUID")[0]
+            found["cuda"] = {"count": len(gpus), "model": model}
+        else:
+            found["cuda"] = {"count": 0, "model": None}
+
+    mgmt = Path("/sys/class/rngd_mgmt")
+    if mgmt.is_dir():
+        found["rngd_cards"] = len(list(mgmt.glob("rngd!npu*mgmt")))
+    elif Path("/dev/rngd").is_dir():
+        found["rngd_cards"] = len(list(Path("/dev/rngd").glob("npu*")))
+
+    dev = Path("/dev")
+    if dev.is_dir():
+        found["atom_devices"] = len(list(dev.glob("rbln*")))
+
+    return found
+
+
 def collect(
     *,
     service_spec_path: str | Path | None = None,
@@ -121,6 +159,9 @@ def collect(
         "platform": platform.platform(),
         "hostname": platform.node(),
         "cpu_count": os.cpu_count(),
+        # Which node produced this. hostname is `s8` on every machine this
+        # project runs on, so it does not identify one; the accelerators do.
+        "accelerators": accelerators(),
     }
     if extra:
         block.update(extra)
