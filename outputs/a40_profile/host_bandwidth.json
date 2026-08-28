@@ -1,0 +1,709 @@
+{
+  "host": "s8",
+  "measured_at": "2026-08-27T17:14:13+0900",
+  "torch_version": "2.10.0+cu128",
+  "cuda_version": "12.8",
+  "driver_version": "560.35.05",
+  "gpus": [
+    {
+      "index": 0,
+      "name": "NVIDIA A40",
+      "total_memory_gb": 47.73,
+      "pci_bus_id": 1
+    },
+    {
+      "index": 1,
+      "name": "NVIDIA A40",
+      "total_memory_gb": 47.73,
+      "pci_bus_id": 36
+    },
+    {
+      "index": 2,
+      "name": "NVIDIA A40",
+      "total_memory_gb": 47.73,
+      "pci_bus_id": 65
+    },
+    {
+      "index": 3,
+      "name": "NVIDIA A40",
+      "total_memory_gb": 47.73,
+      "pci_bus_id": 97
+    },
+    {
+      "index": 4,
+      "name": "NVIDIA A40",
+      "total_memory_gb": 47.73,
+      "pci_bus_id": 129
+    },
+    {
+      "index": 5,
+      "name": "NVIDIA A40",
+      "total_memory_gb": 47.73,
+      "pci_bus_id": 161
+    },
+    {
+      "index": 6,
+      "name": "NVIDIA A40",
+      "total_memory_gb": 47.73,
+      "pci_bus_id": 193
+    },
+    {
+      "index": 7,
+      "name": "NVIDIA A40",
+      "total_memory_gb": 47.73,
+      "pci_bus_id": 225
+    }
+  ],
+  "topology": "\u001b[4mGPU0\tGPU1\tGPU2\tGPU3\tGPU4\tGPU5\tGPU6\tGPU7\tNIC0\tCPU Affinity\tNUMA Affinity\tGPU NUMA ID\u001b[0m\nGPU0\t X \tNV4\tNODE\tNODE\tSYS\tSYS\tSYS\tSYS\tSYS\t0-15,32-47\t0\t\tN/A\nGPU1\tNV4\t X \tNODE\tNODE\tSYS\tSYS\tSYS\tSYS\tSYS\t0-15,32-47\t0\t\tN/A\nGPU2\tNODE\tNODE\t X \tNV4\tSYS\tSYS\tSYS\tSYS\tSYS\t0-15,32-47\t0\t\tN/A\nGPU3\tNODE\tNODE\tNV4\t X \tSYS\tSYS\tSYS\tSYS\tSYS\t0-15,32-47\t0\t\tN/A\nGPU4\tSYS\tSYS\tSYS\tSYS\t X \tNV4\tNODE\tNODE\tNODE\t16-31,48-63\t1\t\tN/A\nGPU5\tSYS\tSYS\tSYS\tSYS\tNV4\t X \tNODE\tNODE\tNODE\t16-31,48-63\t1\t\tN/A\nGPU6\tSYS\tSYS\tSYS\tSYS\tNODE\tNODE\t X \tNV4\tPHB\t16-31,48-63\t1\t\tN/A\nGPU7\tSYS\tSYS\tSYS\tSYS\tNODE\tNODE\tNV4\t X \tNODE\t16-31,48-63\t1\t\tN/A\nNIC0\tSYS\tSYS\tSYS\tSYS\tNODE\tNODE\tPHB\tNODE\t X \t\t\t\t\n\nLegend:\n\n  X    = Self\n  SYS  = Connection traversing PCIe as well as the SMP interconnect between NUMA nodes (e.g., QPI/UPI)\n  NODE = Connection traversing PCIe as well as the interconnect between PCIe Host Bridges within a NUMA node\n  PHB  = Connection traversing PCIe as well as a PCIe Host Bridge (typically the CPU)\n  PXB  = Connection traversing multiple PCIe bridges (without traversing the PCIe Host Bridge)\n  PIX  = Connection traversing at most a single PCIe bridge\n  NV#  = Connection traversing a bonded set of # NVLinks\n\nNIC Legend:\n\n  NIC0: mlx5_0",
+  "single_stream": {
+    "pageable": {
+      "device": "cuda:0",
+      "host_memory": "pageable",
+      "table": [
+        {
+          "size_mb": 1,
+          "h2d_gbps": 4.38,
+          "d2h_gbps": 3.4,
+          "h2d_median_gbps": 4.33,
+          "d2h_median_gbps": 1.46,
+          "reps": 7
+        },
+        {
+          "size_mb": 4,
+          "h2d_gbps": 5.74,
+          "d2h_gbps": 4.79,
+          "h2d_median_gbps": 5.71,
+          "d2h_median_gbps": 2.38,
+          "reps": 7
+        },
+        {
+          "size_mb": 16,
+          "h2d_gbps": 20.08,
+          "d2h_gbps": 14.18,
+          "h2d_median_gbps": 19.97,
+          "d2h_median_gbps": 3.06,
+          "reps": 7
+        },
+        {
+          "size_mb": 64,
+          "h2d_gbps": 23.2,
+          "d2h_gbps": 3.17,
+          "h2d_median_gbps": 23.11,
+          "d2h_median_gbps": 3.15,
+          "reps": 7
+        },
+        {
+          "size_mb": 256,
+          "h2d_gbps": 23.55,
+          "d2h_gbps": 3.1,
+          "h2d_median_gbps": 19.84,
+          "d2h_median_gbps": 3.08,
+          "reps": 7
+        }
+      ],
+      "peak_h2d_gbps": 23.55,
+      "peak_d2h_gbps": 14.18
+    },
+    "pinned": {
+      "device": "cuda:0",
+      "host_memory": "pinned",
+      "table": [
+        {
+          "size_mb": 1,
+          "h2d_gbps": 4.19,
+          "d2h_gbps": 5.05,
+          "h2d_median_gbps": 4.16,
+          "d2h_median_gbps": 5.03,
+          "reps": 7
+        },
+        {
+          "size_mb": 4,
+          "h2d_gbps": 20.65,
+          "d2h_gbps": 23.66,
+          "h2d_median_gbps": 10.69,
+          "d2h_median_gbps": 16.71,
+          "reps": 7
+        },
+        {
+          "size_mb": 16,
+          "h2d_gbps": 24.86,
+          "d2h_gbps": 25.16,
+          "h2d_median_gbps": 24.81,
+          "d2h_median_gbps": 25.13,
+          "reps": 7
+        },
+        {
+          "size_mb": 64,
+          "h2d_gbps": 25.37,
+          "d2h_gbps": 25.72,
+          "h2d_median_gbps": 25.35,
+          "d2h_median_gbps": 25.72,
+          "reps": 7
+        },
+        {
+          "size_mb": 256,
+          "h2d_gbps": 25.5,
+          "d2h_gbps": 25.77,
+          "h2d_median_gbps": 25.5,
+          "d2h_median_gbps": 25.76,
+          "reps": 7
+        }
+      ],
+      "peak_h2d_gbps": 25.5,
+      "peak_d2h_gbps": 25.77
+    }
+  },
+  "parallel": [
+    {
+      "gpus": [
+        0,
+        1
+      ],
+      "streams": 2,
+      "size_mb": 256,
+      "reps": 7,
+      "trials": 5,
+      "host_memory": "pageable",
+      "h2d_aggregate_gbps": 36.44,
+      "d2h_aggregate_gbps": 4.4,
+      "h2d_trial_min_gbps": 36.17,
+      "h2d_trial_max_gbps": 38.86,
+      "d2h_trial_min_gbps": 4.35,
+      "d2h_trial_max_gbps": 4.42
+    },
+    {
+      "gpus": [
+        0,
+        4
+      ],
+      "streams": 2,
+      "size_mb": 256,
+      "reps": 7,
+      "trials": 5,
+      "host_memory": "pageable",
+      "h2d_aggregate_gbps": 31.48,
+      "d2h_aggregate_gbps": 4.4,
+      "h2d_trial_min_gbps": 31.12,
+      "h2d_trial_max_gbps": 31.68,
+      "d2h_trial_min_gbps": 4.33,
+      "d2h_trial_max_gbps": 4.43
+    },
+    {
+      "gpus": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "streams": 4,
+      "size_mb": 256,
+      "reps": 7,
+      "trials": 5,
+      "host_memory": "pageable",
+      "h2d_aggregate_gbps": 39.04,
+      "d2h_aggregate_gbps": 6.33,
+      "h2d_trial_min_gbps": 38.38,
+      "h2d_trial_max_gbps": 40.04,
+      "d2h_trial_min_gbps": 6.18,
+      "d2h_trial_max_gbps": 6.43
+    },
+    {
+      "gpus": [
+        0,
+        1,
+        4,
+        5
+      ],
+      "streams": 4,
+      "size_mb": 256,
+      "reps": 7,
+      "trials": 5,
+      "host_memory": "pageable",
+      "h2d_aggregate_gbps": 40.87,
+      "d2h_aggregate_gbps": 6.09,
+      "h2d_trial_min_gbps": 38.45,
+      "h2d_trial_max_gbps": 41.15,
+      "d2h_trial_min_gbps": 6.06,
+      "d2h_trial_max_gbps": 6.26
+    },
+    {
+      "gpus": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "streams": 8,
+      "size_mb": 256,
+      "reps": 7,
+      "trials": 5,
+      "host_memory": "pageable",
+      "h2d_aggregate_gbps": 40.01,
+      "d2h_aggregate_gbps": 7.44,
+      "h2d_trial_min_gbps": 38.54,
+      "h2d_trial_max_gbps": 40.49,
+      "d2h_trial_min_gbps": 7.23,
+      "d2h_trial_max_gbps": 7.68
+    },
+    {
+      "gpus": [
+        0,
+        1
+      ],
+      "streams": 2,
+      "size_mb": 256,
+      "reps": 7,
+      "trials": 5,
+      "host_memory": "pinned",
+      "h2d_aggregate_gbps": 44.56,
+      "d2h_aggregate_gbps": 47.08,
+      "h2d_trial_min_gbps": 44.46,
+      "h2d_trial_max_gbps": 44.61,
+      "d2h_trial_min_gbps": 46.98,
+      "d2h_trial_max_gbps": 47.15
+    },
+    {
+      "gpus": [
+        0,
+        4
+      ],
+      "streams": 2,
+      "size_mb": 256,
+      "reps": 7,
+      "trials": 5,
+      "host_memory": "pinned",
+      "h2d_aggregate_gbps": 50.82,
+      "d2h_aggregate_gbps": 50.83,
+      "h2d_trial_min_gbps": 50.78,
+      "h2d_trial_max_gbps": 50.82,
+      "d2h_trial_min_gbps": 50.7,
+      "d2h_trial_max_gbps": 50.92
+    },
+    {
+      "gpus": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "streams": 4,
+      "size_mb": 256,
+      "reps": 7,
+      "trials": 5,
+      "host_memory": "pinned",
+      "h2d_aggregate_gbps": 57.42,
+      "d2h_aggregate_gbps": 66.27,
+      "h2d_trial_min_gbps": 57.38,
+      "h2d_trial_max_gbps": 57.64,
+      "d2h_trial_min_gbps": 66.26,
+      "d2h_trial_max_gbps": 66.46
+    },
+    {
+      "gpus": [
+        0,
+        1,
+        4,
+        5
+      ],
+      "streams": 4,
+      "size_mb": 256,
+      "reps": 7,
+      "trials": 5,
+      "host_memory": "pinned",
+      "h2d_aggregate_gbps": 72.66,
+      "d2h_aggregate_gbps": 72.06,
+      "h2d_trial_min_gbps": 72.58,
+      "h2d_trial_max_gbps": 72.71,
+      "d2h_trial_min_gbps": 72.0,
+      "d2h_trial_max_gbps": 72.15
+    },
+    {
+      "gpus": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "streams": 8,
+      "size_mb": 256,
+      "reps": 7,
+      "trials": 5,
+      "host_memory": "pinned",
+      "h2d_aggregate_gbps": 80.73,
+      "d2h_aggregate_gbps": 77.69,
+      "h2d_trial_min_gbps": 80.68,
+      "h2d_trial_max_gbps": 80.8,
+      "d2h_trial_min_gbps": 77.52,
+      "d2h_trial_max_gbps": 77.79
+    }
+  ],
+  "sustained": [
+    {
+      "gpus": [
+        0
+      ],
+      "streams": 1,
+      "size_mb": 256,
+      "duration_s": 5.0,
+      "trials": 3,
+      "host_memory": "pageable",
+      "h2d_aggregate_gbps": 23.58,
+      "d2h_aggregate_gbps": 3.2,
+      "h2d_trial_min_gbps": 23.57,
+      "h2d_trial_max_gbps": 23.59,
+      "d2h_trial_min_gbps": 3.19,
+      "d2h_trial_max_gbps": 3.24
+    },
+    {
+      "gpus": [
+        0,
+        1
+      ],
+      "streams": 2,
+      "size_mb": 256,
+      "duration_s": 5.0,
+      "trials": 3,
+      "host_memory": "pageable",
+      "h2d_aggregate_gbps": 39.36,
+      "d2h_aggregate_gbps": 4.25,
+      "h2d_trial_min_gbps": 39.28,
+      "h2d_trial_max_gbps": 39.38,
+      "d2h_trial_min_gbps": 4.22,
+      "d2h_trial_max_gbps": 4.27
+    },
+    {
+      "gpus": [
+        0,
+        4
+      ],
+      "streams": 2,
+      "size_mb": 256,
+      "duration_s": 5.0,
+      "trials": 3,
+      "host_memory": "pageable",
+      "h2d_aggregate_gbps": 39.86,
+      "d2h_aggregate_gbps": 4.39,
+      "h2d_trial_min_gbps": 39.71,
+      "h2d_trial_max_gbps": 40.0,
+      "d2h_trial_min_gbps": 4.38,
+      "d2h_trial_max_gbps": 4.42
+    },
+    {
+      "gpus": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "streams": 4,
+      "size_mb": 256,
+      "duration_s": 5.0,
+      "trials": 3,
+      "host_memory": "pageable",
+      "h2d_aggregate_gbps": 41.89,
+      "d2h_aggregate_gbps": 6.15,
+      "h2d_trial_min_gbps": 40.71,
+      "h2d_trial_max_gbps": 42.21,
+      "d2h_trial_min_gbps": 5.95,
+      "d2h_trial_max_gbps": 6.29
+    },
+    {
+      "gpus": [
+        0,
+        1,
+        4,
+        5
+      ],
+      "streams": 4,
+      "size_mb": 256,
+      "duration_s": 5.0,
+      "trials": 3,
+      "host_memory": "pageable",
+      "h2d_aggregate_gbps": 43.65,
+      "d2h_aggregate_gbps": 6.0,
+      "h2d_trial_min_gbps": 42.68,
+      "h2d_trial_max_gbps": 43.71,
+      "d2h_trial_min_gbps": 5.7,
+      "d2h_trial_max_gbps": 6.36
+    },
+    {
+      "gpus": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "streams": 8,
+      "size_mb": 256,
+      "duration_s": 5.0,
+      "trials": 3,
+      "host_memory": "pageable",
+      "h2d_aggregate_gbps": 42.23,
+      "d2h_aggregate_gbps": 7.27,
+      "h2d_trial_min_gbps": 41.1,
+      "h2d_trial_max_gbps": 42.49,
+      "d2h_trial_min_gbps": 6.04,
+      "d2h_trial_max_gbps": 8.09
+    },
+    {
+      "gpus": [
+        0
+      ],
+      "streams": 1,
+      "size_mb": 256,
+      "duration_s": 5.0,
+      "trials": 3,
+      "host_memory": "pinned",
+      "h2d_aggregate_gbps": 25.46,
+      "d2h_aggregate_gbps": 25.71,
+      "h2d_trial_min_gbps": 25.45,
+      "h2d_trial_max_gbps": 25.49,
+      "d2h_trial_min_gbps": 25.69,
+      "d2h_trial_max_gbps": 25.75
+    },
+    {
+      "gpus": [
+        0,
+        1
+      ],
+      "streams": 2,
+      "size_mb": 256,
+      "duration_s": 5.0,
+      "trials": 3,
+      "host_memory": "pinned",
+      "h2d_aggregate_gbps": 45.47,
+      "d2h_aggregate_gbps": 47.95,
+      "h2d_trial_min_gbps": 45.47,
+      "h2d_trial_max_gbps": 45.49,
+      "d2h_trial_min_gbps": 47.94,
+      "d2h_trial_max_gbps": 48.02
+    },
+    {
+      "gpus": [
+        0,
+        4
+      ],
+      "streams": 2,
+      "size_mb": 256,
+      "duration_s": 5.0,
+      "trials": 3,
+      "host_memory": "pinned",
+      "h2d_aggregate_gbps": 50.93,
+      "d2h_aggregate_gbps": 51.22,
+      "h2d_trial_min_gbps": 50.92,
+      "h2d_trial_max_gbps": 50.93,
+      "d2h_trial_min_gbps": 51.21,
+      "d2h_trial_max_gbps": 51.27
+    },
+    {
+      "gpus": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "streams": 4,
+      "size_mb": 256,
+      "duration_s": 5.0,
+      "trials": 3,
+      "host_memory": "pinned",
+      "h2d_aggregate_gbps": 58.14,
+      "d2h_aggregate_gbps": 70.47,
+      "h2d_trial_min_gbps": 58.08,
+      "h2d_trial_max_gbps": 58.55,
+      "d2h_trial_min_gbps": 70.31,
+      "d2h_trial_max_gbps": 70.98
+    },
+    {
+      "gpus": [
+        0,
+        1,
+        4,
+        5
+      ],
+      "streams": 4,
+      "size_mb": 256,
+      "duration_s": 5.0,
+      "trials": 3,
+      "host_memory": "pinned",
+      "h2d_aggregate_gbps": 83.13,
+      "d2h_aggregate_gbps": 80.04,
+      "h2d_trial_min_gbps": 83.1,
+      "h2d_trial_max_gbps": 83.17,
+      "d2h_trial_min_gbps": 79.89,
+      "d2h_trial_max_gbps": 80.25
+    },
+    {
+      "gpus": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "streams": 8,
+      "size_mb": 256,
+      "duration_s": 5.0,
+      "trials": 3,
+      "host_memory": "pinned",
+      "h2d_aggregate_gbps": 89.96,
+      "d2h_aggregate_gbps": 82.63,
+      "h2d_trial_min_gbps": 89.9,
+      "h2d_trial_max_gbps": 89.98,
+      "d2h_trial_min_gbps": 82.2,
+      "d2h_trial_max_gbps": 82.68
+    }
+  ],
+  "kv_path": {
+    "pageable": {
+      "composed_at_size_mb": 256,
+      "peak_single_stream": {
+        "gpu_leg_gbps": 3.1,
+        "npu_leg_gbps": 3.77,
+        "serialised_gbps": 1.7,
+        "pipelined_gbps": 3.1
+      },
+      "peak_parallel": {
+        "gpu_leg_gbps": 7.44,
+        "npu_leg_gbps": 26.27,
+        "serialised_gbps": 5.8,
+        "pipelined_gbps": 7.44
+      },
+      "peak_parallel_gpu_group": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "sustained_card_fixture_tp1": {
+        "rngd_a40": {
+          "gpu_leg_gbps": 3.2,
+          "npu_leg_gbps": 26.27,
+          "serialised_gbps": 2.85,
+          "pipelined_gbps": 3.2
+        },
+        "a40_a40": {
+          "gpu_leg_gbps": 3.2,
+          "npu_leg_gbps": 3.2,
+          "serialised_gbps": 1.6,
+          "pipelined_gbps": 3.2
+        }
+      },
+      "sustained_pe_fixture_tp4": {
+        "rngd_a40": {
+          "gpu_leg_gbps": 6.15,
+          "npu_leg_gbps": 15.36,
+          "serialised_gbps": 4.39,
+          "pipelined_gbps": 6.15
+        },
+        "a40_a40": {
+          "gpu_leg_gbps": 6.15,
+          "npu_leg_gbps": 6.15,
+          "serialised_gbps": 3.08,
+          "pipelined_gbps": 6.15
+        }
+      },
+      "sustained_rngd_rngd": {
+        "card_fixture_tp1": {
+          "gpu_leg_gbps": 26.27,
+          "npu_leg_gbps": 26.27,
+          "serialised_gbps": 13.13,
+          "pipelined_gbps": 26.27
+        },
+        "pe_fixture_tp4": {
+          "gpu_leg_gbps": 15.36,
+          "npu_leg_gbps": 15.36,
+          "serialised_gbps": 7.68,
+          "pipelined_gbps": 15.36
+        }
+      }
+    },
+    "pinned": {
+      "composed_at_size_mb": 256,
+      "peak_single_stream": {
+        "gpu_leg_gbps": 25.77,
+        "npu_leg_gbps": 3.77,
+        "serialised_gbps": 3.29,
+        "pipelined_gbps": 3.77
+      },
+      "peak_parallel": {
+        "gpu_leg_gbps": 77.69,
+        "npu_leg_gbps": 26.27,
+        "serialised_gbps": 19.63,
+        "pipelined_gbps": 26.27
+      },
+      "peak_parallel_gpu_group": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "sustained_card_fixture_tp1": {
+        "rngd_a40": {
+          "gpu_leg_gbps": 25.71,
+          "npu_leg_gbps": 26.27,
+          "serialised_gbps": 12.99,
+          "pipelined_gbps": 25.71
+        },
+        "a40_a40": {
+          "gpu_leg_gbps": 25.71,
+          "npu_leg_gbps": 25.71,
+          "serialised_gbps": 12.86,
+          "pipelined_gbps": 25.71
+        }
+      },
+      "sustained_pe_fixture_tp4": {
+        "rngd_a40": {
+          "gpu_leg_gbps": 70.47,
+          "npu_leg_gbps": 15.36,
+          "serialised_gbps": 12.61,
+          "pipelined_gbps": 15.36
+        },
+        "a40_a40": {
+          "gpu_leg_gbps": 70.47,
+          "npu_leg_gbps": 70.47,
+          "serialised_gbps": 35.23,
+          "pipelined_gbps": 70.47
+        }
+      },
+      "sustained_rngd_rngd": {
+        "card_fixture_tp1": {
+          "gpu_leg_gbps": 26.27,
+          "npu_leg_gbps": 26.27,
+          "serialised_gbps": 13.13,
+          "pipelined_gbps": 26.27
+        },
+        "pe_fixture_tp4": {
+          "gpu_leg_gbps": 15.36,
+          "npu_leg_gbps": 15.36,
+          "serialised_gbps": 7.68,
+          "pipelined_gbps": 15.36
+        }
+      }
+    }
+  },
+  "method": "torch .to(device) / .cpu() on a contiguous bfloat16 buffer, host-side perf_counter with torch.cuda.synchronize() inside the timed region, best and median of N reps after one warm copy. Deliberately mirrors experiments/scripts/rngd_device_facts.py measure_host_bandwidth() so the two legs of the cross-vendor KV path compose; the synchronize() is added because CUDA copies can complete asynchronously and the RNGD .to(device) does not. Pageable rows are the like-for-like comparison against the NPU leg (which is pageable); the pinned path reuses a pre-allocated staging buffer, as a real handoff would. Parallel aggregate is total bytes over the wall time of the concurrent region, the same definition as the NPU 8-stream figure. Host buffers are not NUMA-bound, so a cross-node group pays whatever the allocator happened to choose. KNOWN ARTIFACT: pageable D2H is allocator-bound, not link-bound -- .cpu() allocates a fresh destination per rep, PyTorch's CPU allocator reuses a cached block up to ~16 MB and mmaps above it, so the pageable D2H column peaks at 16 MB and drops ~5x at 64 MB and beyond, with medians far below the best. Read the pinned rows for the link, and the pageable rows only for like-for-like comparison against the pageable NPU leg."
+}
