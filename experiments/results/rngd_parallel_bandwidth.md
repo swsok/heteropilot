@@ -149,6 +149,13 @@ live sysfs enumeration instead, and falls back to the arithmetic only when sysfs
 is unreadable. All three present cards are on NUMA node 0, as was npu2, so the
 old and new runs are not separated by placement.
 
+> **npu2 returned on the 2026-08-28 reboot**, so there are four cards again and
+> `rngd:16..23` is npu2 once more (confirmed by pinning a load and reading
+> `furiosa-smi ps`). This measurement's `card: npu3` was correct when taken; the
+> **card label is the durable fact and the device index is not**. To re-run it on
+> the same physical card today, use `--device rngd:24`. `card_of()` resolves
+> correctly in both states without modification, which is the point of the fix.
+
 ## Reproduce
 
 ```bash
