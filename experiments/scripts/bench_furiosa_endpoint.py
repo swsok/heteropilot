@@ -9,6 +9,16 @@ and leaves TTFT/TPOT to the server's Prometheus histograms. ``furiosa-llm``'s
 metrics surface is not the vLLM one, so this client streams and takes the
 timings itself -- first-token arrival for TTFT, the gaps after it for TPOT.
 
+IGNORES ``arrival_time_ns``. Every row is dispatched under one
+``asyncio.Semaphore(--concurrency)``, so with concurrency >= the request count the
+whole trace starts at t=0 -- a burst, whatever timestamps the file carries. That
+matters when comparing against ``python -m serving``, which DOES replay the column:
+feeding both the same file compares a burst against a spread arrival process, and
+the queueing difference lands entirely in TTFT. This is what produced the
+"-71 % TTFT" figure retracted in deviations D19. Either zero the arrivals on the
+simulator side (``outputs/envcheck/rngd20_burst.jsonl``) or teach this script to
+sleep until each row's arrival before comparing.
+
 Fidelity note: the simulator replays each request's exact input and output token
 counts, so a fair comparison needs the real run to generate the same number of
 tokens. ``ignore_eos`` is requested to force that; the script records the token

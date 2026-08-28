@@ -200,6 +200,15 @@ loaded, from 15 ms to 28 ms per token. Two operating points a factor of two apar
 in absolute cost, both within 3 %, is independent confirmation that the bundle's
 per-layer magnitudes are correct and not fitted to one point.
 
+> **RETRACTED 2026-08-28 (deviations D19).** The queuing half of what follows was
+> misattributed. The simulator replays the trace's `arrival_time_ns`, spread over
+> 1.78 s; `bench_furiosa_endpoint.py` fires all 20 requests at once under
+> `Semaphore(concurrency=64)` and never reads that column. With arrivals matched
+> the card-EDF error is **−5.1 %**, not −71.3 %, and there is no evidence of a
+> scheduler difference. The −36.6 % unloaded figure below stands — it comes from a
+> sparse-arrival run where nothing queues. See
+> `experiments/results/rngd_ttft_gap_resolved.md`.
+
 **Prefill splits into two separate errors.** −36.6 % is present with no queuing at
 all, so it is a genuine prefill-cost gap: bucket quantisation accounts for ~11 %
 of it (`rngd_sim_vs_real_summary.md`), and the rest is server-side work the device
@@ -223,11 +232,11 @@ Phase 4/5 calibration question rather than a profiling one.
   the interior. Whether furiosa-llm actually never mixes them cannot be settled
   from these traces — the EDF CSV carries durations, not timestamps, so
   co-occurrence within one forward is not observable.
-- **The TTFT gap is now attributed** (see above): −36.6 % is unloaded prefill
-  cost, and the rest is the scheduler queuing 2.2× less than furiosa-llm's. What
-  is still open is *which* scheduler knob accounts for it — `max_num_seqs`,
-  chunked-prefill admission, or the prefill/decode interleave. That is a
-  scheduler comparison, not more profiling.
+- **The TTFT gap is resolved, and not the way this file first said** (D19). It was
+  the validation harness: matched arrivals give −5.1 %. No scheduler knob is
+  implicated and the scheduler comparison this item called for is not needed. What
+  remains is a 10–17 % tail under-prediction at p90–p99, plausibly bucket
+  quantisation.
 - **`max_tp_size` stays 1.** TP *across* cards has never been built or served
   here.
 - **This does not license an RNGD P/D claim.** FuriosaAI's llm-d documentation

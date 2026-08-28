@@ -643,6 +643,7 @@ drops, TTFT flat, `none`-mode control flat — all PASS) and `tests/test_sim_pd_
 | D10 | Phase 2 | **Open** — derating factor for the memory feasibility filter; nominal vs KV-matched config for the A5000 comparison |
 | D15 | Phase 5 | **Resolved** — sim-level P/D KV-transfer model, opt-in `--pd-transfer-model bandwidth`, default byte-identical; first sanctioned `serving/` edit (router.py + __main__.py only, scheduler.py pristine) |
 | D18 | Phase 5 | **Resolved** (retraction) — NPU-leg multi-stream bandwidth remeasured; scaling law held, levels ~25 % lower. Fixture `bandwidth_gbps` deliberately left at the old value pending the GPU leg |
+| D19 | Phase 4 | **Resolved** (retraction) — the card profile's −71 % TTFT error was an arrival-pattern mismatch in the validation harness, not a scheduler difference; matched arrivals give −5.1 %. Both RNGD TTFT calibrations refitted |
 
 ---
 
@@ -848,3 +849,75 @@ would repeat exactly the error this entry retracts.
 `experiments/results/rngd_parallel_bandwidth.md` tabulates the new compositions;
 the one to watch is `rngd ↔ rngd` at tp4, which falls 9.6 → 7.68 GB/s and so
 crosses *below* the ~10 GB/s P/D adoption threshold.
+
+---
+
+## D19 — The RNGD TTFT gap was blamed on the scheduler; it was the validation harness · Resolved (retraction + refit)
+
+**What was wrong.** `docs/PROJECT_REPORT.md` §4.8.4 and
+`experiments/results/rngd_edf_bundle_notes.md` recorded the card profile's −71.3 %
+TTFT error as "upstream's scheduler queuing ~2.2x less than furiosa-llm's", and
+left "*which* knob -- `max_num_seqs`, chunked-prefill admission, or the P/D
+interleave" as the open question. §6 carried it as "diagnosed, not fixed".
+
+**The actual cause.** The two sides of the validation disagree about the arrival
+process. `python -m serving` replays the trace's `arrival_time_ns` column, which in
+`outputs/envcheck/rngd20.jsonl` spreads 20 requests over **1.78 s**.
+`experiments/scripts/bench_furiosa_endpoint.py` fires every row under
+`asyncio.Semaphore(concurrency=64)` against 20 requests, so all 20 start at once --
+**the string `arrival` does not appear anywhere in that file.** The simulator queued
+less because less arrived at once. That is not a scheduler property.
+
+**Evidence** (`experiments/results/rngd_ttft_gap_resolved.md`). Same trace, same
+profile, every arrival zeroed:
+
+| profile / arrivals | TTFT | err | queue | prefill | TPOT | err |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| card-EDF / spread | 403.0 | -71.3 % | 253.3 | 149.7 | 27.55 | -3.1 % |
+| card-EDF / burst | 1332.9 | **-5.1 %** | 1126.5 | 206.3 | 27.60 | -3.0 % |
+| per-PE tp8 / spread | 946.9 | -32.6 % | 655.5 | 291.5 | 35.70 | +25.5 % |
+| per-PE tp8 / burst | 2004.8 | **+42.8 %** | 1699.9 | 304.9 | 35.69 | +25.5 % |
+| real | 1404.1 | -- | ~1246 | ~158 | 28.44 | -- |
+
+TPOT does not move, which is the control. The per-request TTFT *distributions*
+match too, not only the means: real spans 402 -> 2897 ms and burst-sim 432 ->
+2603 ms in the same ramp, where the spread run spans 41 -> 1119 ms.
+
+**Two further things it overturns.**
+
+1. **The per-PE profile is not the better TTFT model.** Its -32.6 % was two errors
+   cancelling -- a queue 2.2x too short times a prefill cost 93 % too high (304.9 ms
+   against a real ~158). With arrivals matched it is +42.8 % where the card profile
+   is -5.1 %. §4.8.6's recommendation to use per-PE "for TTFT-feasibility decisions"
+   is inverted and has been corrected.
+2. **Both TTFT calibrations were fitting the bug.** Refitted from burst runs through
+   the same `--calibration-out` path: `rngd_card_edf.yaml` TTFT goes alpha
+   2.089 -> 1.241, beta +646 -> -242, **fit error 2.340 -> 0.103** (it was recorded
+   as "unusable"); `rngd.yaml` goes alpha 1.336 -> 0.851, beta +183 -> -302, error
+   0.473 -> -0.263. TPOT is essentially unchanged in both (0.025 -> 0.019,
+   -0.204 -> -0.206), the same control again.
+
+**How we adapt.** The burst trace (`outputs/envcheck/rngd20_burst.jsonl`) and both
+burst validation CSVs are committed, the calibrations are refitted, and
+`bench_furiosa_endpoint.py` now states in its docstring that it ignores
+`arrival_time_ns`. Every doc that carried the scheduler diagnosis is corrected in
+place rather than quietly overwritten.
+
+**`pd_slo_sweep.py` was checked and does NOT share the mismatch.** It builds its
+own arrival process from the ServiceSpec (`planner/util/workload.py:generate_trace`,
+Poisson at `arrival_rate_rps: 10`), so there is no bench to disagree with. But the
+check found a different reason its card rows are not quotable: the sweep's winner
+runs each card at **~76 concurrent sequences**, against 16.6 in the validation run
+and 32 the highest ever tested on hardware, and assumes 1767 output tok/s per card
+where extrapolating the measured c16->c32 scaling exponent (0.598) gives ~1090 --
+**~1.6x optimistic, 2.4x outside the measured envelope.** Neither calibration may
+be applied there either: both are scoped to the `sharegpt-llama31-8b-20` bucket.
+`experiments/results/pd_slo_sweep.md` is rewritten accordingly.
+
+**Left open.** A 10-17 % tail under-prediction remains at p90-p99 with arrivals
+matched -- plausibly bucket quantisation (+10.9 % of charged prefill tokens), but
+that is a hypothesis. Other comparisons that pair `python -m serving` with
+`bench_furiosa_endpoint.py` still inherit the mismatch and have not been audited.
+And the c1-c32 scaling curve the paragraph above leans on is prose-only in
+`rngd_edf_bundle_notes.md`, with no committed artifact -- the same class of gap
+D18 retracted.

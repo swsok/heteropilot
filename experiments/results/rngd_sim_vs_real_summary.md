@@ -79,11 +79,15 @@ it pays for the buckets that cover it: a 399-token prompt runs the 512 bucket, a
 request**. The simulator interpolates on exact token counts and so cannot see
 this at all.
 
-**Scheduler behaviour, the remaining ~20 %.** The server ran the eager scheduler
-with `npu_queue_limit: 1`, i.e. one request queued to the NPU at a time, against
-client concurrency 64. The simulator models continuous batching with a token
-budget. Queueing delay under that mismatch lands in TTFT, not TPOT — consistent
-with the errors having opposite signs.
+**Arrival-pattern mismatch, the remaining ~20 % — and it is not the scheduler.**
+This paragraph read "scheduler behaviour": the server ran the eager scheduler with
+`npu_queue_limit: 1` against client concurrency 64, while the simulator models
+continuous batching. **That was the wrong attribution (deviations D19).** The real
+cause is that `bench_furiosa_endpoint.py` fires all 20 requests at once and never
+reads the trace's `arrival_time_ns`, while `python -m serving` replays it spread
+over 1.78 s. Matched arrivals close the card-profile gap to −5.1 %. Queueing delay
+does land in TTFT and not TPOT, which is why the errors have opposite signs — that
+part stands. See `experiments/results/rngd_ttft_gap_resolved.md`.
 
 ## Why decode is over-predicted (real faster than sim)
 
