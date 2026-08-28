@@ -447,7 +447,8 @@ fixture that deviation D16 describes.
 > card ~1.6x below what the simulator assumes there. The *ordering* of the regimes
 > below is unaffected -- it is driven by energy and TTFT feasibility, not by that
 > throughput margin -- but no absolute TTFT figure from the card rows should be
-> quoted. `experiments/results/pd_slo_sweep.md`.
+> quoted. `experiments/results/pd_slo_sweep.md`. Settling it needs a c64/c128 run
+> on the hardware: `docs/npu_concurrency_envelope_work_order.md`.
 
 Two 8-point TTFT-SLO sweeps (300 requests, seed 42), one per fixture.
 `experiments/results/pd_slo_sweep.md`.
