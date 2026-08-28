@@ -31,6 +31,7 @@ from __future__ import annotations
 import argparse
 import gc
 import json
+import re
 import statistics
 import subprocess
 import sys
@@ -53,8 +54,40 @@ import furiosa.torch as ft  # noqa: F401  (registers the rngd device)
 BYTES_PER_ELEMENT = 2  # bfloat16
 
 
+PES_PER_CARD = 8
+
+
+def present_cards() -> list[str]:
+    """Cards the driver currently exposes, in ascending npu order.
+
+    NOT every npu0..npu3: the driver re-enumerates, and on 2026-08-27 npu2
+    (PCI 44:00.0) vanished from sysfs entirely while npu0/1/3 stayed. Torch
+    numbers rngd devices densely over the cards that are *present*, so with a
+    hole in the middle ``rngd:16`` is npu3, not npu2 -- confirmed against
+    ``furiosa-smi ps``, which reported ``npu3:0`` for a load pinned to rngd:16.
+    """
+    nodes = Path("/sys/class/rngd_mgmt").glob("rngd!npu*mgmt")
+    return sorted(
+        (f"npu{n}" for n in
+         (int(m.group(1)) for m in
+          (re.match(r"rngd!npu(\d+)mgmt$", p.name) for p in nodes) if m)),
+        key=lambda c: int(c[3:]),
+    )
+
+
 def card_of(device: str) -> str:
-    return f"npu{int(device.split(':')[1]) // 8}"
+    """Physical card backing a torch device index.
+
+    Resolves through the live enumeration rather than ``index // 8``: that
+    assumption holds only when no card is missing, and it silently mislabels
+    the artifact when one is (see :func:`present_cards`). Falls back to the
+    arithmetic when sysfs is unreadable, so the non-NPU paths still import.
+    """
+    slot = int(device.split(":")[1]) // PES_PER_CARD
+    cards = present_cards()
+    if slot < len(cards):
+        return cards[slot]
+    return f"npu{slot}"
 
 
 def sample_power_w(card: str) -> float | None:
@@ -345,6 +378,212 @@ def measure_host_bandwidth(device: str, sizes_mb: list[int], reps: int, log) -> 
     }
 
 
+# ---------------------------------------------------------------------------
+# Parallel host -> PE bandwidth
+# ---------------------------------------------------------------------------
+
+#: One process per PE, because that is how this file already drives several PEs
+#: at once (see ``start_load``). Threads are deliberately NOT used: nothing here
+#: establishes that ``furiosa.torch`` lets one interpreter hold several PE
+#: contexts concurrently, and the subprocess pattern is the one already proven
+#: on this hardware.
+#:
+#: The parent synchronises the workers by sending an absolute ``time.time()``
+#: instant on stdin after every worker has reported READY. ``time.time()`` is
+#: comparable across processes; ``perf_counter`` is not, which is why the
+#: single-stream path uses it and this one cannot.
+BANDWIDTH_WORKER = """
+import sys, time, torch
+import furiosa.torch as ft  # noqa: F401
+
+device, size_mb, duration_s = sys.argv[1], int(sys.argv[2]), float(sys.argv[3])
+elements = size_mb * 1000 ** 2 // 2          # bfloat16
+host = torch.empty(elements, dtype=torch.bfloat16)
+warm = host.to(device)                        # first copy pays context setup
+warm.cpu()
+del warm
+print("READY", flush=True)
+
+
+def run(direction, start_at):
+    while time.time() < start_at:
+        pass                                  # spin: sleep granularity is too coarse
+    first = time.time()
+    moved = 0
+    last = first
+    if direction == "d2h":
+        on_device = host.to(device)
+    # NOTE: the d2h loop calls .cpu(), which allocates a fresh pageable
+    # destination every iteration. Above ~16 MB PyTorch's CPU allocator stops
+    # reusing a cached block and mmaps instead, so every copy pays page faults
+    # and the figure becomes allocator-bound rather than link-bound -- measured
+    # and documented on the GPU side of this same path
+    # (experiments/results/gpu_host_bandwidth.md). H2D does NOT have this
+    # problem: its host buffer is allocated once and reused. Treat h2d as the
+    # measurement and d2h as indicative only.
+    while time.time() - first < duration_s:
+        if direction == "h2d":
+            on_device = host.to(device)
+            del on_device
+        else:
+            on_device.cpu()
+        moved += 1
+        last = time.time()
+    print(f"RESULT {direction} {moved} {first!r} {last!r}", flush=True)
+
+
+for _ in range(2):
+    line = sys.stdin.readline().split()       # "GO <direction> <start_at>"
+    run(line[1], float(line[2]))
+"""
+
+
+def _parallel_trial(first_pe: int, streams: int, size_mb: int, duration_s: float,
+                    log) -> dict | None:
+    """One trial: fresh worker processes, both directions, synchronised start.
+
+    Workers are respawned per trial on purpose. Host buffer placement is decided
+    once at allocation and is not bound to a NUMA node, so re-allocating is the
+    only way to sample it -- on the GPU side of this same measurement two runs
+    disagreed by 38 % on the 4-stream figure with the ordering reversing between
+    them (experiments/results/gpu_host_bandwidth.md).
+    """
+    workers = [
+        subprocess.Popen(
+            [sys.executable, "-u", "-c", BANDWIDTH_WORKER,
+             f"rngd:{first_pe + offset}", str(size_mb), str(duration_s)],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL, text=True,
+        )
+        for offset in range(streams)
+    ]
+    try:
+        for worker in workers:
+            assert worker.stdout is not None
+            if worker.stdout.readline().strip() != "READY":
+                log(f"  worker on rngd:{first_pe} never reported READY; trial dropped")
+                return None
+
+        result: dict = {}
+        for direction in ("h2d", "d2h"):
+            start_at = time.time() + 2.0      # every worker is already spinning
+            for worker in workers:
+                assert worker.stdin is not None
+                worker.stdin.write(f"GO {direction} {start_at!r}\n")
+                worker.stdin.flush()
+            spans = []
+            for worker in workers:
+                assert worker.stdout is not None
+                parts = worker.stdout.readline().split()
+                if len(parts) != 5 or parts[0] != "RESULT":
+                    log(f"  malformed worker line {parts!r}; trial dropped")
+                    return None
+                spans.append((int(parts[2]), float(parts[3]), float(parts[4])))
+            moved = sum(s[0] for s in spans) * size_mb * 1000 ** 2
+            window = max(s[2] for s in spans) - min(s[1] for s in spans)
+            result[direction] = moved / window / 1e9
+        return result
+    finally:
+        stop_load(workers)
+
+
+def measure_parallel_bandwidth(device: str, streams: list[int], size_mb: int,
+                               duration_s: float, trials: int, log) -> dict:
+    """Aggregate host<->PE bandwidth with N PEs of one card transferring at once.
+
+    **This closed a provenance gap and retracted four numbers** -- see deviations
+    D18 and experiments/results/rngd_parallel_bandwidth.md. The repo quoted
+    5.06 / 10.39 / 19.10 / 35.47 GB/s at 1 / 2 / 4 / 8 streams while committing
+    only the single-stream run, so three of the four had no artifact behind them.
+    Measured here: **3.77 / 7.60 / 15.36 / 26.27 GB/s**, recorded in
+    outputs/rngd_profile/parallel_bandwidth.json.
+
+    The scaling law survived -- 87.1 % of ideal at 8 streams against the claimed
+    88 % -- but every level was ~25 % high, because the old figures were peak
+    single transfers where a KV handoff is a sustained bulk copy. The same card
+    still yields 5.06 GB/s under the old best-of-N method, so it was a statistic
+    change, not a hardware change.
+
+    Aggregate is total bytes across all workers over the wall time of the
+    concurrent region (first start to last finish) -- the same definition
+    experiments/scripts/gpu_host_bandwidth.py uses, so the two legs compose.
+
+    The statistic differs from that script's default deliberately: this one
+    measures **sustained** throughput over a fixed duration rather than best-of-N
+    single transfers, because coordinating a per-transfer barrier across processes
+    is not worth the failure modes. The ``streams=1`` row exists to be
+    cross-checked against the committed single-stream table; that check is what
+    localised the 25 % to the statistic rather than the link.
+
+    Composing against the GPU leg requires the **same** statistic on both sides.
+    The GPU figures measured on branch feat/gpu-host-bandwidth are best-of-N, so
+    they carry the same upward bias this function found on the NPU side; use its
+    sustained mode, not its default, when composing a fabric bandwidth.
+    """
+    first_pe = (int(device.split(":")[1]) // 8) * 8
+    rows = []
+    for width in streams:
+        h2d_trials, d2h_trials = [], []
+        for _ in range(trials):
+            one = _parallel_trial(first_pe, width, size_mb, duration_s, log)
+            if one is None:
+                continue
+            h2d_trials.append(one["h2d"])
+            d2h_trials.append(one["d2h"])
+        if not h2d_trials:
+            log(f"  {width} stream(s): every trial failed")
+            continue
+        row = {
+            "streams": width,
+            "first_pe": first_pe,
+            "size_mb": size_mb,
+            "duration_s": duration_s,
+            "trials": len(h2d_trials),
+            "h2d_aggregate_gbps": round(statistics.median(h2d_trials), 2),
+            "d2h_aggregate_gbps": round(statistics.median(d2h_trials), 2),
+            "h2d_trial_min_gbps": round(min(h2d_trials), 2),
+            "h2d_trial_max_gbps": round(max(h2d_trials), 2),
+            "d2h_trial_min_gbps": round(min(d2h_trials), 2),
+            "d2h_trial_max_gbps": round(max(d2h_trials), 2),
+        }
+        rows.append(row)
+        log(f"  {width} stream(s)  H2D {row['h2d_aggregate_gbps']:7.2f} GB/s "
+            f"[{row['h2d_trial_min_gbps']:.1f}-{row['h2d_trial_max_gbps']:.1f}]  "
+            f"D2H {row['d2h_aggregate_gbps']:7.2f} GB/s "
+            f"[{row['d2h_trial_min_gbps']:.1f}-{row['d2h_trial_max_gbps']:.1f}]")
+
+    single = next((r for r in rows if r["streams"] == 1), None)
+    for row in rows:
+        if single and single["h2d_aggregate_gbps"]:
+            row["h2d_scaling_vs_ideal"] = round(
+                row["h2d_aggregate_gbps"]
+                / (row["streams"] * single["h2d_aggregate_gbps"]), 3)
+    return {
+        "card": card_of(device),
+        "table": rows,
+        "peak_h2d_aggregate_gbps": max(
+            (r["h2d_aggregate_gbps"] for r in rows), default=None),
+        "method": (
+            "One process per PE (threads are not used: nothing establishes that "
+            "furiosa.torch allows several PE contexts in one interpreter, and "
+            "subprocess-per-PE is the pattern start_load already proves on this "
+            "hardware). Workers allocate a contiguous pageable bfloat16 buffer, "
+            "warm once, report READY, then spin until an absolute time.time() "
+            "instant sent by the parent and copy back to back for duration_s. "
+            "Aggregate is total bytes over the concurrent window, first start to "
+            "last finish -- the same definition experiments/scripts/"
+            "gpu_host_bandwidth.py uses for the GPU leg, so the two compose. "
+            "Sustained throughput, not best-of-N: the streams=1 row cross-checks "
+            "against the committed single-stream table. Repeated over independent "
+            "trials because host buffer NUMA placement is uncontrolled. h2d is "
+            "the measurement -- its host buffer is allocated once and reused. "
+            "d2h is indicative only: .cpu() allocates a fresh destination per "
+            "iteration and is allocator-bound above ~16 MB, the same artifact "
+            "documented for the GPU leg."
+        ),
+    }
+
+
 def measure_power(device: str, load_s: float, idle_s: float, load_pes: int, log) -> dict:
     """Idle / active / standby board power for one card.
 
@@ -426,6 +665,21 @@ def main() -> None:
     parser.add_argument("--sizes-mb", default="1,4,16,64,256",
                         help="transfer sizes for --host-bandwidth")
     parser.add_argument("--bw-reps", type=int, default=5)
+    parser.add_argument("--parallel-bandwidth", action="store_true",
+                        help="measure aggregate host<->PE bandwidth across N PEs "
+                             "of one card and nothing else; this is what closes "
+                             "the multi-stream provenance gap")
+    parser.add_argument("--streams", default="1,2,4,8",
+                        help="PE counts to sweep for --parallel-bandwidth")
+    parser.add_argument("--parallel-size-mb", type=int, default=256,
+                        help="transfer size for --parallel-bandwidth; 256 MB is "
+                             "the KV footprint of a 2048-token Llama-3.1-8B "
+                             "prompt and the size the GPU leg was composed at")
+    parser.add_argument("--parallel-duration-s", type=float, default=5.0,
+                        help="sustained-transfer window per direction per trial")
+    parser.add_argument("--parallel-trials", type=int, default=3,
+                        help="independent worker spawns per stream count; the "
+                             "median trial is the headline")
     parser.add_argument("--out", type=Path,
                         default=Path("outputs/rngd_profile/device_facts.json"))
     args = parser.parse_args()
@@ -439,7 +693,12 @@ def main() -> None:
         "card": card_of(args.device),
         "measured_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
     }
-    if args.host_bandwidth:
+    if args.parallel_bandwidth:
+        facts["parallel_bandwidth"] = measure_parallel_bandwidth(
+            args.device, [int(v) for v in args.streams.split(",") if v],
+            args.parallel_size_mb, args.parallel_duration_s,
+            args.parallel_trials, log)
+    elif args.host_bandwidth:
         facts["host_bandwidth"] = measure_host_bandwidth(
             args.device, [int(v) for v in args.sizes_mb.split(",") if v],
             args.bw_reps, log)
@@ -449,13 +708,13 @@ def main() -> None:
     else:
         facts["power_w"] = measure_power(
             args.device, args.load_s, args.idle_s, args.load_pes, log)
-    if not args.skip_memory:
+    if not args.skip_memory and not args.parallel_bandwidth:
         facts["memory"] = measure_usable_memory(args.device, log)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(facts, indent=2) + "\n")
     log(f"wrote {args.out}")
-    log(json.dumps(facts.get("host_bandwidth") or facts.get("pe_power_sweep")
-                   or facts.get("power_w"), indent=2))
+    log(json.dumps(facts.get("parallel_bandwidth") or facts.get("host_bandwidth")
+                   or facts.get("pe_power_sweep") or facts.get("power_w"), indent=2))
 
 
 if __name__ == "__main__":

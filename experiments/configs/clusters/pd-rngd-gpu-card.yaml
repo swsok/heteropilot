@@ -134,9 +134,16 @@ links:
 
   # --- inter-island: the prefill -> decode KV path -------------------------
   # PLACEHOLDER, same value and same reason as the sibling fixture. Measured on
-  # this machine: host -> RNGD is 5.06 GB/s single-stream and 35.47 GB/s across a
-  # card's 8 PEs (88% of ideal), well above the ~10 GB/s P/D adoption crossing
-  # Exp 3 found, so the NPU leg is not the bottleneck. The GPU -> host leg CANNOT
+  # this machine: host -> RNGD sustains 3.77 GB/s single-stream and 26.27 GB/s
+  # across a card's 8 PEs (87.1% of ideal), still well above the ~10 GB/s P/D
+  # adoption crossing Exp 3 found, so the NPU leg is not the bottleneck.
+  # Corrected 2026-08-27 from 5.06 / 35.47 GB/s at 88%, which were peak single
+  # transfers quoted where a sustained bulk copy is what a KV handoff does, and
+  # which had no committed artifact behind the multi-stream half. The scaling law
+  # survived; the levels dropped ~25%. bandwidth_gbps below is still the OLD
+  # 8-stream figure -- see the sibling fixture's note for why it is not yet
+  # changed. outputs/rngd_profile/parallel_bandwidth.json,
+  # experiments/results/rngd_parallel_bandwidth.md. The GPU -> host leg CANNOT
   # be measured here (no NVIDIA GPU on this host), so 35 GB/s is the measured NPU
   # leg used as an UPPER BOUND on the whole GPU->host->NPU path. That is not the
   # quantity the planner thinks it is, hence placeholder. docs/HANDOVER_A40.md.

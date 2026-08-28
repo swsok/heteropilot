@@ -1,0 +1,26 @@
+{
+  "device": "rngd:16",
+  "card": "npu3",
+  "measured_at": "2026-08-27T07:49:58+0000",
+  "host_bandwidth": {
+    "device": "rngd:16",
+    "table": [
+      {
+        "size_mb": 256,
+        "h2d_gbps": 5.06,
+        "d2h_gbps": 1.62,
+        "h2d_median_gbps": 5.03,
+        "d2h_median_gbps": 1.52,
+        "reps": 7
+      }
+    ],
+    "peak_h2d_gbps": 5.06,
+    "peak_d2h_gbps": 1.62,
+    "method": "torch .to(device) / .cpu() on a contiguous bfloat16 buffer, host-side perf_counter, best and median of N reps after one warm copy. Bounds the cross-vendor P/D KV handoff: GPU->host->NPU is two copies and the GPU leg is not measurable on this machine."
+  },
+  "memory": {
+    "largest_single_alloc_gb": 6.25,
+    "method": "bisected torch.empty(bfloat16) on one PE, 0.25 GB resolution",
+    "note": "one allocation, not the PE's total budget: the runtime may refuse a single block smaller than the sum of several"
+  }
+}
