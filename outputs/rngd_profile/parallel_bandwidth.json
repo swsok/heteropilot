@@ -1,0 +1,68 @@
+{
+  "device": "rngd:16",
+  "card": "npu3",
+  "measured_at": "2026-08-27T07:45:56+0000",
+  "parallel_bandwidth": {
+    "card": "npu3",
+    "table": [
+      {
+        "streams": 1,
+        "first_pe": 16,
+        "size_mb": 256,
+        "duration_s": 5.0,
+        "trials": 3,
+        "h2d_aggregate_gbps": 3.77,
+        "d2h_aggregate_gbps": 1.61,
+        "h2d_trial_min_gbps": 3.76,
+        "h2d_trial_max_gbps": 4.14,
+        "d2h_trial_min_gbps": 1.6,
+        "d2h_trial_max_gbps": 1.61,
+        "h2d_scaling_vs_ideal": 1.0
+      },
+      {
+        "streams": 2,
+        "first_pe": 16,
+        "size_mb": 256,
+        "duration_s": 5.0,
+        "trials": 3,
+        "h2d_aggregate_gbps": 7.6,
+        "d2h_aggregate_gbps": 3.52,
+        "h2d_trial_min_gbps": 7.44,
+        "h2d_trial_max_gbps": 8.16,
+        "d2h_trial_min_gbps": 3.44,
+        "d2h_trial_max_gbps": 3.59,
+        "h2d_scaling_vs_ideal": 1.008
+      },
+      {
+        "streams": 4,
+        "first_pe": 16,
+        "size_mb": 256,
+        "duration_s": 5.0,
+        "trials": 3,
+        "h2d_aggregate_gbps": 15.36,
+        "d2h_aggregate_gbps": 7.1,
+        "h2d_trial_min_gbps": 15.02,
+        "h2d_trial_max_gbps": 16.03,
+        "d2h_trial_min_gbps": 6.84,
+        "d2h_trial_max_gbps": 7.38,
+        "h2d_scaling_vs_ideal": 1.019
+      },
+      {
+        "streams": 8,
+        "first_pe": 16,
+        "size_mb": 256,
+        "duration_s": 5.0,
+        "trials": 3,
+        "h2d_aggregate_gbps": 26.27,
+        "d2h_aggregate_gbps": 14.04,
+        "h2d_trial_min_gbps": 26.13,
+        "h2d_trial_max_gbps": 27.09,
+        "d2h_trial_min_gbps": 13.41,
+        "d2h_trial_max_gbps": 15.11,
+        "h2d_scaling_vs_ideal": 0.871
+      }
+    ],
+    "peak_h2d_aggregate_gbps": 26.27,
+    "method": "One process per PE (threads are not used: nothing establishes that furiosa.torch allows several PE contexts in one interpreter, and subprocess-per-PE is the pattern start_load already proves on this hardware). Workers allocate a contiguous pageable bfloat16 buffer, warm once, report READY, then spin until an absolute time.time() instant sent by the parent and copy back to back for duration_s. Aggregate is total bytes over the concurrent window, first start to last finish -- the same definition experiments/scripts/gpu_host_bandwidth.py uses for the GPU leg, so the two compose. Sustained throughput, not best-of-N: the streams=1 row cross-checks against the committed single-stream table. Repeated over independent trials because host buffer NUMA placement is uncontrolled. h2d is the measurement -- its host buffer is allocated once and reused. d2h is indicative only: .cpu() allocates a fresh destination per iteration and is allocator-bound above ~16 MB, the same artifact documented for the GPU leg."
+  }
+}

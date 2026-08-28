@@ -280,11 +280,21 @@ Phase-3 `CsvProfileImporter`. **Parallelised one worker per PE: 315 s against
 | achieved HBM read, card | **~1750 GB/s** | 8 PEs concurrently sustain 218.8 GB/s **each** — 104 % scaling, no degradation |
 | board power | **`38.01 + 32.71 × PEs` W**, R² 0.996 | 0..8 loaded-PE sweep |
 | card active / idle | 290.93 / 39.35 W | same sweep; the 8th PE adds only +17.4 W where PEs 1–4 add ~31 W, so 291 W is a plateau |
-| host↔PE transfer | 5.06 GB/s single, **35.47 GB/s** at 8 streams | 88 % of ideal |
+| host↔PE transfer, sustained | 3.77 GB/s single, **26.27 GB/s** at 8 streams | 87.1 % of ideal; corrected 2026-08-27, see below |
 | **on-package all-reduce, TP=8** | **115 µs per decoder layer** | §4.8.5 |
 
 A single-PE power reading understated the card by **4×** (68 W against 285.5 W);
 that is why the sweep exists.
+
+The host↔PE row was **corrected on 2026-08-27**. It previously read 5.06 GB/s
+single and 35.47 GB/s at 8 streams, but only the single-stream figure had ever
+been committed; the multi-stream ones existed as prose alone. Measured from
+committed code (`outputs/rngd_profile/parallel_bandwidth.json`) the near-linear
+PE scaling holds — 87.1 % of ideal against the claimed 88 % — while every
+absolute figure drops ~25 %, because the old numbers were peak single transfers
+and a KV handoff is a sustained bulk copy. The old method still reproduces 5.06
+GB/s on the same card, so nothing about the hardware changed.
+`experiments/results/rngd_parallel_bandwidth.md` has the decomposition.
 
 ### 4.8.3 Instrument 2 — FuriosaAI's own EDF profiler, and what it revealed
 
@@ -351,10 +361,20 @@ attention, and the head are **measured**; the split of a layer's stage time acro
 into one stage. The simulator only ever *sums* the per-layer lookups, so the sum is
 what has to be right. Full account: `experiments/results/rngd_edf_bundle_notes.md`.
 
-**The residual TTFT error is a scheduler artefact, not a profile error.** −36.6 %
-is present with no queuing at all; the stretch to −71.3 % is upstream's scheduler
-queuing ~2.2× less than furiosa-llm's. For identical prompts, real TTFT rises
-158 → 1894 ms as concurrency goes 1 → 32 while the prefill work never changes.
+> **RETRACTED 2026-08-28 — it was the validation harness, not the scheduler.**
+> This paragraph read: "the residual TTFT error is a scheduler artefact... the
+> stretch to −71.3 % is upstream's scheduler queuing ~2.2× less than
+> furiosa-llm's." **There is no such scheduler difference.** `python -m serving`
+> replays the trace's `arrival_time_ns` (spread over 1.78 s) while
+> `bench_furiosa_endpoint.py` fires all 20 requests at once under
+> `Semaphore(concurrency=64)` and never reads that column. Matched arrivals give
+> **−5.1 %**, and the per-request distributions line up, not just the means.
+> Deviations **D19**, `experiments/results/rngd_ttft_gap_resolved.md`.
+
+The −36.6 % unloaded-prefill gap is a separate and still-genuine finding: it comes
+from a sparse-arrival comparison of 6 requests where nothing queues, and ~11 % of
+it is bucket quantisation. What was wrongly attributed to the scheduler is only
+the stretch from there to −71.3 %.
 
 ### 4.8.5 The on-package all-reduce, measured
 
@@ -402,9 +422,17 @@ What it settles:
 | --- | --- | --- |
 | accelerator | one PE, 6.25 GB, `max_tp 8` | one card, 47.5 GB, `max_tp 1` |
 | TPOT error | +25.7 % (conservative) | **−3.1 %** |
-| TTFT error | **−32.6 %** | −71.3 % |
-| fitted calibration error | TPOT 0.204 | **TPOT 0.025**, TTFT 2.34 (poor — do not lean on it) |
-| use it for | TTFT-feasibility decisions | decode, throughput, energy, cross-vendor P/D |
+| TTFT error, harness-matched arrivals | +42.8 % | **−5.1 %** |
+| TTFT error, as first reported | −32.6 % | −71.3 % (both invalid — D19) |
+| fitted calibration error | TPOT 0.204, TTFT −0.263 | **TPOT 0.019, TTFT 0.103** |
+| use it for | nothing it is uniquely better at | **everything, TTFT included** |
+
+> **The recommendation in this table was inverted before D19.** It read "use the
+> per-PE profile for TTFT-feasibility decisions" because −32.6 % looked better than
+> −71.3 %. Both figures came from the mismatched harness. With arrivals matched the
+> card profile is better on **both** axes, and the per-PE profile's −32.6 % turns
+> out to have been two errors cancelling: a queue 2.2× too short times a prefill
+> cost 93 % too high (304.9 ms against a real ~158 ms).
 
 The card profile also unblocks two structural problems: 47.5 GB removes the
 decode-KV exhaustion that crashed P/D simulations, and its TP set {1} overlaps an
@@ -412,6 +440,14 @@ A40 island's {1,2,4} so cross-vendor P/D is expressible without the PCIe-bridgin
 fixture that deviation D16 describes.
 
 ### 4.8.7 Does heterogeneous RNGD+GPU P/D ever pay?
+
+> **Envelope caveat (D19 follow-up, 2026-08-28).** The card fixture's winner runs
+> each RNGD card at ~76 concurrent sequences, against 16.6 in the validation run
+> and 32 the highest ever tested. Extrapolating the measured scaling curve puts the
+> card ~1.6x below what the simulator assumes there. The *ordering* of the regimes
+> below is unaffected -- it is driven by energy and TTFT feasibility, not by that
+> throughput margin -- but no absolute TTFT figure from the card rows should be
+> quoted. `experiments/results/pd_slo_sweep.md`.
 
 Two 8-point TTFT-SLO sweeps (300 requests, seed 42), one per fixture.
 `experiments/results/pd_slo_sweep.md`.
@@ -504,7 +540,7 @@ states Furiosa-LLM does not support prefill/decode disaggregation at all today.
 | **Exp 4 — GPU vs NPU island (SLO-goodput/J)** | superseded in substance | The SLO sweeps of §4.8.7 answer the same question across 8 SLO points and two device abstractions. A dedicated Exp 4 run would add a figure, not a finding |
 | **GPU→host leg of the cross-vendor KV path** | ✅ **done 2026-08-27** (A40 server) | Sustained pinned D2H 25.71 GB/s single stream, 82.63 GB/s across 8 GPUs; saturates ~83 GB/s at 40 % of ideal against the NPU leg's 87 %. Unlike RNGD the A40 sustains its peak (0.998), so no D18-style correction was needed — but both legs are now composed from sustained figures. Cross-vendor fixture links land at 12.6–13.0 GB/s against a 35 GB/s placeholder that was 2.7–4.5× too optimistic; still above Exp 3's ~10 GB/s crossing. `experiments/results/gpu_host_bandwidth.md` |
 | **Measured NPU profiles** — ATOM | placeholder stub | `rebel-compiler` 0.11.0 vs `vllm_rbln`/`optimum-rbln` expecting 0.10.2, **and** all four ATOMs held by another tenant's pods |
-| **The −71 % TTFT gap (card profile)** | diagnosed, not fixed | It is a **scheduler** difference (upstream queues ~2.2× less than furiosa-llm), so it needs a scheduler comparison — which knob: `max_num_seqs`, chunked-prefill admission, or the P/D interleave |
+| **The −71 % TTFT gap (card profile)** | ✅ **resolved 2026-08-28** (retraction) | Not a scheduler difference. The simulator replayed spread arrivals against a bench that fires everything at once and ignores the trace's `arrival_time_ns`. Matched arrivals: **−5.1 %**. Both TTFT calibrations refitted (card fit error 2.34 → 0.103). Deviations D19, `experiments/results/rngd_ttft_gap_resolved.md` |
 | **ASTRA-Sim collective over-charge** | target measured | 115 µs/layer measured against ~340 µs apparently charged. Calibrating `link_bw`/`link_latency` in `rngd-llama31-8b-tp8.json` should shrink the per-PE model's +25.7 % TPOT error |
 | **Asymmetric TP per phase** (D14) | structural | `A40 tp4 prefill + RNGD tp8 decode` — the industry-recommended shape — cannot be enumerated. Card-as-device *sidesteps* it by folding TP=8 inside the device; it does not lift the constraint |
 | **D12 prefix-cache memory growth** | open, blocks Phase 2 | Two attempted fixes were wrong and reverted; `serving/` is pristine. Read D12 before retrying |

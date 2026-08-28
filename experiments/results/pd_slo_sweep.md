@@ -135,23 +135,58 @@ against 4.956 (45 %) — and, crucially, it **exists as an evaluated candidate**
 rather than a crash. Its SLO attainment of 0.74 is what keeps it out: it satisfies
 both SLOs for only three quarters of requests.
 
-**Why the 480 ms winner must not be quoted.** That row says two RNGD cards meet a
-500 ms p99 TTFT. The real hardware does 1404 ms at concurrency ~20 and 1894 ms at
-32, for the same prompts. This is exactly the −71.3 % TTFT error the card profile
-carries and that its header warns about. Applying the fitted calibration
-(`profiles/calibration/rngd_card_edf.yaml`, `real = 2.089·sim + 646 ms`):
+**Why the 480 ms winner must not be quoted — REWRITTEN 2026-08-28 (D19).**
 
-| pure-RNGD candidate | sim p99 TTFT | **calibrated** | sim p99 TPOT | calibrated |
-| --- | ---: | ---: | ---: | ---: |
-| 2-card aggregated, s256-t8192 | 480 ms | **1649 ms** | 48.4 | 45.4 |
-| 2-card aggregated, s256-t2048 | 673 | **2051** | 49.6 | 46.3 |
-| 2-card aggregated, s128-t8192 | 4589 | 10230 | 47.6 | 44.7 |
-| 1 card, s128-t8192 | 36849 | 77606 | 55.1 | 50.8 |
+> The paragraph that stood here said the figure was untrustworthy because of
+> "exactly the −71.3 % TTFT error the card profile carries", and prescribed
+> `real = 2.089·sim + 646 ms`, giving 1649 ms. **Both statements are withdrawn.**
+> The −71.3 % was an arrival-pattern mismatch in the *validation harness*, not a
+> profile error: `bench_furiosa_endpoint.py` fires every request at once and never
+> reads the trace's `arrival_time_ns`, while `python -m serving` replays it.
+> Matched, the card profile's TTFT error is **−5.1 %**. Deviations D19,
+> `experiments/results/rngd_ttft_gap_resolved.md`.
 
-So calibrated, the winner clears roughly a **2 s** TTFT SLO, not 500 ms, and
-**every row in the card sweep at SLO ≤ 1 s is an artefact of the profile's prefill
-error.** The A40 arm needs no such correction (~2 % sim-vs-real), so where the two
-fixtures disagree about TTFT, believe the A40 rows.
+Two things follow, and they point in opposite directions.
+
+**The profile is not the reason to distrust the number.** The refitted calibration
+is `real = 1.241·sim − 242 ms`, which would turn 480 ms into ~354 ms rather than
+1649 ms. **Do not apply either.** Both RNGD calibration files are scoped to the
+`sharegpt-llama31-8b-20` bucket — a 20-request burst at ~17 concurrent sequences —
+and both say so in their headers. This sweep is a different workload entirely, so
+no calibrated TTFT figure for the card rows is defensible right now.
+
+**The reason to distrust it is the operating point, which no measurement covers.**
+The sweep offers an open-loop Poisson process at 9.9 rps (300 requests over 30.3 s,
+`arrival_rate_rps: 10` in the service spec). At the winner's numbers that puts each
+card at **~76 concurrent sequences**:
+
+| | output tok/s per card | TPOT | implied concurrent |
+| --- | ---: | ---: | ---: |
+| real, validation run (burst of 20) | 584 | 28.4 ms | 16.6 |
+| real, highest concurrency ever tested (c32) | ~648 | 30.1 ms | ~32 |
+| **sim, this sweep's winner** | **1767** | 43.2 ms | **76** |
+
+The measured scaling curve has a marginal exponent of **0.598** between c16 and
+c32 (throughput ×1.51 for concurrency ×2). Extrapolating that to c76 gives
+~1090 output tok/s per card; the simulator assumes 1767, i.e. **~1.6× optimistic**
+at an operating point **2.4× beyond the highest concurrency ever run on the
+hardware.**
+
+And the simulator is *itself* behind at this load: makespan 54.0 s against arrivals
+spanning 30.3 s — it drains 23.7 s late, and goodput is 5.55 rps against 9.9
+offered. The 480 ms p99 TTFT is internally consistent (the backlog sits in decode,
+not in prefill admission, so TTFT stays low while TPOT inflates to 43 ms), but it
+describes a regime the card has never been shown to reach.
+
+**So: the card rows at tight TTFT are still not quotable, for a different and
+better-founded reason than this section originally gave.** The A40 arm needs no
+correction (~2 % sim-vs-real), so where the two fixtures disagree about TTFT,
+believe the A40 rows.
+
+> *Provenance caveat.* The c1–c32 measured scaling curve used above lives only as
+> prose in `experiments/results/rngd_edf_bundle_notes.md`; no artifact behind it is
+> committed. That is the same class of gap D18 retracted, and any conclusion
+> resting on the 0.598 exponent inherits it.
 
 Calibrated, the honest side-by-side at the tight end:
 
