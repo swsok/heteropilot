@@ -239,11 +239,20 @@ the 88 %-of-winner row in `pd_slo_sweep.md` — comes back **exactly** as before
 2.7× cut in fabric bandwidth changes it in no digit, because a single request's
 prompt KV is 50–260 MB and at 13 GB/s that is 4–21 ms against a multi-second TTFT.
 
-**So Exp 3's ~10 GB/s adoption crossing is not a statement about this term.** It
-must come from aggregate contention under concurrency, which is what the
-simulator-side model (D15, opt-in) produces by deferring and queueing each
-transfer. The test that would show the corrected bandwidth is
-`pd_sim_network_sweep.py` / `run_exp_pd.sh`, not these SLO sweeps.
+**So Exp 3's ~10 GB/s adoption crossing is not a statement about this term.** The
+test that does exercise the fabric is `pd_sim_network_sweep.py`, which passes
+`--pd-transfer-model bandwidth` and charges the delay to latency/TPOT rather than
+TTFT. (`run_exp_pd.sh` does **not** — both its drivers are planner-side, and both
+run on fixtures untouched by this work. Re-run on 2026-08-28 it reproduces Exp 3
+byte-identically and Exp 5 in every metric, as expected.)
+
+**That test was run, and the answer is the same.** On the compiled config of the
+`A40 prefill → RNGD-card decode` candidate, 35 → 13 GB/s moves mean TPOT by
++0.012 % and mean latency by +0.011 %. The deployment sits at a 30.7-second mean
+latency, so a 3–9 ms per-request KV transfer is absorbed by queueing. Full
+analysis, including why three of the driver's pass criteria fail on a multi-node
+config for reasons unrelated to D15:
+`experiments/results/pd_sim_network_sweep_rngd_card.md`.
 
 An earlier draft of this file warned that "the headroom is thin enough that the
 regimes should not be assumed to carry over". That was the wrong caution: the
