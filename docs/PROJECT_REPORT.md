@@ -441,6 +441,14 @@ fixture that deviation D16 describes.
 
 ### 4.8.7 Does heterogeneous RNGD+GPU P/D ever pay?
 
+> **Envelope caveat (D19 follow-up, 2026-08-28).** The card fixture's winner runs
+> each RNGD card at ~76 concurrent sequences, against 16.6 in the validation run
+> and 32 the highest ever tested. Extrapolating the measured scaling curve puts the
+> card ~1.6x below what the simulator assumes there. The *ordering* of the regimes
+> below is unaffected -- it is driven by energy and TTFT feasibility, not by that
+> throughput margin -- but no absolute TTFT figure from the card rows should be
+> quoted. `experiments/results/pd_slo_sweep.md`.
+
 Two 8-point TTFT-SLO sweeps (300 requests, seed 42), one per fixture.
 `experiments/results/pd_slo_sweep.md`.
 

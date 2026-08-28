@@ -903,9 +903,21 @@ burst validation CSVs are committed, the calibrations are refitted, and
 `arrival_time_ns`. Every doc that carried the scheduler diagnosis is corrected in
 place rather than quietly overwritten.
 
+**`pd_slo_sweep.py` was checked and does NOT share the mismatch.** It builds its
+own arrival process from the ServiceSpec (`planner/util/workload.py:generate_trace`,
+Poisson at `arrival_rate_rps: 10`), so there is no bench to disagree with. But the
+check found a different reason its card rows are not quotable: the sweep's winner
+runs each card at **~76 concurrent sequences**, against 16.6 in the validation run
+and 32 the highest ever tested on hardware, and assumes 1767 output tok/s per card
+where extrapolating the measured c16->c32 scaling exponent (0.598) gives ~1090 --
+**~1.6x optimistic, 2.4x outside the measured envelope.** Neither calibration may
+be applied there either: both are scoped to the `sharegpt-llama31-8b-20` bucket.
+`experiments/results/pd_slo_sweep.md` is rewritten accordingly.
+
 **Left open.** A 10-17 % tail under-prediction remains at p90-p99 with arrivals
 matched -- plausibly bucket quantisation (+10.9 % of charged prefill tokens), but
-that is a hypothesis. And **whether other comparisons share the mismatch is not
-settled**: any pairing of `python -m serving` with `bench_furiosa_endpoint.py`
-inherits it, and `pd_slo_sweep.py` generates its own arrival process, so the TTFT
-figures in `pd_slo_sweep.md` should not be quoted until checked.
+that is a hypothesis. Other comparisons that pair `python -m serving` with
+`bench_furiosa_endpoint.py` still inherit the mismatch and have not been audited.
+And the c1-c32 scaling curve the paragraph above leans on is prose-only in
+`rngd_edf_bundle_notes.md`, with no committed artifact -- the same class of gap
+D18 retracted.
