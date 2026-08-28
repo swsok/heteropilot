@@ -64,3 +64,8 @@ outputs/envcheck/smoke.csv
 outputs/envcheck/plan.yaml
 outputs/envcheck/rngd_verify.csv
 outputs/rngd_edf_bundle/sim_sparse*.csv
+
+# Vendor-specific venvs (one per NPU vendor; see docs/hardware_roadmap.md)
+.venv-rbln/
+.venv-furiosa/
+.venv-rbln-vllm/

@@ -1,30 +1,141 @@
 profile_id: rbln-atom
 vendor: Rebellions
-model: RBLN-ATOM
+model: RBLN-CA22
 backend: rbln
-# EVERY number below is a placeholder pending first access to the machine
-# (docs/hardware_roadmap.md). Read the real figures off the device's own tools
-# at bring-up and replace them; do not cite these.
-memory_gb: 16
+
+# ONE ACCELERATOR HERE IS ONE CARD, unlike furiosa_rngd.yaml where it is one PE.
+# An ATOM card is the unit the runtime binds to (rebel create_runtime(device=N),
+# device_count() == 4 == the card count), so a card's own idle draw belongs in
+# this profile rather than in ClusterSpecV2's base_node_power. That is the
+# opposite of the RNGD split, and it is why idle_power below is non-zero.
+
+# memory_gb: measured 2026-08-28 - largest single weight that compiles, places
+#   and runs on one card, bisected to 0.5 GiB by
+#   experiments/scripts/atom_device_facts.py. The driver confirms 15.088 GiB
+#   resident at that point against a 15.719 GiB card, so one allocation can
+#   claim ~96% of the card. This is ONE allocation, not a total budget.
+memory_gb: 15.047
+
+# memory_bandwidth_gbps: NOT MEASURED. The stub's 256 is retained only as a
+#   placeholder and must not be cited. The RNGD figure was derived from the
+#   profiling run's own DMA spans; ATOM has no equivalent bundle yet, and the
+#   saturating load used for power is compute-bound (an 8-layer 8192-wide stack
+#   reads ~1.07 GB of weights per forward at ~2.8 forwards/s, i.e. ~3 GB/s -
+#   nowhere near HBM speed), so it bounds nothing. Measure this when the
+#   layerwise bundle lands.
 memory_bandwidth_gbps: 256
 
-# No profiler/perf/ bundle and no verified serving stack yet: excluded from
-# candidate generation, and any direct use fails loudly.
+# Still null: there is no profiler/perf/ATOM/ bundle, so the profile fails loud
+# and stays out of candidate generation. Device facts do NOT make it usable.
 sim_hardware: null
+
+# Per-field provenance (absolute rule 3), following furiosa_rngd.yaml.
+#   memory_gb             : measured - bisected on rbln0, driver-confirmed
+#   memory_bandwidth_gbps : PLACEHOLDER - see above, do not cite
+#   power                 : measured - see the power: block
+#   perf_data             : absent - no layerwise bundle exists yet
+#   supported_models      : empty - nothing verified by execution yet
+#
+# Top-level source stays PLACEHOLDER deliberately, even though memory_gb and
+# power are measured: the Source enum has only measured/vendor_spec/placeholder,
+# and a profile carrying an unmeasured memory_bandwidth_gbps must not present
+# itself as measured. Promote this to `measured` only when the bandwidth is
+# measured and a perf bundle exists.
 source: placeholder
+
 perf_data: null
 
-# Deliberately empty. Empty means "unknown", and unknown means excluded from
-# candidates (work order §11 Risk 1) - NPU model/kernel support must be
-# verified on the vLLM-compatible stack (vllm-rbln), never assumed. Fill this
-# from an actual boot per (model, dtype) pair.
+# Measured 2026-08-28 on rbln0 by experiments/scripts/atom_device_facts.py.
+# Raw: outputs/atom_profile/device_power.json, outputs/atom_profile/power_decay.csv
+#
+# UTILISATION IS PART OF THIS MEASUREMENT, not a footnote. Power on this card is
+# close to linear in device utilisation, so a power reading taken below
+# saturation is not active power:
+#
+#   load                          util%   card power (W)
+#   1 Linear, synchronous          36.2       44.3
+#   8 layers, synchronous          64.4       54.9
+#   8 layers, async                75.6       57.7
+#   8 layers n=12288, async        95.1       68.7   <- the figure below
+#
+# The first row is what a naive harness produces, and it under-reads active
+# power by 30%. Every rt.run() is a synchronous host round trip, so a shallow
+# model leaves the card idle between calls; depth amortises the round trip and
+# async overlap buys ~10 more points. The same class of error made a single-PE
+# RNGD reading understate its card by 4x. active_util_pct is recorded in the
+# artifact so this reading can be judged rather than trusted.
+#
+#   idle_power    19.44  measured - card at rest, no context. Tight: 19.28-19.53
+#                        over 23 samples, taken after a 45 s settle. An idle
+#                        window opened immediately after a large allocation
+#                        reads high (19.0-36.7 W on the first attempt) because
+#                        the card is still shedding; the settle is not optional.
+#   active_power  68.73  measured - mean over 31 samples at 95.1% utilisation
+#                        (92.9-95.9), range 67.38-70.78 W.
+#   standby_power 68.03  measured - the D7 2 s post-load window, kept on the
+#                        same definition as the A40 and RNGD entries so the
+#                        three are comparable. It comes out equal to active
+#                        because the card does not begin shedding within 2 s;
+#                        see the decay note below.
+#   standby_duration 2 s - the D7 window, NOT the observed decay time.
+#
+# MEASURED DECAY, which the D7 window does not capture (power_decay.csv):
+# work stops at ~1.3 s (util hits 0) but the card holds ~66 W through the whole
+# 2 s window, steps down through a ~38 W plateau at 2.4-3.6 s and ~31 W at
+# 4.7 s, and only reaches idle at ~5.9 s. So the honest tail is ~6 s at a mean
+# of roughly 43 W, not 2 s at 68 W. The D7 figures are kept for cross-profile
+# comparability; a model that cares about burst tails should use the CSV.
+#
+# rbln-smi reports card_power in MICROWATTS, so unlike the RNGD and A40 entries
+# these figures are not quantised to 1 W.
+power:
+  idle_power: 19.44
+  standby_power: 68.03
+  active_power: 68.73
+  standby_duration: 2000000000   # ns (2 s), the D7 window
+  source: measured
+
+# PER-CARD POWER IS ADDITIVE, and that was tested rather than assumed. Loading
+# 1..4 cards and reading every card at each point (outputs/atom_profile/
+# device_power.json, card_sweep):
+#
+#   loaded : rbln0   rbln1   rbln2   rbln3   total
+#     0     : 23.52   18.73   19.35   18.06    79.66   (rbln0 still shedding)
+#     1     : 65.98   18.71   19.23   18.07   121.99
+#     2     : 67.56   64.85   19.27   18.11   169.79
+#     3     : 66.12   64.73   66.45   18.11   215.42
+#     4     : 65.46   64.45   66.14   63.35   259.40
+#
+# An unloaded card never moves more than ~0.1 W when a neighbour is saturated,
+# and a loaded card holds ~65 W regardless of how many others are busy. So a
+# multi-card ClusterSpecV2 may simply sum this profile's power - there is no
+# shared board cost to split, and no saturation knee like the one RNGD shows at
+# its 8th PE. (An earlier sweep appeared to show per-card power falling from
+# 52.6 to 38.9 W as cards were added; that was host contention from the
+# non-saturating load, not the hardware.)
+
+# Deliberately empty: nothing has been verified by execution yet. Empty means
+# unknown, and unknown means excluded from candidates (work order §11 Risk 1).
+# What IS verified is only that the stack runs at all - a compiled Linear
+# executes on all four cards, output matching CPU to 3.75e-03. That is a
+# bring-up check, not model support.
 supported_models: []
 
+# UNVERIFIED. The driver reports the four cards in one group with a uniform 4x4
+# topology matrix (diagonal 0, off-diagonal 4) after the 2026-08-28 reboot, but
+# no multi-card TP path has been exercised, so this is an assumption inherited
+# from the original stub, not a measurement.
 max_tp_size: 4
 
 notes: >
-  4 devices expected reachable from the week of 2026-08-17. Bring-up follows
-  the V1 path: verify serving stack, measure, import via CsvProfileImporter
-  against profiler/CONTRACT.md. Replaces Ascend as a concrete NPU target for
-  Exp 4 (GPU vs NPU SLO-goodput/J); the ascend_target.yaml stub remains as a
-  schema example only.
+  Device facts measured on this NPU server 2026-08-28 (docs/hardware_roadmap.md,
+  2026-08-28 update). 4 x RBLN-CA22, 15.7 GiB each, KMD/firmware 3.0.0, NUMA
+  node 1 - note RNGD sits on node 0, so a cross-vendor path crosses sockets.
+  The vendor stack needed repair before any of this was reachable: a broken
+  partial upgrade left stale 0.10.2 files under rebel-compiler's vendored tvm,
+  and device_count() returned 0 until a reboot cleared degraded driver state.
+  Both are recorded in docs/hardware_roadmap.md; .venv-rbln carries the
+  consistent 0.11.0 trio.
+  memory_gb and power are measured; memory_bandwidth_gbps is still a
+  placeholder and sim_hardware is still null, so this profile remains excluded
+  from candidate generation until a profiler/perf/ATOM/ bundle exists.
