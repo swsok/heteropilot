@@ -149,6 +149,225 @@ allocatable. Consequences:
   matched the allocation sweep exactly on two separate runs and is the cheapest
   pre-flight check before starting a profiling job.
 
+### UPDATE 2026-08-27 — the tenants left, a card vanished, and the ATOM stack is repaired
+
+Everything in the two sections above describes 2026-08-25. Re-checked on
+2026-08-27, three of its load-bearing facts are no longer true. Re-verify before
+planning any run; this machine's device state has now changed twice in three days.
+
+**The other tenant's workload is gone.** Of the pod table above, only PID 6945
+(`--role gateway`) survives, and it holds no device. Every per-chip pod
+(`--chip 0/1/2`, and all four `--backend atom` roles) has exited. Consequently:
+
+- **Every RNGD PE is free.** All 8 PEs on npu0, npu1 and npu3 return an empty
+  `alloc_status`, and `furiosa-smi ps` is empty. The "only npu3 is allocatable"
+  constraint is lifted.
+- **All four ATOMs are free.** `rbln-stat` shows `0.0B / 15.7GiB` used, 0.0 %
+  util and an empty context table on every card; `rbln-smi -j` reports all four
+  `status: normal` with `contexts: []`, and `/dev/rbln0..3` all accept `O_RDWR`.
+  The leftover 13–14 GiB contexts recorded on 2026-08-25 are gone. So route 2 is
+  no longer blocked on device availability — only on the runtime (below).
+
+**RNGD npu2 (PCI `44:00.0`) has left the PCI bus entirely.** Not busy, not
+`rev ff` as on 2026-08-25 — absent. No `/sys/class/rngd_mgmt/rngd!npu2*` node, no
+`lspci` entry, no `furiosa-smi` row. Three RNGD cards remain: npu0, npu1, npu3.
+
+**Torch numbers RNGD devices densely over the cards that are present.** This is
+the trap the missing card creates: with npu2 gone, `rngd:16..23` is **npu3**, and
+`rngd:24` — the device id every earlier document names — **does not exist**,
+failing with `Expected allocator != nullptr to be true`. Confirmed by pinning a
+load to `rngd:16` and reading `furiosa-smi ps`, which reported `npu3:0`. Anything
+computing a card as `device_index // 8` is now wrong; `card_of()` in
+`experiments/scripts/rngd_device_facts.py` was fixed to resolve through sysfs
+enumeration instead. **Never assume the arithmetic — re-check the mapping.**
+
+**NUMA, newly recorded.** All three RNGD cards are on **NUMA node 0**; all four
+ATOMs are on **NUMA node 1** (`03/04/45:00.0` vs `83/84/c3/c4:00.0`). Host buffer
+placement is not bound by default, so a cross-vendor RNGD↔ATOM KV path crosses
+sockets. This is a variable in any host-bandwidth measurement and was not
+controlled in the ones committed so far.
+
+#### The ATOM (Rebellions) stack — root cause found and repaired
+
+The `rebel-compiler` / `tvm` conflict recorded below was **not** a version
+mismatch between two separately installed packages. `rebel-compiler` vendors its
+own TVM and declares no `tvm` dependency at all. What actually happened is a
+**broken partial upgrade**: `/usr/local/lib/python3.10/dist-packages` carries
+*two* dist-info directories, `rebel_compiler-0.10.2` and `rebel_compiler-0.11.0`,
+and the tree is a mixture of both.
+
+Verified by hashing every file against the 0.11.0 `RECORD` manifest already on
+disk:
+
+| top-level | ok | bad | missing |
+| --- | ---: | ---: | ---: |
+| `rebel/` | 289 | 0 | 0 |
+| `rebel_compiler.libs/` | 2 | 0 | 0 |
+| `tvm/` | 602 | **24** | **1** |
+
+So `rebel/` is a clean 0.11.0 and the vendored `tvm/` is 0.11.0 with **24 stale
+0.10.2 files** left behind, all under `tvm/`. 0.11.0's `rebel.core.torch_compile`
+imports `set_data_ptr_name_overrides` from `tvm.relay.frontend.pytorch`, which
+exists only in the 0.11.0 copy — hence the `ImportError` that killed `import
+rebel`, and with it `optimum.rbln` and `vllm_rbln`.
+
+**Repair, without touching the shared system install.** There is no outbound
+network on this box (`pypi.org` resolves but times out; `pypi.rebellions.ai` does
+not resolve) and no wheel in the pip cache, so the fix reuses a
+cryptographically complete 0.11.0 tree found elsewhere on the machine, validated
+file-by-file against the 0.11.0 `RECORD` we already own — 923/923 files matching,
+0 bad, 0 missing. `.venv-rbln` is created with `--system-site-packages` and the
+verified `tvm/` and `rebel_compiler.libs/` copied into its site-packages, where
+they shadow the broken system copies. **System `dist-packages` is unmodified**,
+which matters on a shared node.
+
+The venv also **excludes the user site** (`~/.local`) via a `.pth` file, because
+that is where `furiosa-torch` keeps `torch 2.10.0+cu128` and `transformers 5.1.0`
+— which shadow the `torch 2.9.1+cpu` / `transformers 4.57.6` that `optimum-rbln`
+pins. This is the "one venv per vendor" rule made mechanical rather than
+remembered.
+
+Result — the whole chain imports, where previously all three died at `import rebel`:
+
+```
+$ .venv-rbln/bin/python -c "import rebel, optimum.rbln, vllm_rbln"
+rebel          OK  0.11.0
+optimum.rbln   OK  0.11.0.post1
+vllm_rbln      OK
+```
+
+#### Rebuilding `.venv-rbln`
+
+`.venv-rbln/` is gitignored (923 files, ~440 MB). To recreate it:
+
+```bash
+# 1. Verify the system tree really is 0.11.0-with-stale-tvm before repairing it.
+python3 - <<'PY'
+import base64, hashlib, csv, os
+D = "/usr/local/lib/python3.10/dist-packages"
+h = lambda p: "sha256=" + base64.urlsafe_b64encode(
+    hashlib.sha256(open(p, "rb").read()).digest()).rstrip(b"=").decode()
+rec = {r[0]: r[1] for r in csv.reader(
+    open(f"{D}/rebel_compiler-0.11.0.dist-info/RECORD")) if len(r) >= 2 and r[1]}
+bad = [f for f, e in rec.items()
+       if not os.path.exists(os.path.join(D, f)) or h(os.path.join(D, f)) != e]
+print(len(bad), "files not matching 0.11.0:", bad[:5])
+PY
+
+# 2. Build the venv on top of the system packages, then shadow the broken bits.
+python3 -m venv --system-site-packages .venv-rbln
+DST=.venv-rbln/lib/python3.10/site-packages
+SRC=<a directory whose tvm/ and rebel_compiler.libs/ verify against that RECORD>
+cp -a "$SRC/tvm" "$SRC/rebel_compiler.libs" "$DST/"
+
+# 3. Drop the user site, which holds furiosa's torch 2.10 / transformers 5.1 and
+#    shadows the torch 2.9.1+cpu / transformers 4.57.6 optimum-rbln pins.
+printf "%s\n" "import sys; sys.path[:] = [p for p in sys.path if '/.local/lib/python' not in p]" \
+    > "$DST/_zz_no_user_site.pth"
+
+# 4. Verify.
+.venv-rbln/bin/python -c "import rebel, optimum.rbln, vllm_rbln; print(rebel.__version__)"
+```
+
+Step 2's `SRC` must be checked against the `RECORD` **before** copying — that
+manifest is the only thing making a copy from elsewhere on the machine
+trustworthy. Do not repair system `dist-packages` in place; it is shared.
+
+#### Still blocked: the runtime enumerates zero ATOMs
+
+**`rebel.device_count()` returns 0 and `rebel.npu_is_available()` is False**, on
+a machine where all four cards are healthy and idle. This is *not* caused by the
+repair, and not a packaging problem at all:
+
+- It reproduces in a **separate, self-consistent 0.10.1 venv** that predates this
+  work, so it affects at least 0.10.1 and 0.11.0 alike.
+- The driver side is healthy: `status 0`, `dram_used 0`, `qstat 4/4/(4/4)/4`,
+  `fw_ver`/`smc_ver`/`kernel_version` all 3.0.0, distinct `group_id` 1–4.
+- The runtime *does* reach the driver — `get_kmd_version()` returns 3.0.0, inside
+  the compiled compat range `[3.0.0, 4.0.0)`.
+- It *does* enumerate: `strace` shows it exec'ing `/usr/bin/rbln-smi -j`
+  successfully, opening all four `/dev/rbln*`, and reading every sysfs attribute.
+  `rbln-smi -j` itself returns 4 devices, `status: normal`, `contexts: []`.
+- **No permission error anywhere** in the trace — the device nodes are `0666`.
+
+One anomaly worth chasing: every device reports **`"npu": 0`** in `rbln-smi -j`
+(and NPU column `0` in `rbln-stat`, above a stray `N/A` row), while `group_id` is
+correctly 1–4. If the runtime keys its device map on that field, four devices all
+claiming index 0 would explain the collapse. Whether that is a driver quirk, an
+`rbln-smi` schema drift, or a red herring is **not decidable without root or the
+vendor** — the debug channels (`RBLN_DEBUG_LEVEL`, `RBLN_COMPILER_LOG_LEVEL`) are
+refused by this deploy build, and `RBLN_DEVICES` / `RBLN_DUMMY_DEVICE` do not
+change the count.
+
+**So ATOM profiling remains blocked, but the blocker has moved** — from a broken
+Python install (fixed) to device enumeration in the vendor runtime. Next step is
+root access or a vendor question, not more packaging work. `rbln_atom.yaml` keeps
+`sim_hardware: null` and empty `supported_models`, and every ATOM number in the
+repo stays placeholder (absolute rule 3) — the hardware being present, idle and
+importable changes none of that until it is actually profiled.
+
+### UPDATE 2026-08-28 — a reboot cleared both blockers, and the vanished card returned
+
+The machine was rebooted at 04:48 on 2026-08-28. It changed two things that the
+2026-08-27 section above records as blockers, and both changed for the better.
+
+**ATOM is usable.** `rebel.device_count()` now returns **4**, `npu_is_available()`
+is `True`, `get_npu_name()` is `RBLN-CA22`, and a model compiled with
+`rebel.compile_from_torch` runs on **all four devices** (checked individually,
+max abs error 3.75e-03 against the CPU reference — ordinary reduced-precision
+agreement). The `.venv-rbln` repair from 2026-08-27 was necessary but not
+sufficient; the reboot supplied the rest.
+
+**The zero-device blocker was stale driver state, and the `npu: 0` anomaly was
+the tell.** Comparing the driver's own view either side of the reboot:
+
+| | before reboot | after reboot |
+| --- | --- | --- |
+| `npu` index (`rbln-smi -j`) | `0, 0, 0, 0` | `0, 1, 2, 3` |
+| `group_id` (sysfs) | `1, 2, 3, 4` | `0, 0, 0, 0` (one group) |
+| `topology` (sysfs) | `rbln0 0` — one column | `rbln0 0 4 4 4` — full 4×4 matrix |
+
+So the driver had never completed device-group and topology initialisation: each
+card sat in its own group with no inter-device distances and a collapsed npu
+index, which is exactly the shape that would make a runtime keying on `npu`
+count one device or none. The most likely cause is the abrupt exit of the
+root-owned `rngd_pd.serving.cluster` pods that held the cards — they left on
+2026-08-27, and the driver never recovered until it was reloaded by the reboot.
+
+*Diagnostic worth keeping:* if `device_count()` returns 0 again on healthy cards,
+read `rbln-smi -j` and the sysfs `topology` **first**. A collapsed `npu` index or
+a one-column topology means driver state, not packaging, and the fix is a
+reload/reboot — which on this shared node is the owner's call, not ours.
+
+The post-reboot `topology` matrix is also the first real inter-ATOM distance data
+this repo has seen: diagonal 0, every off-diagonal 4, i.e. uniform. Relevant to
+the Level-2 topology model, and still not a measurement — it is the driver's
+nominal distance metric, not a bandwidth.
+
+**RNGD npu2 came back.** `44:00.0` is on the bus again, so there are **4 RNGD
+cards** and all **32 PEs are free**. This is the third distinct device set in four
+days (4 cards on 08-25 → 3 on 08-27 → 4 on 08-28).
+
+The consequence is the numbering trap in reverse: with all four cards present,
+`rngd:16..23` is **npu2** again and `rngd:24..31` is npu3 — confirmed by pinning a
+load to `rngd:16` and reading `furiosa-smi ps`, which reported `npu2:0`. While
+npu2 was missing, that same index was npu3. **The index→card mapping is not
+stable across reboots**, which is precisely why `card_of()` resolves it through
+live sysfs enumeration rather than `index // 8`; that function returns the right
+answer in both states without modification.
+
+*Provenance note.* `outputs/rngd_profile/parallel_bandwidth.json` records
+`device: rngd:16`, `card: npu3`, measured 2026-08-27. That was correct when
+measured — npu2 was off the bus. After this reboot `rngd:16` is npu2, so the
+artifact's device id no longer points at the card it was measured on. The card
+label is the durable fact; the index is not. Re-running that measurement today
+would land on a different physical card unless `--device rngd:24` is used.
+
+**Only the gateway pod restarted.** `rngd_pd.serving.cluster --role gateway` is
+running again and holds no device; no per-chip pod came back. Every RNGD PE and
+every ATOM is unclaimed. As always this can change without warning — re-check
+before planning a run.
+
 ### The serving stacks are installed, split across two site-packages, and conflict
 
 | stack | location | version |

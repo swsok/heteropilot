@@ -644,6 +644,7 @@ drops, TTFT flat, `none`-mode control flat — all PASS) and `tests/test_sim_pd_
 | D15 | Phase 5 | **Resolved** — sim-level P/D KV-transfer model, opt-in `--pd-transfer-model bandwidth`, default byte-identical; first sanctioned `serving/` edit (router.py + __main__.py only, scheduler.py pristine) |
 | D18 | Phase 5 | **Resolved** (retraction) — NPU-leg multi-stream bandwidth remeasured; scaling law held, levels ~25 % lower. Fixture `bandwidth_gbps` deliberately left at the old value pending the GPU leg |
 | D19 | Phase 4 | **Resolved** (retraction) — the card profile's −71 % TTFT error was an arrival-pattern mismatch in the validation harness, not a scheduler difference; matched arrivals give −5.1 %. Both RNGD TTFT calibrations refitted |
+| D20 | Phase 3 / Exp 4 | **Open** — ATOM layerwise profiling blocked: host I/O exceeds the kernels and the device tracer's schema is undocumented. Memory and power measured; no perf bundle, so ATOM stays out of candidate generation |
 
 ---
 
@@ -928,3 +929,68 @@ concurrency ever run on RNGD is 32, and the sweep's operating point is ~76 per
 card. Settling whether the simulator's high-concurrency throughput is valid needs
 a c64/c128 run on the hardware -- see
 `docs/npu_concurrency_envelope_work_order.md`.
+
+---
+
+## D20 — ATOM cannot be layerwise-profiled to contract fidelity: host I/O exceeds the kernels, and the device profiler is unreadable · **Open (blocks ATOM in Exp 4)**
+
+**What the work order assumes.** `docs/HANDOVER_NPU.md` §3 says that once the
+`rebel-compiler`/`vllm_rbln`/`optimum-rbln` versions are consistent in an
+rbln-only venv, "the existing vLLM profiler works as-is". The packaging half of
+that is now true — `.venv-rbln-vllm` carries a consistent 0.11.0 trio and
+`RblnPlatform` activates. The conclusion does not follow.
+
+**Why vLLM cannot drive it.** The profiler's `HOST_ENGINE_DEFAULTS` fixes
+`load_format: "dummy"` and `enforce_eager: True`, both marked "should not be
+changed". vllm-rbln's optimum path AOT-compiles a *real* checkpoint and rejects
+dummy weights; its vLLM-native path accepts them but rejects eager unless
+`VLLM_RBLN_USE_DEVICE_TENSOR=1`, which needs a torch device named `rbln` that
+nothing on this machine registers (no `torch_rbln`, unlike `furiosa.torch`
+registering `rngd:` as PrivateUse1). That path also registers only
+deepseek_v2 / gpt_oss / minimax_m2 / qwen2 / qwen3 — not llama. Both fixes
+require editing `profiler/`, pristine until Phase 5.
+
+**Why the RNGD-style harness cannot either.** `experiments/scripts/profile_atom.py`
+runs fine — 284 shots, zero compile failures — but cannot produce *device* time.
+`rebel._C.profiler` emits protobuf traces with `comp_cycle`/`transfer` records
+and no published schema, and no decoder ships with the stack, so wall clock is
+the only instrument. On this card wall clock is dominated by transport:
+
+| input | bytes | pure-I/O µs |
+| ---: | ---: | ---: |
+| 8 | 16 | 6.4 |
+| 1,024 | 2 KB | 56.3 |
+| 1,048,576 | 2 MB | 300.6 |
+| 4,194,304 | 8 MB | 999.7 |
+
+against RNGD device spans of 3–200 µs for the same layers. **The transport costs
+more than the computation**, so the measurement is I/O with a kernel inside it.
+
+**Three subtraction schemes, all defeated.** A constant floor (6.5 µs, calibrated
+on a 1×8 tensor) inflated elementwise layers 8–25× and *produced a bundle that
+passed contract validation* — it was deleted. A per-shot I/O baseline works for
+single-input layers (`o_proj` at 0.83–1.09× RNGD) but its `sum()` over extra
+inputs costs more than the layer for multi-input ones (27,919 µs on one attention
+shape; 145/284 shots negative), and the cheap single-index variant lets the
+compiler elide the unread tensors instead. A repetition slope is defeated by its
+own accumulator. The invariant behind all three: **the transfer only happens if
+the graph consumes the data, and consuming it costs compute.**
+
+**How we adapt.** No `profiler/perf/ATOM/` bundle is shipped. A partial one is
+not possible either — `attention.csv` is `required=True`, and attention is
+precisely the case the subtraction cannot handle, since a decode shot carries
+megabytes of K/V whose transfer is inseparable from its compute. The CSVs the
+harness did produce are kept under `outputs/atom_profile/layerwise_attempt/`
+with their sidecar, explicitly **not** as a bundle. Full evidence:
+`experiments/results/atom_layerwise_blocked.md`.
+
+**Consequence.** `profiles/accelerators/rbln_atom.yaml` keeps `sim_hardware:
+null` and empty `supported_models`, so ATOM stays out of candidate generation and
+out of Exp 4, even though its memory and power are now measured. Absolute rule 3:
+present, idle, importable and partly measured is still not profiled.
+
+**What would resolve it**, in order of expected effort: (1) the `.pb` trace
+schema from Rebellions — the tracer already records what is needed, so this is a
+documentation request; (2) a torch backend registering device `rbln`, which
+enables the vLLM-native path; (3) a llama entry in vllm-rbln's native model
+registry, after (2).

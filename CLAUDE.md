@@ -16,7 +16,8 @@ Authoritative documents, all of which outrank this file:
 | `WORK_ORDER_heteropilot.md` | HeteroPilot schemas, module contracts, phase gates (Korean, v1.0) | The HeteroPilot spec |
 | `docs/phase0_formats.md` | Real CSV / stdout / cluster-config schemas, verified at the pin | Basis for the §5.5 compiler and parser |
 | `docs/deviations.md` | Where the work order and upstream disagree, and how we adapt | Read before implementing any Phase 2+ module |
-| `docs/phase0_bench_plan.md` | What was measured vs simulated, and what this machine can actually run | Provenance discipline |
+| `docs/phase0_bench_plan.md` | What was measured vs simulated, and what a node can actually run | Provenance discipline |
+| `docs/nodes/{a40,a5000,npu}.md` | Per-node inventory, topology and traps | Read the one `scripts/whichnode.sh` names — never all three |
 
 Upstream ships `CLAUDE.md` as a symlink to `AGENTS.md`. This fork replaces it with a real file;
 read `AGENTS.md` directly for anything about the simulator itself.
@@ -53,7 +54,8 @@ Island id convention: `{backend}-{model_slug}-{node_id}` (e.g. `cuda-h100-node0`
 2. **Never mix backends in one TP group.** Candidate generation must exclude such configs automatically.
 3. **Never invent hardware numbers.** Values with no measurement get `source: placeholder` in the
    profile file. Never label unmeasured data as measured, and never claim results from hardware
-   that isn't present (see *This machine* below).
+   that isn't present — run `scripts/whichnode.sh` to find out what is (see
+   *Which machine am I on?* below).
 4. **First optimizer is exhaustive enumeration + pruning, not RL.** RL, Kubernetes operators,
    cross-vendor TP, and live migration are out of scope.
 5. **Never delete `planner/optimizer/exhaustive.py`.** It is the oracle that detects pruning bugs
@@ -69,51 +71,43 @@ Island id convention: `{backend}-{model_slug}-{node_id}` (e.g. `cuda-h100-node0`
 GPU+NPU mixed TP · dynamic migration · multi-tenancy · RL · Kubernetes operator ·
 cross-vendor P/D before Phase 5 · full switch-level congestion modeling.
 
-## This machine — the NPU server (since 2026-08-25)
+## Which machine am I on? — detect it, never assume
 
-The project has moved. This box is the NPU server promised in `docs/hardware_roadmap.md`, and
-it has **no NVIDIA GPU at all** (`nvidia-smi` cannot reach a driver).
+**This repository moves between three nodes: an A40 node, an A5000 node and an NPU
+node.** Any statement in a committed file about what hardware is present is true on
+at most one of them. This section used to *be* such a statement, and it is why a
+session once opened on a box with eight A40s while reading "no NVIDIA GPU at all".
 
-96 cores, 1.5 TB RAM, Python 3.10.12, `cmake` 4.3.2 / `g++` 11.4.0 / `protoc` 3.12.4.
+**Hostname does not discriminate.** Every node reports `s8` on kernel
+5.4.0-216-generic. The only incidental difference in committed provenance is the
+CPU count (A40 64, NPU 96). Do not key off `hostname`.
 
-NPU inventory as reported by the vendor tools (not yet profiled — see below):
+So the first command of a session on an unfamiliar checkout is:
 
-- **4 × Rebellions ATOM** — `RBLN-CA22`, `/dev/rbln0..3`, PCI `83/84/c3/c4:00.0`, 15.7 GiB each,
-  KMD 3.0.0, ~19 W idle.
-- **4 × FuriosaAI RNGD** on PCI `03/04/44/45:00.0`, 47.5 GiB and 8 PEs each, firmware
-  `2026.3.0`, ~40 W idle. All four are `alive`. Torch addresses them as PrivateUse1 device
-  `rngd:0..31` (card × 8 PEs); `/dev/rngd/npu<N>pe<a>-<b>` nodes allow fusing 2 or 4 PEs.
-  **Only npu3 (`rngd:24..31`) is actually allocatable** right now — every PE on npu0/1/2
-  returns `EBUSY`. Re-check before planning a run; the driver re-enumerated at one
-  point today and changed what was visible.
+```bash
+bash scripts/whichnode.sh
+```
 
-Vendor runtimes are already installed, but **split across two site-packages and mutually
-incompatible**: system `dist-packages` holds `vllm 0.13.0+cpu`, `vllm_rbln 0.10.2.post1`,
-`rebel-compiler` 0.10.2, `tvm 0.20.dev0` and `transformers 4.57.6`, while user `~/.local`
-holds `furiosa-llm`/`furiosa-torch` 2026.2.0, `torch 2.10.0+cu128` and `transformers 5.1.0`.
-The user-site `transformers` breaks system vLLM, and the auto-loaded `rbln` vLLM plugin
-breaks on the `rebel-compiler`/`tvm` mismatch. **Use one venv per vendor**; details and the
-routes forward are in `docs/hardware_roadmap.md` "First access".
+It probes the accelerators — `nvidia-smi -L`, `/sys/class/rngd_mgmt`, `/dev/rbln*` —
+and prints the detected node, **what can actually be run here** (real vLLM bench,
+CUDA profiling, RNGD profiling), and which node profile to read:
 
-Consequences:
+| node | profile |
+| --- | --- |
+| A40 | `docs/nodes/a40.md` |
+| A5000 | `docs/nodes/a5000.md` |
+| NPU (RNGD / ATOM) | `docs/nodes/npu.md` |
 
-- Real-vLLM `bench/` runs on **CUDA are no longer possible on this machine**. The A40 and A5000
-  numbers already committed stay valid as measured artifacts of *other* machines; do not re-run
-  or extend them here, and never relabel them.
-- Every NPU number in the repo is still **SIM-PROXY or placeholder** until step §3 of
-  `docs/HANDOVER_NPU.md` is done. The hardware being physically present changes nothing about
-  the provenance labels until it is actually profiled (absolute rule 3).
-- The ATOM/RNGD profile stubs (`profiles/accelerators/rbln_atom.yaml`, `furiosa_rngd.yaml`) keep
-  `sim_hardware: null` and empty `supported_models`, so they fail loud and stay out of candidate
-  generation until measured.
+Those files hold the machine-specific detail — inventory, topology, vendor runtime
+splits, device-ownership traps — and each one says at the top that it applies only
+when the detector names that node.
 
-**This is a shared Kubernetes node and someone else's workload owns most of the NPUs.**
-`rngd_pd.serving.cluster` pods (P/D-disaggregated serving, one pod per chip, running as root
-under `kubepods-burstable-*`) hold RNGD npu0/1/2 via `--chip 0/1/2` and **all four ATOMs**.
-Only RNGD npu3 is free. Do not drain devices or kill those pods; `furiosa-smi ps` and
-`rbln-stat` under-report because the holders are pods. Cheapest pre-flight check:
-`/sys/class/rngd_mgmt/rngd!npu<N>pe<M>/alloc_status` is non-empty iff that PE is claimed.
-Full holder table: `docs/hardware_roadmap.md` "Who holds the NPUs".
+**Absolute rule 3 extends to hardware presence, not just hardware numbers.** Never
+claim a result from hardware the detector does not list. Artifacts measured on
+another node stay valid as measurements *of that node*: do not re-run, extend, or
+relabel them here. Every result written through `planner/util/provenance.py` now
+records the detected accelerator inventory, so an artifact says for itself which
+node produced it.
 
 ## Architecture: the planning pipeline
 

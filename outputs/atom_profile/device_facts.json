@@ -1,0 +1,117 @@
+{
+  "device": 0,
+  "device_count": 4,
+  "npu_name": "RBLN-CA22",
+  "rebel_version": "0.11.0",
+  "measured_at": "2026-08-28T05:41:03+0000",
+  "memory": {
+    "device": 0,
+    "largest_single_alloc_gb": 15.047,
+    "at_best": {
+      "target_gib": 15.047,
+      "n": 89856,
+      "observed_resident_gib": 15.088,
+      "compiler_total_device_alloc": 16198402048
+    },
+    "bisect_tolerance_gb": 0.5,
+    "dram_total_gb": 15.719,
+    "method": "largest single Linear weight that compiles, places and runs on one card, bisected to the stated tolerance, sized by ON-DEVICE bytes (the compiler places weights as 2 bytes, not the module's 4). Ground truth is the driver's memory.used, NOT the compiler's get_total_device_alloc(): the latter is a compile-time figure and over-reports residency by ~70x when several runtimes share one compiled model, because the weights upload once and each runtime adds only a small context. One allocation, not a total budget."
+  },
+  "power": {
+    "device": 0,
+    "idle_w": {
+      "n": 16,
+      "mean": 24.247,
+      "min": 19.037,
+      "max": 36.737
+    },
+    "active_w": {
+      "n": 26,
+      "mean": 52.481,
+      "min": 52.271,
+      "max": 52.657
+    },
+    "standby_w": {
+      "n": 3,
+      "mean": 49.708,
+      "min": 43.759,
+      "max": 52.682
+    },
+    "standby_duration_ns": 2000000000,
+    "method": "rbln-smi -j card_power for this card only, polled at 2 Hz. Idle with no context, active mean over a sustained compiled-matmul load after a 3 s settle, standby over the 2 s window right after the load stops (deviations D7). Reported in microwatts by the tool, so not quantised to 1 W the way the RNGD and A40 figures are."
+  },
+  "card_sweep": {
+    "table": [
+      {
+        "loaded_cards": 0,
+        "loaded": [],
+        "per_card_w": {
+          "rbln0": 21.769,
+          "rbln1": 18.793,
+          "rbln2": 19.375,
+          "rbln3": 18.176
+        },
+        "total_w": 78.113
+      },
+      {
+        "loaded_cards": 1,
+        "loaded": [
+          0
+        ],
+        "per_card_w": {
+          "rbln0": 52.575,
+          "rbln1": 18.78,
+          "rbln2": 19.36,
+          "rbln3": 18.207
+        },
+        "total_w": 108.922
+      },
+      {
+        "loaded_cards": 2,
+        "loaded": [
+          0,
+          1
+        ],
+        "per_card_w": {
+          "rbln0": 47.959,
+          "rbln1": 46.713,
+          "rbln2": 19.397,
+          "rbln3": 18.176
+        },
+        "total_w": 132.245
+      },
+      {
+        "loaded_cards": 3,
+        "loaded": [
+          0,
+          1,
+          2
+        ],
+        "per_card_w": {
+          "rbln0": 41.088,
+          "rbln1": 40.042,
+          "rbln2": 40.482,
+          "rbln3": 18.161
+        },
+        "total_w": 139.773
+      },
+      {
+        "loaded_cards": 4,
+        "loaded": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "per_card_w": {
+          "rbln0": 39.835,
+          "rbln1": 38.793,
+          "rbln2": 39.226,
+          "rbln3": 37.824
+        },
+        "total_w": 155.678
+      }
+    ],
+    "method": "one saturating process per loaded card; every card's power averaged over 4 samples after a 3 s settle."
+  }
+}
