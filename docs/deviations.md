@@ -919,9 +919,16 @@ be applied there either: both are scoped to the `sharegpt-llama31-8b-20` bucket.
 matched -- plausibly bucket quantisation (+10.9 % of charged prefill tokens), but
 that is a hypothesis. Other comparisons that pair `python -m serving` with
 `bench_furiosa_endpoint.py` still inherit the mismatch and have not been audited.
-And the c1-c32 scaling curve the paragraph above leans on is prose-only in
-`rngd_edf_bundle_notes.md`, with no committed artifact -- the same class of gap
-D18 retracted.
+(An earlier version of this paragraph claimed the c1-c32 scaling curve was
+prose-only with no committed artifact. **That was wrong** --
+`outputs/rngd_edf_bundle/edf/real_c{1,2,4,8,16,32}.json` are committed and
+reproduce the table exactly. The extrapolation rests on measured data.)
+
+What the concurrency check *did* expose as genuinely unmeasured: the highest
+concurrency ever run on RNGD is 32, and the sweep's operating point is ~76 per
+card. Settling whether the simulator's high-concurrency throughput is valid needs
+a c64/c128 run on the hardware -- see
+`docs/npu_concurrency_envelope_work_order.md`.
 
 ---
 

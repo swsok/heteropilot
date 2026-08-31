@@ -183,10 +183,17 @@ better-founded reason than this section originally gave.** The A40 arm needs no
 correction (~2 % sim-vs-real), so where the two fixtures disagree about TTFT,
 believe the A40 rows.
 
-> *Provenance caveat.* The c1–c32 measured scaling curve used above lives only as
-> prose in `experiments/results/rngd_edf_bundle_notes.md`; no artifact behind it is
-> committed. That is the same class of gap D18 retracted, and any conclusion
-> resting on the 0.598 exponent inherits it.
+> *Correction, same day.* A first version of this block claimed the c1–c32 curve
+> was prose-only with no committed artifact. **It is committed** —
+> `outputs/rngd_edf_bundle/edf/real_c{1,2,4,8,16,32}.json`, 24 requests each,
+> reproducing the table exactly (wall 255.2 / 156.9 / 93.3 / 55.1 / 38.6 / 25.5 s;
+> output throughput 64.6 → 646.9 tok/s). The 0.598 exponent is derived from those
+> files, not from prose.
+>
+> What *is* unmeasured is the range beyond them: **c32 is the highest concurrency
+> ever run on RNGD**, and this sweep's winner sits at ~76 per card. That is the
+> gap, and it needs hardware —
+> `docs/npu_concurrency_envelope_work_order.md`.
 
 Calibrated, the honest side-by-side at the tight end:
 
