@@ -1,5 +1,9 @@
 # Handover — continuing on the A40 server
 
+> **HISTORICAL — the record of the 2026-08-26 move to the A40 node.** Its §1, the
+> one measurement it existed to order, is done (PR #19). For current status and
+> next work read `docs/HANDOVER.md`; for this node's facts read `docs/nodes/a40.md`.
+
 *Written 2026-08-26, **revised 2026-08-27 after everything merged to `main`**, for
 a Claude Code session that will `git pull` this repo on the **A40 server** and
 continue. Read this first, then `experiments/results/rngd_edf_bundle_notes.md` and

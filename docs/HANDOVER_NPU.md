@@ -1,5 +1,10 @@
 # Handover — continuing HeteroPilot on the NPU server
 
+> **HISTORICAL — the record of the 2026-08-25 move to the NPU node.** Its §3
+> RNGD steps are done and its ATOM steps are superseded by deviations D20. For
+> current status and next work read `docs/HANDOVER.md`; for this node's facts read
+> `docs/nodes/npu.md`.
+
 *Written 2026-08-25 for a fresh Claude Code session that will `git pull` this repo
 on the NPU server and continue. Read this first, then `docs/PROJECT_REPORT.md` for
 the full state and `WORK_ORDER_heteropilot.md` for the spec.*

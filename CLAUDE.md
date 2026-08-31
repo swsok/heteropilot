@@ -18,6 +18,7 @@ Authoritative documents, all of which outrank this file:
 | `docs/deviations.md` | Where the work order and upstream disagree, and how we adapt | Read before implementing any Phase 2+ module |
 | `docs/phase0_bench_plan.md` | What was measured vs simulated, and what a node can actually run | Provenance discipline |
 | `docs/nodes/{a40,a5000,npu}.md` | Per-node inventory, topology and traps | Read the one `scripts/whichnode.sh` names — never all three |
+| `docs/HANDOVER.md` | Current state, next work by node, traps that cost a session | The live handover; the `HANDOVER_*.md` files are historical |
 
 Upstream ships `CLAUDE.md` as a symlink to `AGENTS.md`. This fork replaces it with a real file;
 read `AGENTS.md` directly for anything about the simulator itself.

@@ -1,191 +1,234 @@
-# HeteroPilot 진행 현황 및 인계 문서
+# HeteroPilot — current state and what to do next
 
-> 작성일: 2026-08-18 · 기준 커밋: `a5d88f3` (main) · 기준 문서: `WORK_ORDER_heteropilot.md` v1.0
+> **This is the live handover.** Written 2026-08-31 at `main` = `3d59035`, after
+> PRs #17–#22. It is **node-agnostic**: every open item below says which machine it
+> needs. The older handovers are kept as historical record of a single move and
+> should not be read as current status:
+> `docs/HANDOVER.md`'s previous content (A5000 → A40, 2026-08-18),
+> `docs/HANDOVER_NPU.md` (→ NPU, 2026-08-25),
+> `docs/HANDOVER_A40.md` (→ A40, 2026-08-26; **its §1 is done**).
 >
-> 용도: 2×RTX A5000 개발 머신 → **A40×8 서버**로 소스 이전 시 인계.
-> 이 문서는 요약이며, 충돌 시 상세 문서(`docs/deviations.md`, `docs/phase0_formats.md`,
-> `docs/phase0_bench_plan.md`, `docs/hardware_roadmap.md`)와 작업지시서가 우선한다.
+> Authority order is unchanged: `WORK_ORDER_heteropilot.md` → `docs/deviations.md`
+> → `CLAUDE.md` → this file.
 
 ---
 
-## 1. 한눈에 보는 현황
+## 0. First command on any machine
 
-| 작업지시서 Phase | 상태 | 완료 조건 대비 |
-| --- | --- | --- |
-| Phase 0 — Baseline 고정 | ✅ 완료 | §7 조건 4/4. upstream `2c2042ce` pin, 예제 재현(바이트 동일), bench 3종 재현(커밋본과 바이트 동일), 형식 조사 문서화 |
-| Phase 1 — Spec + Inventory | ✅ 완료 | `inspect-cluster`가 island/TP후보/호환성 출력, 테스트 통과 |
-| Phase 2 — Offline Planner (MVP ★) | ✅ 완료 | §7 조건 6/6 (아래 §3 참조) |
-| Phase 3 — Hetero Profiles | 🟡 부분 선행 | A5000 실측 프로파일 + 전력, `profiler/CONTRACT.md`(§3.7), mixed-replica 후보. **NPU importer 미구현** |
-| Phase 4 — Real Deploy + Calibration | ⬜ 미착수 | 단, sim-vs-real 검증 데이터·방법론은 확보(§4 참조) |
-| Phase 5 — Topology-aware P/D | ⬜ 미착수 | 순서상 정상 |
-| Phase 6 — Online Replanning | ⬜ 미착수 | **착수 전 사용자 승인 필요** (작업지시서 명시) |
+```bash
+bash scripts/whichnode.sh
+```
 
-품질 게이트(§9): **pytest 140개 / ruff / mypy 전부 통과.** upstream 코드 무수정
-(절대 규칙 1 준수 — D12 수정 시도 2회는 승인하에 진행했으나 실패하여 전량 원복, `serving/` pristine).
+**This repository moves between an A40 node, an A5000 node and an NPU node, and
+every one of them reports the hostname `s8` on the same kernel.** Nothing
+committed can tell you which machine you are on; the detector probes the
+accelerators and prints what can actually be run here. It names one of
+`docs/nodes/{a40,a5000,npu}.md` — read that one, not all three.
 
-§13 즉시 착수 목록: 14항목 중 **13개 완료**, 미완 1개는 §5.5의 surrogate predictor
-(§5.4 6단계 — Phase 2 후반 항목, 현재 규모에선 불필요해 보류).
+The device set has changed **three times in four days** (RNGD cards 4 → 3 → 4;
+ATOMs held by pods, then free). Re-check before every run, and never key off
+`hostname` or compute a card from `index // 8`.
+
+Then:
+
+```bash
+pytest          # expect 284 passed
+ruff check .
+mypy planner/
+```
+
+All three are green at `3d59035`.
 
 ---
 
-## 2. 저장소 구조 (신규 추가분)
+## 1. Status
 
-작업지시서 §2.1 구조를 따르되 실제 구현은 다음과 같다:
+| Phase | Status |
+| --- | --- |
+| 0 Baseline · 1 Inventory/islands · 2 Offline planner (MVP) | ✅ done |
+| 3 Heterogeneous profiles | ✅ done (7 profiles, `CsvProfileImporter`) |
+| 4 Real deploy + calibration | ✅ CUDA. NPU launcher still a stub |
+| 5 Topology-aware P/D | ✅ core. Network-aware routing deferred |
+| 6 Online replanning | ⛔ not started — **requires explicit user approval** |
 
-```
-planner/                     # Control Plane (전부 신규)
-├── __main__.py              # CLI: inspect-cluster, plan, validate-plan 동작 / deploy, status는 Phase 4
-├── spec.py                  # ServiceSpec (§3.1)
-├── inventory.py             # ClusterSpecV2, island 탐지, NodePower (§3.2, §5.2)
-├── topology.py              # Level-1 모델 + 손실 압축 기록 (§5.3, D3)
-├── candidate_generator.py   # §5.4 고정 순서 pruning + mixed-replica 열거
-├── plan.py                  # CandidateConfig/DeploymentPlan/PlannerOutput (§3.4, §3.5)
-├── envelope.py              # PerformanceEnvelope 파일 캐시 (§3.6, 키는 확장됨 — D13)
-├── render.py                # §6 stdout 요건
-├── predictor/
-│   ├── __init__.py          # Predictor ABC + SimResult(OK/CRASHED/TIMEOUT/UNPARSEABLE)
-│   └── llmservingsim.py     # config 컴파일러 + subprocess 러너 + 파서 (§5.5)
-├── optimizer/
-│   ├── feasibility.py       # hard constraints, robust margin 배관 포함 (§5.6, §5.8)
-│   ├── pareto.py            # lexicographic 랭킹 + frontier (weighted-sum 금지 준수)
-│   └── exhaustive.py        # 검색 드라이버 + oracle (절대 규칙 5: 삭제 금지)
-└── util/
-    ├── memory.py            # upstream memory_model 호출 + D10 derating
-    ├── percentile.py        # 단일 percentile 유틸 (§4)
-    ├── power_parse.py       # stdout 전력 파서 (D2)
-    ├── provenance.py        # §3.8 metadata 수집
-    └── workload.py          # traffic 분포 → JSONL trace (seed는 여기 — D5)
+**Accelerator profiles** (`profiles/accelerators/`) **and what they are allowed to claim:**
 
-profiles/accelerators/       # a5000(실측), rtxpro6000, a40/rbln_atom/furiosa_rngd(스텁), ascend_target(스키마 예시)
-profiler/perf/A5000/         # 로컬 실측 프로파일 번들 (Llama-3.1-8B bf16 tp1)
-profiler/perf/RTXPRO6000X2/  # 파생 아티팩트 (밀도 대조군, 측정 아님 — D11)
-profiler/CONTRACT.md         # §3.7 CSV 계약 (NPU importer 기준)
-examples/                    # 서비스 스펙 3종 + heterogeneous-lab 클러스터
-experiments/                 # Exp 2 설정·스크립트·결과, A5000 전력 원시 데이터
-tests/                       # 140개 (oracle 일치·재현성·golden 요건 충족)
-docs/                        # phase0_formats, phase0_bench_plan, deviations(D1–D14), hardware_roadmap, 본 문서
-```
+| profile | `sim_hardware` | `source` | usable in candidate generation |
+| --- | --- | --- | --- |
+| `a40.yaml` | A40 | measured | yes |
+| `a5000.yaml` | A5000 | measured | yes |
+| `furiosa_rngd.yaml` (PE-as-device) | RNGD | measured | yes |
+| `furiosa_rngd_card.yaml` (card-as-device) | RNGD-CARD | measured | yes |
+| `rtxpro6000.yaml` | RTXPRO6000 | vendor_spec | yes, labelled |
+| `rbln_atom.yaml` | **null** | placeholder | **no — fails loud** |
+| `ascend_target.yaml` | **null** | placeholder | **no — fails loud** |
 
-## 3. Phase 2 MVP — 완료 증거 (§7 완료 조건 대비)
+Calibrations (`profiles/calibration/`): `a40.yaml`, `rngd.yaml`, `rngd_card_edf.yaml`. All bucket-scoped —
+**do not extrapolate outside the bucket named in the file.**
 
-1. **후보 자동 생성** — 예제 클러스터에서 54개 (단일 island 30 + mixed 24)
-2. **후보별 LLMServingSim 결과** — 54/54 실제 시뮬레이션 (cold cache 히트 0 검증)
-3. **SLO/power/tokens-J 자동 검증** — §5.6 hard constraints, 측정 불가 제약은 통과가 아닌 노트로 처리
-4. **최적 plan + Pareto 대안 / infeasible 진단** — closest_plan + violated_constraints + 규칙 기반 suggestions
-5. **oracle 일치** — `--oracle` 모드와 pruning 모드가 동일 최적해 (테스트로 상시 검증)
-6. **재현성** — 동일 spec+seed → 바이트 동일 출력 (실행으로 검증, 테스트로 고정)
+### What the last cycle established (PRs #17–#22)
 
-주요 실험 결과 (전부 **시뮬레이션 예측값**, 실측 아님):
+- **The cross-vendor KV path is measured on both legs.** GPU leg (A40 → host,
+  sustained pinned D2H) 25.71 GB/s single stream, 82.63 GB/s across 8 GPUs — only
+  40 % of ideal, the host path saturates ~83 GB/s. NPU leg (host → RNGD)
+  3.77 / 7.60 / 15.36 / 26.27 GB/s at 1/2/4/8 streams, 87.1 % of ideal. Both P/D
+  fixtures now carry composed values at `source: measured` (12.6–13.0 GB/s), where
+  a 35 GB/s placeholder had stood — 2.7–4.5× too optimistic.
+- **And it changed no prediction.** All 16 SLO-sweep winners identical; Exp 3
+  reproduces byte-identically; the simulator-side test moves TPOT by +0.012 %
+  between 35 and 13 GB/s. One request ships 114.7 MB, so 3–9 ms against a
+  30.7-second mean latency. **For this hardware pair the NPU leg sets the fabric
+  bandwidth and the GPU leg's exact value has low leverage.**
+- **Three retractions**, recorded in the open the way this project does it:
+  **D18** (NPU multi-stream figures were peaks quoted where a sustained rate was
+  needed — scaling law held, levels ~25 % high), **D19** (the −71 % card TTFT error
+  was an arrival-pattern mismatch in the validation harness, not the scheduler;
+  matched arrivals give −5.1 %, and both TTFT calibrations were refitted — the card
+  fit error went 2.34 "unusable" → 0.103), and **D20** (ATOM layerwise profiling
+  blocked).
+- **ATOM is usable and partly measured, still not profiled.** 15.047 GiB largest
+  allocation, idle 19.44 W, active 68.73 W at 95.1 % utilisation, per-card power
+  additive. No perf bundle, so it stays out of candidate generation and Exp 4.
+- **`CLAUDE.md` no longer asserts which machine it is on** — see §0.
 
-- **Exp 1** (TP 스윕, 300req): TP=2가 DP=2를 전 지표에서 지배. `outputs/plans/llama31-8b-plan-300.yaml`
-- **Exp 2** (이기종 자원 선택, 54후보): RTXPRO6000 1장 1.697 tok/J > A5000 2장 1.634 (−3.7%, 오차 대역 내)
-  > mixed 1.043 (−39%). 수요가 한 클래스에 담기면 right-sizing이 scale-out을 이김.
-  `experiments/results/exp2_summary.md`
-- **목적함수 스터디**: 유한 폐쇄 트레이스에서 goodput/J ≡ 1/E로 퇴화 (attainment가 갈릴 때만 변별)
+---
 
-## 4. sim-vs-real 검증 실적 (Phase 4의 기반)
+## 2. Next work, in priority order
 
-| 조건 | 평균 절대오차 (15지표) |
-| --- | ---: |
-| RTXPRO6000, 전체 그리드 (upstream 재현) | 1.23% |
-| RTXPRO6000, ×2 그리드 (밀도 대조군, D11) | 3.05% |
-| A5000, nominal `mem_size: 24` | 22.54% |
-| **A5000, KV-matched `mem_size: 20.81`** | **9.26%** |
+### 2.1 RNGD concurrency envelope — **needs the NPU node** · branch ready
 
-핵심 교훈: **메모리 회계(D10)가 메모리 제약 장치에서 최대 단일 오차 항** (−13.3pp).
-플래너는 `gpu_memory_utilization`(기본 0.9)과 `activation_reserve_gb`를 명시적으로 derating한다.
-A5000 실측 vLLM 데이터 2세트(prefix on/off)는 `outputs/phase0_bench/A5000*/vllm/`에 커밋됨.
+**The largest open risk.** Every card-fixture number in
+`experiments/results/pd_slo_sweep.md` — the three-regime answer, the 480 ms p99
+TTFT winner, 5.55 rps goodput, tokens/J — assumes each RNGD card runs at **~76
+concurrent sequences**. The highest ever measured is **32**.
 
-## 5. 반드시 알아야 할 괴리 (deviations.md D1–D14 중 핵심)
+| | output tok/s per card | implied concurrent |
+| --- | ---: | ---: |
+| real, validation run | 584 | 16.6 |
+| real, highest ever tested (c32) | 646.9 | ~32 |
+| **sim, the sweep's winner** | **1767** | **76** |
 
-| ID | 내용 | 상태 |
-| --- | --- | --- |
-| D2 | 전력/에너지는 stdout에만 존재 → `power_parse.py`로 파싱 (golden 테스트 고정) | 결정 |
-| D3 | cluster config에 링크 그래프 없음 → Level-1 손실 압축, provenance에 `path_aware: false` 기록 | 결정 (Phase 5에서 Level-2) |
-| D5 | 시뮬레이터에 `--seed` 없음 → 재현성은 workload 생성기 소유 | 해결 |
-| D6 | `outputs/example_*_run.csv`는 **stale** — golden으로 쓰지 말 것. `bench/examples/`가 안전한 앵커 | 해결 |
-| **D10** | 시뮬레이터 메모리 모델에 utilization/예약 없음 → 24GB 카드에서 KV +55~71% 과대평가 | 해결+실증 |
-| D11 | 프로파일 그리드 밀도 ≈ 2.2pp 정확도. `meta.yaml`은 그리드를 과소 기술 — CSV 키가 진실 | 정량화 |
-| **D12** | **prefix cache 메모리 단조 증가 → 포화 장치에서 런 사망. 미해결.** Phase 2는 전 후보 prefix caching OFF (모든 출력에 caveat 동반). 승인받은 수정 시도 2회 실패·원복 — 재시도 전 D12 기록 필독 | **미해결** |
-| D13 | §3.6 envelope 키에 dp 누락 → 충돌 사고. 키를 전체 배치 서술로 확장 | 해결 |
-| D14 | 시뮬레이터 토폴로지 추론이 균일 인스턴스 크기 가정 → mixed는 replica당 장치 수 동일 조합만 열거 | 해결 (제약 회피) |
+Extrapolating the measured c16→c32 exponent (0.598) to c76 gives ~1090 tok/s —
+the simulator is **~1.6× optimistic at 2.4× beyond the measured envelope.**
 
-**깨지기 쉬운 불변식 2개** (CLAUDE.md에도 기재):
-pruning 단계는 feasibility의 완화여야지 추가 조건이면 안 됨(처리량 bound 사건) /
-mock predictor는 bound와 같은 물리를 따라야 함.
+Work order with the run, the traps and the three possible outcomes:
+**`docs/npu_concurrency_envelope_work_order.md`**, on branch
+**`fix/scaling-curve-provenance-and-npu-envelope`** (pushed, not merged — merge it
+with the results).
 
-## 6. A40 서버에서의 환경 구축
+That branch also carries a correction: I claimed the c1–c32 curve was prose-only
+with no committed artifact. **That was wrong** —
+`outputs/rngd_edf_bundle/edf/real_c{1,2,4,8,16,32}.json` are committed and
+reproduce the table exactly.
 
-```bash
-git clone <this-repo> && cd heteropilot
-git submodule update --init --recursive        # astra-sim (~30분, 572MB+)
+### 2.2 ATOM layerwise bundle (D20) — **needs the NPU node**, and probably the vendor
 
-# 시뮬레이터 venv (bare-metal — planner가 subprocess로 띄우므로 Docker 아님)
-uv venv --python 3.10 .venv && source .venv/bin/activate
-uv pip install pyyaml pyinstrument transformers datasets msgspec scikit-learn \
-  xgboost==3.1.2 matplotlib==3.5.3 pandas==1.5.3 numpy==1.23.5 rich \
-  "pydantic>=2" pytest ruff mypy types-PyYAML
-bash scripts/compile.sh                        # ASTRA-Sim 빌드 (cmake/g++/protoc 필요)
-uv pip install ./astra-sim/extern/graph_frontend/chakra   # 함정 1: compile.sh의 pip3가 venv를 놓침
-uv pip install "protobuf>=7.35.1"                          # 함정 2: Chakra gencode 버전
-pytest && ruff check planner/ tests/ && mypy   # 140 passed가 나와야 정상
+Both documented routes are blocked, and neither is a matter of effort:
 
-# vLLM venv (별도! — 함정 3: scripts/install-vllm.sh는 CWD에 venv를 만들어 .venv를 덮어씀)
-uv venv --python 3.12 .venv-vllm
-VLLM_USE_PRECOMPILED=1 uv pip install --python .venv-vllm/bin/python vllm==0.19.0 --no-build-isolation
-uv pip install --python .venv-vllm/bin/python datasets matplotlib pandas
-```
+- **vLLM route** — packaging now works, but both vllm-rbln paths reject the
+  profiler's fixed `load_format="dummy"` / `enforce_eager=True`, and fixing either
+  means editing `profiler/`, **pristine until Phase 5**.
+- **rebel harness route** — `experiments/scripts/profile_atom.py` runs clean (284 shots, zero compile
+  failures) but cannot produce *device* time. Host I/O exceeds the kernels
+  (999.7 µs at 8 MB against RNGD device spans of 3–200 µs), and the device
+  tracer's protobuf schema is undocumented.
 
-함정 4: 시뮬레이터에 넘기는 모든 경로는 **저장소 루트 기준 상대경로**여야 한다
-(`serving/__main__.py:199`가 astra-sim으로 chdir 후 `../` 접두). predictor는 이를 처리하므로
-`--work-dir`를 저장소 안(`outputs/…`)에 두면 된다.
+**Suggested move: ask Rebellions for the `rebel._C.profiler` trace schema.**
+FuriosaAI's own EDF profiler is what rescued RNGD — it took decode prediction from
++25.7 % to −3.1 %. The same shape of answer is what ATOM needs.
 
-## 7. A40 서버에서의 작업 순서 (docs/hardware_roadmap.md 상세판의 요약)
+Do **not** ship a bundle from the current attempt.
+`outputs/atom_profile/layerwise_attempt/` is **not a bundle** — 166 of 284 shots
+are baseline-dominated. An earlier constant-floor subtraction **passed contract
+validation and imported cleanly while inflating elementwise layers 8–25×**; only
+the RNGD comparison caught it.
 
-**1단계 — 인벤토리 (첫날, 코드 작성 전):**
-`nvidia-smi -L`, `nvidia-smi topo -m`(NVLink 브리지 여부가 island 구조를 결정),
-NIC/패브릭 조사 → 실측 기반 `ClusterSpecV2` YAML 작성 (모든 필드에 `source:` 표기, 절대 규칙 3).
-`python -m planner inspect-cluster`로 island 탐지 확인.
+### 2.3 TTFT tail under-prediction — **any node** (simulation only)
 
-**2단계 — A40 프로파일링 (기존 프로파일러 그대로 동작, CUDA):**
-```bash
-CUDA_VISIBLE_DEVICES=0 .venv-vllm/bin/python -m profiler profile \
-  meta-llama/Llama-3.1-8B --hardware A40 --tp 1,2,4,8 \
-  --max-num-batched-tokens 2048 --max-num-seqs 256 --measurement-iterations 3
-# Qwen/Qwen3-32B 동일 (작업지시서 대표 모델 — 48GB에서 TP=2로 서빙 가능)
-```
-소요 예상: TP당 attention ~1h + skew 1–2h (A5000 실적 기준). resume 모드라 중단 후 재개 가능.
-완료 후 `profiles/accelerators/a40.yaml`에 `sim_hardware: A40` 기입 (스텁에 이유 주석 있음).
+With arrivals matched, the card profile is −5.1 % on mean TTFT but still **−10 to
+−17 % at p90–p99**. Plausibly bucket quantisation — the vendor artifact charges
++10.9 % more prefill tokens than the prompts contain, and the simulator
+interpolates on exact counts so it cannot see this. **That is a hypothesis, not a
+measurement.**
 
-**3단계 — A40 전력 실측 (D7):** A5000 때의 절차 재사용 —
-`nvidia-smi --query-gpu=power.draw -lms 100` 폴링 + bench 부하, idle/active/standby 산출.
-원시 데이터는 `experiments/results/`에 커밋. **호스트 전력도 측정**(IPMI 등) — Exp 2 mixed
-페널티의 크기가 placeholder 호스트 전력에 걸려 있음.
+### 2.4 D14 — asymmetric TP per phase — **any node**, largest change
 
-**4단계 — sim-vs-real 재검증 (Phase 4 진입):** A5000 프로토콜 반복
-(`docs/phase0_bench_plan.md`) — bench 실측 → KV 예산 재측정(48GB에서 D10 재확인) →
-nominal/KV-matched 비교. 그다음 TP=2/4, 멀티 노드.
+`tp_p == tp_d` is enforced, so `A40 tp4 prefill + RNGD tp8 decode` — the shape
+NVIDIA Dynamo and AWS Neuron recommend — **cannot be enumerated at all**. Card-as-
+device sidesteps it by folding TP=8 inside the device; it does not lift it.
+Lifting it means teaching the compiler to emit non-uniform instance sizes, a
+simulator-side change.
 
-**5단계 — Phase 4 본체:** `deploy/vllm_cuda.py`(§5.7 — local/SSH만),
-`monitor/metrics.py`, `calibration.py`(§5.8 — 선형 보정. 주의: A5000은 과소예측,
-RTXPRO6000은 과대예측으로 **부호가 반대** — 하드웨어별 보정 필수).
-서버의 스케줄러(SLURM 여부)가 launcher 설계에 영향 — 확인 필요.
+### 2.5 Smaller, any node
 
-**병행 가능 — NPU (ATOM/RNGD) V1:** 서빙 스택(vllm-rbln / furiosa-llm) 버전·모델 지원
-실기 확인 → 측정 → `CsvProfileImporter` 구현(`profiler/CONTRACT.md` 준수) →
-스텁 프로파일의 `supported_models` 채움 (빈 목록 = 후보 제외가 현재 의도된 동작).
+- **PR #13** (`docs/slide-deck-ko`) has been open since before this cycle.
+- **Remote branches**: 20-odd merged branches still exist on `origin`. Local ones
+  are cleaned; remote cleanup was left as your call.
+- **`docs/nodes/a5000.md` is thin and says so** — it was written from committed
+  artifacts, not from the node. Fill it in from `scripts/whichnode.sh` when you are
+  next on that machine.
 
-## 8. 미해결 사안 (사용자 결정 필요)
+---
 
-1. **D12** — prefix cache 포화 사망. 선택지: upstream 이슈 제기 / 계측 기반 KV 생애주기
-   조사 / 현행 유지(prefix off). 실측 prefix hit 7.4% 워크로드가 있으므로 방치 비용 있음.
-2. **원격 저장소** — push할 origin이 없음. fork 생성 후 §10.1의 feat/* + PR 흐름 적용 가능.
-3. **Phase 6** — 착수 전 명시적 승인 필요 (작업지시서).
-4. **surrogate predictor** (§5.4 6단계) — 후보 수가 수백 규모가 되면(A40×64 조합) 필요해짐.
-   A40 8장×8노드에서는 탐색 공간이 커지므로 우선순위 재평가 권장.
+## 3. Traps that have each cost a session
 
-## 9. 범위 제한 리마인더 (작업지시서 §8 — 발견 시 중단·보고)
+Recorded because they are not discoverable from the code.
 
-GPU+NPU mixed TP · dynamic migration · multi-tenancy · RL · Kubernetes operator ·
-cross-vendor P/D(Phase 5 전) · full switch-level congestion. 지금까지 위반 없음.
-Ascend 스텁은 스키마 예시로만 존치 (실 NPU 타깃은 ATOM/RNGD로 변경 — D4).
+**Measurement**
+
+- **A single parallel-transfer trial is not reproducible.** Host buffers are not
+  NUMA-bound and placement is fixed at allocation; two runs disagreed by 38 % on
+  the 4-GPU figure and the same-node/cross-node ordering reversed. Repeat over
+  independent allocations, report median and spread.
+- **Pageable D2H is allocator-bound, not link-bound.** It peaks at 16 MB and drops
+  ~4.5× above, because PyTorch's CPU allocator stops caching there. Read pinned.
+- **Peak is not sustained.** On RNGD best-of-N overstates a bulk copy by 25 %; on
+  the A40 it does not (0.998). Compose a fabric bandwidth from the *same* statistic
+  on both legs.
+- **Judge a power reading by its utilisation.** ATOM's first pass read 30 % low at
+  36 % util; a single-PE RNGD reading understated its card 4×. `active_util_pct` is
+  recorded beside the power for exactly this reason.
+- **Never subtract a constant host round-trip floor on ATOM** — per-call cost
+  scales with bytes moved.
+
+**Harness**
+
+- **`experiments/scripts/bench_furiosa_endpoint.py` ignores `arrival_time_ns`** and fires everything at
+  once, while `python -m serving` replays it. Feeding both the same file compares a
+  burst against a spread arrival process; the difference lands entirely in TTFT.
+  That is D19. Use `outputs/envcheck/rngd20_burst.jsonl` on the simulator side.
+- **`python -m serving` shells out to a bare `python -m chakra`**, so the venv must
+  be on `PATH`, not merely invoked by full path:
+  `export PYTHONPATH=$PWD && export PATH="$PWD/.venv/bin:$PATH"`.
+- **The SLO sweeps do not price the fabric.** The simulator charges the P/D handoff
+  at zero unless `--pd-transfer-model bandwidth` is passed, and only
+  `experiments/scripts/pd_sim_network_sweep.py` passes it.
+  `experiments/scripts/run_exp_pd.sh` is planner-side on both drivers.
+- **`link_bw` is an overloaded scalar in multi-node configs** — the `none`-mode
+  control moves too, which the driver's pass criteria do not anticipate at tp1.
+
+**Environment**
+
+- **One venv per vendor.** `.venv` = planner + analytical sim, no device, never
+  install vLLM into it. `.venv-vllm` = CUDA. `.venv-rbln` / `.venv-rbln-vllm` =
+  ATOM. System `python3` = FuriosaAI.
+- **`furiosa.torch` and `rebel` must import after `torch`**, behind the
+  `# isort: off` guards. `ruff check --fix` reordering them breaks every run.
+- **Multi-device work on NPUs uses one subprocess per device**, not threads.
+
+---
+
+## 4. Invariants that are easy to break
+
+Beyond `CLAUDE.md`'s absolute rules, three that this cycle exercised:
+
+1. **Absolute rule 3 covers hardware *presence*, not just hardware numbers.** Never
+   claim a result from hardware `scripts/whichnode.sh` does not list. Artifacts
+   measured on another node stay valid as measurements *of that node* — do not
+   re-run, extend, or relabel them.
+2. **Retract in public.** D18, D19 and D20 each state what was claimed, what was
+   measured, and what it changes. When a committed number turns out wrong, correct
+   every site that carried it and say so — do not quietly overwrite.
+3. **A pruning stage must be a relaxation of the feasibility test**, and **a mock
+   predictor must respect the same physics as the bounds.** Both have been violated
+   before and both were caught by the oracle-agreement test.
