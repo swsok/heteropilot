@@ -91,17 +91,26 @@ Nothing in `pd_slo_sweep.md`'s three-regime answer depends on 35 vs 26.
 | `pd-rngd-gpu.yaml` (tp4) | rngd ↔ a40 | 1/(1/62.42 + 1/19.10) | 1/(1/62.42 + 1/15.36) | 14.6 → 12.33 |
 | | rngd ↔ rngd | 1/(1/19.10 + 1/19.10) | 1/(1/15.36 + 1/15.36) | 9.6 → 7.68 |
 
-**These have not been applied, and the reason is that the branch they belong to
-does not exist here.** `feat/gpu-host-bandwidth` is not on `origin`, and
-`experiments/results/gpu_host_bandwidth.md` is not in the tree. On this branch both
-fixtures still carry `bandwidth_gbps: 35, source: placeholder` — the state that
-predates the GPU leg. The GPU figures above (26.03 / 62.42 / 79.98) are quoted
-from the work order's prose and are themselves uncommitted here, so composing
-against them would repeat exactly the error this branch exists to fix.
+**APPLIED 2026-08-28.** When this was written the compositions could not be
+applied: `feat/gpu-host-bandwidth` was not on `origin`, both fixtures still read
+`bandwidth_gbps: 35, source: placeholder`, and the GPU figures above
+(26.03 / 62.42 / 79.98) were quoted from the work order's prose. Composing
+against uncommitted numbers would have repeated exactly the error this page
+retracts, so they were tabulated and left.
 
-The last row is the one to watch: `rngd ↔ rngd` at tp4 falls from 9.6 to **7.68
-GB/s**, which crosses below the ~10 GB/s P/D adoption threshold. Whoever merges
-the GPU leg should re-run both SLO sweeps rather than assume the regimes hold.
+The GPU leg has since landed (PR #19) and all six `fabric-*` links in both
+fixtures now read `source: measured`. The committed values match the predictions
+above to within rounding — 12.6 against 12.33, **7.7 against 7.68**, 13.0 against
+13.07, 13.1 against 13.13.
+
+The last row behaved as flagged: `rngd ↔ rngd` at tp4 falls to **7.7 GB/s**,
+crossing below the ~10 GB/s P/D adoption threshold. Both SLO sweeps were re-run
+rather than assumed — and **could not see the change**: all 16 winners unchanged,
+the card fixture byte-identical. That is not evidence the fabric is irrelevant.
+The simulator prices the P/D handoff at zero by default (D15) and `pd_slo_sweep.py`
+does not opt into the bandwidth model; `link_bw` acts on collectives and the card
+fixture has none; and the planner-side penalty is worth 0.13–0.36 % of the
+cross-vendor candidate's p99. Deviations D18 records the full reasoning.
 
 ## d2h is not a link figure
 

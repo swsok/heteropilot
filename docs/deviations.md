@@ -642,7 +642,7 @@ drops, TTFT flat, `none`-mode control flat — all PASS) and `tests/test_sim_pd_
 | D4 | Phase 3 | **Resolution path secured** — A5000 measured locally; A40/ATOM/RNGD hardware reachable from 2026-08-17 (see `docs/hardware_roadmap.md`) |
 | D10 | Phase 2 | **Open** — derating factor for the memory feasibility filter; nominal vs KV-matched config for the A5000 comparison |
 | D15 | Phase 5 | **Resolved** — sim-level P/D KV-transfer model, opt-in `--pd-transfer-model bandwidth`, default byte-identical; first sanctioned `serving/` edit (router.py + __main__.py only, scheduler.py pristine) |
-| D18 | Phase 5 | **Resolved** (retraction) — NPU-leg multi-stream bandwidth remeasured; scaling law held, levels ~25 % lower. Fixture `bandwidth_gbps` deliberately left at the old value pending the GPU leg |
+| D18 | Phase 5 | **Resolved** (retraction) — NPU-leg multi-stream bandwidth remeasured; scaling law held, levels ~25 % lower. Fixtures recomputed once the GPU leg landed (all six links now `measured`); the SLO sweeps cannot see the change, for three recorded reasons |
 | D19 | Phase 4 | **Resolved** (retraction) — the card profile's −71 % TTFT error was an arrival-pattern mismatch in the validation harness, not a scheduler difference; matched arrivals give −5.1 %. Both RNGD TTFT calibrations refitted |
 | D20 | Phase 3 / Exp 4 | **Open** — ATOM layerwise profiling blocked: host I/O exceeds the kernels and the device tracer's schema is undocumented. Memory and power measured; no perf bundle, so ATOM stays out of candidate generation |
 
@@ -839,17 +839,41 @@ live sysfs enumeration rather than `index // 8`, because npu2 left the PCI bus a
 torch renumbers densely over the cards that remain — under the old arithmetic this
 run's artifact would have been stamped `npu2`, a card no longer in the machine.
 
-**Left open deliberately.** `bandwidth_gbps: 35` on the six `fabric-*` links in
-both P/D fixtures is still the old 8-stream figure. The corrected upper bound is
-26.27, and changing it requires re-running both SLO sweeps. It is left for
-whoever lands the GPU leg, because the composed `1/(1/gpu + 1/npu)` values that
-the work order describes were never committed here — branch
-`feat/gpu-host-bandwidth` is not on `origin` and both fixtures still read
-`source: placeholder`. Composing against GPU figures that exist only in prose
-would repeat exactly the error this entry retracts.
-`experiments/results/rngd_parallel_bandwidth.md` tabulates the new compositions;
-the one to watch is `rngd ↔ rngd` at tp4, which falls 9.6 → 7.68 GB/s and so
-crosses *below* the ~10 GB/s P/D adoption threshold.
+**Left open deliberately at the time — CLOSED 2026-08-28.** When this entry was
+written, `bandwidth_gbps: 35` still sat on the six `fabric-*` links of both P/D
+fixtures, and the corrected NPU leg could not be composed into them because the
+GPU leg existed only as prose: `feat/gpu-host-bandwidth` was not on `origin` and
+both fixtures read `source: placeholder`. Composing against uncommitted figures
+would have repeated exactly the error this entry retracts, so the recomputation
+was deferred rather than guessed.
+
+The GPU leg landed (PR #19) and the recomputation was done. All six links in both
+fixtures now read `source: measured`, and the composed values match what
+`experiments/results/rngd_parallel_bandwidth.md` predicted from the corrected NPU
+leg to within rounding:
+
+| fixture | link | predicted | committed |
+| --- | --- | ---: | ---: |
+| `pd-rngd-gpu.yaml` (tp4) | rngd ↔ a40 | 12.33 | 12.6 |
+| | rngd ↔ rngd | 7.68 | **7.7** |
+| `pd-rngd-gpu-card.yaml` (tp1) | rngd ↔ a40 | 13.07 | 13.0 |
+| | rngd ↔ rngd | 13.13 | 13.1 |
+
+The row this entry flagged to watch behaved as flagged: `rngd ↔ rngd` at tp4
+falls to **7.7 GB/s**, below the ~10 GB/s P/D adoption crossing Exp 3 found.
+
+**But the SLO sweeps could not see it**, and that is the more useful result. Both
+were re-run at the measured fabric: all 16 winners unchanged, the per-PE fixture's
+tight-TTFT row moving 372 → 371 ms, the card fixture byte-identical at all 8
+points. Three reasons, none of them "the number does not matter": the simulator
+prices the P/D KV handoff at **zero** by default (D15) and `pd_slo_sweep.py` does
+not pass `--pd-transfer-model bandwidth`; `link_bw` acts on collectives and the
+card fixture has none, every candidate there being tp1 on both sides; and the
+planner-side penalty is a per-request latency term worth 0.13–0.36 % of the
+cross-vendor candidate's p99. So these sweeps are not evidence that fabric
+bandwidth is irrelevant — they are evidence that *this configuration of them
+cannot answer the question*. See the PR #19 commit chain and
+`experiments/results/pd_slo_sweep.md`.
 
 ---
 
