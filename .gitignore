@@ -74,3 +74,8 @@ outputs/rngd_edf_bundle/sim_sparse*.csv
 .venv-rbln/
 .venv-furiosa/
 .venv-rbln-vllm/
+
+# Envelope EDF stage traces: 166 MB, reproducible from the command in
+# experiments/results/rngd_concurrency_envelope.md, and no claim there uses them
+# (they exist for bundle rebuilding, not for the throughput/latency envelope).
+outputs/rngd_envelope/edf/*.csv

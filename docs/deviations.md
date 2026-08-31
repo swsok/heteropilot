@@ -645,6 +645,7 @@ drops, TTFT flat, `none`-mode control flat — all PASS) and `tests/test_sim_pd_
 | D18 | Phase 5 | **Resolved** (retraction) — NPU-leg multi-stream bandwidth remeasured; scaling law held, levels ~25 % lower. Fixtures recomputed once the GPU leg landed (all six links now `measured`); the SLO sweeps cannot see the change, for three recorded reasons |
 | D19 | Phase 4 | **Resolved** (retraction) — the card profile's −71 % TTFT error was an arrival-pattern mismatch in the validation harness, not a scheduler difference; matched arrivals give −5.1 %. Both RNGD TTFT calibrations refitted |
 | D20 | Phase 3 / Exp 4 | **Open** — ATOM layerwise profiling blocked: host I/O exceeds the kernels and the device tracer's schema is undocumented. Memory and power measured; no perf bundle, so ATOM stays out of candidate generation |
+| D21 | Phase 4 | **Resolved** (retraction + measurement) — the c1–c32 curve's top point was a 24-request pool running at eff 21.2, not c32; envelope measured to eff 107.2. At eff 76 the simulator is 1.31× optimistic on throughput and 18 % on TPOT; sweep must be re-run before its absolute numbers are quoted |
 
 ---
 
@@ -1018,3 +1019,71 @@ schema from Rebellions — the tracer already records what is needed, so this is
 documentation request; (2) a torch backend registering device `rbln`, which
 enables the vLLM-native path; (3) a llama entry in vllm-rbln's native model
 registry, after (2).
+
+---
+
+## D21 — The RNGD scaling curve's top point was request-pool-limited, and the envelope beyond it is now measured · Resolved (retraction + measurement)
+
+**What was wrong.** `experiments/results/pd_slo_sweep.md`, `docs/PROJECT_REPORT.md`
+§4.8.7 and `docs/npu_concurrency_envelope_work_order.md` all rested on two figures
+from the committed c1–c32 curve: that **32 was the highest concurrency ever run on
+RNGD** at ~648 output tok/s, and that the curve's marginal exponent was **0.598**
+between c16 and c32. Both are artifacts of the harness.
+
+Every committed point used a **24-request pool** while requesting up to 32
+concurrent, so the pool bound the experiment. Average in-flight concurrency by
+Little's law (`Σ latency / wall`):
+
+| committed point | requested | pool | **actually served** | tok/s |
+| --- | ---: | ---: | ---: | ---: |
+| c8 | 8 | 24 | 7.4 | 299.4 |
+| c16 | 16 | 24 | **12.2** | 427.4 |
+| c32 | 32 | 24 | **21.2** | 646.4 |
+
+So the top point was ~21, not 32, and the 0.598 exponent reads a pool-capped ×1.74
+interval as a ×2 doubling. Re-measured at a non-binding pool the same levels give
+**585.8 tok/s at c16 (+37 %)** and **908.6 at c32 (+40 %)**, with TPOT essentially
+unchanged at c32 (30.14 → 31.18 ms) — real throughput the harness was leaving on
+the table, not a bookkeeping difference.
+
+**What the measurement found** (2026-08-31, npu0, TP=8;
+`outputs/rngd_envelope/edf/real_c{16,32,64,128}.json`):
+
+| requested | pool | eff. conc | output tok/s | TPOT avg |
+| ---: | ---: | ---: | ---: | ---: |
+| 16 | 128 | 15.3 | 585.8 | 25.71 |
+| 32 | 128 | 29.3 | 908.6 | 31.18 |
+| 64 | 256 | 59.2 | 1277.0 | 44.54 |
+| 128 | 300 | **107.2** | **1473.3** | 67.88 |
+
+Exponent decays 0.675 → 0.485 → **0.241**; the curve flattens decisively, which it
+had not done by the old top point. All 812 requests succeeded.
+
+**Two simulator errors at the load the card fixture uses.** Interpolated to
+eff 76: measured **1346 tok/s** against the simulator's 1767 (**1.31× optimistic**,
+not the ~1.6× the work order predicted from the bad exponent), and measured TPOT
+**52.7 ms** against 43.2 (**18 % optimistic**). The TPOT divergence is the one the
+work order asked for and did not expect: measured TPOT is already 44.54 ms at
+eff 59, past the simulator's c76 prediction. **The decode model is accurate at the
+concurrency it was fitted on and degrades above it** — its −3.1 % agreement does
+not extend to this range.
+
+**How we adapt.** The correction is a throughput/latency *model* error, not a
+calibration offset: it varies with concurrency, so no scalar expresses it and it
+does not belong in `profiles/calibration/`. It is recorded as a profile-level
+caveat with the curve attached
+(`experiments/results/rngd_concurrency_envelope.md`), and per the work order's
+§4.4 the committed sweep results are **not** silently rescaled —
+`pd_slo_sweep.py` must be re-run at a defensible load before its absolute numbers
+are quoted again.
+
+**The envelope is no longer the largest open risk.** The card reaches eff 107 with
+zero failures, so c76 is inside what the hardware serves; the question moved from
+"can it?" to "at what cost?", and the cost is measured.
+
+**Limits of this measurement.** One card (npu0), one artifact, one dataset. The
+300-line trace caps the pool, so c128 ran at 2.3× headroom and reached eff 107
+rather than 128 — the only point where the pool still binds slightly. TTFT from
+these runs is **not** comparable to the sweep's p99 TTFT: the bench fires the whole
+pool at once (D19), a closed-loop saturation probe, while the sweep offers Poisson
+arrivals. Throughput and TPOT are the valid comparisons.
