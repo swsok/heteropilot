@@ -96,6 +96,8 @@ async function route() {
   try {
     if (page === "explorer") await renderExplorer();
     else if (page === "scenario" && arg) await renderScenario(arg);
+    else if (page === "planner") await renderPlanner();
+    else if (page === "verification") await renderVerification();
     else await renderDashboard();
   } catch (err) {
     console.error(err);
@@ -392,51 +394,8 @@ async function renderScenario(scenarioId) {
       <pre>${esc(JSON.stringify(out.provenance ?? {}, null, 2))}</pre>
     </details>`;
 
-  renderTopology(d.graph);
+  renderTopologyInto("topo", d.graph, {});
   renderPareto(out);
-}
-
-function renderTopology(graph) {
-  const roleLabel = { prefill: "P", decode: "D", aggregated: "A" };
-  const classes = [...new Set(graph.nodes.map((n) => n.cls))];
-  const palette = ["#4c6ef5", "#f76707", "#37b24d", "#ae3ec9", "#0ca678", "#e8590c"];
-  const chart = makeChart(document.getElementById("topo"));
-  chart.setOption({
-    tooltip: {
-      formatter: (p) => p.dataType === "edge"
-        ? `${p.data.source} → ${p.data.target}<br>${p.data.linkType} ${p.data.bw} Gbps`
-        : `${p.data.id}<br>${p.data.cls} · ${p.data.state}` +
-          (p.data.role ? `<br>role: ${p.data.role}` : ""),
-    },
-    legend: { data: classes, bottom: 0 },
-    series: [{
-      type: "graph", layout: "force", roam: true,
-      force: { repulsion: 260, edgeLength: 90 },
-      categories: classes.map((c, i) => ({
-        name: c, itemStyle: { color: palette[i % palette.length] },
-      })),
-      label: { show: true, fontSize: 10, formatter: (p) =>
-        (p.data.role ? roleLabel[p.data.role] + " · " : "") + p.data.device },
-      data: graph.nodes.map((n) => ({
-        id: n.id, name: n.id, device: n.device, cls: n.cls, state: n.state,
-        role: n.role, category: classes.indexOf(n.cls),
-        symbol: n.kind === "nic" ? "diamond" : "circle",
-        symbolSize: n.kind === "nic" ? 16 : 34,
-        itemStyle: {
-          opacity: n.state === "FREE" ? 1 : 0.35,
-          borderColor: n.in_plan ? "#1c7ed6" : "#adb5bd",
-          borderWidth: n.in_plan ? 4 : 1,
-        },
-      })),
-      links: graph.links.map((l) => ({
-        source: l.src, target: l.dst, linkType: l.type, bw: l.bandwidth_gbps,
-        lineStyle: {
-          width: Math.max(1, Math.log2(l.bandwidth_gbps / 8)),
-          color: l.in_plan ? "#1c7ed6" : "#ced4da",
-        },
-      })),
-    }],
-  });
 }
 
 function renderPareto(out) {
@@ -459,6 +418,239 @@ function renderPareto(out) {
     xAxis: { name: "p99 TTFT (ms)", type: "value" },
     yAxis: { name: "energy (J)", type: "value" },
     series: [{ type: "scatter", data }],
+  });
+}
+
+// ------------------------------------------------------ ④ interactive planner
+
+async function renderPlanner() {
+  await loadBatches();
+  const clusters = await api("/api/clusters");
+  main.innerHTML = `
+    <div class="layout">
+      <div class="sidebar">
+        <label>cluster</label>
+        <select id="p-cluster">${clusters.map((c) =>
+          `<option value="${esc(c.cluster_id)}">${esc(c.cluster_id)} · ${esc(c.classes.join(","))} (${c.num_free_accels} free)</option>`
+        ).join("")}</select>
+        <label>rps</label><input id="p-rps" type="number" value="5" step="0.5">
+        <label>input p50 (tokens)</label><input id="p-in" type="number" value="512">
+        <label>output p50 (tokens)</label><input id="p-out" type="number" value="128">
+        <label>TTFT p99 (ms)</label><input id="p-ttft" type="number" value="2000">
+        <label>TPOT p99 (ms)</label><input id="p-tpot" type="number" value="60">
+        <label>power cap (W)</label><input id="p-cap" type="number" value="2000">
+        <div style="margin-top:14px">
+          <button id="p-go" style="width:100%;padding:8px">최적 배치 계산</button>
+        </div>
+        <div class="chart" id="p-preview" style="height:200px;margin-top:14px"></div>
+      </div>
+      <div id="p-result">
+        <div class="panel">Pick a cluster, set the SLO, and compute. Results are
+        ${badge("surrogate", "surrogate")} fast-path predictions - not verified
+        by full simulation.</div>
+      </div>
+    </div>`;
+
+  const preview = async () => {
+    const id = document.getElementById("p-cluster").value;
+    const detail = await api(`/api/clusters/${encodeURIComponent(id)}`);
+    disposeChartsIn("p-preview");
+    renderTopologyInto("p-preview", detail.graph, { compact: true });
+  };
+  document.getElementById("p-cluster").addEventListener("change", preview);
+  await preview();
+
+  document.getElementById("p-go").onclick = async () => {
+    const body = {
+      cluster_id: document.getElementById("p-cluster").value,
+      slo: {
+        rps: +document.getElementById("p-rps").value || null,
+        input_p50: +document.getElementById("p-in").value || null,
+        output_p50: +document.getElementById("p-out").value || null,
+        ttft_p99_ms: +document.getElementById("p-ttft").value,
+        tpot_p99_ms: +document.getElementById("p-tpot").value,
+        power_cap_w: +document.getElementById("p-cap").value || null,
+      },
+    };
+    const target = document.getElementById("p-result");
+    target.innerHTML = `<div class="panel">computing…</div>`;
+    let res;
+    try {
+      const raw = await fetch("/api/plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!raw.ok) {
+        const detail = (await raw.json()).detail;
+        target.innerHTML = `<div class="panel">${badge("request rejected", "warn")} ${esc(JSON.stringify(detail))}</div>`;
+        return;
+      }
+      res = await raw.json();
+    } catch (err) {
+      showError(`plan request failed: ${err.message}`);
+      return;
+    }
+    renderPlanResult(target, res);
+  };
+}
+
+function renderPlanResult(target, res) {
+  const out = res.planner_output;
+  const plan = out.recommended ? out.recommended.plan : out.closest_plan;
+  const m = plan ? plan.predicted : null;
+  const labels =
+    fidelityBadge(res.fidelity) +
+    (res.npu_extrapolated ? " " + badge("⚠ NPU extrapolated", "warn") : "") +
+    (res.calibrated ? "" : " " + badge("calibrated: false", "muted")) +
+    (res.truncated ? " " + badge(`truncated top-K`, "muted") : "");
+  const violations = (out.violated_constraints || []).map((v) => `
+    <tr><td>${esc(v.metric)}</td><td class="num">${fmt(v.target)}</td>
+    <td class="num">${fmt(v.predicted)}</td></tr>`).join("");
+  target.innerHTML = `
+    <div class="panel">
+      <h3>${out.feasible ? "Recommended plan" : "INFEASIBLE - closest plan"} ${labels}</h3>
+      <p style="color:#7a5b00;background:#fff8e1;padding:6px 10px;border-radius:6px">
+        이 결과는 ${esc(res.fidelity)} 예측이며 full sim 검증을 거치지 않았습니다
+        (elapsed ${fmt(res.elapsed_s, 2)}s · seed ${res.seed} · ${res.num_requests} reqs).
+      </p>
+      ${m ? `<div class="kv">
+        <span class="k">candidate</span><span>${esc(plan.candidate.id)}</span>
+        <span class="k">p99 TTFT / TPOT</span>
+        <span>${fmt(m.p99_ttft_ms, 0)} ms / ${fmt(m.p99_tpot_ms)} ms</span>
+        <span class="k">avg / peak power</span>
+        <span>${fmt(m.average_power_w)} / ${fmt(m.peak_power_w)} W</span>
+        <span class="k">tokens/J</span><span>${fmt(m.tokens_per_joule, 3)}</span>
+        <span class="k">devices</span><span>${plan.candidate.assignments
+          .map((a) => `${esc(a.island_id)} tp${a.tp_size}×dp${a.dp_replicas} (${esc(a.role)})`)
+          .join(", ")}</span>
+      </div>` : `<p>${esc(out.reason || "no candidate at all")}</p>`}
+      ${violations ? `<h3 style="margin-top:12px">violated constraints</h3>
+        <table class="violations"><thead><tr><th>metric</th>
+        <th class="num">target</th><th class="num">predicted</th></tr></thead>
+        <tbody>${violations}</tbody></table>` : ""}
+      ${(out.suggestions || []).map((s) => `<div class="suggestion">${esc(s)}</div>`).join("")}
+    </div>
+    <div class="panel" style="margin-top:14px">
+      <h3>Placement on topology</h3>
+      <div id="p-topo" style="height:380px"></div>
+    </div>
+    <details><summary>Full planner output (JSON)</summary>
+      <pre>${esc(JSON.stringify(out, null, 2))}</pre></details>`;
+  renderTopologyInto("p-topo", res.graph, {});
+}
+
+// ------------------------------------------------------------ ⑤ verification
+
+async function renderVerification() {
+  await loadBatches();
+  const data = await api(
+    `/api/verification?batch_id=${encodeURIComponent(currentBatch)}`
+  );
+  const s = data.stats;
+  main.innerHTML = `
+    <div class="cards">
+      <div class="card"><div class="label">Verified (full sim)</div>
+        <div class="value">${s.verified}</div></div>
+      <div class="card"><div class="label">Selection flips</div>
+        <div class="value">${s.selection_flips}</div></div>
+      <div class="card"><div class="label">Feasibility flips</div>
+        <div class="value">${s.feasibility_flips}</div></div>
+      <div class="card"><div class="label">|err| p50 / p95 (TPOT)</div>
+        <div class="value">${fmt(s.err_tpot_pct_p50)} / ${fmt(s.err_tpot_pct_p95)}%</div></div>
+      <div class="card"><div class="label">|err| p50 / p95 (power)</div>
+        <div class="value">${fmt(s.err_power_pct_p50)} / ${fmt(s.err_power_pct_p95)}%</div></div>
+    </div>
+    <div class="chart-row">
+      <div class="chart" id="v-power"></div>
+      <div class="chart" id="v-ttft"></div>
+    </div>
+    <div class="panel" style="margin-top:14px">
+      <h3>Selection flips (fast-path picked a plan full sim would not)</h3>
+      <div id="v-flips">${data.flipped.length
+        ? data.flipped.map((id) =>
+            `<a href="#/scenario/${esc(id)}">${esc(id)}</a>`).join(" · ")
+        : "none in this batch"}</div>
+    </div>`;
+
+  const scatter = (elId, title, fastKey, simKey) => {
+    const points = data.points
+      .filter((p) => p[fastKey] != null && p[simKey] != null)
+      .map((p) => ({ value: [p[fastKey], p[simKey]], name: p.scenario_id }));
+    const values = points.flatMap((p) => p.value);
+    const max = values.length ? Math.max(...values) * 1.05 : 1;
+    const chart = makeChart(document.getElementById(elId));
+    chart.setOption({
+      title: { text: title, left: 8, textStyle: { fontSize: 13 } },
+      tooltip: { formatter: (p) => `${p.data.name}<br>fast ${fmt(p.data.value[0])} · sim ${fmt(p.data.value[1])}` },
+      xAxis: { name: "fast path", type: "value", max },
+      yAxis: { name: "full sim", type: "value", max },
+      series: [
+        { type: "scatter", data: points },
+        { type: "line", data: [[0, 0], [max, max]], showSymbol: false,
+          lineStyle: { type: "dashed", color: "#adb5bd" }, silent: true },
+      ],
+    });
+    chart.on("click", (p) => {
+      if (p.data.name) location.hash = `#/scenario/${p.data.name}`;
+    });
+  };
+  scatter("v-power", "avg power: fast vs sim (W)", "fast_avg_power_w", "sim_avg_power_w");
+  scatter("v-ttft", "p99 TTFT: fast vs sim (ms)", "fast_p99_ttft_ms", "sim_p99_ttft_ms");
+}
+
+// ------------------------------------------------------------ topology reuse
+
+function disposeChartsIn(elId) {
+  const dom = document.getElementById(elId);
+  if (dom) {
+    const existing = echarts.getInstanceByDom(dom);
+    if (existing) existing.dispose();
+  }
+}
+
+function renderTopologyInto(elId, graph, { compact = false } = {}) {
+  const holder = document.getElementById(elId);
+  if (!holder) return;
+  const roleLabel = { prefill: "P", decode: "D", aggregated: "A" };
+  const classes = [...new Set(graph.nodes.map((n) => n.cls))];
+  const palette = ["#4c6ef5", "#f76707", "#37b24d", "#ae3ec9", "#0ca678", "#e8590c"];
+  const chart = makeChart(holder);
+  chart.setOption({
+    tooltip: {
+      formatter: (p) => p.dataType === "edge"
+        ? `${p.data.source} → ${p.data.target}<br>${p.data.linkType} ${p.data.bw} Gbps`
+        : `${p.data.id}<br>${p.data.cls} · ${p.data.state}` +
+          (p.data.role ? `<br>role: ${p.data.role}` : ""),
+    },
+    legend: compact ? undefined : { data: classes, bottom: 0 },
+    series: [{
+      type: "graph", layout: "force", roam: true,
+      force: { repulsion: compact ? 120 : 260, edgeLength: compact ? 40 : 90 },
+      categories: classes.map((c, i) => ({
+        name: c, itemStyle: { color: palette[i % palette.length] },
+      })),
+      label: { show: !compact, fontSize: 10, formatter: (p) =>
+        (p.data.role ? roleLabel[p.data.role] + " · " : "") + p.data.device },
+      data: graph.nodes.map((n) => ({
+        id: n.id, name: n.id, device: n.device, cls: n.cls, state: n.state,
+        role: n.role, category: classes.indexOf(n.cls),
+        symbol: n.kind === "nic" ? "diamond" : "circle",
+        symbolSize: n.kind === "nic" ? (compact ? 8 : 16) : (compact ? 18 : 34),
+        itemStyle: {
+          opacity: n.state === "FREE" ? 1 : 0.35,
+          borderColor: n.in_plan ? "#1c7ed6" : "#adb5bd",
+          borderWidth: n.in_plan ? 4 : 1,
+        },
+      })),
+      links: graph.links.map((l) => ({
+        source: l.src, target: l.dst, linkType: l.type, bw: l.bandwidth_gbps,
+        lineStyle: {
+          width: Math.max(1, Math.log2(l.bandwidth_gbps / 8)),
+          color: l.in_plan ? "#1c7ed6" : "#ced4da",
+        },
+      })),
+    }],
   });
 }
 

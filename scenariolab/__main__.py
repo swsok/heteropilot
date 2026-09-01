@@ -71,15 +71,26 @@ def cmd_serve(args: argparse.Namespace) -> int:
 
     from scenariolab.api.server import create_app
 
+    envelope_dir = None
+    calibration_dir: Path | None = Path("profiles/calibration")
     if args.db is not None:
         db_path = args.db
     elif args.config is not None:
         config, _ = load_lab_config(args.config, args.root)
         db_path = Path(args.root) / config.store.db_path
+        if config.runner.tier_policy.envelope_cache:
+            envelope_dir = config.store.envelope_dir
+        calibration_dir = config.runner.tier_policy.calibration_dir
     else:
         print("error: pass --db or --config to locate the result store", file=sys.stderr)
         return 1
-    app = create_app(db_path, root=args.root)
+    # Open once read-write so an old store migrates (v1 -> v2 adds the
+    # plan-query history table); the app itself then reads it read-only.
+    ResultStore(db_path).close()
+    app = create_app(
+        db_path, root=args.root,
+        envelope_dir=envelope_dir, calibration_dir=calibration_dir,
+    )
     print(f"ScenarioLab UI on http://{args.host}:{args.port}  (db: {db_path})")
     uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
     return 0
@@ -131,9 +142,10 @@ def build_parser() -> argparse.ArgumentParser:
     serve.add_argument("--config", type=Path, default=None,
                        help="LabConfig to take the DB path from when --db is not given.")
     serve.add_argument("--root", type=Path, default=Path("."))
-    serve.add_argument("--host", default="127.0.0.1",
-                       help="Bind address. Lab-internal tool: no auth, so expose "
-                            "beyond localhost deliberately, not by default.")
+    serve.add_argument("--host", default="0.0.0.0",
+                       help="Bind address (default 0.0.0.0 so lab machines can "
+                            "reach it). NO auth - do not expose beyond the lab "
+                            "network; pass --host 127.0.0.1 for local-only.")
     serve.add_argument("--port", type=int, default=8080)
     serve.set_defaults(func=cmd_serve)
 

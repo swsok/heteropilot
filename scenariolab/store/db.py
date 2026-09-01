@@ -17,7 +17,7 @@ from typing import Any
 from scenariolab.generator.cluster_gen import ClusterSummary
 from scenariolab.generator.slo_gen import ServiceSummary
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 SCHEMA_PATH = Path(__file__).parent / "schema.sql"
 
 #: Scenario state machine (DESIGN §2.3).
@@ -83,11 +83,22 @@ class ResultStore:
             self._conn.executescript(SCHEMA_PATH.read_text())
             self._conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
             self._conn.commit()
+        elif version == 1 and not self.readonly:
+            # v1 -> v2 is purely additive (the plan_queries table), so it is
+            # migrated in place; anything else stays a hard error (FR-D2).
+            self._conn.executescript(SCHEMA_PATH.read_text())
+            self._conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+            self._conn.commit()
         elif version != SCHEMA_VERSION:
             raise StoreError(
                 f"{self.db_path}: schema version {version} != expected "
-                f"{SCHEMA_VERSION}. No automatic migration exists; move the old "
-                "DB aside or export it first."
+                f"{SCHEMA_VERSION}."
+                + (
+                    " Open it once read-write to migrate (v1 -> v2 is automatic)."
+                    if version == 1 else
+                    " No automatic migration exists; move the old DB aside or "
+                    "export it first."
+                )
             )
 
     # -- batch / matrix registration ---------------------------------------- #
@@ -358,6 +369,37 @@ class ResultStore:
                 params,
             )
         )
+
+    def record_plan_query(
+        self,
+        *,
+        cluster_id: str,
+        slo: dict[str, Any],
+        seed: int,
+        num_requests: int,
+        feasible: bool | None,
+        fidelity: str | None,
+        truncated: bool | None,
+        elapsed_s: float | None,
+    ) -> None:
+        """Interactive query history (§2.2). The web layer calls this through a
+        dedicated read-write ResultStore, never through its read-only one."""
+        if self.readonly:
+            raise StoreError("plan-query history requires a read-write store")
+        with self._conn:
+            self._conn.execute(
+                "INSERT INTO plan_queries (created_at, cluster_id, slo_json, seed, "
+                "num_requests, feasible, fidelity, truncated, elapsed_s) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    _now(), cluster_id, json.dumps(slo, sort_keys=True), seed,
+                    num_requests,
+                    None if feasible is None else int(feasible),
+                    fidelity,
+                    None if truncated is None else int(truncated),
+                    elapsed_s,
+                ),
+            )
 
     # -- web API queries (all read-only, FR-D3/FR-A6) -------------------------- #
 

@@ -9,6 +9,9 @@
     "/api/clusters/{cluster_id}": [
       "get"
     ],
+    "/api/plan": [
+      "post"
+    ],
     "/api/scenarios": [
       "get"
     ],
@@ -100,6 +103,34 @@
     "HistogramBin": [
       "counts",
       "label"
+    ],
+    "PlanRequest": [
+      "cluster_id",
+      "slo"
+    ],
+    "PlanResponse": [
+      "calibrated",
+      "calibration",
+      "cluster_id",
+      "elapsed_s",
+      "feasible",
+      "fidelity",
+      "graph",
+      "npu_extrapolated",
+      "num_requests",
+      "planner_output",
+      "seed",
+      "truncated"
+    ],
+    "PlanSloRequest": [
+      "dtype",
+      "input_p50",
+      "model",
+      "output_p50",
+      "power_cap_w",
+      "rps",
+      "tpot_p99_ms",
+      "ttft_p99_ms"
     ],
     "RateBin": [
       "feasible",

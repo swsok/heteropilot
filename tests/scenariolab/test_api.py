@@ -179,3 +179,65 @@ def test_openapi_contract_golden(client: TestClient) -> None:
         golden_path.write_text(json.dumps(snapshot, indent=2, sort_keys=True))
         raise AssertionError(f"golden created at {golden_path}; inspect and commit")
     assert snapshot == json.loads(golden_path.read_text())
+
+
+# ------------------------------------------------------------ P4: /api/plan
+
+RELAXED_SLO = {
+    "rps": 2.0, "input_p50": 256, "output_p50": 64,
+    "ttft_p99_ms": 20000, "tpot_p99_ms": 200, "power_cap_w": 3000,
+}
+
+
+def test_plan_endpoint_feasible_and_history(
+    client: TestClient, fixture_db: Path
+) -> None:
+    response = client.post(
+        "/api/plan", json={"cluster_id": "c0000", "slo": RELAXED_SLO}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["feasible"] is True
+    # FR-A2: the honesty block is always present.
+    for key in ("fidelity", "calibrated", "npu_extrapolated", "truncated",
+                "elapsed_s"):
+        assert key in data
+    assert data["fidelity"] in ("surrogate", "envelope")
+    assert data["planner_output"]["recommended"] is not None
+    assert any(n["in_plan"] for n in data["graph"]["nodes"])
+
+    # The query history is the one thing the API writes (FR-A6).
+    with ResultStore(fixture_db) as writer:
+        rows = list(writer._conn.execute(
+            "SELECT cluster_id, feasible, fidelity FROM plan_queries"
+        ))
+    assert rows
+    assert rows[-1]["cluster_id"] == "c0000"
+    assert rows[-1]["feasible"] == 1
+
+
+def test_plan_endpoint_missing_traffic_is_400(client: TestClient) -> None:
+    slo = dict(RELAXED_SLO)
+    slo["rps"] = None
+    response = client.post("/api/plan", json={"cluster_id": "c0000", "slo": slo})
+    assert response.status_code == 400
+    assert "traffic is required" in response.json()["detail"]
+
+
+def test_plan_endpoint_unknown_cluster_is_404(client: TestClient) -> None:
+    response = client.post(
+        "/api/plan", json={"cluster_id": "c9999", "slo": RELAXED_SLO}
+    )
+    assert response.status_code == 404
+
+
+def test_plan_endpoint_infeasible_is_200_with_diagnosis(client: TestClient) -> None:
+    """FR-A4: infeasible is a diagnosis, not an HTTP error."""
+    slo = dict(RELAXED_SLO)
+    slo["tpot_p99_ms"] = 1.0
+    response = client.post("/api/plan", json={"cluster_id": "c0000", "slo": slo})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["feasible"] is False
+    assert data["planner_output"]["reason"]
+    assert data["planner_output"]["suggestions"]

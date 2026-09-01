@@ -154,3 +154,26 @@ def test_parallel_writes_lossless(tmp_path: Path) -> None:
         assert len(rows) == 80
         savings = sorted(r["power_saving_pct"] for r in rows)
         assert savings == [float(v) for v in range(80)]
+
+
+def test_v1_to_v2_migration(tmp_path: Path) -> None:
+    """v1 -> v2 (plan_queries) migrates automatically read-write; a read-only
+    open explains what to do instead of failing opaquely (FR-D2)."""
+    db = tmp_path / "t.sqlite"
+    ResultStore(db).close()
+    conn = sqlite3.connect(db)
+    conn.execute("DROP TABLE plan_queries")
+    conn.execute("PRAGMA user_version = 1")
+    conn.commit()
+    conn.close()
+
+    with pytest.raises(StoreError, match="migrate"):
+        ResultStore(db, readonly=True)
+
+    with ResultStore(db) as store:
+        store.record_plan_query(
+            cluster_id="c0000", slo={"rps": 1}, seed=1, num_requests=10,
+            feasible=True, fidelity="surrogate", truncated=False, elapsed_s=0.1,
+        )
+        version = store._conn.execute("PRAGMA user_version").fetchone()[0]
+        assert version == 2
