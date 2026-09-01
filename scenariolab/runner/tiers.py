@@ -35,7 +35,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from planner.envelope import EnvelopeCache, workload_bucket
-from planner.inventory import AcceleratorProfile, ClusterSpecV2, ExecutionIsland
+from planner.inventory import AcceleratorProfile, ClusterSpecV2, ExecutionIsland, Node
 from planner.plan import CandidateConfig, PredictedMetrics, Role
 from planner.predictor import Predictor, SimOutcome, SimResult
 from planner.predictor.calibration import CalibrationModel, load_calibration
@@ -91,7 +91,7 @@ class SurrogatePredictor(Predictor):
         profiles: dict[str, AcceleratorProfile],
     ) -> SimResult:
         try:
-            metrics = self._analytic_metrics(candidate, spec, islands, profiles)
+            metrics = self._analytic_metrics(candidate, spec, cluster, islands, profiles)
         except Exception as exc:  # pragma: no cover - defensive, per Predictor ABC
             return SimResult(
                 candidate.id, SimOutcome.CRASHED,
@@ -103,6 +103,7 @@ class SurrogatePredictor(Predictor):
         self,
         candidate: CandidateConfig,
         spec: ServiceSpec,
+        cluster: ClusterSpecV2,
         islands: dict[str, ExecutionIsland],
         profiles: dict[str, AcceleratorProfile],
     ) -> PredictedMetrics:
@@ -113,6 +114,17 @@ class SurrogatePredictor(Predictor):
         peak_power = 0.0
         idle_power = 0.0
         power_known = True
+
+        # Host power floor: the simulator charges every node's NodePower block
+        # (base + CPU + DRAM + link/NIC/storage idle), and the first real
+        # verification pass showed that omitting it under-predicts average
+        # power by ~95%. This copies the static components of the same block -
+        # no invented numbers; the dynamic energy-per-bit terms remain
+        # unmodelled and are left to calibration/verification to expose.
+        host_power = sum(
+            _host_static_power_w(cluster.node(node_id))
+            for node_id in {islands[a.island_id].node_id for a in candidate.assignments}
+        )
 
         for a in candidate.assignments:
             island = islands[a.island_id]
@@ -166,7 +178,8 @@ class SurrogatePredictor(Predictor):
 
         if power_known:
             util_frac = min(1.0, utilization)
-            avg_power = idle_power + (peak_power - idle_power) * util_frac
+            avg_power = host_power + idle_power + (peak_power - idle_power) * util_frac
+            peak_power += host_power
             energy = avg_power * makespan_s
             tokens_per_joule = completed_tokens / energy if energy > 0 else None
         else:
@@ -192,6 +205,28 @@ class SurrogatePredictor(Predictor):
             tokens_per_joule=tokens_per_joule,
             sim_wall_seconds=0.0,
         )
+
+
+def _host_static_power_w(node: Node) -> float:
+    """Static host-power floor from the node's NodePower block.
+
+    Mirrors the component list the simulator's power model reads from the
+    same block: base node, CPU blended by the configured utilization, DRAM
+    DIMM idle, and link/NIC/storage idle. Dynamic (per-bit) terms are not
+    modelled here. Returns 0 when the node has no power block, matching the
+    simulator's own all-or-nothing energy behavior (deviations D2/D14).
+    """
+    p = node.power
+    if p is None:
+        return 0.0
+    cpu = p.cpu_idle_power + p.cpu_util * max(0.0, p.cpu_active_power - p.cpu_idle_power)
+    dram = (node.cpu_memory_gb / p.dram_dimm_size) * p.dram_idle_power
+    return (
+        p.base_node_power + cpu + dram
+        + p.link_num_links * p.link_idle_power
+        + p.nic_num_nics * p.nic_idle_power
+        + p.storage_num_devices * p.storage_idle_power
+    )
 
 
 def make_predictor(
