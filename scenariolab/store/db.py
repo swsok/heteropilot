@@ -40,12 +40,25 @@ def _now() -> str:
 
 
 class ResultStore:
-    def __init__(self, db_path: str | Path) -> None:
+    def __init__(self, db_path: str | Path, *, readonly: bool = False) -> None:
+        """`readonly=True` opens the file with SQLite's mode=ro so a reader
+        (the web API, FR-A6) can never mutate results, and refuses to create
+        a missing DB rather than serving an empty one."""
         self.db_path = Path(db_path)
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(self.db_path, timeout=30.0)
+        self.readonly = readonly
+        if readonly:
+            if not self.db_path.is_file():
+                raise StoreError(f"{self.db_path}: no result store at this path")
+            self._conn = sqlite3.connect(
+                f"file:{self.db_path}?mode=ro", uri=True, timeout=30.0,
+                check_same_thread=False,
+            )
+        else:
+            self.db_path.parent.mkdir(parents=True, exist_ok=True)
+            self._conn = sqlite3.connect(self.db_path, timeout=30.0)
         self._conn.row_factory = sqlite3.Row
-        self._conn.execute("PRAGMA journal_mode=WAL")
+        if not readonly:
+            self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.execute("PRAGMA busy_timeout=30000")
         self._init_schema()
 
@@ -63,6 +76,10 @@ class ResultStore:
     def _init_schema(self) -> None:
         version = self._conn.execute("PRAGMA user_version").fetchone()[0]
         if version == 0:
+            if self.readonly:
+                raise StoreError(
+                    f"{self.db_path}: not a ScenarioLab result store (no schema)"
+                )
             self._conn.executescript(SCHEMA_PATH.read_text())
             self._conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
             self._conn.commit()
@@ -339,6 +356,115 @@ class ResultStore:
                 f"{where} ORDER BY r.{order_by} {direction}, s.scenario_id "
                 "LIMIT ? OFFSET ?",
                 params,
+            )
+        )
+
+    # -- web API queries (all read-only, FR-D3/FR-A6) -------------------------- #
+
+    def list_batches(self) -> list[sqlite3.Row]:
+        return list(
+            self._conn.execute(
+                "SELECT batch_id, config_hash, master_seed, status, started_at, "
+                "finished_at FROM batches ORDER BY batch_id"
+            )
+        )
+
+    def count_results(
+        self,
+        batch_id: str | None = None,
+        *,
+        feasible: bool | None = None,
+        fidelity: str | None = None,
+        has_npu: bool | None = None,
+        min_saving_pct: float | None = None,
+        cluster_id: str | None = None,
+        service_id: str | None = None,
+    ) -> int:
+        clauses = []
+        params: list[Any] = []
+        for clause, value in (
+            ("s.batch_id = ?", batch_id),
+            ("r.feasible = ?", None if feasible is None else int(feasible)),
+            ("r.fidelity = ?", fidelity),
+            ("c.has_npu = ?", None if has_npu is None else int(has_npu)),
+            ("r.power_saving_pct >= ?", min_saving_pct),
+            ("s.cluster_id = ?", cluster_id),
+            ("s.service_id = ?", service_id),
+        ):
+            if value is not None:
+                clauses.append(clause)
+                params.append(value)
+        where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+        row = self._conn.execute(
+            "SELECT COUNT(*) FROM results r "
+            "JOIN scenarios s ON s.scenario_id = r.scenario_id "
+            "JOIN clusters c ON c.cluster_id = s.cluster_id "
+            f"{where}",
+            params,
+        ).fetchone()
+        return int(row[0])
+
+    def get_scenario(self, scenario_id: str) -> sqlite3.Row | None:
+        return self._conn.execute(
+            "SELECT s.*, r.feasible, r.fidelity, r.calibrated, r.npu_extrapolated, "
+            "r.plan_json_path, r.p99_ttft_ms, r.p99_tpot_ms, r.avg_power_w, "
+            "r.peak_power_w, r.tokens_per_joule, r.slo_goodput, r.active_devices, "
+            "r.baseline_power_w, r.power_saving_pct, r.baseline_note, "
+            "r.violated_json "
+            "FROM scenarios s LEFT JOIN results r ON r.scenario_id = s.scenario_id "
+            "WHERE s.scenario_id = ?",
+            (scenario_id,),
+        ).fetchone()
+
+    def get_verification(self, scenario_id: str) -> sqlite3.Row | None:
+        return self._conn.execute(
+            "SELECT * FROM verifications WHERE scenario_id = ?", (scenario_id,)
+        ).fetchone()
+
+    def list_clusters(self) -> list[sqlite3.Row]:
+        return list(self._conn.execute("SELECT * FROM clusters ORDER BY cluster_id"))
+
+    def get_cluster(self, cluster_id: str) -> sqlite3.Row | None:
+        return self._conn.execute(
+            "SELECT * FROM clusters WHERE cluster_id = ?", (cluster_id,)
+        ).fetchone()
+
+    def list_services(self) -> list[sqlite3.Row]:
+        return list(self._conn.execute("SELECT * FROM services ORDER BY service_id"))
+
+    def get_service(self, service_id: str) -> sqlite3.Row | None:
+        return self._conn.execute(
+            "SELECT * FROM services WHERE service_id = ?", (service_id,)
+        ).fetchone()
+
+    def verification_rows(self, batch_id: str) -> list[sqlite3.Row]:
+        return list(
+            self._conn.execute(
+                "SELECT v.*, r.p99_ttft_ms AS fast_p99_ttft_ms, "
+                "r.p99_tpot_ms AS fast_p99_tpot_ms, r.avg_power_w AS fast_avg_power_w, "
+                "r.feasible, r.fidelity "
+                "FROM verifications v "
+                "JOIN scenarios s ON s.scenario_id = v.scenario_id "
+                "JOIN results r ON r.scenario_id = v.scenario_id "
+                "WHERE s.batch_id = ? ORDER BY v.scenario_id",
+                (batch_id,),
+            )
+        )
+
+    def dashboard_rows(self, batch_id: str) -> list[sqlite3.Row]:
+        """Everything the dashboard bins server-side (FR-U6: the browser never
+        pulls the full scenario table)."""
+        return list(
+            self._conn.execute(
+                "SELECT r.feasible, r.fidelity, r.power_saving_pct, "
+                "r.npu_extrapolated, r.calibrated, sv.power_cap_w, "
+                "sv.tpot_p99_ms, sv.ttft_p99_ms, c.num_accels "
+                "FROM results r "
+                "JOIN scenarios s ON s.scenario_id = r.scenario_id "
+                "JOIN services sv ON sv.service_id = s.service_id "
+                "JOIN clusters c ON c.cluster_id = s.cluster_id "
+                "WHERE s.batch_id = ?",
+                (batch_id,),
             )
         )
 
