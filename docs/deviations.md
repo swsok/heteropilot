@@ -645,7 +645,7 @@ drops, TTFT flat, `none`-mode control flat — all PASS) and `tests/test_sim_pd_
 | D18 | Phase 5 | **Resolved** (retraction) — NPU-leg multi-stream bandwidth remeasured; scaling law held, levels ~25 % lower. Fixtures recomputed once the GPU leg landed (all six links now `measured`); the SLO sweeps cannot see the change, for three recorded reasons |
 | D19 | Phase 4 | **Resolved** (retraction) — the card profile's −71 % TTFT error was an arrival-pattern mismatch in the validation harness, not a scheduler difference; matched arrivals give −5.1 %. Both RNGD TTFT calibrations refitted |
 | D20 | Phase 3 / Exp 4 | **Open** — ATOM layerwise profiling blocked: host I/O exceeds the kernels and the device tracer's schema is undocumented. Memory and power measured; no perf bundle, so ATOM stays out of candidate generation |
-| D21 | Phase 4 | **Resolved** (retraction + measurement) — the c1–c32 curve's top point was a 24-request pool running at eff 21.2, not c32; envelope measured to eff 107.2. At eff 76 the simulator is 1.31× optimistic on throughput and 18 % on TPOT; sweep must be re-run before its absolute numbers are quoted |
+| D21 | Phase 4 | **Resolved** (retraction + measurement) — the c1–c32 curve's top point was a 24-request pool running at eff 21.2, not c32; envelope measured to eff 107.2. At eff 76 the simulator is 1.31× optimistic on throughput and 18 % on TPOT. The re-run is **still open**: lowering the arrival rate does not work (RNGD candidates never terminate, and the objective trades fleet size against concurrency) — constrain the fleet at 10 rps instead |
 
 ---
 
@@ -1087,3 +1087,54 @@ rather than 128 — the only point where the pool still binds slightly. TTFT fro
 these runs is **not** comparable to the sweep's p99 TTFT: the bench fires the whole
 pool at once (D19), a closed-loop saturation probe, while the sweep offers Poisson
 arrivals. Throughput and TPOT are the valid comparisons.
+
+### The re-run this entry calls for cannot be done by lowering the arrival rate — attempted 2026-09-01 and abandoned
+
+§4.4 asks for `pd_slo_sweep.py` at "a defensible load". The obvious reading is to
+lower the offered load until the winner's per-card concurrency lands where the
+profile was validated (~16.6) rather than at ~76. Per-card concurrency is an
+*outcome* of the Poisson arrival rate, not an input, and the sweep exposes no
+arrival-rate flag, so this was tried with a service spec at **3.3 rps** (9.9 × 25/76,
+targeting ~25 per card) identical to `examples/service_specs/llama31-8b.yaml` in
+every other field. **It does not work, for two independent reasons, and the run
+was killed after 3.7 hours.**
+
+**1. RNGD candidates never terminate at that rate.** After 3.7 hours, by candidate
+class:
+
+| class | attempted | completed |
+| --- | ---: | ---: |
+| `furiosa ↔ furiosa` (RNGD P/D) | 24 | **0** |
+| cross-vendor (`cuda ↔ furiosa`) | 12 | **0** |
+| `cuda ↔ cuda` | 84 | 60 |
+
+Completions decayed 102 → 24 → 6 → 0 per hour as the sweep worked through the
+CUDA-only candidates and reached the RNGD ones. The same candidates complete
+normally at 10 rps — `agg[furiosa:tp8]` is a *winner* in the committed sweep. The
+mechanism is that a slower arrival rate gives the decode scheduler less to batch,
+which lowers throughput, which lengthens the *simulated* time needed to drain 300
+requests. On a device whose per-token cost is already high that is unbounded in
+practice. The naive cost model — "3.3 rps triples the 30 s window to 91 s, so
+expect 3× runtime" — is wrong: the window is the arrival span, not the drain time.
+
+**2. It would not have produced the intended load anyway.** The objective is
+`minimize_energy` then `minimize_active_accelerators`. Lower offered load lets the
+planner satisfy the SLO with *fewer* accelerators, which pushes per-card
+concurrency back up. Reducing the arrival rate therefore does not control
+per-card concurrency; it trades fleet size against it, and the two effects fight.
+
+**So the arrival rate is the wrong knob: it changes the operating regime rather
+than the load level, and the result would not have been comparable to the
+committed sweep point-for-point even if it had finished.** The service spec used
+for the attempt is deliberately **not** committed — a spec that cannot be
+simulated to completion is a trap for whoever finds it.
+
+**What should be done instead.** Hold the arrival rate at 10 rps, so the regime
+and the comparison are preserved, and constrain the **fleet**: give the RNGD arm
+enough cards that per-card concurrency falls into the directly measured band
+(eff 15.3–59.2 are all measured points). That controls the quantity directly
+instead of fighting the objective function, and it keeps the simulated window at
+30 s, so it costs what the original sweep cost. Until that is done, D21's finding
+stands on its own: the card-fixture absolute numbers are optimistic by 1.31× on
+throughput and 18 % on TPOT at the concurrency they assume, and should not be
+quoted.

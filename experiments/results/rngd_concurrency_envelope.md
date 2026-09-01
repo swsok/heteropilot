@@ -115,6 +115,19 @@ further; the flattening exponent suggests there is not much left to find.
    silently rescaled — the discrepancy is recorded here and in deviations, and
    `pd_slo_sweep.py` should be re-run at a defensible load before its numbers are
    quoted again.
+
+   **That re-run is still open, and the obvious way to do it does not work.**
+   Lowering the arrival rate to bring per-card concurrency down was attempted on
+   2026-09-01 at 3.3 rps and abandoned after 3.7 hours: **no RNGD-involving
+   candidate terminated** (0 of 24 RNGD P/D and 0 of 12 cross-vendor, against 60 of
+   84 CUDA-only), because a slower arrival rate gives the decode scheduler less to
+   batch, which lowers throughput, which lengthens the simulated time needed to
+   drain the trace. It would also not have produced the intended load: the
+   `minimize_active_accelerators` objective shrinks the fleet as load falls, pushing
+   per-card concurrency back up. **Hold the rate at 10 rps and constrain the fleet
+   instead** — give the RNGD arm enough cards that per-card concurrency lands in the
+   directly measured band (eff 15.3–59.2 above). Deviations D21 has the full
+   account.
 2. **The envelope itself is no longer the largest open risk.** The card does reach
    eff 107 with zero failures, so c76 is inside what the hardware serves. The risk
    moved from "can it?" to "at what cost?", and the cost is now measured.
