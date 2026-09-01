@@ -1,6 +1,7 @@
 """M6 FastAPI app: read-only serving of the ResultStore (DESIGN §9).
 
-A lab-internal tool: no auth, binds 127.0.0.1 unless told otherwise. The DB
+A lab-internal tool with NO auth: the CLI binds 0.0.0.0 by default so other
+lab machines can reach it - do not expose it beyond the lab network. The DB
 is opened read-only per request (FR-A6); the interactive /api/plan endpoint
 arrives with P4 and is declared here so /docs shows the intended surface.
 """
