@@ -27,6 +27,8 @@ from scenariolab.api.schemas import (
     DashboardCharts,
     HeatmapCell,
     HistogramBin,
+    PlanRequest,
+    PlanResponse,
     RateBin,
     ScenarioDetail,
     ScenarioListResponse,
@@ -43,11 +45,18 @@ from scenariolab.store.db import ResultStore, StoreError
 WEB_DIR = Path(__file__).resolve().parents[1] / "web"
 
 
-def create_app(db_path: str | Path, root: str | Path = ".") -> FastAPI:
+def create_app(
+    db_path: str | Path,
+    root: str | Path = ".",
+    *,
+    envelope_dir: str | Path | None = None,
+    calibration_dir: str | Path | None = "profiles/calibration",
+) -> FastAPI:
     app = FastAPI(
         title="ScenarioLab",
-        description="Random-scenario power-optimal placement results (read-only).",
-        version="0.1.0",
+        description="Random-scenario power-optimal placement results (read-only), "
+        "plus the interactive fast-path planner.",
+        version="0.2.0",
     )
     root = Path(root)
 
@@ -351,6 +360,65 @@ def create_app(db_path: str | Path, root: str | Path = ".") -> FastAPI:
             stats=_verification_stats(rows),
             points=points,
             flipped=[p.scenario_id for p in points if p.selection_flipped],
+        )
+
+    @app.post("/api/plan", response_model=PlanResponse)
+    def plan(request: PlanRequest, db: ResultStore = Depends(store)) -> PlanResponse:
+        from scenariolab.runner.interactive import (
+            InteractivePlanError,
+            plan_interactive,
+        )
+
+        cluster_row = db.get_cluster(request.cluster_id)
+        if cluster_row is None:
+            raise HTTPException(
+                status_code=404, detail=f"no cluster '{request.cluster_id}'"
+            )
+        slo = request.slo.model_dump()
+        try:
+            result = plan_interactive(
+                root / cluster_row["yaml_path"], slo,
+                root=root,
+                envelope_dir=envelope_dir,
+                calibration_dir=calibration_dir,
+            )
+        except InteractivePlanError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        # Query history is the single thing the web layer writes (FR-A6),
+        # through a dedicated short-lived read-write store.
+        try:
+            with ResultStore(db_path) as writer:
+                writer.record_plan_query(
+                    cluster_id=request.cluster_id,
+                    slo=slo,
+                    seed=result["seed"],
+                    num_requests=result["num_requests"],
+                    feasible=result["feasible"],
+                    fidelity=result["fidelity"],
+                    truncated=result["truncated"],
+                    elapsed_s=result["elapsed_s"],
+                )
+        except StoreError:
+            pass  # history must never break the answer itself
+
+        graph = build_cluster_graph(
+            root / cluster_row["yaml_path"], root,
+            document={"planner_output": result["planner_output"]},
+        )
+        return PlanResponse(
+            cluster_id=request.cluster_id,
+            feasible=result["feasible"],
+            fidelity=result["fidelity"],
+            calibrated=result["calibrated"],
+            npu_extrapolated=result["npu_extrapolated"],
+            truncated=result["truncated"],
+            elapsed_s=result["elapsed_s"],
+            seed=result["seed"],
+            num_requests=result["num_requests"],
+            calibration=result["calibration"],
+            planner_output=result["planner_output"],
+            graph=graph,
         )
 
     @app.get("/api/batches/{batch_id}/progress")

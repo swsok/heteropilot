@@ -196,4 +196,39 @@ class ScenarioDetail(BaseModel):
     verification: VerificationRecord | None
 
 
+class PlanSloRequest(BaseModel):
+    """Interactive SLO body (§9.2). rps/input_p50/output_p50 are the traffic -
+    without them the request is rejected with 400 (FR-A3)."""
+
+    model: str = "meta-llama/Llama-3.1-8B"
+    dtype: str = "bfloat16"
+    rps: float | None = None
+    input_p50: int | None = None
+    output_p50: int | None = None
+    ttft_p99_ms: float
+    tpot_p99_ms: float
+    power_cap_w: float | None = None
+
+
+class PlanRequest(BaseModel):
+    cluster_id: str
+    slo: PlanSloRequest
+
+
+class PlanResponse(BaseModel):
+    cluster_id: str
+    feasible: bool
+    #: FR-A2 honesty block, always present.
+    fidelity: str
+    calibrated: bool
+    npu_extrapolated: bool
+    truncated: bool
+    elapsed_s: float
+    seed: int
+    num_requests: int
+    calibration: dict[str, Any]
+    planner_output: dict[str, Any]
+    graph: ClusterGraph
+
+
 SummaryResponse.model_rebuild()

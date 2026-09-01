@@ -70,6 +70,22 @@ CREATE TABLE IF NOT EXISTS results (
     provenance_json   TEXT
 );
 
+-- Interactive /api/plan query history (FR-A6): the one table the web layer
+-- writes, via a dedicated short-lived read-write connection. Results tables
+-- stay untouched by the API.
+CREATE TABLE IF NOT EXISTS plan_queries (
+    query_id    INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at  TEXT NOT NULL,
+    cluster_id  TEXT NOT NULL,
+    slo_json    TEXT NOT NULL,
+    seed        INTEGER NOT NULL,
+    num_requests INTEGER NOT NULL,
+    feasible    INTEGER,
+    fidelity    TEXT,
+    truncated   INTEGER,
+    elapsed_s   REAL
+);
+
 CREATE TABLE IF NOT EXISTS verifications (
     scenario_id        TEXT PRIMARY KEY REFERENCES scenarios(scenario_id),
     sim_p99_ttft_ms    REAL,
