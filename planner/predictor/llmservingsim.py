@@ -281,6 +281,7 @@ class LLMServingSimPredictor(Predictor):
         keep_artifacts: bool = False,
         topology_level: int = 1,
         routing_policy: str = "LOAD",
+        run_id_prefix: str = "",
     ) -> None:
         self.trace = trace
         self.timeout_s = timeout_s
@@ -294,6 +295,13 @@ class LLMServingSimPredictor(Predictor):
         self.routing_policy = routing_policy
         self.python = python or sys.executable
         self.retry_once = retry_once
+        # The simulator stages ASTRA-Sim inputs under a --run-id derived from
+        # the candidate id. Candidate ids are unique only within one search, so
+        # two concurrent predictors simulating identically-named candidates
+        # (e.g. ScenarioLab evaluating the same placement on two clusters)
+        # would share - and corrupt - one input directory. A caller-supplied
+        # prefix restores isolation; empty keeps existing ids byte-identical.
+        self.run_id_prefix = run_id_prefix
         self.keep_artifacts = keep_artifacts
         self._owns_dir = work_dir is None
         # The simulator chdir's into astra-sim/ and then prepends "../" to every
@@ -378,7 +386,8 @@ class LLMServingSimPredictor(Predictor):
         csv_path = run_dir / f"sim{attempt}.csv"
         log_path = run_dir / f"sim{attempt}.log"
         run_id = "".join(
-            ch if ch.isalnum() or ch in "-_" else "_" for ch in f"{candidate.id}-a{attempt}"
+            ch if ch.isalnum() or ch in "-_" else "_"
+            for ch in f"{self.run_id_prefix}{candidate.id}-a{attempt}"
         )
 
         cmd = [
