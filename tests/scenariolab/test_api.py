@@ -241,3 +241,13 @@ def test_plan_endpoint_infeasible_is_200_with_diagnosis(client: TestClient) -> N
     assert data["feasible"] is False
     assert data["planner_output"]["reason"]
     assert data["planner_output"]["suggestions"]
+
+
+def test_graph_has_no_isolated_devices(client: TestClient) -> None:
+    """Topology v2: the Explorer bug - every accelerator/NIC in the scenario
+    graph must have at least one link."""
+    for cluster_id in ("c0000", "c0001"):
+        graph = client.get(f"/api/clusters/{cluster_id}").json()["graph"]
+        touched = {e for link in graph["links"] for e in (link["src"], link["dst"])}
+        for node in graph["nodes"]:
+            assert node["id"] in touched, f"{cluster_id}: {node['id']} is isolated"

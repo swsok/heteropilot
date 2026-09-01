@@ -1,0 +1,55 @@
+# ScenarioLab maximal-scale batch: every cluster is exactly 16 nodes x 8
+# GPUs = 128 accelerators (the largest network the lab studies). GPU-only
+# pool because the RNGD card caps at 4 per node. Fast path only - see
+# large.yaml for why verification is a deliberate, separate run.
+lab:
+  batch_name: lab-max128
+  seed: 20260901
+
+cluster_generator:
+  num_clusters: 2
+  nodes_per_cluster: {min: 16, max: 16}
+  accelerators_per_node: {min: 8, max: 8}
+  accelerator_pool:            # 8-per-node classes only -> exactly 128 devices
+    - a40                      # measured
+    - rtxpro6000               # vendor_spec
+  same_class_per_node: true
+  internode_link_pool: [ib_400g]
+  free_ratio: {min: 0.75, max: 1.0}
+
+slo_generator:
+  num_specs: 5
+  models:
+    - meta-llama/Llama-3.1-8B
+  arrival_rate_rps: {dist: loguniform, min: 20, max: 500}
+  input_tokens_p50: {dist: choice, values: [256, 512, 1024, 4096]}
+  output_tokens_p50: {dist: choice, values: [64, 128, 512]}
+  ttft_p99_ms: {dist: loguniform, min: 200, max: 5000}
+  tpot_p99_ms: {dist: loguniform, min: 30, max: 300}
+  power_cap_w: {dist: uniform, min: 10000, max: 80000}
+  min_tokens_per_joule: {dist: fixed, value: 0.0}
+  objective:
+    primary: minimize_energy
+    secondary: minimize_active_accelerators
+
+pairing:
+  mode: cross                  # 2 x 5 = 10 scenarios
+  max_scenarios: 1500
+
+runner:
+  workers: 10
+  num_requests: 300
+  tier_policy:
+    envelope_cache: true
+    surrogate_top_k: 5
+    full_sim: never
+  verification:
+    fraction: 0.0
+    min_count: 0
+
+store:
+  db_path: outputs/scenariolab/max128/lab.sqlite
+  results_dir: outputs/scenariolab/max128/results
+  clusters_dir: outputs/scenariolab/max128/clusters
+  services_dir: outputs/scenariolab/max128/services
+  envelope_dir: outputs/scenariolab/max128/envelope

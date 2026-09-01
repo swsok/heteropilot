@@ -99,12 +99,12 @@ def _accel_to_accel_links(cluster) -> list:
 
 
 def test_interconnect_dictated_by_profile(tmp_path: Path) -> None:
-    """FR-C4: NVLink cards never get PCIE peer links and vice versa; RNGD
-    cards get no peer links at all."""
+    """FR-C4 (topology v2): every class sits on the host PCIe tree; only
+    NVLink-capable classes additionally get a fast peer fabric."""
     cases = {
-        "rtxpro6000": {LinkType.NVLINK},
+        "rtxpro6000": {LinkType.NVLINK, LinkType.PCIE},
         "a40": {LinkType.PCIE},
-        "furiosa_rngd_card": set(),
+        "furiosa_rngd_card": {LinkType.PCIE},
     }
     for entry, expected_types in cases.items():
         config = _gen_config(
@@ -132,7 +132,84 @@ def test_contention_groups_assigned(tmp_path: Path) -> None:
     pcie_groups = {
         link.contention_group for link in cluster.links if link.type == LinkType.PCIE
     }
-    assert pcie_groups == {"node0-pcie-root"}
+    assert pcie_groups == {"node0-pcie-root0"}  # 3 devices + NIC on one root
+
+
+def _adjacency(cluster) -> dict[str, set[str]]:
+    vertices = {
+        f"{n.id}/{d.id}" for n in cluster.nodes for d in [*n.accelerators, *n.nics]
+    }
+    adjacency: dict[str, set[str]] = {v: set() for v in vertices}
+    for link in cluster.links:
+        adjacency[link.src].add(link.dst)
+        adjacency[link.dst].add(link.src)
+    return adjacency
+
+
+def test_every_device_connected(tmp_path: Path) -> None:
+    """Topology v2 invariant: no isolated accelerators or NICs, ever - the
+    Explorer bug this rework fixes (RNGD cards used to float unconnected)."""
+    for i in range(12):
+        summary = _generate(tmp_path, i, derive_seed(31, "conn", i), subdir="conn")
+        cluster = load_cluster_spec(summary.yaml_path)
+        adjacency = _adjacency(cluster)
+        assert all(peers for peers in adjacency.values()), (
+            f"{summary.cluster_id}: isolated device(s) "
+            f"{[v for v, p in adjacency.items() if not p]}"
+        )
+        start = next(iter(adjacency))
+        seen, stack = {start}, [start]
+        while stack:
+            for peer in adjacency[stack.pop()]:
+                if peer not in seen:
+                    seen.add(peer)
+                    stack.append(peer)
+        assert seen == set(adjacency), f"{summary.cluster_id}: graph is disconnected"
+
+
+def test_pcie_root_complex_structure(tmp_path: Path) -> None:
+    """An 8-device node splits into two 4-device roots bridged by the CPU;
+    the NIC hangs off root 0."""
+    config = _gen_config(
+        accelerator_pool=["a40"],
+        nodes_per_cluster={"min": 1, "max": 1},
+        accelerators_per_node={"min": 8, "max": 8},
+    )
+    summary = _generate(tmp_path, 0, derive_seed(32, "rc"), config, subdir="rc")
+    cluster = load_cluster_spec(summary.yaml_path)
+    groups: dict[str, list] = {}
+    for link in cluster.links:
+        if link.type == LinkType.PCIE:
+            groups.setdefault(link.contention_group, []).append(link)
+    # Two roots (full mesh of 4 = 6 links each; root0 carries the NIC attach
+    # too), one CPU-interconnect bridge between them.
+    assert set(groups) == {
+        "node0-pcie-root0", "node0-pcie-root1", "node0-cpu-interconnect",
+    }
+    assert len(groups["node0-pcie-root0"]) == 7  # 6 peer + 1 NIC
+    assert len(groups["node0-pcie-root1"]) == 6
+    assert len(groups["node0-cpu-interconnect"]) == 1
+    nic_links = [
+        link for link in groups["node0-pcie-root0"] if link.dst == "node0/nic0"
+    ]
+    assert len(nic_links) == 1
+
+
+def test_rngd_cards_share_one_island_via_host_bus(tmp_path: Path) -> None:
+    """RNGD cards on one host bus now form one island (dp across cards inside
+    the island); TP stays 1 per card (profile max_tp_size=1)."""
+    config = _gen_config(
+        accelerator_pool=["furiosa_rngd_card"],
+        nodes_per_cluster={"min": 1, "max": 1},
+        accelerators_per_node={"min": 4, "max": 4},
+    )
+    summary = _generate(tmp_path, 0, derive_seed(33, "rngd"), config, subdir="rngd")
+    cluster = load_cluster_spec(summary.yaml_path)
+    islands = detect_islands(cluster, load_profiles_for(cluster, ROOT))
+    free_islands = [i for i in islands if i.size >= 1]
+    assert len(free_islands) >= 1
+    biggest = max(free_islands, key=lambda i: i.size)
+    assert biggest.max_tp_candidates == [1]  # cards never TP across each other
 
 
 def test_minimal_ranges_still_valid(tmp_path: Path) -> None:
