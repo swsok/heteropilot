@@ -216,6 +216,105 @@ def test_reproducibility_byte_identical_modulo_timestamp(tmp_path: Path) -> None
     assert docs[0] == docs[1]
 
 
+def test_envelope_reuse_across_scenarios(tmp_path: Path) -> None:
+    """Tier-1 end to end: a second scenario with the same placement/bucket is
+    served from the envelope written by the first - zero predictor calls, and
+    the result is relabelled fidelity=envelope (FR-T1/FR-T3)."""
+    from planner.predictor import Predictor
+    from scenariolab.runner.tiers import SurrogatePredictor
+
+    calls: list[str] = []
+
+    class CountingPredictor(Predictor):
+        def __init__(self, trace) -> None:
+            self.inner = SurrogatePredictor(trace)
+
+        def predict(self, candidate, spec, cluster, islands, profiles):
+            calls.append(candidate.id)
+            return self.inner.predict(candidate, spec, cluster, islands, profiles)
+
+    base = _direct_task(tmp_path, ttft_ms=10_000, tpot_ms=200)
+    # full_sim=top_k marks the run as simulation-fidelity, which is what makes
+    # the envelope writable; the counting predictor stands in for the sim.
+    task1 = ScenarioTask(**{
+        **base.__dict__, "full_sim": "top_k",
+        "envelope_dir": str(tmp_path / "env"),
+    })
+    record1 = run_scenario(task1, predictor_factory=CountingPredictor)
+    assert record1["ok"], record1.get("error")
+    assert record1["fidelity"] == "sim"
+    first_calls = len(calls)
+    assert first_calls > 0
+
+    task2 = ScenarioTask(**{
+        **task1.__dict__, "scenario_id": "scY",
+        "results_dir": str(tmp_path / "res2"),
+    })
+    record2 = run_scenario(task2, predictor_factory=CountingPredictor)
+    assert record2["ok"], record2.get("error")
+    assert len(calls) == first_calls  # everything, baseline included, was cached
+    assert record2["fidelity"] == "envelope"
+    assert record2["avg_power_w"] == record1["avg_power_w"]
+
+
+def test_oracle_agreement_tiered_path(tmp_path: Path) -> None:
+    """DESIGN §7.5 core regression: the Tier-3 path (full_sim=top_k, no K cap,
+    same predictor) must recommend exactly what the pruning-disabled oracle
+    recommends. If they disagree, the tier plumbing lost a candidate."""
+    import tempfile
+
+    from planner.inventory import detect_islands, load_cluster_spec, load_profiles_for
+    from planner.optimizer import exhaustive
+    from planner.spec import load_service_spec
+    from planner.util.workload import generate_trace
+    from scenariolab.config import ClusterGeneratorConfig
+    from scenariolab.generator.cluster_gen import generate_cluster
+    from scenariolab.runner.tiers import SurrogatePredictor
+
+    gen = ClusterGeneratorConfig.model_validate({
+        "num_clusters": 1,
+        "nodes_per_cluster": {"min": 2, "max": 2},
+        "accelerators_per_node": {"min": 2, "max": 2},
+        "accelerator_pool": ["a5000", "furiosa_rngd_card"],
+        "internode_link_pool": ["ib_400g"],
+        "free_ratio": {"min": 1.0, "max": 1.0},
+    })
+    summary = generate_cluster(gen, 0, 777, tmp_path / "cl", ROOT, "h")
+
+    base = _direct_task(tmp_path, ttft_ms=10_000, tpot_ms=200)
+    task = ScenarioTask(**{
+        **base.__dict__,
+        "cluster_yaml": str(summary.yaml_path),
+        "full_sim": "top_k",
+        "top_k": None,  # no stage-6 cap: simulate every pruning survivor
+    })
+    record = run_scenario(task, predictor_factory=SurrogatePredictor)
+    assert record["ok"], record.get("error")
+    document = json.loads(Path(record["plan_json_path"]).read_text())
+    tiered = document["planner_output"]
+
+    spec = load_service_spec(task.service_yaml)
+    cluster = load_cluster_spec(task.cluster_yaml)
+    profiles = load_profiles_for(cluster, ROOT)
+    islands = detect_islands(cluster, profiles)
+    with tempfile.TemporaryDirectory() as tmp:
+        trace = generate_trace(
+            spec, Path(tmp) / "w.jsonl", num_requests=task.num_requests, seed=task.seed
+        )
+        oracle = exhaustive.oracle(
+            spec, cluster, islands, profiles, SurrogatePredictor(trace), max_workers=1
+        )
+
+    assert oracle.feasible == tiered["feasible"]
+    assert oracle.recommended is not None
+    assert tiered["recommended"] is not None
+    assert (
+        tiered["recommended"]["plan"]["candidate"]["id"]
+        == oracle.recommended.plan.candidate.id
+    )
+    assert tiered["recommended"]["value"] == oracle.recommended.value
+
+
 def test_golden_batch(tmp_path: Path) -> None:
     """Frozen DB image of the fixed-seed test batch (DESIGN §11).
 

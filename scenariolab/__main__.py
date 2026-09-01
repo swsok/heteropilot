@@ -51,6 +51,21 @@ def cmd_run(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_verify(args: argparse.Namespace) -> int:
+    from scenariolab.runner.verify import run_verification_pass
+
+    config, _ = load_lab_config(args.config, args.root)
+    with ResultStore(Path(args.root) / config.store.db_path) as store:
+        summary = run_verification_pass(
+            config, store,
+            root=args.root,
+            fraction=args.fraction,
+            min_count=args.min_count,
+            quiet=args.quiet,
+        )
+    return 0 if summary["errors"] == 0 else 1
+
+
 def _not_yet(phase: str):
     def handler(args: argparse.Namespace) -> int:
         print(f"'{args.command}' is scheduled for {phase} and is not implemented yet.",
@@ -79,10 +94,17 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--quiet", action="store_true")
     run.set_defaults(func=cmd_run)
 
-    verify = sub.add_parser("verify", help="(P2) Cross-check sampled scenarios with full sim.")
-    verify.add_argument("--batch", required=False)
-    verify.add_argument("--fraction", type=float, default=None)
-    verify.set_defaults(func=_not_yet("P2 (feat/scenariolab-tiers)"))
+    verify = sub.add_parser(
+        "verify", help="Cross-check sampled scenarios with the full simulator."
+    )
+    verify.add_argument("--config", required=True, type=Path)
+    verify.add_argument("--root", type=Path, default=Path("."))
+    verify.add_argument("--fraction", type=float, default=None,
+                        help="Override runner.verification.fraction.")
+    verify.add_argument("--min-count", type=int, default=None,
+                        help="Override runner.verification.min_count.")
+    verify.add_argument("--quiet", action="store_true")
+    verify.set_defaults(func=cmd_verify)
 
     serve = sub.add_parser("serve", help="(P3) Serve the web UI over the result store.")
     serve.add_argument("--db", type=Path, default=None)

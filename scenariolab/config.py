@@ -103,6 +103,10 @@ class TierPolicy(_Strict):
     envelope_cache: bool = True
     surrogate_top_k: int = Field(default=5, ge=1)
     full_sim: Literal["verification_only", "top_k", "never"] = "verification_only"
+    #: Where robust-margin calibration is read from (FR-T2). None disables it.
+    calibration_dir: Path | None = Path("profiles/calibration")
+    #: Per-candidate simulator wall-clock budget for the full-sim tiers.
+    sim_timeout_s: float = Field(default=900.0, gt=0)
 
 
 class VerificationConfig(_Strict):
@@ -127,6 +131,9 @@ class StoreConfig(_Strict):
     results_dir: Path = Path("outputs/scenariolab/results")
     clusters_dir: Path = Path("outputs/scenariolab/clusters")
     services_dir: Path = Path("outputs/scenariolab/services")
+    #: Tier-1 shared envelope cache. Only full-sim results are ever written
+    #: here (the surrogate path opens it read-only, see tiers.SharedEnvelope).
+    envelope_dir: Path = Path("outputs/scenariolab/envelope")
 
 
 class LabConfig(_Strict):

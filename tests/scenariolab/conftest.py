@@ -61,6 +61,7 @@ def lab_yaml_dict(tmp_path: Path, **overrides: Any) -> dict:
             "results_dir": str(tmp_path / "results"),
             "clusters_dir": str(tmp_path / "clusters"),
             "services_dir": str(tmp_path / "services"),
+            "envelope_dir": str(tmp_path / "envelope"),
         },
     }
     for key, value in overrides.items():

@@ -223,6 +223,27 @@ class ResultStore:
                 (VERIFIED, scenario_id, DONE_FEASIBLE, DONE_INFEASIBLE),
             )
 
+    def verification_pool(self, batch_id: str) -> list[sqlite3.Row]:
+        """DONE scenarios joined with what stratified sampling and error
+        computation need (§7.4). VERIFIED rows are excluded: re-verifying
+        would overwrite a record without adding information."""
+        return list(
+            self._conn.execute(
+                "SELECT s.scenario_id, s.cluster_id, s.service_id, s.seed, "
+                "r.feasible, r.plan_json_path, r.p99_ttft_ms, r.p99_tpot_ms, "
+                "r.avg_power_w, c.num_accels, c.has_npu, "
+                "cl.yaml_path AS cluster_yaml, sv.yaml_path AS service_yaml "
+                "FROM scenarios s "
+                "JOIN results r ON r.scenario_id = s.scenario_id "
+                "JOIN clusters c ON c.cluster_id = s.cluster_id "
+                "JOIN clusters cl ON cl.cluster_id = s.cluster_id "
+                "JOIN services sv ON sv.service_id = s.service_id "
+                "WHERE s.batch_id=? AND s.status IN (?, ?) "
+                "ORDER BY s.scenario_id",
+                (batch_id, DONE_FEASIBLE, DONE_INFEASIBLE),
+            )
+        )
+
     # -- queries -------------------------------------------------------------- #
 
     def scenario_counts(self, batch_id: str) -> dict[str, int]:
