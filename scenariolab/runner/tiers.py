@@ -1,8 +1,20 @@
-"""M4 TieredPredictor - P1 increment: the analytic surrogate tier (DESIGN §7).
+"""M4 TieredPredictor (DESIGN §7).
 
-P1 ships Tier-2 only: a deterministic, physics-based analytic predictor that
-lets a batch run in milliseconds per candidate with NO simulator. Tier-1
-(envelope cache reuse) and Tier-3 (sampled full-sim verification) land in P2.
+Tier-1: envelope-cache reuse. Entries are keyed by planner/envelope.py's full
+deployment key (dp included, deviations D13) with NO trace digest, so results
+recorded by full simulation in one scenario serve every later scenario that
+lands in the same (placement, knobs, network class, workload bucket). The
+surrogate path opens the cache READ-ONLY: analytic numbers must never
+masquerade as cached simulations.
+
+Tier-2: the deterministic roofline surrogate below, optionally hardened by
+calibration margins when profiles/calibration/ covers the scenario's
+(hardware, workload bucket) - `calibrated: false` and raw predictions
+otherwise (DESIGN §0.4).
+
+Tier-3: full LLMServingSim, either per-scenario for the top-K candidates
+(tier_policy.full_sim: top_k) or for the sampled verification pass
+(scenariolab/runner/verify.py).
 
 HONESTY CONTRACT (FR-T3): everything this predictor emits is fidelity =
 "surrogate". It is NOT a sound bound and NOT a simulation; the numbers exist
@@ -20,9 +32,13 @@ profile's measured/declared idle+active figures, utilization-blended; host
 
 from __future__ import annotations
 
-from planner.inventory import AcceleratorProfile, ClusterSpecV2, ExecutionIsland
+from pathlib import Path
+
+from planner.envelope import EnvelopeCache, workload_bucket
+from planner.inventory import AcceleratorProfile, ClusterSpecV2, ExecutionIsland, Node
 from planner.plan import CandidateConfig, PredictedMetrics, Role
 from planner.predictor import Predictor, SimOutcome, SimResult
+from planner.predictor.calibration import CalibrationModel, load_calibration
 from planner.spec import ServiceSpec
 from planner.util import memory as memutil
 from planner.util.workload import WorkloadTrace
@@ -41,6 +57,15 @@ TTFT_PER_SEQ_MS = 0.5
 FIDELITY_SURROGATE = "surrogate"
 FIDELITY_SIM = "sim"
 FIDELITY_ENVELOPE = "envelope"
+
+#: Measured per-card concurrency ceiling of a real RNGD deployment
+#: (HANDOVER §2.1): the simulator's fixture admits ~76 concurrent sequences
+#: per card while the real furiosa-llm server peaked at 32. Any plan whose
+#: estimated per-replica concurrency on an RNGD card exceeds this is flagged
+#: `npu_concurrency_extrapolated` (FR-T6) so the optimism travels with the
+#: result instead of hiding in it.
+RNGD_CARD_MAX_CONCURRENT_SEQS = 32
+RNGD_CARD_MODEL = "RNGD-CARD"
 
 
 class SurrogatePredictor(Predictor):
@@ -66,7 +91,7 @@ class SurrogatePredictor(Predictor):
         profiles: dict[str, AcceleratorProfile],
     ) -> SimResult:
         try:
-            metrics = self._analytic_metrics(candidate, spec, islands, profiles)
+            metrics = self._analytic_metrics(candidate, spec, cluster, islands, profiles)
         except Exception as exc:  # pragma: no cover - defensive, per Predictor ABC
             return SimResult(
                 candidate.id, SimOutcome.CRASHED,
@@ -78,6 +103,7 @@ class SurrogatePredictor(Predictor):
         self,
         candidate: CandidateConfig,
         spec: ServiceSpec,
+        cluster: ClusterSpecV2,
         islands: dict[str, ExecutionIsland],
         profiles: dict[str, AcceleratorProfile],
     ) -> PredictedMetrics:
@@ -88,6 +114,17 @@ class SurrogatePredictor(Predictor):
         peak_power = 0.0
         idle_power = 0.0
         power_known = True
+
+        # Host power floor: the simulator charges every node's NodePower block
+        # (base + CPU + DRAM + link/NIC/storage idle), and the first real
+        # verification pass showed that omitting it under-predicts average
+        # power by ~95%. This copies the static components of the same block -
+        # no invented numbers; the dynamic energy-per-bit terms remain
+        # unmodelled and are left to calibration/verification to expose.
+        host_power = sum(
+            _host_static_power_w(cluster.node(node_id))
+            for node_id in {islands[a.island_id].node_id for a in candidate.assignments}
+        )
 
         for a in candidate.assignments:
             island = islands[a.island_id]
@@ -141,7 +178,8 @@ class SurrogatePredictor(Predictor):
 
         if power_known:
             util_frac = min(1.0, utilization)
-            avg_power = idle_power + (peak_power - idle_power) * util_frac
+            avg_power = host_power + idle_power + (peak_power - idle_power) * util_frac
+            peak_power += host_power
             energy = avg_power * makespan_s
             tokens_per_joule = completed_tokens / energy if energy > 0 else None
         else:
@@ -169,17 +207,43 @@ class SurrogatePredictor(Predictor):
         )
 
 
+def _host_static_power_w(node: Node) -> float:
+    """Static host-power floor from the node's NodePower block.
+
+    Mirrors the component list the simulator's power model reads from the
+    same block: base node, CPU blended by the configured utilization, DRAM
+    DIMM idle, and link/NIC/storage idle. Dynamic (per-bit) terms are not
+    modelled here. Returns 0 when the node has no power block, matching the
+    simulator's own all-or-nothing energy behavior (deviations D2/D14).
+    """
+    p = node.power
+    if p is None:
+        return 0.0
+    cpu = p.cpu_idle_power + p.cpu_util * max(0.0, p.cpu_active_power - p.cpu_idle_power)
+    dram = (node.cpu_memory_gb / p.dram_dimm_size) * p.dram_idle_power
+    return (
+        p.base_node_power + cpu + dram
+        + p.link_num_links * p.link_idle_power
+        + p.nic_num_nics * p.nic_idle_power
+        + p.storage_num_devices * p.storage_idle_power
+    )
+
+
 def make_predictor(
     kind: str,
     trace: WorkloadTrace,
     *,
     gpu_memory_utilization: float = 0.90,
     activation_reserve_gb: float = 0.0,
+    work_dir: str | Path | None = None,
+    timeout_s: float = 900.0,
+    run_id_prefix: str = "",
 ) -> Predictor:
     """Named predictor factory, picklable across worker processes by name.
 
-    P1 knows only "surrogate". P2 adds the envelope-cache tier and the full
-    LLMServingSim path for verification samples.
+    `run_id_prefix` must be unique per scenario when scenarios simulate in
+    parallel: candidate ids repeat across scenarios, and the simulator's
+    ASTRA-Sim input root is keyed by run id.
     """
     if kind == FIDELITY_SURROGATE:
         return SurrogatePredictor(
@@ -187,7 +251,131 @@ def make_predictor(
             gpu_memory_utilization=gpu_memory_utilization,
             activation_reserve_gb=activation_reserve_gb,
         )
-    raise ValueError(
-        f"unknown predictor kind '{kind}' (P1 supports only 'surrogate'; "
-        "'sim'/'envelope' arrive with the P2 tier work)"
-    )
+    if kind == FIDELITY_SIM:
+        from planner.predictor.llmservingsim import LLMServingSimPredictor
+
+        return LLMServingSimPredictor(
+            trace,
+            work_dir=Path(work_dir) if work_dir else None,
+            timeout_s=timeout_s,
+            gpu_memory_utilization=gpu_memory_utilization,
+            activation_reserve_gb=activation_reserve_gb,
+            run_id_prefix=run_id_prefix,
+        )
+    raise ValueError(f"unknown predictor kind '{kind}' (expected 'surrogate' or 'sim')")
+
+
+class SharedEnvelope(EnvelopeCache):
+    """Tier-1 cache: cross-scenario envelope reuse (FR-T1).
+
+    Keys carry NO trace digest, deliberately: an entry answers for its whole
+    (placement, knobs, network class, workload bucket), which is exactly the
+    §3.6 envelope idea. `readonly=True` is mandatory on the surrogate path -
+    a cache that mixed analytic numbers into simulated entries would corrupt
+    the fidelity labels of every later batch.
+    """
+
+    def __init__(
+        self,
+        root: str | Path,
+        spec: ServiceSpec,
+        *,
+        accelerator_of: dict[str, str],
+        link_bw_gbps: float,
+        readonly: bool,
+    ) -> None:
+        super().__init__(
+            root, spec,
+            accelerator_of=accelerator_of,
+            link_bw_gbps=link_bw_gbps,
+            trace_digest=None,
+        )
+        self.readonly = readonly
+
+    def put(self, candidate: CandidateConfig, result: SimResult) -> None:
+        if self.readonly:
+            return
+        super().put(candidate, result)
+
+
+def load_calibrations(directory: str | Path) -> CalibrationModel:
+    """Merge every calibration YAML under `directory` into one model.
+
+    Later files never overwrite earlier hardware entries; a duplicate hardware
+    label across files is a configuration error worth failing loudly on.
+    """
+    merged = CalibrationModel.identity()
+    directory = Path(directory)
+    if not directory.is_dir():
+        return merged
+    for path in sorted(directory.glob("*.yaml")):
+        model = load_calibration(path)
+        for hardware, entry in model.hardware.items():
+            if hardware in merged.hardware:
+                raise ValueError(
+                    f"calibration for hardware '{hardware}' defined in more than "
+                    f"one file under {directory}"
+                )
+            merged.hardware[hardware] = entry
+    return merged
+
+
+def calibration_margins(
+    model: CalibrationModel,
+    hardware_labels: set[str],
+    spec: ServiceSpec,
+) -> tuple[float, float, bool]:
+    """Robust (ttft%, tpot%) margins for a scenario, and whether they apply.
+
+    `calibrated` is True only when EVERY hardware class in the scenario's
+    islands has error stats for this spec's workload bucket; the margins are
+    then the worst (largest) across those classes. Any gap means raw
+    predictions with `calibrated: false` - a margin fitted on other hardware
+    or another bucket is a guess, and rule 3 forbids guesses (DESIGN §0.4).
+    """
+    bucket = workload_bucket(spec)
+    ttft = 0.0
+    tpot = 0.0
+    for hardware in sorted(hardware_labels):
+        cal = model.get(hardware)
+        bucket_error = cal.errors.get(bucket) if cal else None
+        if bucket_error is None or (
+            bucket_error.ttft.sample_count == 0 and bucket_error.tpot.sample_count == 0
+        ):
+            return 0.0, 0.0, False
+        ttft = max(ttft, bucket_error.ttft.robust_margin_percent)
+        tpot = max(tpot, bucket_error.tpot.robust_margin_percent)
+    return ttft, tpot, bool(hardware_labels)
+
+
+def npu_concurrency_extrapolated(
+    candidate: CandidateConfig,
+    spec: ServiceSpec,
+    islands: dict[str, ExecutionIsland],
+    profiles: dict[str, AcceleratorProfile],
+    *,
+    gpu_memory_utilization: float = 0.90,
+) -> bool:
+    """FR-T6: does this plan assume more concurrent sequences per RNGD card
+    than the measured maximum? Uses the same concurrency estimate as the
+    surrogate (KV-capacity-capped max_num_seqs per replica)."""
+    for a in candidate.assignments:
+        island = islands[a.island_id]
+        if island.accelerator_model != RNGD_CARD_MODEL:
+            continue
+        report = memutil.evaluate(
+            candidate.model,
+            tp_size=a.tp_size,
+            device_memory_gb=island.total_memory_gb / island.size,
+            dtype=candidate.dtype,
+            gpu_memory_utilization=gpu_memory_utilization,
+        )
+        median_len = spec.traffic.input_tokens.p50 + spec.traffic.output_tokens.p50
+        active = max(
+            1, min(candidate.knobs.max_num_seqs, report.kv_tokens // max(1, median_len))
+        )
+        # One replica spans tp_size cards; the ceiling is per card.
+        per_card = active / max(1, a.tp_size)
+        if per_card > RNGD_CARD_MAX_CONCURRENT_SEQS:
+            return True
+    return False

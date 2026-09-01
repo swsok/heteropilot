@@ -1,0 +1,57 @@
+# ScenarioLab real-simulation verification smoke (P2 gate, DESIGN §12 P2):
+# a tiny batch whose ENTIRE result set is cross-checked with the real
+# LLMServingSim (fraction 1.0). Needs a node with ASTRA-Sim built.
+# SLOs are fixed and relaxed so the scenarios are feasible and the
+# verification exercises the error/flip statistics, not the diagnosis path.
+lab:
+  batch_name: lab-verify-smoke
+  seed: 20260901
+
+cluster_generator:
+  num_clusters: 2
+  nodes_per_cluster: {min: 1, max: 1}
+  accelerators_per_node: {min: 1, max: 2}
+  accelerator_pool: [a5000, a40]
+  same_class_per_node: true
+  internode_link_pool: [ib_400g]
+  free_ratio: {min: 1.0, max: 1.0}
+
+slo_generator:
+  num_specs: 2
+  models:
+    - meta-llama/Llama-3.1-8B
+  arrival_rate_rps: {dist: loguniform, min: 0.5, max: 5}
+  input_tokens_p50: {dist: choice, values: [256]}
+  output_tokens_p50: {dist: choice, values: [64]}
+  ttft_p99_ms: {dist: fixed, value: 20000}
+  tpot_p99_ms: {dist: fixed, value: 200}
+  power_cap_w: {dist: fixed, value: 3000}
+  min_tokens_per_joule: {dist: fixed, value: 0.0}
+  objective:
+    primary: minimize_energy
+    secondary: minimize_active_accelerators
+
+pairing:
+  mode: cross
+  max_scenarios: 1500
+
+runner:
+  workers: 4
+  num_requests: 50
+  tier_policy:
+    envelope_cache: true
+    surrogate_top_k: 2       # sim the recommended + up to 2 alternatives
+    full_sim: verification_only
+    sim_timeout_s: 900
+  verification:
+    fraction: 1.0
+    min_count: 0
+    stratify_by: [feasible, cluster_size_bucket, has_npu]
+    sim_workers: 4
+
+store:
+  db_path: outputs/scenariolab/verify_smoke/lab.sqlite
+  results_dir: outputs/scenariolab/verify_smoke/results
+  clusters_dir: outputs/scenariolab/verify_smoke/clusters
+  services_dir: outputs/scenariolab/verify_smoke/services
+  envelope_dir: outputs/scenariolab/verify_smoke/envelope

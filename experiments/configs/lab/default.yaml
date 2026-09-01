@@ -43,7 +43,7 @@ runner:
   tier_policy:
     envelope_cache: true
     surrogate_top_k: 5
-    full_sim: never            # P2: switch to verification_only
+    full_sim: verification_only  # needs a node with ASTRA-Sim built
   verification:
     fraction: 0.05
     min_count: 10
