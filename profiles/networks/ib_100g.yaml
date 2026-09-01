@@ -1,0 +1,15 @@
+# Inter-node 100G InfiniBand link class used by ScenarioLab's random cluster
+# generator.
+#
+# PROVENANCE (absolute rule 3): every number below is source: placeholder.
+# bandwidth_gbps is the nominal HDR100 line rate; latency and energy are copied
+# from the 400G placeholder link in examples/clusters/heterogeneous-lab.yaml.
+# No 100G fabric exists on this project's hardware and nothing here was
+# measured. Nothing here may be cited as a measurement.
+link_id: ib_100g
+type: INFINIBAND
+scope: internode
+bandwidth_gbps: 100
+latency_ns: 5000
+energy_per_bit_pj: 5.0
+source: placeholder

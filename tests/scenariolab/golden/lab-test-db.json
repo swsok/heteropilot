@@ -1,0 +1,162 @@
+{
+  "results": [
+    {
+      "active_devices": 1,
+      "avg_power_w": 32.309508691328055,
+      "baseline_note": "ok",
+      "baseline_power_w": 51.309508691328055,
+      "calibrated": 0,
+      "feasible": 1,
+      "fidelity": "surrogate",
+      "npu_extrapolated": 0,
+      "p99_tpot_ms": 25.1138176,
+      "p99_ttft_ms": 282.9648204609036,
+      "peak_power_w": 227.6,
+      "plan_json_path": "sc0000x0000.json",
+      "power_saving_pct": 37.03,
+      "scenario_id": "sc0000x0000",
+      "slo_goodput": 3.731495,
+      "tokens_per_joule": 11.04306642254635,
+      "violated_json": "[]"
+    },
+    {
+      "active_devices": 1,
+      "avg_power_w": 43.14748307028108,
+      "baseline_note": "ok",
+      "baseline_power_w": 62.14748307028108,
+      "calibrated": 0,
+      "feasible": 1,
+      "fidelity": "surrogate",
+      "npu_extrapolated": 0,
+      "p99_tpot_ms": 25.1138176,
+      "p99_ttft_ms": 299.5911345136895,
+      "peak_power_w": 227.6,
+      "plan_json_path": "sc0000x0001.json",
+      "power_saving_pct": 30.572,
+      "scenario_id": "sc0000x0001",
+      "slo_goodput": 6.770063,
+      "tokens_per_joule": 19.753851778168638,
+      "violated_json": "[]"
+    },
+    {
+      "active_devices": 1,
+      "avg_power_w": 29.51234477579672,
+      "baseline_note": "ok",
+      "baseline_power_w": 51.956928916965765,
+      "calibrated": 0,
+      "feasible": 1,
+      "fidelity": "surrogate",
+      "npu_extrapolated": 0,
+      "p99_tpot_ms": 25.1293824,
+      "p99_ttft_ms": 346.4966722506473,
+      "peak_power_w": 227.6,
+      "plan_json_path": "sc0000x0002.json",
+      "power_saving_pct": 43.198,
+      "scenario_id": "sc0000x0002",
+      "slo_goodput": 5.326874,
+      "tokens_per_joule": 14.567297169571189,
+      "violated_json": "[]"
+    },
+    {
+      "active_devices": 1,
+      "avg_power_w": 41.9400506420683,
+      "baseline_note": "ok",
+      "baseline_power_w": 44.52470130509248,
+      "calibrated": 0,
+      "feasible": 1,
+      "fidelity": "surrogate",
+      "npu_extrapolated": 0,
+      "p99_tpot_ms": 11.035938464914286,
+      "p99_ttft_ms": 218.53738005225117,
+      "peak_power_w": 290.93,
+      "plan_json_path": "sc0001x0000.json",
+      "power_saving_pct": 5.805,
+      "scenario_id": "sc0001x0000",
+      "slo_goodput": 3.731495,
+      "tokens_per_joule": 8.580308867085947,
+      "violated_json": "[]"
+    },
+    {
+      "active_devices": 1,
+      "avg_power_w": 44.04913694644984,
+      "baseline_note": "ok",
+      "baseline_power_w": 48.73847669410203,
+      "calibrated": 0,
+      "feasible": 1,
+      "fidelity": "surrogate",
+      "npu_extrapolated": 0,
+      "p99_tpot_ms": 11.035938464914286,
+      "p99_ttft_ms": 220.4043299225765,
+      "peak_power_w": 290.93,
+      "plan_json_path": "sc0001x0001.json",
+      "power_saving_pct": 9.621,
+      "scenario_id": "sc0001x0001",
+      "slo_goodput": 6.770063,
+      "tokens_per_joule": 14.078733014150227,
+      "violated_json": "[]"
+    },
+    {
+      "active_devices": 1,
+      "avg_power_w": 43.04741174084836,
+      "baseline_note": "ok",
+      "baseline_power_w": 46.73711477299666,
+      "calibrated": 0,
+      "feasible": 1,
+      "fidelity": "surrogate",
+      "npu_extrapolated": 0,
+      "p99_tpot_ms": 11.035938464914286,
+      "p99_ttft_ms": 219.51364786919916,
+      "peak_power_w": 290.93,
+      "plan_json_path": "sc0001x0002.json",
+      "power_saving_pct": 7.895,
+      "scenario_id": "sc0001x0002",
+      "slo_goodput": 5.326874,
+      "tokens_per_joule": 9.969280929695778,
+      "violated_json": "[]"
+    }
+  ],
+  "scenarios": [
+    {
+      "cluster_id": "c0000",
+      "scenario_id": "sc0000x0000",
+      "seed": 6474364065133276019,
+      "service_id": "s0000",
+      "status": "DONE_FEASIBLE"
+    },
+    {
+      "cluster_id": "c0000",
+      "scenario_id": "sc0000x0001",
+      "seed": 1122898852608580747,
+      "service_id": "s0001",
+      "status": "DONE_FEASIBLE"
+    },
+    {
+      "cluster_id": "c0000",
+      "scenario_id": "sc0000x0002",
+      "seed": 7788294552560843500,
+      "service_id": "s0002",
+      "status": "DONE_FEASIBLE"
+    },
+    {
+      "cluster_id": "c0001",
+      "scenario_id": "sc0001x0000",
+      "seed": 6225737208134514534,
+      "service_id": "s0000",
+      "status": "DONE_FEASIBLE"
+    },
+    {
+      "cluster_id": "c0001",
+      "scenario_id": "sc0001x0001",
+      "seed": 4248600772610832908,
+      "service_id": "s0001",
+      "status": "DONE_FEASIBLE"
+    },
+    {
+      "cluster_id": "c0001",
+      "scenario_id": "sc0001x0002",
+      "seed": 750879669637022482,
+      "service_id": "s0002",
+      "status": "DONE_FEASIBLE"
+    }
+  ]
+}
