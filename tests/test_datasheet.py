@@ -92,7 +92,10 @@ def test_a40_datasheet_has_source_urls():
     profile = load_accelerator_profile(PROFILE_DIR / "a40.yaml")
     assert profile.datasheet is not None
     assert profile.datasheet.datasheet_source.strip()
-    assert profile.datasheet.peak_tflops.get("bf16") == 74.8
+    # 149.7 is the DENSE BF16 Tensor Core rate (299.4 is the sparsity figure).
+    # Cross-checked in STEP 5: the measured A40 bundle sustains 81.3 TFLOP/s,
+    # which would breach a 74.8 half-rate misreading.
+    assert profile.datasheet.peak_tflops.get("bf16") == 149.7
     assert profile.datasheet.compute_units == 84
     raw = (PROFILE_DIR / "a40.yaml").read_text(encoding="utf-8")
     assert "https://" in raw

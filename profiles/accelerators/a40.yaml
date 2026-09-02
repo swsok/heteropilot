@@ -80,11 +80,13 @@ max_tp_size: 8
 # would label an unmeasured number as usable (absolute rule A1).
 datasheet:
   peak_tflops:
-    # Dense (non-sparse) Tensor Core peaks. The NVIDIA A40 datasheet prints
-    # 149.7 TFLOPS for BF16/FP16 Tensor Core with the asterisk "effective ...
-    # using the new sparsity feature"; dense is half that.
-    bf16: 74.8   # https://images.nvidia.com/content/Solutions/data-center/a40/nvidia-a40-datasheet.pdf
-    fp16: 74.8   # same source (BF16/FP16 Tensor Core dense = 149.7/2)
+    # Dense (non-sparse) Tensor Core peaks. The NVIDIA A40 datasheet lists
+    # BF16/FP16 Tensor Core as "149.7 TFLOPS | 299.4 TFLOPS*" where the
+    # asterisked figure is with sparsity; 149.7 is the dense rate.
+    # Cross-check: the measured A40 dense.csv sustains 81.3 TFLOP/s on
+    # down_proj, which exceeds 74.8 (a half-rate misreading) but fits 149.7.
+    bf16: 149.7  # https://images.nvidia.com/content/Solutions/data-center/a40/nvidia-a40-datasheet.pdf
+    fp16: 149.7  # same source
   compute_units: 84   # GA102, 84 SMs: NVIDIA GA102 whitepaper (A40 uses full GA102)
                       # https://www.nvidia.com/content/PDF/nvidia-ampere-ga-102-gpu-architecture-whitepaper-v2.pdf
   clock_mhz: 1740     # boost clock, NVIDIA A40 product page / datasheet
