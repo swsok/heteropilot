@@ -55,9 +55,14 @@ def test_dense_csv_layers_are_all_resolvable(llama_resolver):
     for layer in _csv_column(A40_TP1 / "per_sequence.csv", "layer"):
         cost = llama_resolver.per_sequence(layer, sequences=4)
         assert cost.bytes_moved > 0
-    # moe.csv has no layer column; its key is (tokens, activated_experts).
+    # The Qwen3-MoE bundle exercises catalog layers Llama lacks (qk_norm).
     moe_dims = ModelDims.from_hf_config(QWEN_MOE_CFG, "bf16")
     moe_resolver = ShapeResolver(moe_dims, load_architecture(QWEN_MOE_ARCH), tp=1)
+    for layer in _csv_column(MOE_TP1 / "dense.csv", "layer"):
+        assert moe_resolver.dense(layer, tokens=64).bytes_moved > 0
+    for layer in _csv_column(MOE_TP1 / "per_sequence.csv", "layer"):
+        assert moe_resolver.per_sequence(layer, sequences=4).bytes_moved > 0
+    # moe.csv has no layer column; its key is (tokens, activated_experts).
     with (MOE_TP1 / "moe.csv").open() as f:
         for row in list(csv.DictReader(f))[:32]:
             cost = moe_resolver.expert(int(row["tokens"]), int(row["activated_experts"]))

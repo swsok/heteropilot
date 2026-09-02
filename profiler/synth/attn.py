@@ -58,6 +58,7 @@ class AttentionCostModel:
         tp: int,
         *,
         mode: str = "max",
+        scaling=None,
     ) -> None:
         if tp < 1:
             raise AttnError(f"tp must be >= 1, got {tp}")
@@ -67,6 +68,9 @@ class AttentionCostModel:
         self.device = device
         self.tp = tp
         self.mode = mode
+        #: Optional Tier 1 ScalingTable (see roofline.ScalingTable); applied
+        #: with the same feature convention as RooflineModel.
+        self.scaling = scaling
 
     # ------------------------------------------------------------------
 
@@ -119,10 +123,14 @@ class AttentionCostModel:
             prefill_chunk, kv_prefill, n_decode, kv_decode
         )
         if self.mode == "max":
-            return self._roofline_us(fp + fd, bp + bd)
-        prefill_us = self._roofline_us(fp, bp) if prefill_chunk > 0 else 0.0
-        decode_us = self._roofline_us(fd, bd) if n_decode > 0 else 0.0
-        return max(prefill_us + decode_us, self.device.kernel_launch_us)
+            t_us = self._roofline_us(fp + fd, bp + bd)
+        else:
+            prefill_us = self._roofline_us(fp, bp) if prefill_chunk > 0 else 0.0
+            decode_us = self._roofline_us(fd, bd) if n_decode > 0 else 0.0
+            t_us = max(prefill_us + decode_us, self.device.kernel_launch_us)
+        if self.scaling is not None:
+            t_us *= self.scaling.scale("attention", max(fp + fd, bp + bd))
+        return t_us
 
     def estimate_us(self, point: AttentionKey) -> float:
         """time_us for one profiler AttentionPoint-compatible key."""

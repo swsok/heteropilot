@@ -22,12 +22,19 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import ClassVar, Iterator
+from typing import TYPE_CHECKING, ClassVar, Iterator
 
 from profiler.core.config import Architecture, LayerEntry, ProfileArgs
-from profiler.core.engine import RuntimeLimits
 from profiler.core.hooks.batch import Shot
 from profiler.core.hooks.timings import TimingSample
+
+if TYPE_CHECKING:
+    # Annotation-only (PEP 563 is active); a runtime import would pull the
+    # torch/vllm stack via engine.py and make this module unusable in the
+    # GPU-free venv where profiler.synth reuses the grid generators
+    # (WORK_ORDER_tiered_profiles.md STEP 7). Behavior is unchanged: callers
+    # pass RuntimeLimits (or any object with its attributes) as before.
+    from profiler.core.engine import RuntimeLimits
 
 
 # ---------------------------------------------------------------------------

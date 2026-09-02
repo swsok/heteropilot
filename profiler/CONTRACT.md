@@ -70,7 +70,12 @@ quantified in `docs/deviations.md` D11. **Do not describe a bundle's grid from
 `meta.yaml`** — resume-mode accumulation means the CSV can be denser than the
 recorded factors (also D11); read the keys.
 
-### moe.csv — MoE expert dispatch (MoE models only)
+### moe.csv — MoE expert dispatch (MoE models only, `tp1/` only)
+
+`moe.csv` is measured once at TP=1 and lives only in `tp1/`; the simulator
+scales per-expert time by `ep_size` (see `categories_for` in
+`profiler/core/categories.py`). The shipped Qwen3-30B-A3B bundle confirms
+the layout: `tp1/moe.csv` exists, `tp2/moe.csv` does not.
 
 | column | type | meaning |
 | --- | --- | --- |

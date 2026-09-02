@@ -119,6 +119,12 @@ class ShapeResolver:
             # (draft coefficient, revisited by the STEP 8 diff).
             elems = t * d.hidden_size / tp
             return self._elementwise(5.0, elems, elems)
+        if layer == "qk_norm":
+            # Qwen3-family per-head RMSNorm applied to q and k after the QKV
+            # projection; same 5 ops/elem draft coefficient as RMSNorm. The
+            # catalog marks it tp_stable, so tp is already 1 here.
+            elems = t * (d.num_attention_heads + d.num_key_value_heads) * d.head_dim / tp
+            return self._elementwise(5.0, elems, elems)
         if layer == "act_fn":
             # SiluAndMul: in = 2*d_ff/TP per token, out = d_ff/TP;
             # silu(x)*y ~= 3 ops per OUTPUT element (sigmoid+mul+mul, draft).
