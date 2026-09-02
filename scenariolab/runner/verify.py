@@ -338,6 +338,112 @@ def run_verification_pass(
     return _summarize(batch_id, records, quiet=quiet)
 
 
+def verify_workspace(
+    store: Any,
+    workspace_id: str,
+    *,
+    root: str | Path = ".",
+    sim_timeout_s: float = 900.0,
+    predictor_factory: Callable[..., Predictor] | None = None,
+    quiet: bool = False,
+) -> dict[str, Any]:
+    """Cross-check a workspace's PLACED plans with the full simulator (work
+    order §9): each plan is re-simulated on the SAME occupancy view it was
+    planned against (everything else PLACED marked ALLOCATED). Results go to
+    <document>.verify.json - fast-path rows keep their fidelity labels; this
+    measures their error, it never overwrites them."""
+    from planner.plan import DeploymentPlan
+    from scenariolab.runner.tiers import make_predictor
+    from scenariolab.runner.workspace import cluster_overlay
+    from scenariolab.store.db import devices_from_json
+
+    workspace = store.get_workspace(workspace_id)
+    if workspace is None:
+        raise KeyError(f"no workspace '{workspace_id}'")
+    cluster_row = store.get_cluster(workspace["cluster_id"])
+    root = Path(root)
+    cluster = load_cluster_spec(root / cluster_row["yaml_path"])
+    placed = [
+        row for row in store.workspace_placements(workspace_id, include_removed=False)
+        if row["status"] == "PLACED"
+    ]
+    all_devices = store.placed_devices(workspace_id)
+    records: list[dict[str, Any]] = []
+
+    for row in placed:
+        document = json.loads(Path(row["plan_json_path"]).read_text())
+        output = document["planner_output"]
+        if not output.get("recommended"):
+            continue
+        plan = DeploymentPlan.model_validate(output["recommended"]["plan"])
+        own = devices_from_json(row["devices_json"])
+        overlay = cluster_overlay(cluster, all_devices - own)
+        profiles = load_profiles_for(overlay, root)
+        islands = {i.id: i for i in detect_islands(overlay, profiles)}
+        service_row = store.get_service(row["service_id"])
+        spec = load_service_spec(root / service_row["yaml_path"])
+
+        with tempfile.TemporaryDirectory(prefix=f"wsv-{row['placement_id']}-") as tmp:
+            trace = generate_trace(
+                spec, Path(tmp) / "workload.jsonl",
+                num_requests=document.get("num_requests", 100),
+                seed=document.get("seed", 42),
+            )
+            if predictor_factory is not None:
+                predictor = predictor_factory(trace)
+            else:
+                predictor = make_predictor(
+                    "sim", trace, work_dir=Path(tmp) / "sims",
+                    timeout_s=sim_timeout_s,
+                    run_id_prefix=f"wsv-{row['placement_id']}-",
+                )
+            try:
+                result = predictor.predict(
+                    plan.candidate, spec, overlay, islands, profiles
+                )
+            finally:
+                predictor.close()
+
+        record: dict[str, Any] = {"placement_id": row["placement_id"]}
+        if result.ok and result.metrics is not None:
+            metrics = result.metrics
+            record.update(
+                sim_p99_ttft_ms=metrics.p99_ttft_ms,
+                sim_p99_tpot_ms=metrics.p99_tpot_ms,
+                sim_avg_power_w=metrics.average_power_w,
+                err_ttft_pct=_err_pct(metrics.p99_ttft_ms, row["p99_ttft_ms"]),
+                err_tpot_pct=_err_pct(metrics.p99_tpot_ms, row["p99_tpot_ms"]),
+                err_power_pct=_err_pct(metrics.average_power_w, row["avg_power_w"]),
+                sim_slo_ttft_ok=metrics.p99_ttft_ms <= service_row["ttft_p99_ms"],
+                sim_slo_tpot_ok=metrics.p99_tpot_ms <= service_row["tpot_p99_ms"],
+            )
+        else:
+            record["skipped"] = f"{result.outcome.value} {result.detail}"
+        out_path = Path(row["plan_json_path"]).with_suffix(".verify.json")
+        out_path.write_text(json.dumps(record, indent=2, sort_keys=True))
+        records.append(record)
+        if not quiet:
+            state = record.get("skipped", (
+                f"err ttft {record.get('err_ttft_pct')}% "
+                f"tpot {record.get('err_tpot_pct')}% "
+                f"power {record.get('err_power_pct')}%"
+            ))
+            print(f"  [verify-ws] {row['placement_id']} {state}")
+
+    summary = {
+        "workspace_id": workspace_id,
+        "verified": sum(1 for r in records if "skipped" not in r),
+        "skipped": sum(1 for r in records if "skipped" in r),
+        "records": records,
+    }
+    if not quiet:
+        print(
+            f"[verify {workspace_id}] {summary['verified']} verified · "
+            f"{summary['skipped']} skipped"
+        )
+    return summary
+
+
 def _summarize(
     batch_id: str, records: list[dict[str, Any]], *, quiet: bool
 ) -> dict[str, Any]:

@@ -365,41 +365,96 @@ class ResultStore:
         """One placement row in its initial state (PLANNING preview, or a
         terminal REJECTED/FAILED that never occupies devices)."""
         with self._conn:
-            seq = self._conn.execute(
-                "SELECT COALESCE(MAX(seq), 0) + 1 FROM placements "
-                "WHERE workspace_id = ?",
-                (workspace_id,),
-            ).fetchone()[0]
-            placement_id = f"{workspace_id}-p{seq:04d}"
-            self._conn.execute(
-                "INSERT INTO placements (placement_id, workspace_id, service_id, "
-                "seq, status, devices_json, plan_json_path, fidelity, calibrated, "
-                "slo_ttft_ok, slo_tpot_ok, p99_ttft_ms, p99_tpot_ms, avg_power_w, "
-                "peak_power_w, tokens_per_joule, shared_fabric_warning, "
-                "npu_extrapolated, rejected_reason_json, created_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    placement_id, workspace_id, service_id, seq, status,
-                    json.dumps(devices, sort_keys=True)
-                    if isinstance(devices, dict) else json.dumps(sorted(devices)),
-                    record.get("plan_json_path"),
-                    record.get("fidelity"),
-                    _opt_int(record.get("calibrated")),
-                    _opt_int(record.get("slo_ttft_ok")),
-                    _opt_int(record.get("slo_tpot_ok")),
-                    record.get("p99_ttft_ms"),
-                    record.get("p99_tpot_ms"),
-                    record.get("avg_power_w"),
-                    record.get("peak_power_w"),
-                    record.get("tokens_per_joule"),
-                    _opt_int(record.get("shared_fabric_warning")),
-                    _opt_int(record.get("npu_extrapolated")),
-                    json.dumps(record.get("rejected_reason"))
-                    if record.get("rejected_reason") is not None else None,
-                    _now(),
-                ),
+            placement_id = self._insert_placement_row(
+                workspace_id, service_id, status, devices, record
             )
         return placement_id
+
+    def _insert_placement_row(
+        self,
+        workspace_id: str,
+        service_id: str,
+        status: str,
+        devices: dict[str, str] | list[str],
+        record: dict[str, Any],
+    ) -> str:
+        """The bare INSERT; the caller owns the transaction."""
+        seq = self._conn.execute(
+            "SELECT COALESCE(MAX(seq), 0) + 1 FROM placements "
+            "WHERE workspace_id = ?",
+            (workspace_id,),
+        ).fetchone()[0]
+        placement_id = f"{workspace_id}-p{seq:04d}"
+        self._conn.execute(
+            "INSERT INTO placements (placement_id, workspace_id, service_id, "
+            "seq, status, devices_json, plan_json_path, fidelity, calibrated, "
+            "slo_ttft_ok, slo_tpot_ok, p99_ttft_ms, p99_tpot_ms, avg_power_w, "
+            "peak_power_w, tokens_per_joule, shared_fabric_warning, "
+            "npu_extrapolated, rejected_reason_json, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                placement_id, workspace_id, service_id, seq, status,
+                json.dumps(devices, sort_keys=True)
+                if isinstance(devices, dict) else json.dumps(sorted(devices)),
+                record.get("plan_json_path"),
+                record.get("fidelity"),
+                _opt_int(record.get("calibrated")),
+                _opt_int(record.get("slo_ttft_ok")),
+                _opt_int(record.get("slo_tpot_ok")),
+                record.get("p99_ttft_ms"),
+                record.get("p99_tpot_ms"),
+                record.get("avg_power_w"),
+                record.get("peak_power_w"),
+                record.get("tokens_per_joule"),
+                _opt_int(record.get("shared_fabric_warning")),
+                _opt_int(record.get("npu_extrapolated")),
+                json.dumps(record.get("rejected_reason"))
+                if record.get("rejected_reason") is not None else None,
+                _now(),
+            ),
+        )
+        return placement_id
+
+    def replace_all_placements(
+        self,
+        workspace_id: str,
+        entries: list[tuple[str, str, dict[str, str] | list[str], dict[str, Any]]],
+    ) -> list[str]:
+        """Atomic replan swap (§5.5): every current PLACED placement becomes
+        REMOVED and the new set is inserted, in ONE transaction - a reader
+        never observes a half-replanned workspace."""
+        self._conn.execute("BEGIN IMMEDIATE")
+        try:
+            self._conn.execute(
+                "UPDATE placements SET status = 'REMOVED', removed_at = ? "
+                "WHERE workspace_id = ? AND status = 'PLACED'",
+                (_now(), workspace_id),
+            )
+            ids = [
+                self._insert_placement_row(
+                    workspace_id, service_id, status, devices, record
+                )
+                for service_id, status, devices, record in entries
+            ]
+            self._conn.execute("COMMIT")
+            return ids
+        except BaseException:
+            self._conn.execute("ROLLBACK")
+            raise
+
+    def archive_workspace(self, workspace_id: str) -> None:
+        """ACTIVE -> ARCHIVED: the workspace becomes read-only history."""
+        with self._conn:
+            row = self._conn.execute(
+                "SELECT status FROM workspaces WHERE workspace_id = ?",
+                (workspace_id,),
+            ).fetchone()
+            if row is None:
+                raise StoreError(f"no workspace '{workspace_id}'")
+            self._conn.execute(
+                "UPDATE workspaces SET status = 'ARCHIVED' WHERE workspace_id = ?",
+                (workspace_id,),
+            )
 
     def set_placement_plan_path(self, placement_id: str, path: str) -> None:
         with self._conn:

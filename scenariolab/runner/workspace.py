@@ -29,13 +29,13 @@ from planner.inventory import (
     load_cluster_spec,
     load_profiles_for,
 )
-from planner.spec import ServiceSpec
+from planner.spec import ServiceSpec, load_service_spec
 from planner.topology import TopologyError, TopologyGraph
 from scenariolab.config import SloGeneratorConfig
 from scenariolab.generator.sampling import derive_seed
 from scenariolab.generator.slo_gen import ServiceSummary, generate_service
 from scenariolab.runner.interactive import build_service_spec, plan_fast
-from scenariolab.store.db import PLANNING, REJECTED, ResultStore
+from scenariolab.store.db import PLANNING, REJECTED, ResultStore, StoreError
 
 #: Random workspace services sample from the same distributions as the
 #: default batch config - one place, so the two modes stay comparable.
@@ -174,6 +174,96 @@ def save_user_service(
     return summary, spec
 
 
+def evaluate_placement(
+    cluster: ClusterSpecV2,
+    occupied: set[str],
+    spec: ServiceSpec,
+    *,
+    root: str | Path = ".",
+    envelope_dir: str | Path | None = None,
+    calibration_dir: str | Path | None = "profiles/calibration",
+    total_power_cap_w: float | None = None,
+    placed_peak_sum_w: float = 0.0,
+) -> dict[str, Any]:
+    """Pure evaluation of one service against an occupancy state (§5.1).
+
+    Shared by incremental placement and replan-all; persists nothing.
+    Returns {"feasible", "record", "devices_roles", "result"}.
+    """
+    root = Path(root)
+    overlay = cluster_overlay(cluster, occupied)
+    result = plan_fast(
+        spec, overlay,
+        root=root, envelope_dir=envelope_dir, calibration_dir=calibration_dir,
+    )
+    output = result["planner_output"]
+    cal = result["calibration"]
+
+    record: dict[str, Any] = {
+        "fidelity": result["fidelity"],
+        "calibrated": result["calibrated"],
+        "npu_extrapolated": result["npu_extrapolated"],
+    }
+
+    # Workspace-level power cap (FR-P3): accumulated PLACED peaks + this peak.
+    cap_violation = None
+    plan = output.get("recommended")
+    if plan is not None and total_power_cap_w is not None:
+        peak = plan["plan"]["predicted"].get("peak_power_w")
+        if peak is not None and placed_peak_sum_w + peak > total_power_cap_w:
+            cap_violation = {
+                "metric": "workspace_power_cap",
+                "target": total_power_cap_w,
+                "predicted": placed_peak_sum_w + peak,
+            }
+
+    if not output["feasible"] or cap_violation is not None:
+        record["rejected_reason"] = {
+            "reason": (
+                "workspace power cap exceeded" if cap_violation
+                else output.get("reason", "")
+            ),
+            "violated_constraints": (
+                [cap_violation] if cap_violation
+                else output.get("violated_constraints", [])
+            ),
+            "suggestions": output.get("suggestions", []),
+            # FR-P5: which devices were unavailable to this plan.
+            "occupied_devices": sorted(occupied),
+        }
+        return {
+            "feasible": False, "record": record,
+            "devices_roles": {}, "result": result,
+        }
+
+    devices_roles = plan_devices_of(output, overlay, root)
+    metrics = plan["plan"]["predicted"]
+
+    # SLO verdicts on ROBUST values: predicted * (1 + margin%). With no
+    # calibration coverage the margins are 0 and the verdict is raw - the
+    # calibrated flag says which one the user is looking at (§2.2).
+    robust_ttft = metrics["p99_ttft_ms"] * (1 + cal["ttft_margin_percent"] / 100)
+    robust_tpot = metrics["p99_tpot_ms"] * (1 + cal["tpot_margin_percent"] / 100)
+    shared = plan_contention_groups(cluster, set(devices_roles)) & (
+        plan_contention_groups(cluster, occupied)
+    )
+    record.update(
+        slo_ttft_ok=robust_ttft <= spec.slo.ttft.max_ms,
+        slo_tpot_ok=robust_tpot <= spec.slo.tpot.max_ms,
+        p99_ttft_ms=metrics["p99_ttft_ms"],
+        p99_tpot_ms=metrics["p99_tpot_ms"],
+        avg_power_w=metrics.get("average_power_w"),
+        peak_power_w=metrics.get("peak_power_w"),
+        tokens_per_joule=metrics.get("tokens_per_joule"),
+        shared_fabric_warning=bool(shared),
+        shared_groups=sorted(shared),
+    )
+    return {
+        "feasible": True, "record": record,
+        "devices_roles": devices_roles, "result": result,
+    }
+
+
 def place_service(
     store: ResultStore,
     workspace_id: str,
@@ -195,58 +285,32 @@ def place_service(
     workspace = store.get_workspace(workspace_id)
     if workspace is None:
         raise KeyError(f"no workspace '{workspace_id}'")
+    if workspace["status"] != "ACTIVE":
+        raise StoreError(
+            f"workspace '{workspace_id}' is {workspace['status']}; "
+            "archived workspaces accept no new placements"
+        )
     cluster_row = store.get_cluster(workspace["cluster_id"])
     assert cluster_row is not None
     root = Path(root)
     cluster = load_cluster_spec(root / cluster_row["yaml_path"])
 
     occupied = store.placed_devices(workspace_id)
-    overlay = cluster_overlay(cluster, occupied)
-
-    result = plan_fast(
-        spec, overlay,
-        root=root, envelope_dir=envelope_dir, calibration_dir=calibration_dir,
+    placed_peak = sum(
+        row["peak_power_w"] or 0.0
+        for row in store.workspace_placements(workspace_id, include_removed=False)
+        if row["status"] == "PLACED"
     )
-    output = result["planner_output"]
-    cal = result["calibration"]
+    evaluation = evaluate_placement(
+        cluster, occupied, spec,
+        root=root, envelope_dir=envelope_dir, calibration_dir=calibration_dir,
+        total_power_cap_w=workspace["total_power_cap_w"],
+        placed_peak_sum_w=placed_peak,
+    )
+    record = evaluation["record"]
+    result = evaluation["result"]
 
-    record: dict[str, Any] = {
-        "fidelity": result["fidelity"],
-        "calibrated": result["calibrated"],
-        "npu_extrapolated": result["npu_extrapolated"],
-    }
-
-    # Workspace-level power cap (FR-P3): existing PLACED peaks + this peak.
-    cap_violation = None
-    plan = output.get("recommended")
-    if plan is not None and workspace["total_power_cap_w"] is not None:
-        peak = plan["plan"]["predicted"].get("peak_power_w")
-        placed = store.workspace_placements(workspace_id, include_removed=False)
-        placed_peak = sum(
-            row["peak_power_w"] or 0.0
-            for row in placed if row["status"] == "PLACED"
-        )
-        if peak is not None and placed_peak + peak > workspace["total_power_cap_w"]:
-            cap_violation = {
-                "metric": "workspace_power_cap",
-                "target": workspace["total_power_cap_w"],
-                "predicted": placed_peak + peak,
-            }
-
-    if not output["feasible"] or cap_violation is not None:
-        record["rejected_reason"] = {
-            "reason": (
-                "workspace power cap exceeded" if cap_violation
-                else output.get("reason", "")
-            ),
-            "violated_constraints": (
-                [cap_violation] if cap_violation
-                else output.get("violated_constraints", [])
-            ),
-            "suggestions": output.get("suggestions", []),
-            # FR-P5: which devices were unavailable to this plan.
-            "occupied_devices": sorted(occupied),
-        }
+    if not evaluation["feasible"]:
         placement_id = store.insert_placement(
             workspace_id, service_id, status=REJECTED, devices=[], record=record,
         )
@@ -259,31 +323,7 @@ def place_service(
             "devices": [], "record": record, "result": result,
         }
 
-    devices_roles = plan_devices_of(output, overlay, root)
-    devices = sorted(devices_roles)
-    metrics = plan["plan"]["predicted"]
-
-    # SLO verdicts on ROBUST values: predicted * (1 + margin%). With no
-    # calibration coverage the margins are 0 and the verdict is raw - the
-    # calibrated flag says which one the user is looking at (§2.2).
-    robust_ttft = metrics["p99_ttft_ms"] * (1 + cal["ttft_margin_percent"] / 100)
-    robust_tpot = metrics["p99_tpot_ms"] * (1 + cal["tpot_margin_percent"] / 100)
-
-    shared = plan_contention_groups(cluster, set(devices)) & plan_contention_groups(
-        cluster, occupied
-    )
-
-    record.update(
-        slo_ttft_ok=robust_ttft <= spec.slo.ttft.max_ms,
-        slo_tpot_ok=robust_tpot <= spec.slo.tpot.max_ms,
-        p99_ttft_ms=metrics["p99_ttft_ms"],
-        p99_tpot_ms=metrics["p99_tpot_ms"],
-        avg_power_w=metrics.get("average_power_w"),
-        peak_power_w=metrics.get("peak_power_w"),
-        tokens_per_joule=metrics.get("tokens_per_joule"),
-        shared_fabric_warning=bool(shared),
-        shared_groups=sorted(shared),
-    )
+    devices_roles = evaluation["devices_roles"]
     placement_id = store.insert_placement(
         workspace_id, service_id, status=PLANNING, devices=devices_roles,
         record=record,
@@ -297,11 +337,104 @@ def place_service(
     return {
         "placement_id": placement_id,
         "status": "PLACED" if confirm else PLANNING,
-        "devices": devices,
+        "devices": sorted(devices_roles),
         "devices_roles": devices_roles,
         "record": record,
         "result": result,
     }
+
+
+#: The replan disclaimer, stated wherever replan results travel (work order
+#: §5.5/§9: three places - code, API response, docs).
+REPLAN_NOTE = (
+    "replan-all is a sequential re-run of the SAME greedy per-service "
+    "placement in a chosen order; it is NOT a joint multi-service "
+    "optimization (that is out of scope by the parent work order)."
+)
+
+
+def replan_workspace(
+    store: ResultStore,
+    workspace_id: str,
+    *,
+    order: str = "seq",
+    apply: bool = False,
+    root: str | Path = ".",
+    results_dir: str | Path,
+    envelope_dir: str | Path | None = None,
+    calibration_dir: str | Path | None = "profiles/calibration",
+) -> dict[str, Any]:
+    """§5.5 replan-all: re-run sequential placement of the current PLACED
+    services from an empty overlay. Preview by default; `apply=True` swaps
+    the whole placement set atomically."""
+    if order not in ("seq", "rps_desc"):
+        raise ValueError("order must be 'seq' or 'rps_desc'")
+    workspace = store.get_workspace(workspace_id)
+    if workspace is None:
+        raise KeyError(f"no workspace '{workspace_id}'")
+    cluster_row = store.get_cluster(workspace["cluster_id"])
+    assert cluster_row is not None
+    root = Path(root)
+    cluster = load_cluster_spec(root / cluster_row["yaml_path"])
+
+    placed = [
+        row for row in store.workspace_placements(workspace_id, include_removed=False)
+        if row["status"] == "PLACED"
+    ]
+    if order == "rps_desc":
+        placed = sorted(placed, key=lambda r: (-r["rps"], r["seq"]))
+
+    occupied: set[str] = set()
+    peak_sum = 0.0
+    entries: list[dict[str, Any]] = []
+    for row in placed:
+        service_row = store.get_service(row["service_id"])
+        assert service_row is not None
+        spec = load_service_spec(root / service_row["yaml_path"])
+        evaluation = evaluate_placement(
+            cluster, occupied, spec,
+            root=root, envelope_dir=envelope_dir, calibration_dir=calibration_dir,
+            total_power_cap_w=workspace["total_power_cap_w"],
+            placed_peak_sum_w=peak_sum,
+        )
+        if evaluation["feasible"]:
+            occupied |= set(evaluation["devices_roles"])
+            peak_sum += evaluation["record"].get("peak_power_w") or 0.0
+        entries.append({
+            "service_id": row["service_id"],
+            "previous_placement_id": row["placement_id"],
+            "status": "PLACED" if evaluation["feasible"] else REJECTED,
+            "devices_roles": evaluation["devices_roles"],
+            "record": evaluation["record"],
+            "result": evaluation["result"],
+        })
+
+    response: dict[str, Any] = {
+        "order": order,
+        "applied": False,
+        "note": REPLAN_NOTE,
+        "entries": entries,
+    }
+    if not apply:
+        return response
+
+    placement_ids = store.replace_all_placements(
+        workspace_id,
+        [
+            (e["service_id"], e["status"],
+             e["devices_roles"] if e["status"] == "PLACED" else [], e["record"])
+            for e in entries
+        ],
+    )
+    for entry, placement_id in zip(entries, placement_ids, strict=True):
+        entry["placement_id"] = placement_id
+        path = _write_document(
+            results_dir, workspace_id, placement_id, entry["service_id"],
+            entry["result"],
+        )
+        store.set_placement_plan_path(placement_id, str(path))
+    response["applied"] = True
+    return response
 
 
 def _write_document(

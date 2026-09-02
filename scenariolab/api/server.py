@@ -60,6 +60,7 @@ from scenariolab.runner.interactive import InteractivePlanError
 from scenariolab.runner.workspace import (
     place_service,
     random_workspace_service,
+    replan_workspace,
     save_user_service,
 )
 from scenariolab.store.db import ResultStore, StoreError, devices_from_json
@@ -690,12 +691,15 @@ def create_app(
         rows: list[PlacementRow] = []
         results: list[dict[str, Any]] = []
         for service_id, spec in jobs:
-            outcome = place_service(
-                db, workspace_id, service_id, spec,
-                root=root, results_dir=results_dir,
-                envelope_dir=envelope_dir, calibration_dir=calibration_dir,
-                confirm=confirm,
-            )
+            try:
+                outcome = place_service(
+                    db, workspace_id, service_id, spec,
+                    root=root, results_dir=results_dir,
+                    envelope_dir=envelope_dir, calibration_dir=calibration_dir,
+                    confirm=confirm,
+                )
+            except StoreError as exc:  # e.g. ARCHIVED workspace
+                raise HTTPException(status_code=409, detail=str(exc)) from exc
             placement = db.workspace_placements(workspace_id)
             row = next(
                 p for p in placement
@@ -704,6 +708,41 @@ def create_app(
             rows.append(_placement_row(row))
             results.append(outcome["result"])
         return PlacementResponse(placements=rows, results=results)
+
+    @app.post("/api/workspaces/{workspace_id}/replan")
+    def workspace_replan(
+        workspace_id: str,
+        order: str = "seq",
+        apply: bool = False,
+        db: ResultStore = Depends(write_store),
+    ) -> dict[str, Any]:
+        """§5.5 replan-all. Preview by default; apply=true swaps atomically.
+        NOT a joint optimization - see `note` in the response."""
+        if db.get_workspace(workspace_id) is None:
+            raise HTTPException(status_code=404, detail=f"no workspace '{workspace_id}'")
+        try:
+            outcome = replan_workspace(
+                db, workspace_id, order=order, apply=apply,
+                root=root, results_dir=results_dir,
+                envelope_dir=envelope_dir, calibration_dir=calibration_dir,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        # Strip the bulky planner outputs from the wire response; the applied
+        # rows carry their documents on disk like any placement.
+        for entry in outcome["entries"]:
+            entry.pop("result", None)
+        return outcome
+
+    @app.post("/api/workspaces/{workspace_id}/archive")
+    def workspace_archive(
+        workspace_id: str, db: ResultStore = Depends(write_store)
+    ) -> dict[str, str]:
+        try:
+            db.archive_workspace(workspace_id)
+        except StoreError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return {"workspace_id": workspace_id, "status": "ARCHIVED"}
 
     @app.get("/api/workspaces/{workspace_id}/placements/{placement_id}")
     def placement_detail(

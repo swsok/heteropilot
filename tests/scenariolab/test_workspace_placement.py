@@ -187,3 +187,74 @@ def test_devices_json_records_roles(env) -> None:
     stored = json.loads(row["devices_json"])
     assert isinstance(stored, dict)
     assert set(stored.values()) <= {"aggregated", "prefill", "decode"}
+
+
+def test_replan_preview_and_apply(env) -> None:
+    """§5.5: replan preview changes nothing; apply swaps atomically and stays
+    a sequential re-run (the note travels with the response)."""
+    from scenariolab.runner.workspace import replan_workspace
+
+    store, workspace_id, tmp_path = env
+    first = _place(store, workspace_id, tmp_path)
+    second = _place(store, workspace_id, tmp_path, slo=dict(RELAXED, rps=10.0))
+    before = store.placed_devices(workspace_id)
+
+    preview = replan_workspace(
+        store, workspace_id, order="rps_desc", apply=False,
+        root=ROOT, results_dir=tmp_path / "results",
+        envelope_dir=None, calibration_dir=None,
+    )
+    assert preview["applied"] is False
+    assert "NOT a joint" in preview["note"]
+    assert len(preview["entries"]) == 2
+    # rps_desc puts the heavier service first.
+    assert (preview["entries"][0]["service_id"] == second["record"] and False) or (
+        preview["entries"][0]["previous_placement_id"] == second["placement_id"]
+    )
+    assert store.placed_devices(workspace_id) == before  # preview is stateless
+
+    applied = replan_workspace(
+        store, workspace_id, order="rps_desc", apply=True,
+        root=ROOT, results_dir=tmp_path / "results",
+        envelope_dir=None, calibration_dir=None,
+    )
+    assert applied["applied"] is True
+    rows = store.workspace_placements(workspace_id)
+    placed_now = [r for r in rows if r["status"] == "PLACED"]
+    removed = [r for r in rows if r["status"] == "REMOVED"]
+    assert len(placed_now) == 2
+    assert {r["placement_id"] for r in removed} >= {
+        first["placement_id"], second["placement_id"],
+    }
+    # The occupancy stays consistent (deterministic pipeline, same devices).
+    assert store.placed_devices(workspace_id) == before
+
+
+def test_archived_workspace_refuses_placements(env) -> None:
+    store, workspace_id, tmp_path = env
+    store.archive_workspace(workspace_id)
+    with pytest.raises(StoreError, match="ARCHIVED"):
+        _place(store, workspace_id, tmp_path)
+
+
+def test_verify_workspace_with_fake_sim(env) -> None:
+    """§9 CLI hook: PLACED plans re-simulated on their occupancy view; error
+    records written next to the documents."""
+    from scenariolab.runner.verify import verify_workspace
+    from tests.scenariolab.test_verify import ScaledFactory
+
+    store, workspace_id, tmp_path = env
+    _place(store, workspace_id, tmp_path)
+    _place(store, workspace_id, tmp_path)
+    summary = verify_workspace(
+        store, workspace_id, root=ROOT,
+        predictor_factory=ScaledFactory(), quiet=True,
+    )
+    assert summary["verified"] == 2
+    assert summary["skipped"] == 0
+    for record in summary["records"]:
+        assert abs(record["err_tpot_pct"] - 20.0) < 0.01
+        verify_path = Path(
+            store.get_placement(record["placement_id"])["plan_json_path"]
+        ).with_suffix(".verify.json")
+        assert verify_path.exists()

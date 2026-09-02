@@ -57,8 +57,26 @@ def cmd_run(args: argparse.Namespace) -> int:
 
 
 def cmd_verify(args: argparse.Namespace) -> int:
-    from scenariolab.runner.verify import run_verification_pass
+    from scenariolab.runner.verify import run_verification_pass, verify_workspace
 
+    if args.workspace is not None:
+        if args.db is not None:
+            db_path = args.db
+        elif args.config is not None:
+            config, _ = load_lab_config(args.config, args.root)
+            db_path = Path(args.root) / config.store.db_path
+        else:
+            print("error: --workspace needs --db or --config", file=sys.stderr)
+            return 1
+        with ResultStore(db_path) as store:
+            summary = verify_workspace(
+                store, args.workspace, root=args.root, quiet=args.quiet
+            )
+        return 0 if summary["skipped"] == 0 else 1
+
+    if args.config is None:
+        print("error: pass --config (batch mode) or --workspace", file=sys.stderr)
+        return 1
     config, _ = load_lab_config(args.config, args.root)
     with ResultStore(Path(args.root) / config.store.db_path) as store:
         summary = run_verification_pass(
@@ -172,7 +190,13 @@ def build_parser() -> argparse.ArgumentParser:
     verify = sub.add_parser(
         "verify", help="Cross-check sampled scenarios with the full simulator."
     )
-    verify.add_argument("--config", required=True, type=Path)
+    verify.add_argument("--config", type=Path, default=None,
+                        help="LabConfig (batch mode, or to locate the store).")
+    verify.add_argument("--workspace", default=None,
+                        help="Verify a workspace's PLACED plans with full sim "
+                             "instead of a batch (workspace work order §9).")
+    verify.add_argument("--db", type=Path, default=None,
+                        help="Result store path (with --workspace).")
     verify.add_argument("--root", type=Path, default=Path("."))
     verify.add_argument("--fraction", type=float, default=None,
                         help="Override runner.verification.fraction.")

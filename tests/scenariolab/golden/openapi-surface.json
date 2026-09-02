@@ -40,6 +40,9 @@
     "/api/workspaces/{workspace_id}": [
       "get"
     ],
+    "/api/workspaces/{workspace_id}/archive": [
+      "post"
+    ],
     "/api/workspaces/{workspace_id}/placements": [
       "post"
     ],
@@ -48,6 +51,9 @@
       "get"
     ],
     "/api/workspaces/{workspace_id}/placements/{placement_id}/confirm": [
+      "post"
+    ],
+    "/api/workspaces/{workspace_id}/replan": [
       "post"
     ],
     "/api/workspaces/{workspace_id}/summary": [
