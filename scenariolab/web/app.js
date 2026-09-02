@@ -637,44 +637,159 @@ function renderTopologyInto(elId, graph, { compact = false, serviceColors = fals
   const classes = [...new Set(graph.nodes.map((n) => n.cls))];
   const palette = ["#4c6ef5", "#f76707", "#37b24d", "#ae3ec9", "#0ca678", "#e8590c"];
   const chart = makeChart(holder);
-  chart.setOption({
-    tooltip: {
-      formatter: (p) => p.dataType === "edge"
-        ? `${p.data.source} → ${p.data.target}<br>${p.data.linkType} ${p.data.bw} Gbps`
-        : `${p.data.id}<br>${p.data.cls} · ${p.data.state}` +
-          (p.data.role ? `<br>role: ${p.data.role}` : ""),
+
+  // Group devices by host node; hosts render collapsed (device counts only)
+  // until clicked open. Clicking an open host collapses it again.
+  const hosts = {};
+  graph.nodes.forEach((n) => {
+    (hosts[n.node] ??= { accels: [], nics: [] })[
+      n.kind === "nic" ? "nics" : "accels"
+    ].push(n);
+  });
+  const hostOf = (endpoint) => endpoint.split("/")[0];
+  const expanded = new Set();
+
+  const hostCounts = (host) => {
+    const counts = {};
+    hosts[host].accels.forEach((a) => {
+      const kind = a.accel_type || "DEV";
+      counts[kind] = (counts[kind] || 0) + 1;
+    });
+    return Object.entries(counts).map(([k, v]) => `${k}×${v}`).join(" · ");
+  };
+
+  const deviceVertex = (n) => ({
+    id: n.id, name: n.id, device: n.device, cls: n.cls, state: n.state,
+    role: n.role, category: classes.indexOf(n.cls),
+    symbol: n.kind === "nic" ? "diamond" : "circle",
+    symbolSize: n.kind === "nic" ? (compact ? 8 : 16) : (compact ? 18 : 34),
+    itemStyle: {
+      // Workspace view: device color = its service; grey = FREE (FR-W2).
+      ...(serviceColors && n.kind === "accelerator"
+        ? { color: n.service_color || "#ced4da" } : {}),
+      opacity: n.state === "FREE" ? 1 : (serviceColors ? 1 : 0.35),
+      borderColor: n.in_plan ? "#1c7ed6" : "#adb5bd",
+      borderWidth: n.in_plan ? 4 : 1,
     },
-    legend: compact ? undefined : { data: classes, bottom: 0 },
-    series: [{
-      type: "graph", layout: "force", roam: true,
-      force: { repulsion: compact ? 120 : 260, edgeLength: compact ? 40 : 90 },
-      categories: classes.map((c, i) => ({
-        name: c, itemStyle: { color: palette[i % palette.length] },
-      })),
-      label: { show: !compact, fontSize: 10, formatter: (p) =>
-        (p.data.role ? roleLabel[p.data.role] + " · " : "") + p.data.device },
-      data: graph.nodes.map((n) => ({
-        id: n.id, name: n.id, device: n.device, cls: n.cls, state: n.state,
-        role: n.role, category: classes.indexOf(n.cls),
-        symbol: n.kind === "nic" ? "diamond" : "circle",
-        symbolSize: n.kind === "nic" ? (compact ? 8 : 16) : (compact ? 18 : 34),
+  });
+
+  const build = () => {
+    const nodes = [];
+    const links = [];
+    for (const [host, info] of Object.entries(hosts)) {
+      const isOpen = expanded.has(host);
+      const inPlanCount = info.accels.filter((a) => a.in_plan).length;
+      nodes.push({
+        id: `host:${host}`, host: true, hostId: host, name: host,
+        symbol: "roundRect",
+        symbolSize: isOpen
+          ? (compact ? [40, 16] : [64, 22])
+          : (compact ? [56, 26] : [92, 42]),
+        label: {
+          show: true, fontSize: compact ? 9 : 11, fontWeight: 600,
+          formatter: isOpen
+            ? `${host} ▾`
+            : `${host} ▸\n${hostCounts(host)}`
+              + (inPlanCount ? `\n(${inPlanCount} in plan)` : ""),
+        },
         itemStyle: {
-          // Workspace view: device color = its service; grey = FREE (FR-W2).
-          ...(serviceColors && n.kind === "accelerator"
-            ? { color: n.service_color || "#ced4da" } : {}),
-          opacity: n.state === "FREE" ? 1 : (serviceColors ? 1 : 0.35),
-          borderColor: n.in_plan ? "#1c7ed6" : "#adb5bd",
-          borderWidth: n.in_plan ? 4 : 1,
+          color: isOpen ? "#f1f3f7" : "#e7f5ff",
+          borderColor: inPlanCount ? "#1c7ed6" : "#868e96",
+          borderWidth: inPlanCount ? 3 : 1.5,
         },
-      })),
-      links: graph.links.map((l) => ({
-        source: l.src, target: l.dst, linkType: l.type, bw: l.bandwidth_gbps,
+      });
+      if (isOpen) {
+        for (const device of [...info.accels, ...info.nics]) {
+          nodes.push(deviceVertex(device));
+          // Tether devices to their host so the force layout keeps the node
+          // visually grouped; not a real link.
+          links.push({
+            source: `host:${host}`, target: device.id, tether: true,
+            lineStyle: { color: "#e9ecef", width: 1, type: "dotted" },
+          });
+        }
+      }
+    }
+    // Real links, re-anchored to the host vertex while its side is collapsed;
+    // parallel links onto the same pair are aggregated.
+    const aggregated = new Map();
+    for (const l of graph.links) {
+      const src = expanded.has(hostOf(l.src)) ? l.src : `host:${hostOf(l.src)}`;
+      const dst = expanded.has(hostOf(l.dst)) ? l.dst : `host:${hostOf(l.dst)}`;
+      if (src === dst) continue; // intra-node link while collapsed
+      const key = src < dst ? `${src}|${dst}` : `${dst}|${src}`;
+      const entry = aggregated.get(key) || {
+        source: src, target: dst, count: 0, bw: 0, types: new Set(), inPlan: false,
+      };
+      entry.count += 1;
+      entry.bw = Math.max(entry.bw, l.bandwidth_gbps);
+      entry.types.add(l.type);
+      entry.inPlan = entry.inPlan || l.in_plan;
+      aggregated.set(key, entry);
+    }
+    for (const entry of aggregated.values()) {
+      links.push({
+        source: entry.source, target: entry.target,
+        linkType: [...entry.types].join("/"), bw: entry.bw, count: entry.count,
         lineStyle: {
-          width: Math.max(1, Math.log2(l.bandwidth_gbps / 8)),
-          color: l.in_plan ? "#1c7ed6" : "#ced4da",
+          width: Math.max(1, Math.log2(entry.bw / 8)),
+          color: entry.inPlan ? "#1c7ed6" : "#ced4da",
         },
-      })),
-    }],
+      });
+    }
+    return { nodes, links };
+  };
+
+  const option = () => {
+    const { nodes, links } = build();
+    return {
+      tooltip: {
+        formatter: (p) => {
+          if (p.dataType === "edge") {
+            if (p.data.tether) return "";
+            return `${p.data.source} ↔ ${p.data.target}<br>` +
+              `${p.data.linkType} · max ${p.data.bw} Gbps` +
+              (p.data.count > 1 ? ` · ${p.data.count} links` : "");
+          }
+          if (p.data.host) {
+            const info = hosts[p.data.hostId];
+            const byClass = {};
+            info.accels.forEach((a) => {
+              const c = byClass[a.cls] ??= { total: 0, free: 0 };
+              c.total += 1;
+              if (a.state === "FREE") c.free += 1;
+            });
+            return `<b>${p.data.hostId}</b> — 클릭하여 ${expanded.has(p.data.hostId) ? "접기" : "펼치기"}<br>` +
+              Object.entries(byClass).map(([cls, c]) =>
+                `${cls}: ${c.total} (free ${c.free})`).join("<br>");
+          }
+          return `${p.data.id}<br>${p.data.cls} · ${p.data.state}` +
+            (p.data.role ? `<br>role: ${p.data.role}` : "");
+        },
+      },
+      legend: compact ? undefined : { data: classes, bottom: 0 },
+      series: [{
+        type: "graph", layout: "force", roam: true,
+        force: { repulsion: compact ? 120 : 260, edgeLength: compact ? 40 : 70 },
+        categories: classes.map((c, i) => ({
+          name: c, itemStyle: { color: palette[i % palette.length] },
+        })),
+        label: { show: true, fontSize: 10, formatter: (p) =>
+          p.data.host ? p.name
+            : (compact ? ""
+              : (p.data.role ? roleLabel[p.data.role] + " · " : "") + p.data.device) },
+        data: nodes,
+        links,
+      }],
+    };
+  };
+
+  chart.setOption(option());
+  chart.on("click", (p) => {
+    if (p.dataType !== "node" || !p.data.host) return;
+    if (expanded.has(p.data.hostId)) expanded.delete(p.data.hostId);
+    else expanded.add(p.data.hostId);
+    chart.setOption(option(), true);
   });
 }
 

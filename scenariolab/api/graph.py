@@ -63,6 +63,7 @@ def build_cluster_graph(
                     cls=accel.model,
                     state=accel.state.value,
                     kind="accelerator",
+                    accel_type=accel.type.value,
                     role=occupied.get(key),
                     in_plan=key in occupied,
                 )

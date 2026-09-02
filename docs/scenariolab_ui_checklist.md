@@ -23,6 +23,19 @@ deferred follow-up (DESIGN P5); until then this list is the gate.
       (`#/dashboard`, `#/explorer`, `#/scenario/<id>`), and pasting such a URL
       into a new tab lands on the same view (FR-U4)
 
+## Topology (all screens that draw it: ③④⑥⑦⑧)
+
+- [ ] Hosts render collapsed as rounded rectangles showing only the node id
+      and its device counts (e.g. "node0 ▸ / GPU×8")
+- [ ] Clicking a collapsed host expands its GPUs/NPUs/NIC; clicking the open
+      host ("node0 ▾") collapses it again
+- [ ] While collapsed, intra-node links are hidden and inter-node links
+      anchor to the host box; parallel links aggregate (tooltip shows
+      type · max bandwidth · link count)
+- [ ] A host with in-plan devices keeps the blue border and an
+      "(n in plan)" line even while collapsed
+- [ ] Host tooltip lists per-class totals and free counts
+
 ## ① Dashboard
 
 - [ ] Cards: scenarios done, feasible rate, median power saving,

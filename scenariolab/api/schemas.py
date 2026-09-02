@@ -96,6 +96,8 @@ class GraphNode(BaseModel):
     cls: str
     state: str
     kind: Literal["accelerator", "nic"]
+    #: GPU | NPU for accelerators (drives the collapsed per-node counts).
+    accel_type: str | None = None
     role: str | None = None
     in_plan: bool = False
 

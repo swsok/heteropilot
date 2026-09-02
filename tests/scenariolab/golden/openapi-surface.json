@@ -137,6 +137,7 @@
       "type"
     ],
     "GraphNode": [
+      "accel_type",
       "cls",
       "device",
       "id",
