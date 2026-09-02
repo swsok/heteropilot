@@ -441,6 +441,14 @@ fixture that deviation D16 describes.
 
 ### 4.8.7 Does heterogeneous RNGD+GPU P/D ever pay?
 
+> **SUPERSEDED IN PART 2026-09-02.** Re-run with the measured TPOT optimism as a
+> feasibility margin, **every RNGD configuration is rejected on both fixtures** and
+> the loose-TTFT winner becomes `agg[cuda:tp4]` at 2.595 tok/J against the RNGD
+> rows' 3.164 / 4.956. The committed winners clear the 50 ms TPOT SLO by 1.59 ms,
+> so any margin above 3.3 % rejects them. They are infeasible, not optimistic.
+> `experiments/results/pd_slo_sweep_margin.md`. The tight-TTFT regime is *not*
+> overturned — it was not determined by that run.
+>
 > **Envelope caveat — MEASURED 2026-08-31 (D21).** The card fixture's winner runs
 > each RNGD card at ~76 concurrent sequences. That range has now been measured on
 > the hardware to c128: the card **does** serve it (eff 107.2 at 1473 output tok/s,

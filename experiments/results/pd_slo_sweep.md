@@ -7,6 +7,21 @@ The SLO is swept because the answer turns out to depend entirely on it.*
 
 ## The short answer
 
+> ### SUPERSEDED IN PART, 2026-09-02 — the RNGD rows here are infeasible
+>
+> Re-run with the **measured** TPOT optimism applied as a feasibility margin
+> (18 %, D21), **every RNGD configuration is rejected on both fixtures** and the
+> loose-TTFT winner becomes `agg[cuda:tp4]` at 2.595 tok/J. The committed RNGD
+> winners below clear the 50 ms TPOT SLO by 1.59 ms, so **any margin above 3.3 %**
+> rejects them, against a profile whose own agreement is −3.1 %. They are not
+> optimistic; they are infeasible. The energy advantage this page reports for RNGD
+> at loose TTFT therefore **does not survive**.
+> `experiments/results/pd_slo_sweep_margin.md`, deviations D21.
+>
+> The tight-TTFT rows are *not* overturned — that regime was not determined by the
+> re-run (a timeout artifact, see the results file), and the committed winner there
+> passes the margin at 43.98 ms.
+
 **Three regimes, and heterogeneous P/D wins in none of them.**
 
 | TTFT p99 SLO | recommended | arch | acc | tok/J | goodput (rps) | p99 TTFT | p99 TPOT | avg W |

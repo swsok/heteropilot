@@ -645,7 +645,7 @@ drops, TTFT flat, `none`-mode control flat — all PASS) and `tests/test_sim_pd_
 | D18 | Phase 5 | **Resolved** (retraction) — NPU-leg multi-stream bandwidth remeasured; scaling law held, levels ~25 % lower. Fixtures recomputed once the GPU leg landed (all six links now `measured`); the SLO sweeps cannot see the change, for three recorded reasons |
 | D19 | Phase 4 | **Resolved** (retraction) — the card profile's −71 % TTFT error was an arrival-pattern mismatch in the validation harness, not a scheduler difference; matched arrivals give −5.1 %. Both RNGD TTFT calibrations refitted |
 | D20 | Phase 3 / Exp 4 | **Open** — ATOM layerwise profiling blocked: host I/O exceeds the kernels and the device tracer's schema is undocumented. Memory and power measured; no perf bundle, so ATOM stays out of candidate generation |
-| D21 | Phase 4 | **Resolved** (retraction + measurement) — the c1–c32 curve's top point was a 24-request pool running at eff 21.2, not c32; envelope measured to eff 107.2. At eff 76 the simulator is 1.31× optimistic on throughput and 18 % on TPOT. The re-run is **still open**: lowering the arrival rate does not work (RNGD candidates never terminate, and the objective trades fleet size against concurrency) — constrain the fleet at 10 rps instead |
+| D21 | Phase 4 | **Resolved** (retraction + measurement) — the c1–c32 curve's top point was a 24-request pool running at eff 21.2, not c32; envelope measured to eff 107.2. At eff 76 the simulator is 1.31× optimistic on throughput and 18 % on TPOT. The re-run is **done for the loose-TTFT regime**: with the measured 18 % margin every RNGD config is rejected on both fixtures and the winner becomes `agg[cuda:tp4]` at 2.595 tok/J — the committed winner is infeasible, not merely optimistic. Tight-TTFT rows still open (timeout artifact) |
 
 ---
 
@@ -1129,12 +1129,37 @@ committed sweep point-for-point even if it had finished.** The service spec used
 for the attempt is deliberately **not** committed — a spec that cannot be
 simulated to completion is a trap for whoever finds it.
 
-**What should be done instead.** Hold the arrival rate at 10 rps, so the regime
-and the comparison are preserved, and constrain the **fleet**: give the RNGD arm
-enough cards that per-card concurrency falls into the directly measured band
-(eff 15.3–59.2 are all measured points). That controls the quantity directly
-instead of fighting the objective function, and it keeps the simulated window at
-30 s, so it costs what the original sweep cost. Until that is done, D21's finding
-stands on its own: the card-fixture absolute numbers are optimistic by 1.31× on
-throughput and 18 % on TPOT at the concurrency they assume, and should not be
-quoted.
+**What was done instead — and the answer is stronger than "optimistic".** Neither
+the arrival rate nor the fleet is the right knob. `exhaustive.search()` already
+took `tpot_margin_percent`, which inflates predicted p-TPOT before the
+feasibility check; that is exactly the shape of a measured model error, so the
+re-run held 10 rps and applied **18 %**, the TPOT optimism measured at the
+concurrency these plans run at.
+
+**Every RNGD configuration on the card fixture is then rejected**, on both
+fixtures, converging on the same A40 plan — so the result does not depend on
+whether an RNGD accelerator is modelled as a card or as 8 PEs:
+
+| | committed (no margin) | with the measured margin |
+| --- | --- | --- |
+| card fixture, TTFT ≤ 64 s | `agg[furiosa:tp1]` n=2, 3.164 tok/J | `agg[cuda:tp4]` n=4, **2.595 tok/J** |
+| tp4 fixture, TTFT ≤ 64 s | `agg[furiosa:tp8]` n=8, 4.956 tok/J | `agg[cuda:tp4]` n=4, **2.595 tok/J** |
+
+**The committed winner is not optimistic, it is infeasible.** It clears the 50 ms
+TPOT SLO by 1.59 ms, so any margin above **3.3 %** rejects it — and the profile's
+own agreement at its fitted concurrency is −3.1 %. The RNGD arm is squeezed
+between the two SLOs: high per-instance concurrency (s128/s256) meets TTFT and
+breaks TPOT at 56–58 ms; low concurrency (s32) meets TPOT at 38.7 ms and breaks
+TTFT at 57 s, **at any margin including zero**. No setting satisfies both.
+
+So the half of the three-regime answer that says RNGD wins on energy at loose
+TTFT does not survive. Full table and per-candidate arithmetic:
+`experiments/results/pd_slo_sweep_margin.md`.
+
+**Still open: the tight-TTFT regime.** That run printed INFEASIBLE at TTFT ≤ 8 s
+and ≤ 500 ms, and **that is an artifact, not a result** — `--timeout` was lowered
+to 1080 s on card-fixture evidence (no successful sim exceeded 14.9 min) which
+did not hold for tp4, where all 72 `pd_cuda-a40-tp4` candidates timed out. One of
+them is the committed tight-TTFT winner at p99 TPOT 37.27 ms, which *passes* the
+margin at 43.98. That regime needs a re-run at 1800 s. The loose-TTFT finding is
+unaffected: zero RNGD candidates timed out on the card fixture.
