@@ -101,6 +101,38 @@ Reading:
   to coarse candidate screening). Whether this error changes *planning
   decisions* is measured by experiment E1 (STEP 11), not here.
 
+## Tier 1 hold-out curve (STEP 9)
+
+Anchor subsets were drawn uniformly at random (seed 42) from the measured
+A40 tp1 rows; the ScalingTable (`python -m profiler.synth calibrate`) was
+fitted on the anchors and evaluated on the REMAINING rows. Tier 0 here is
+the V3 backend with the self-fitted efficiencies above; Tier 1 multiplies
+it by the fitted per-family scaling (scalar + log-feature piecewise bins).
+
+| anchor share | n anchors | Tier 0 MAPE % (hold-out) | Tier 1 MAPE % (hold-out) |
+| --- | --- | --- | --- |
+| 1% | 100 | 38.9 | 33.1 |
+| 2% | 201 | 38.8 | 30.4 |
+| 5% | 504 | 38.9 | 29.7 |
+| 10% | 1009 | 38.8 | 27.8 |
+| 20% | 2018 | 38.6 | 27.3 |
+
+Findings:
+
+- **Tier 1 improves on Tier 0 at every budget**, with most of the gain
+  already at 1-2% (~100-200 measured points): 38.9% -> 33.1%/30.4%. Returns
+  flatten past 10%.
+- **A stability guard was required.** The first fit let a family scalar be
+  computed from as few as one anchor; a single launch-floor `embedding` key
+  fitted `gather` at 36.3x and drove hold-out MAPE to 77-84% at the 1-2%
+  budgets. `fit_from_anchors` therefore treats a family with fewer than
+  `min_family_anchors` (default 8) anchors as having NO data - identity
+  scale (A2: too little data is no data, never a confident multiplier).
+- Piecewise bins (8 log-spaced over the Tier 0-time feature, >= 4 anchors
+  per bin, family scalar as fallback) carry most of the improvement beyond
+  the scalar: at 5% share, scalar-only reaches 39.1% while piecewise
+  reaches 29.7%.
+
 ## Reproduction
 
 ```bash

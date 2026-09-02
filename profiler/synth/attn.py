@@ -131,7 +131,8 @@ class AttentionCostModel:
             decode_us = self._roofline_us(fd, bd) if n_decode > 0 else 0.0
             t_us = max(prefill_us + decode_us, self.device.kernel_launch_us)
         if self.scaling is not None:
-            t_us *= self.scaling.scale("attention", max(fp + fd, bp + bd))
+            # feature = the unscaled Tier 0 time (see roofline.ScalingTable).
+            t_us *= self.scaling.scale("attention", t_us)
         return t_us
 
     def estimate_us(self, point: AttentionKey) -> float:
