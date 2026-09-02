@@ -676,11 +676,28 @@ function renderTopologyInto(elId, graph, { compact = false, serviceColors = fals
   const build = () => {
     const nodes = [];
     const links = [];
+    // Initial layout: hosts on a circle sized to the container, devices in a
+    // small ring around their host. The force layout refines from there, so
+    // big collapsed boxes start apart instead of piled at the center.
+    const hostIds = Object.keys(hosts);
+    const cx = chart.getWidth() / 2;
+    const cy = chart.getHeight() / 2;
+    const radius = Math.max(
+      120, Math.min(chart.getWidth(), chart.getHeight()) / 2 - 70
+    );
+    const hostPos = {};
+    hostIds.forEach((host, i) => {
+      const angle = (2 * Math.PI * i) / hostIds.length;
+      hostPos[host] = [
+        cx + radius * Math.cos(angle), cy + radius * Math.sin(angle),
+      ];
+    });
     for (const [host, info] of Object.entries(hosts)) {
       const isOpen = expanded.has(host);
       const inPlanCount = info.accels.filter((a) => a.in_plan).length;
       nodes.push({
         id: `host:${host}`, host: true, hostId: host, name: host,
+        x: hostPos[host][0], y: hostPos[host][1],
         symbol: "roundRect",
         symbolSize: isOpen
           ? (compact ? [40, 16] : [64, 22])
@@ -699,8 +716,16 @@ function renderTopologyInto(elId, graph, { compact = false, serviceColors = fals
         },
       });
       if (isOpen) {
-        for (const device of [...info.accels, ...info.nics]) {
-          nodes.push(deviceVertex(device));
+        const members = [...info.accels, ...info.nics];
+        members.forEach((device, k) => {
+          const angle = (2 * Math.PI * k) / members.length;
+          nodes.push({
+            ...deviceVertex(device),
+            x: hostPos[host][0] + 55 * Math.cos(angle),
+            y: hostPos[host][1] + 55 * Math.sin(angle),
+          });
+        });
+        for (const device of members) {
           // Tether devices to their host so the force layout keeps the node
           // visually grouped; not a real link.
           links.push({
@@ -770,7 +795,14 @@ function renderTopologyInto(elId, graph, { compact = false, serviceColors = fals
       legend: compact ? undefined : { data: classes, bottom: 0 },
       series: [{
         type: "graph", layout: "force", roam: true,
-        force: { repulsion: compact ? 120 : 260, edgeLength: compact ? 40 : 70 },
+        // Collapsed hosts are big boxes, so repulsion must scale with how
+        // many vertices are visible or they pile up in the middle.
+        force: {
+          repulsion: (compact ? 260 : 700) + 40 * nodes.length,
+          edgeLength: compact ? [50, 90] : [90, 170],
+          gravity: 0.06,
+          friction: 0.25,
+        },
         categories: classes.map((c, i) => ({
           name: c, itemStyle: { color: palette[i % palette.length] },
         })),
