@@ -258,6 +258,17 @@ class PlannerOutput(_Strict):
     #: restriction. Printed with the plan and written into the YAML.
     caveats: list[str] = Field(default_factory=list)
 
+    #: Weakest profile tier among the islands of the reported plans
+    #: (planner/util/tier.py, work order tiered-profiles STEP 2). Anything but
+    #: measured/imported means the numbers rest on non-measured inputs and the
+    #: renderer shows a banner. Lives here rather than on DeploymentPlan: every
+    #: plan of one output shares the same island->tier map, the renderer and
+    #: the YAML writer both consume PlannerOutput, and per-plan copies would
+    #: only duplicate profile_tiers.
+    profile_tier: str = "unknown"
+    #: island_id -> tier for every island the search saw.
+    profile_tiers: dict[str, str] = Field(default_factory=dict)
+
     @property
     def prune_ratio(self) -> float:
         if self.generated_candidates == 0:
