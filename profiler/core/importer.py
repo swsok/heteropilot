@@ -32,7 +32,6 @@ from __future__ import annotations
 
 import csv
 import datetime
-import re
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -42,136 +41,38 @@ import yaml
 
 from profiler import __version__ as profiler_version
 
-# ---------------------------------------------------------------------------
-# Errors
-# ---------------------------------------------------------------------------
-
-class ProfileContractError(ValueError):
-    """A bundle violates ``profiler/CONTRACT.md``.
-
-    Raised for a missing required file, a header that does not match the
-    contract byte-for-byte, an un-parseable / wrong-type value, a duplicate
-    measurement key, or a non-positive ``time_us``.
-    """
-
-
-# ---------------------------------------------------------------------------
-# CSV schemas — the single source of truth, mirrored from CONTRACT.md
-# ---------------------------------------------------------------------------
-
-@dataclass(frozen=True)
-class _CsvSchema:
-    """Exact column contract for one CSV file in a bundle."""
-
-    filename: str
-    #: Header columns, in order. Compared byte-for-byte against the file.
-    columns: tuple[str, ...]
-    int_columns: frozenset[str]
-    float_columns: frozenset[str]
-    str_columns: frozenset[str]
-    #: Columns whose parsed tuple must be unique across rows. Empty tuple
-    #: disables the uniqueness check (skew tables are not simple keyed
-    #: measurements).
-    key_columns: tuple[str, ...]
-    #: Column that must be strictly positive, or ``None`` to skip. Only the
-    #: four keyed measurement files carry ``time_us``; skew columns
-    #: (``alpha``, ``t_*_us``) legitimately go negative and must not be
-    #: sign-checked.
-    time_column: str | None
-    #: ``True`` when the file must exist for every profiled TP degree.
-    required: bool
-    #: Present only for MoE models; skipped otherwise.
-    moe_only: bool = False
-
-
-# dtype casters keyed by the type sets above.
-def _as_int(value: str) -> int:
-    return int(value)
-
-
-def _as_float(value: str) -> float:
-    return float(value)
-
-
-# Schemas, in a deterministic order (validated + written in this order).
-_SCHEMAS: tuple[_CsvSchema, ...] = (
-    _CsvSchema(
-        filename="dense.csv",
-        columns=("layer", "tokens", "time_us"),
-        int_columns=frozenset({"tokens"}),
-        float_columns=frozenset({"time_us"}),
-        str_columns=frozenset({"layer"}),
-        key_columns=("layer", "tokens"),
-        time_column="time_us",
-        required=True,
-    ),
-    _CsvSchema(
-        filename="per_sequence.csv",
-        columns=("layer", "sequences", "time_us"),
-        int_columns=frozenset({"sequences"}),
-        float_columns=frozenset({"time_us"}),
-        str_columns=frozenset({"layer"}),
-        key_columns=("layer", "sequences"),
-        time_column="time_us",
-        required=True,
-    ),
-    _CsvSchema(
-        filename="attention.csv",
-        columns=("prefill_chunk", "kv_prefill", "n_decode", "kv_decode", "time_us"),
-        int_columns=frozenset({"prefill_chunk", "kv_prefill", "n_decode", "kv_decode"}),
-        float_columns=frozenset({"time_us"}),
-        str_columns=frozenset(),
-        key_columns=("prefill_chunk", "kv_prefill", "n_decode", "kv_decode"),
-        time_column="time_us",
-        required=True,
-    ),
-    _CsvSchema(
-        filename="moe.csv",
-        columns=("tokens", "activated_experts", "time_us"),
-        int_columns=frozenset({"tokens", "activated_experts"}),
-        float_columns=frozenset({"time_us"}),
-        str_columns=frozenset(),
-        key_columns=("tokens", "activated_experts"),
-        time_column="time_us",
-        required=True,
-        moe_only=True,
-    ),
-    _CsvSchema(
-        filename="skew.csv",
-        columns=(
-            "regime", "n", "nb", "ratio", "skew", "pc", "kp", "kvs",
-            "kv_big", "kv_mean", "t_mean_us", "t_max_us", "t_skew_us", "alpha",
-        ),
-        int_columns=frozenset({"n", "nb", "pc", "kp", "kvs", "kv_big", "kv_mean"}),
-        float_columns=frozenset({"ratio", "skew", "t_mean_us", "t_max_us", "t_skew_us", "alpha"}),
-        str_columns=frozenset({"regime"}),
-        key_columns=(),
-        time_column=None,
-        required=False,
-    ),
-    _CsvSchema(
-        filename="skew_fit.csv",
-        columns=(
-            "pc", "n_label", "skew_rate_label", "kv_big_label",
-            "kp_label", "alpha", "n_samples",
-        ),
-        int_columns=frozenset({"pc", "n_samples"}),
-        float_columns=frozenset({"alpha"}),
-        str_columns=frozenset({"n_label", "skew_rate_label", "kv_big_label", "kp_label"}),
-        key_columns=(),
-        time_column=None,
-        required=False,
-    ),
+# The CSV schema table and its validation primitives were promoted to
+# profiler/contract.py (WORK_ORDER_tiered_profiles.md STEP 1) so the importer
+# and the synthetic bundle generator share one source of truth. The historical
+# private names are kept as aliases for backward compatibility.
+from profiler.contract import (
+    ALLOWED_SOURCES,
+    SCHEMAS,
+    TP_DIR_RE,
+    CsvSchema,
+    ProfileContractError,
+    as_float,
+    as_int,
+    cast_value,
 )
 
-_TP_DIR_RE = re.compile(r"^tp(\d+)$")
+__all__ = [
+    "BundleReport",
+    "CsvProfileImporter",
+    "FileReport",
+    "ImportProvenance",
+    "ProfileContractError",
+    "TpReport",
+]
 
-
-# ---------------------------------------------------------------------------
-# Provenance
-# ---------------------------------------------------------------------------
-
-_ALLOWED_SOURCES = ("imported", "measured", "placeholder")
+# Backward-compatible aliases for the pre-promotion private names.
+_CsvSchema = CsvSchema
+_SCHEMAS = SCHEMAS
+_as_int = as_int
+_as_float = as_float
+_cast = cast_value
+_TP_DIR_RE = TP_DIR_RE
+_ALLOWED_SOURCES = ALLOWED_SOURCES
 
 
 @dataclass
@@ -644,16 +545,6 @@ _CompactDumper.add_representer(tuple, _represent_list)
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-def _cast(path: Path, lineno: int, column: str, value: str, caster: Any) -> Any:
-    try:
-        return caster(value)
-    except (TypeError, ValueError):
-        raise ProfileContractError(
-            f"{path}:{lineno}: column {column!r} has a bad value {value!r} "
-            f"(expected {caster.__name__.removeprefix('_as_')})."
-        ) from None
-
 
 def _tp_of(tp_dir: Path) -> int:
     m = _TP_DIR_RE.match(tp_dir.name)
