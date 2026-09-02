@@ -77,3 +77,8 @@ pre {
 }
 .suggestion { background: #fff8e1; border-left: 4px solid #f2b705;
   padding: 8px 10px; margin: 6px 0; border-radius: 4px; }
+.builder-row { margin: 4px 0; display: flex; gap: 6px; align-items: center;
+  font-size: 13px; }
+.builder-row select { flex: 1; }
+.w-expand td { background: #f8f9fb; }
+.w-expand pre { max-height: 260px; }

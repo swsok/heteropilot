@@ -178,3 +178,18 @@ def test_double_confirm_is_409(client: TestClient) -> None:
     )
     assert client.post(url).status_code == 200
     assert client.post(url).status_code == 409  # not PLANNING any more
+
+
+def test_placement_detail_endpoint(client: TestClient) -> None:
+    """FR-W5: the UI reuses the detail view; the API serves row + document."""
+    workspaces = client.get("/api/workspaces").json()
+    workspace_id = workspaces[0]["workspace_id"]
+    summary = client.get(f"/api/workspaces/{workspace_id}/summary").json()
+    target = summary["placements"][0]
+    detail = client.get(
+        f"/api/workspaces/{workspace_id}/placements/{target['placement_id']}"
+    ).json()
+    assert detail["placement"]["placement_id"] == target["placement_id"]
+    assert "planner_output" in detail["document"]
+    missing = client.get(f"/api/workspaces/{workspace_id}/placements/nope")
+    assert missing.status_code == 404

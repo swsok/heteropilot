@@ -705,6 +705,26 @@ def create_app(
             results.append(outcome["result"])
         return PlacementResponse(placements=rows, results=results)
 
+    @app.get("/api/workspaces/{workspace_id}/placements/{placement_id}")
+    def placement_detail(
+        workspace_id: str,
+        placement_id: str,
+        db: ResultStore = Depends(store),
+    ) -> dict[str, Any]:
+        """Row + full fast-path document, so the UI can reuse the scenario
+        detail rendering for a placement (FR-W5)."""
+        rows = db.workspace_placements(workspace_id)
+        row = next((p for p in rows if p["placement_id"] == placement_id), None)
+        if row is None:
+            raise HTTPException(status_code=404, detail=f"no placement '{placement_id}'")
+        document: dict[str, Any] = {}
+        if row["plan_json_path"]:
+            document = json.loads(Path(row["plan_json_path"]).read_text())
+        return {
+            "placement": _placement_row(row).model_dump(),
+            "document": document,
+        }
+
     @app.post(
         "/api/workspaces/{workspace_id}/placements/{placement_id}/confirm",
         response_model=PlacementRow,

@@ -98,10 +98,31 @@ async function route() {
     else if (page === "scenario" && arg) await renderScenario(arg);
     else if (page === "planner") await renderPlanner();
     else if (page === "verification") await renderVerification();
+    else if (page === "builder") await renderBuilder();
+    else if (page === "clusters") await renderClusters();
+    else if (page === "workspace" && arg) await renderWorkspace(arg);
+    else if (page === "workspaces") await renderWorkspaces();
     else await renderDashboard();
   } catch (err) {
     console.error(err);
   }
+}
+
+async function apiSend(method, path, body) {
+  banner.classList.add("hidden");
+  const res = await fetch(path, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (!res.ok) {
+    let detail;
+    try { detail = (await res.json()).detail; } catch { detail = await res.text(); }
+    const err = new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
 }
 
 async function loadBatches() {
@@ -609,7 +630,7 @@ function disposeChartsIn(elId) {
   }
 }
 
-function renderTopologyInto(elId, graph, { compact = false } = {}) {
+function renderTopologyInto(elId, graph, { compact = false, serviceColors = false } = {}) {
   const holder = document.getElementById(elId);
   if (!holder) return;
   const roleLabel = { prefill: "P", decode: "D", aggregated: "A" };
@@ -638,7 +659,10 @@ function renderTopologyInto(elId, graph, { compact = false } = {}) {
         symbol: n.kind === "nic" ? "diamond" : "circle",
         symbolSize: n.kind === "nic" ? (compact ? 8 : 16) : (compact ? 18 : 34),
         itemStyle: {
-          opacity: n.state === "FREE" ? 1 : 0.35,
+          // Workspace view: device color = its service; grey = FREE (FR-W2).
+          ...(serviceColors && n.kind === "accelerator"
+            ? { color: n.service_color || "#ced4da" } : {}),
+          opacity: n.state === "FREE" ? 1 : (serviceColors ? 1 : 0.35),
           borderColor: n.in_plan ? "#1c7ed6" : "#adb5bd",
           borderWidth: n.in_plan ? 4 : 1,
         },
@@ -651,6 +675,416 @@ function renderTopologyInto(elId, graph, { compact = false } = {}) {
         },
       })),
     }],
+  });
+}
+
+// ------------------------------------------------------------- ⑥ builder
+
+const BUILDER_CLASSES = ["a40", "a5000", "rtxpro6000", "furiosa_rngd_card"];
+const LINK_PRESETS = ["ib_100g", "ib_400g"];
+
+function builderRow(cls = "a40", perNode = 4, nodes = 1) {
+  return `
+    <div class="builder-row">
+      <select class="b-class">${BUILDER_CLASSES.map((c) =>
+        `<option ${c === cls ? "selected" : ""}>${c}</option>`).join("")}</select>
+      per node <input class="b-per" type="number" value="${perNode}" min="1" max="8" style="width:52px">
+      × nodes <input class="b-nodes" type="number" value="${nodes}" min="1" style="width:52px">
+      <button class="b-del">✕</button>
+    </div>`;
+}
+
+async function renderBuilder() {
+  main.innerHTML = `
+    <div class="layout">
+      <div class="sidebar" style="min-width:330px">
+        <h3 style="margin:0 0 8px">Cluster Builder</h3>
+        <label>name</label><input id="b-name" value="my-cluster">
+        <label>node groups</label>
+        <div id="b-rows">${builderRow()}</div>
+        <button id="b-add" style="margin-top:6px">+ add group</button>
+        <label style="margin-top:14px">inter-node link</label>
+        <label><input type="radio" name="b-link" value="preset" checked style="width:auto">
+          preset <select id="b-preset">${LINK_PRESETS.map((p) => `<option>${p}</option>`).join("")}</select></label>
+        <label><input type="radio" name="b-link" value="custom" style="width:auto"> custom</label>
+        <div id="b-custom" style="padding-left:16px;opacity:.5">
+          type <select id="b-type"><option>ETHERNET</option><option>INFINIBAND</option>
+            <option>NVLINK</option><option>PCIE</option><option>HCCS</option></select>
+          bw <input id="b-bw" type="number" value="50" style="width:70px"> Gbps
+          latency <input id="b-lat" type="number" value="8000" style="width:80px"> ns
+          <div>${badge("custom values are labelled user_defined", "muted")}</div>
+        </div>
+        <button id="b-go" style="margin-top:14px;width:100%;padding:8px">클러스터 생성</button>
+      </div>
+      <div id="b-result"><div class="panel">Define node groups and the inter-node
+        fabric, then build. Intra-node links are dictated by each class's
+        profile (PCIe root complexes of 4 + NVLink where the hardware has it).</div></div>
+    </div>`;
+  document.getElementById("b-add").onclick = () => {
+    document.getElementById("b-rows").insertAdjacentHTML("beforeend", builderRow());
+    wireDelete();
+  };
+  const wireDelete = () => {
+    document.querySelectorAll(".b-del").forEach((b) => {
+      b.onclick = () => b.parentElement.remove();
+    });
+  };
+  wireDelete();
+  document.querySelectorAll("input[name=b-link]").forEach((r) => {
+    r.onchange = () => {
+      document.getElementById("b-custom").style.opacity =
+        document.querySelector("input[name=b-link]:checked").value === "custom" ? "1" : ".5";
+    };
+  });
+  document.getElementById("b-go").onclick = async () => {
+    const nodes = [...document.querySelectorAll(".builder-row")].map((row) => ({
+      class: row.querySelector(".b-class").value,
+      count_per_node: +row.querySelector(".b-per").value,
+      num_nodes: +row.querySelector(".b-nodes").value,
+    }));
+    const mode = document.querySelector("input[name=b-link]:checked").value;
+    const inter_node = mode === "preset"
+      ? { preset: document.getElementById("b-preset").value }
+      : { custom: {
+          type: document.getElementById("b-type").value,
+          bandwidth_gbps: +document.getElementById("b-bw").value,
+          latency_ns: +document.getElementById("b-lat").value,
+        } };
+    const target = document.getElementById("b-result");
+    target.innerHTML = `<div class="panel">building…</div>`;
+    let data;
+    try {
+      data = await apiSend("POST", "/api/clusters/build", {
+        name: document.getElementById("b-name").value,
+        nodes, interconnect: { inter_node },
+      });
+    } catch (err) {
+      target.innerHTML = `<div class="panel">${badge("rejected", "warn")} ${esc(err.message)}</div>`;
+      return;
+    }
+    const c = data.cluster;
+    target.innerHTML = `
+      <div class="panel">
+        <h3>${esc(c.cluster_id)} ${data.already_existed ? badge("already existed", "muted") : badge("created", "envelope")}</h3>
+        <div class="kv">
+          <span class="k">accelerators</span><span>${c.num_accels} (${esc(c.classes.join(", "))})</span>
+          <span class="k">nodes / islands</span><span>${c.num_nodes} / ${c.num_islands}</span>
+          <span class="k">fabric</span><span>${esc(c.link_summary || "")}
+            ${(c.link_summary || "").includes("user_defined") ? badge("user_defined", "warn") : ""}</span>
+        </div>
+        ${data.warnings.map((w) => `<div class="suggestion">⚠ ${esc(w)}</div>`).join("")}
+        <h3 style="margin-top:12px">Islands (TP candidates)</h3>
+        <table><thead><tr><th>island</th><th>devices</th><th>TP</th></tr></thead><tbody>
+        ${data.islands.map((i) => `<tr><td>${esc(i.id)}</td>
+          <td>${i.accelerators} × ${esc(i.model)}</td>
+          <td>${i.tp_candidates.join(", ")}</td></tr>`).join("")}
+        </tbody></table>
+        <div style="margin-top:12px">
+          <a href="#/clusters">→ open the catalog</a> ·
+          <button id="b-ws">이 클러스터로 Workspace 시작</button>
+        </div>
+      </div>
+      <div class="panel" style="margin-top:14px"><h3>Topology</h3>
+        <div id="b-topo" style="height:360px"></div></div>`;
+    const detail = await api(`/api/clusters/${encodeURIComponent(c.cluster_id)}`);
+    renderTopologyInto("b-topo", detail.graph, {});
+    document.getElementById("b-ws").onclick = () => startWorkspace(c.cluster_id);
+  };
+}
+
+async function startWorkspace(clusterId) {
+  const name = prompt("workspace name?", clusterId.replace(/^custom-/, ""));
+  if (!name) return;
+  const workspace = await apiSend("POST", "/api/workspaces", {
+    cluster_id: clusterId, name,
+  });
+  location.hash = `#/workspace/${workspace.workspace_id}`;
+}
+
+// ------------------------------------------------------------- ⑦ clusters
+
+async function renderClusters() {
+  const params = new URLSearchParams(location.hash.split("?")[1] || "");
+  const origin = params.get("origin") || "";
+  const rows = await api(`/api/clusters${origin ? `?origin=${origin}` : ""}`);
+  main.innerHTML = `
+    <div style="margin-bottom:10px">
+      ${["", "random", "custom"].map((o) =>
+        `<a href="#/clusters${o ? `?origin=${o}` : ""}"
+            class="badge ${o === origin ? "sim" : "muted"}"
+            style="margin-right:6px;text-decoration:none">${o || "all"}</a>`).join("")}
+    </div>
+    <div class="layout" style="grid-template-columns: 1fr 380px">
+      <div><table><thead><tr>
+        <th>cluster</th><th>origin</th><th>nodes</th><th>accels</th>
+        <th>islands</th><th>fabric</th><th>ws</th><th></th>
+      </tr></thead><tbody>
+      ${rows.map((c) => `<tr data-id="${esc(c.cluster_id)}">
+        <td>${esc(c.cluster_id)}</td>
+        <td>${badge(c.origin, c.origin === "custom" ? "sim" : "muted")}</td>
+        <td class="num">${c.num_nodes}</td>
+        <td class="num">${c.num_accels}${c.has_npu ? " " + badge("NPU", "muted") : ""}</td>
+        <td class="num">${c.num_islands}</td>
+        <td>${esc(c.link_summary || "")}
+          ${(c.link_summary || "").includes("user_defined") ? badge("user_defined", "warn") : ""}</td>
+        <td class="num">${c.workspaces}</td>
+        <td><button class="c-ws" data-id="${esc(c.cluster_id)}">Workspace 시작</button></td>
+      </tr>`).join("")}
+      </tbody></table></div>
+      <div class="panel"><h3 id="c-preview-title">preview</h3>
+        <div id="c-preview" style="height:420px"></div></div>
+    </div>`;
+  document.querySelectorAll("tbody tr").forEach((tr) => {
+    tr.onclick = async () => {
+      const detail = await api(`/api/clusters/${encodeURIComponent(tr.dataset.id)}`);
+      document.getElementById("c-preview-title").textContent = tr.dataset.id;
+      disposeChartsIn("c-preview");
+      renderTopologyInto("c-preview", detail.graph, {});
+    };
+  });
+  document.querySelectorAll(".c-ws").forEach((btn) => {
+    btn.onclick = (event) => {
+      event.stopPropagation();
+      startWorkspace(btn.dataset.id);
+    };
+  });
+}
+
+// ------------------------------------------------------------ ⑧ workspace
+
+async function renderWorkspaces() {
+  const rows = await api("/api/workspaces");
+  main.innerHTML = `
+    <div class="panel"><h3>Workspaces</h3>
+    ${rows.length ? `<table><thead><tr>
+      <th>workspace</th><th>name</th><th>cluster</th><th>placed</th><th>created</th>
+    </tr></thead><tbody>
+    ${rows.map((w) => `<tr data-id="${esc(w.workspace_id)}">
+      <td>${esc(w.workspace_id)}</td><td>${esc(w.name)}</td>
+      <td>${esc(w.cluster_id)}${w.cluster_changed ? " " + badge("원본 변경됨", "warn") : ""}</td>
+      <td class="num">${w.placed_count}</td><td>${esc(w.created_at)}</td>
+    </tr>`).join("")}</tbody></table>`
+    : `아직 workspace가 없습니다 — <a href="#/clusters">⑦ Clusters</a>에서 시작하세요.`}
+    </div>`;
+  main.querySelectorAll("tbody tr").forEach((tr) => {
+    tr.onclick = () => { location.hash = `#/workspace/${tr.dataset.id}`; };
+  });
+}
+
+const SERVICE_PALETTE = [
+  "#4c6ef5", "#f76707", "#37b24d", "#ae3ec9", "#0ca678",
+  "#e8590c", "#1098ad", "#d6336c", "#74b816", "#7048e8",
+];
+
+function verdictBadge(ok, calibrated) {
+  if (ok === null || ok === undefined) return "–";
+  const cls = calibrated ? (ok ? "envelope" : "warn") : "muted";
+  return `<span class="badge ${cls}" title="${calibrated
+    ? "robust (calibration margin applied)"
+    : "raw prediction - calibrated: false"}">${ok ? "✓" : "✗"}</span>`;
+}
+
+async function renderWorkspace(workspaceId) {
+  const s = await api(`/api/workspaces/${encodeURIComponent(workspaceId)}/summary`);
+  const rows = s.placements;
+  const active = rows.filter((p) => p.status === "PLACED");
+  const gauges = Object.entries(s.resources.by_class).map(([cls, v]) => `
+    <div style="margin:4px 0">${esc(cls)}
+      <div style="background:#e9ecef;border-radius:4px;height:10px">
+        <div style="width:${v.total ? (100 * (v.total - v.free) / v.total) : 0}%;
+             background:#4c6ef5;height:10px;border-radius:4px"></div></div>
+      <small>${v.free}/${v.total} free</small></div>`).join("");
+  const cap = s.power.total_power_cap_w;
+  main.innerHTML = `
+    <h2 style="margin:4px 0 4px">${esc(s.workspace.name)}
+      <small>(${esc(workspaceId)} · cluster ${esc(s.cluster.cluster_id)})</small>
+      ${s.workspace.cluster_changed ? badge("원본 변경됨", "warn") : ""}</h2>
+    <div class="suggestion">ⓘ ${esc(s.interference_notice)}</div>
+    <div class="layout" style="grid-template-columns: 1.1fr .9fr">
+      <div>
+        <div class="panel"><h3>Topology (색 = 서비스, 회색 = FREE)</h3>
+          <div id="w-topo" style="height:400px"></div></div>
+        <div class="panel" style="margin-top:14px"><h3>잔여 자원</h3>${gauges}</div>
+      </div>
+      <div>
+        <div class="panel">
+          <h3>서비스 추가</h3>
+          <label><input type="radio" name="w-mode" value="random" checked style="width:auto">
+            랜덤 SLO 개수 <input id="w-count" type="number" value="3" min="1" style="width:52px">
+            seed <input id="w-seed" type="number" value="42" style="width:80px"></label>
+          <label><input type="radio" name="w-mode" value="user" style="width:auto"> 직접 입력</label>
+          <div id="w-user" style="padding-left:16px;opacity:.5">
+            rps <input id="w-rps" type="number" value="5" style="width:60px">
+            in p50 <input id="w-in" type="number" value="512" style="width:64px">
+            out p50 <input id="w-out" type="number" value="128" style="width:64px"><br>
+            TTFT p99 <input id="w-ttft" type="number" value="2000" style="width:70px"> ms
+            TPOT p99 <input id="w-tpot" type="number" value="60" style="width:60px"> ms
+            cap <input id="w-cap" type="number" value="2000" style="width:70px"> W
+          </div>
+          <button id="w-place" style="margin-top:10px;width:100%;padding:7px">배치 계획 실행</button>
+          <div id="w-preview"></div>
+        </div>
+        <div class="panel" style="margin-top:14px">
+          <h3>총 전력 (PLACED 예측 합)</h3>
+          <div class="kv">
+            <span class="k">avg 합</span><span>${fmt(s.power.sum_avg_w)} W</span>
+            <span class="k">peak 합</span>
+            <span>${fmt(s.power.sum_peak_w)} W ${badge("동시 peak 가정의 보수적 상한", "muted")}</span>
+            ${cap ? `<span class="k">workspace cap</span><span>${fmt(cap, 0)} W</span>` : ""}
+          </div>
+          ${cap ? `<div style="background:#e9ecef;border-radius:4px;height:12px;margin-top:6px">
+            <div style="width:${Math.min(100, 100 * s.power.sum_peak_w / cap)}%;
+              background:${s.power.sum_peak_w > cap ? "#c92a2a" : "#37b24d"};
+              height:12px;border-radius:4px"></div></div>` : ""}
+        </div>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:14px">
+      <h3>서비스 목록 (${active.length} placed / ${rows.length} total)</h3>
+      <table><thead><tr>
+        <th>#</th><th>service</th><th>SLO (TTFT/TPOT ms)</th><th>예측 (TTFT/TPOT ms)</th>
+        <th>SLO</th><th class="num">avg W</th><th>labels</th><th>status</th><th></th>
+      </tr></thead><tbody id="w-rows">
+      ${rows.map((p) => `
+        <tr data-id="${esc(p.placement_id)}"
+            ${p.status === "REJECTED" ? 'style="opacity:.6"' : ""}>
+          <td><span style="display:inline-block;width:12px;height:12px;border-radius:3px;
+            background:${p.status === "PLACED" ? SERVICE_PALETTE[p.seq % SERVICE_PALETTE.length] : "#ced4da"}"></span>
+            ${p.seq}</td>
+          <td>${esc(p.service.model.split("/").pop())} <small>(${esc(p.service.origin)})</small></td>
+          <td>${fmt(p.service.ttft_p99_ms, 0)} / ${fmt(p.service.tpot_p99_ms, 0)}</td>
+          <td>${p.p99_ttft_ms != null ? `${fmt(p.p99_ttft_ms, 0)} / ${fmt(p.p99_tpot_ms)}` : "–"}</td>
+          <td>${verdictBadge(p.slo_ttft_ok, p.calibrated)}${verdictBadge(p.slo_tpot_ok, p.calibrated)}</td>
+          <td class="num">${fmt(p.avg_power_w)}</td>
+          <td>${p.fidelity ? fidelityBadge(p.fidelity) : ""}
+            ${p.npu_extrapolated ? badge("⚠ NPU", "warn") : ""}
+            ${p.shared_fabric_warning ? badge("⚠ shared fabric", "warn") : ""}</td>
+          <td>${p.status === "REJECTED"
+            ? `${badge("REJECTED", "warn")} <a href="#" class="w-diag" data-id="${esc(p.placement_id)}">진단 보기</a>`
+            : esc(p.status)}</td>
+          <td>
+            <button class="w-detail" data-id="${esc(p.placement_id)}">상세</button>
+            ${p.status === "PLACED"
+              ? `<button class="w-remove" data-id="${esc(p.placement_id)}">제거</button>` : ""}
+            ${p.status === "PLANNING"
+              ? `<button class="w-confirm" data-id="${esc(p.placement_id)}">확정</button>` : ""}
+          </td>
+        </tr>
+        <tr class="w-expand hidden" data-for="${esc(p.placement_id)}">
+          <td colspan="9"><pre class="w-expand-body"></pre></td>
+        </tr>`).join("")}
+      </tbody></table>
+    </div>`;
+
+  // Topology with per-service colors (FR-W2: color = seq, stable).
+  const graph = s.graph;
+  graph.nodes.forEach((n) => {
+    const overlay = s.topology_overlay[n.id];
+    n.in_plan = Boolean(overlay);
+    n.role = overlay ? overlay.role : null;
+    n.service_color = overlay
+      ? SERVICE_PALETTE[overlay.color_index % SERVICE_PALETTE.length] : null;
+  });
+  renderTopologyInto("w-topo", graph, { serviceColors: true });
+
+  document.querySelectorAll("input[name=w-mode]").forEach((r) => {
+    r.onchange = () => {
+      document.getElementById("w-user").style.opacity =
+        document.querySelector("input[name=w-mode]:checked").value === "user" ? "1" : ".5";
+    };
+  });
+
+  document.getElementById("w-place").onclick = async () => {
+    const mode = document.querySelector("input[name=w-mode]:checked").value;
+    const body = mode === "random"
+      ? { slo: "random", count: +document.getElementById("w-count").value,
+          seed: +document.getElementById("w-seed").value }
+      : { slo: {
+          rps: +document.getElementById("w-rps").value || null,
+          input_p50: +document.getElementById("w-in").value || null,
+          output_p50: +document.getElementById("w-out").value || null,
+          ttft_p99_ms: +document.getElementById("w-ttft").value,
+          tpot_p99_ms: +document.getElementById("w-tpot").value,
+          power_cap_w: +document.getElementById("w-cap").value || null,
+        } };
+    const preview = document.getElementById("w-preview");
+    preview.innerHTML = "planning…";
+    let data;
+    try {
+      data = await apiSend(
+        "POST", `/api/workspaces/${encodeURIComponent(workspaceId)}/placements`, body
+      );
+    } catch (err) {
+      preview.innerHTML = `${badge("error", "warn")} ${esc(err.message)}`;
+      return;
+    }
+    const first = data.placements[0];
+    if (body.slo !== "random" || body.count === 1) {
+      if (first.status === "PLANNING") {
+        // FR-W4: preview first, confirm explicitly.
+        preview.innerHTML = `
+          <div class="suggestion">미리보기: ${first.devices.length} devices ·
+            avg ${fmt(first.avg_power_w)} W ·
+            SLO ${verdictBadge(first.slo_ttft_ok, first.calibrated)}${verdictBadge(first.slo_tpot_ok, first.calibrated)}
+            <button id="w-ok">확정</button> <button id="w-no">취소</button></div>`;
+        document.getElementById("w-ok").onclick = async () => {
+          await apiSend("POST",
+            `/api/workspaces/${encodeURIComponent(workspaceId)}/placements/${first.placement_id}/confirm`);
+          route();
+        };
+        document.getElementById("w-no").onclick = () => route();
+        return;
+      }
+    }
+    route();
+  };
+
+  document.querySelectorAll(".w-remove").forEach((btn) => {
+    btn.onclick = async () => {
+      await apiSend("DELETE",
+        `/api/workspaces/${encodeURIComponent(workspaceId)}/placements/${btn.dataset.id}`);
+      route();
+    };
+  });
+  document.querySelectorAll(".w-confirm").forEach((btn) => {
+    btn.onclick = async () => {
+      try {
+        await apiSend("POST",
+          `/api/workspaces/${encodeURIComponent(workspaceId)}/placements/${btn.dataset.id}/confirm`);
+      } catch (err) {
+        showError(err.message);
+      }
+      route();
+    };
+  });
+  const toggleExpand = async (placementId, contentPromise) => {
+    const expand = document.querySelector(`.w-expand[data-for="${placementId}"]`);
+    if (!expand.classList.contains("hidden")) {
+      expand.classList.add("hidden");
+      return;
+    }
+    expand.querySelector(".w-expand-body").textContent = "loading…";
+    expand.classList.remove("hidden");
+    expand.querySelector(".w-expand-body").textContent = await contentPromise;
+  };
+  document.querySelectorAll(".w-diag").forEach((a) => {
+    a.onclick = (event) => {
+      event.preventDefault();
+      const row = rows.find((p) => p.placement_id === a.dataset.id);
+      toggleExpand(a.dataset.id,
+        Promise.resolve(JSON.stringify(row.rejected_reason, null, 2)));
+    };
+  });
+  document.querySelectorAll(".w-detail").forEach((btn) => {
+    btn.onclick = () => {
+      toggleExpand(btn.dataset.id, (async () => {
+        const detail = await api(
+          `/api/workspaces/${encodeURIComponent(workspaceId)}/placements/${btn.dataset.id}`);
+        const out = detail.document.planner_output || {};
+        const plan = out.recommended ? out.recommended.plan : out.closest_plan;
+        return JSON.stringify({ placement: detail.placement, plan }, null, 2);
+      })());
+    };
   });
 }
 

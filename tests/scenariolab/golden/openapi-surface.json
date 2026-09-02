@@ -44,7 +44,8 @@
       "post"
     ],
     "/api/workspaces/{workspace_id}/placements/{placement_id}": [
-      "delete"
+      "delete",
+      "get"
     ],
     "/api/workspaces/{workspace_id}/placements/{placement_id}/confirm": [
       "post"
