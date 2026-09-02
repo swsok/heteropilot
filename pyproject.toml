@@ -11,7 +11,24 @@
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-extend-exclude = ["astra-sim", "serving", "profiler", "bench", "workloads", "scripts", "docs"]
+# profiler/ is excluded per-subpackage (not wholesale) so that the fork-owned
+# profiler/synth/ package and profiler/core/contract.py are actually linted
+# (WORK_ORDER_tiered_profiles.md STEP 0). Upstream profiler code stays excluded.
+extend-exclude = [
+    "astra-sim",
+    "serving",
+    "profiler/core",
+    "profiler/v0",
+    "profiler/models",
+    "profiler/power",
+    "profiler/perf",
+    "profiler/__init__.py",
+    "profiler/__main__.py",
+    "bench",
+    "workloads",
+    "scripts",
+    "docs",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "C4", "RUF", "SIM"]
@@ -23,7 +40,7 @@ extend-immutable-calls = ["fastapi.Depends", "fastapi.Query"]
 
 [tool.mypy]
 python_version = "3.10"
-files = ["planner", "scenariolab"]
+files = ["planner", "scenariolab", "profiler/synth"]
 ignore_missing_imports = true
 warn_unused_ignores = true
 # serving/ is upstream and not type-clean; check that our calls into it are
@@ -31,7 +48,9 @@ warn_unused_ignores = true
 follow_imports = "silent"
 
 [[tool.mypy.overrides]]
-module = ["serving.*", "profiler.*", "bench.*"]
+# Narrowed from "profiler.*" so profiler.synth (fork-owned, STEP 0) is checked
+# while upstream profiler subpackages keep their blanket exemption.
+module = ["serving.*", "profiler.core.*", "profiler.v0.*", "bench.*"]
 follow_imports = "skip"
 ignore_errors = true
 
