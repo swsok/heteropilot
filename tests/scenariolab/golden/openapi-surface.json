@@ -6,6 +6,9 @@
     "/api/clusters": [
       "get"
     ],
+    "/api/clusters/build": [
+      "post"
+    ],
     "/api/clusters/{cluster_id}": [
       "get"
     ],
@@ -29,6 +32,25 @@
     ],
     "/api/verification": [
       "get"
+    ],
+    "/api/workspaces": [
+      "get",
+      "post"
+    ],
+    "/api/workspaces/{workspace_id}": [
+      "get"
+    ],
+    "/api/workspaces/{workspace_id}/placements": [
+      "post"
+    ],
+    "/api/workspaces/{workspace_id}/placements/{placement_id}": [
+      "delete"
+    ],
+    "/api/workspaces/{workspace_id}/placements/{placement_id}/confirm": [
+      "post"
+    ],
+    "/api/workspaces/{workspace_id}/summary": [
+      "get"
     ]
   },
   "schemas": {
@@ -45,16 +67,31 @@
       "started_at",
       "status"
     ],
+    "BuildClusterResponse": [
+      "already_existed",
+      "cluster",
+      "islands",
+      "warnings"
+    ],
+    "ClusterBuildRequest": [
+      "initial_state",
+      "interconnect",
+      "name",
+      "nodes"
+    ],
     "ClusterDetail": [
       "classes",
       "cluster_id",
       "graph",
       "has_npu",
+      "link_summary",
       "num_accels",
       "num_free_accels",
       "num_islands",
       "num_nodes",
+      "origin",
       "seed",
+      "workspaces",
       "yaml_path"
     ],
     "ClusterGraph": [
@@ -65,12 +102,20 @@
       "classes",
       "cluster_id",
       "has_npu",
+      "link_summary",
       "num_accels",
       "num_free_accels",
       "num_islands",
       "num_nodes",
+      "origin",
       "seed",
+      "workspaces",
       "yaml_path"
+    ],
+    "CustomLink": [
+      "bandwidth_gbps",
+      "latency_ns",
+      "type"
     ],
     "DashboardCharts": [
       "feasible_by_power_cap",
@@ -103,6 +148,58 @@
     "HistogramBin": [
       "counts",
       "label"
+    ],
+    "InterNode": [
+      "custom",
+      "preset"
+    ],
+    "Interconnect": [
+      "inter_node",
+      "intra_node"
+    ],
+    "IslandInfo": [
+      "accelerators",
+      "id",
+      "model",
+      "tp_candidates"
+    ],
+    "NodeGroup": [
+      "class",
+      "count_per_node",
+      "num_nodes"
+    ],
+    "PlacementResponse": [
+      "placements",
+      "results"
+    ],
+    "PlacementRow": [
+      "avg_power_w",
+      "calibrated",
+      "created_at",
+      "devices",
+      "fidelity",
+      "npu_extrapolated",
+      "p99_tpot_ms",
+      "p99_ttft_ms",
+      "peak_power_w",
+      "placement_id",
+      "rejected_reason",
+      "removed_at",
+      "seq",
+      "service",
+      "service_id",
+      "shared_fabric_warning",
+      "slo_tpot_ok",
+      "slo_ttft_ok",
+      "status",
+      "tokens_per_joule",
+      "workspace_id"
+    ],
+    "PlacementSloRequest": [
+      "confirm",
+      "count",
+      "seed",
+      "slo"
     ],
     "PlanRequest": [
       "cluster_id",
@@ -231,6 +328,41 @@
       "feasibility_flips",
       "selection_flips",
       "verified"
+    ],
+    "WorkspaceCreateRequest": [
+      "cluster_id",
+      "name",
+      "total_power_cap_w"
+    ],
+    "WorkspaceInfo": [
+      "cluster_changed",
+      "cluster_id",
+      "created_at",
+      "name",
+      "placed_count",
+      "status",
+      "total_power_cap_w",
+      "workspace_id"
+    ],
+    "WorkspacePower": [
+      "sum_avg_w",
+      "sum_peak_w",
+      "total_power_cap_w"
+    ],
+    "WorkspaceResources": [
+      "by_class",
+      "free_accels",
+      "total_accels"
+    ],
+    "WorkspaceSummaryResponse": [
+      "cluster",
+      "graph",
+      "interference_notice",
+      "placements",
+      "power",
+      "resources",
+      "topology_overlay",
+      "workspace"
     ]
   }
 }

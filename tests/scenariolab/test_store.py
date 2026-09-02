@@ -156,13 +156,17 @@ def test_parallel_writes_lossless(tmp_path: Path) -> None:
         assert savings == [float(v) for v in range(80)]
 
 
-def test_v1_to_v2_migration(tmp_path: Path) -> None:
-    """v1 -> v2 (plan_queries) migrates automatically read-write; a read-only
-    open explains what to do instead of failing opaquely (FR-D2)."""
+def test_additive_migration_chain(tmp_path: Path) -> None:
+    """v1 -> current migrates automatically read-write (plan_queries,
+    workspace tables, origin columns); a read-only open explains what to do
+    instead of failing opaquely (FR-D2)."""
+    from scenariolab.store.db import SCHEMA_VERSION
+
     db = tmp_path / "t.sqlite"
     ResultStore(db).close()
     conn = sqlite3.connect(db)
-    conn.execute("DROP TABLE plan_queries")
+    for table in ("plan_queries", "workspaces", "placements"):
+        conn.execute(f"DROP TABLE {table}")
     conn.execute("PRAGMA user_version = 1")
     conn.commit()
     conn.close()
@@ -175,5 +179,6 @@ def test_v1_to_v2_migration(tmp_path: Path) -> None:
             cluster_id="c0000", slo={"rps": 1}, seed=1, num_requests=10,
             feasible=True, fidelity="surrogate", truncated=False, elapsed_s=0.1,
         )
+        store.upsert_cluster(_cluster(0))  # origin/link columns exist again
         version = store._conn.execute("PRAGMA user_version").fetchone()[0]
-        assert version == 2
+        assert version == SCHEMA_VERSION

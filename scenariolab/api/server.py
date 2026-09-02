@@ -18,16 +18,23 @@ from typing import Any
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 
+from planner.spec import load_service_spec
+from planner.util import provenance as prov
 from planner.util.percentile import percentile
 from scenariolab.api.graph import build_cluster_graph
 from scenariolab.api.schemas import (
     BatchInfo,
+    BuildClusterResponse,
     ClusterDetail,
     ClusterGraph,
     ClusterInfo,
     DashboardCharts,
     HeatmapCell,
     HistogramBin,
+    IslandInfo,
+    PlacementResponse,
+    PlacementRow,
+    PlacementSloRequest,
     PlanRequest,
     PlanResponse,
     RateBin,
@@ -40,10 +47,31 @@ from scenariolab.api.schemas import (
     VerificationRecord,
     VerificationResponse,
     VerificationStats,
+    WorkspaceCreateRequest,
+    WorkspaceInfo,
+    WorkspacePower,
+    WorkspaceResources,
+    WorkspaceSummaryResponse,
 )
-from scenariolab.store.db import ResultStore, StoreError
+from scenariolab.config import LabConfigError
+from scenariolab.generator.cluster_builder import ClusterBuildRequest, build_cluster
+from scenariolab.generator.cluster_gen import ClusterGenError
+from scenariolab.runner.interactive import InteractivePlanError
+from scenariolab.runner.workspace import (
+    place_service,
+    random_workspace_service,
+    save_user_service,
+)
+from scenariolab.store.db import ResultStore, StoreError, devices_from_json
 
 WEB_DIR = Path(__file__).resolve().parents[1] / "web"
+
+
+class _RowShim(dict):
+    """Dict with sqlite3.Row's keys() shape, so helpers accept either."""
+
+    def keys(self):
+        return list(super().keys())
 
 
 def create_app(
@@ -52,6 +80,9 @@ def create_app(
     *,
     envelope_dir: str | Path | None = None,
     calibration_dir: str | Path | None = "profiles/calibration",
+    clusters_dir: str | Path | None = None,
+    services_dir: str | Path | None = None,
+    results_dir: str | Path | None = None,
 ) -> FastAPI:
     app = FastAPI(
         title="ScenarioLab",
@@ -60,6 +91,10 @@ def create_app(
         version="0.2.0",
     )
     root = Path(root)
+    base = Path(db_path).parent
+    clusters_dir = Path(clusters_dir) if clusters_dir else base / "clusters"
+    services_dir = Path(services_dir) if services_dir else base / "services"
+    results_dir = Path(results_dir) if results_dir else base / "results"
 
     def store() -> Iterator[ResultStore]:
         try:
@@ -70,6 +105,16 @@ def create_app(
             yield reader
         finally:
             reader.close()
+
+    def write_store() -> Iterator[ResultStore]:
+        """Workspace endpoints mutate state, so FR-A6 is amended for them (work
+        order §7): writes go through this dedicated store only; every read
+        endpoint keeps the mode=ro connection."""
+        writer = ResultStore(db_path)
+        try:
+            yield writer
+        finally:
+            writer.close()
 
     # -- helpers ------------------------------------------------------------ #
 
@@ -108,6 +153,8 @@ def create_app(
             classes=json.loads(row["classes_json"]),
             num_islands=row["num_islands"],
             has_npu=bool(row["has_npu"]),
+            origin=row["origin"],
+            link_summary=row["link_summary"],
         )
 
     def _service_info(row: Any) -> ServiceInfo:
@@ -309,8 +356,18 @@ def create_app(
         )
 
     @app.get("/api/clusters", response_model=list[ClusterInfo])
-    def clusters(db: ResultStore = Depends(store)) -> list[ClusterInfo]:
-        return [_cluster_info(r) for r in db.list_clusters()]
+    def clusters(
+        origin: str | None = None, db: ResultStore = Depends(store)
+    ) -> list[ClusterInfo]:
+        rows = db.list_clusters()
+        if origin in ("random", "custom"):
+            rows = [r for r in rows if r["origin"] == origin]
+        out = []
+        for row in rows:
+            info = _cluster_info(row)
+            info.workspaces = db.workspace_count_for_cluster(row["cluster_id"])
+            out.append(info)
+        return out
 
     @app.get("/api/clusters/{cluster_id}", response_model=ClusterDetail)
     def cluster_detail(
@@ -421,6 +478,263 @@ def create_app(
             planner_output=result["planner_output"],
             graph=graph,
         )
+
+    # -- workspace mode (workspace work order §7) ----------------------------- #
+
+    INTERFERENCE_NOTICE = (
+        "Each service's prediction assumes SOLE use of its devices; "
+        "inter-service interference is not modelled. Overlapping fabric is "
+        "flagged (shared_fabric_warning), never quantified."
+    )
+
+    def _workspace_info(row: Any, db: ResultStore) -> WorkspaceInfo:
+        changed = False
+        if row["cluster_yaml_hash"]:
+            cluster_row = db.get_cluster(row["cluster_id"])
+            if cluster_row is not None:
+                current = prov.hash_file(root / cluster_row["yaml_path"])
+                changed = current is not None and current != row["cluster_yaml_hash"]
+        keys = row.keys()
+        return WorkspaceInfo(
+            workspace_id=row["workspace_id"],
+            cluster_id=row["cluster_id"],
+            name=row["name"],
+            created_at=row["created_at"],
+            status=row["status"],
+            total_power_cap_w=row["total_power_cap_w"],
+            placed_count=row["placed_count"] if "placed_count" in keys else 0,
+            cluster_changed=changed,
+        )
+
+    def _placement_row(row: Any) -> PlacementRow:
+        return PlacementRow(
+            placement_id=row["placement_id"],
+            workspace_id=row["workspace_id"],
+            service_id=row["service_id"],
+            seq=row["seq"],
+            status=row["status"],
+            devices=sorted(devices_from_json(row["devices_json"])),
+            fidelity=row["fidelity"],
+            calibrated=_opt_bool(row["calibrated"]),
+            slo_ttft_ok=_opt_bool(row["slo_ttft_ok"]),
+            slo_tpot_ok=_opt_bool(row["slo_tpot_ok"]),
+            p99_ttft_ms=row["p99_ttft_ms"],
+            p99_tpot_ms=row["p99_tpot_ms"],
+            avg_power_w=row["avg_power_w"],
+            peak_power_w=row["peak_power_w"],
+            tokens_per_joule=row["tokens_per_joule"],
+            shared_fabric_warning=_opt_bool(row["shared_fabric_warning"]),
+            npu_extrapolated=_opt_bool(row["npu_extrapolated"]),
+            rejected_reason=(
+                json.loads(row["rejected_reason_json"])
+                if row["rejected_reason_json"] else None
+            ),
+            service={
+                "model": row["model"],
+                "rps": row["rps"],
+                "ttft_p99_ms": row["slo_ttft_ms"],
+                "tpot_p99_ms": row["slo_tpot_ms"],
+                "power_cap_w": row["power_cap_w"],
+                "origin": row["service_origin"],
+            },
+            created_at=row["created_at"],
+            removed_at=row["removed_at"],
+        )
+
+    @app.post("/api/clusters/build", response_model=BuildClusterResponse)
+    def clusters_build(
+        request: ClusterBuildRequest, db: ResultStore = Depends(write_store)
+    ) -> BuildClusterResponse:
+        try:
+            summary, warnings, islands = build_cluster(request, clusters_dir, root)
+        except (LabConfigError, ClusterGenError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        existed = db.get_cluster(summary.cluster_id) is not None
+        db.upsert_cluster(summary)  # idempotent: same request -> same id (FR-CB4)
+        row = db.get_cluster(summary.cluster_id)
+        assert row is not None
+        return BuildClusterResponse(
+            cluster=_cluster_info(row),
+            warnings=warnings,
+            islands=[IslandInfo(**i) for i in islands],
+            already_existed=existed,
+        )
+
+    @app.post("/api/workspaces", response_model=WorkspaceInfo)
+    def workspaces_create(
+        request: WorkspaceCreateRequest, db: ResultStore = Depends(write_store)
+    ) -> WorkspaceInfo:
+        cluster_row = db.get_cluster(request.cluster_id)
+        if cluster_row is None:
+            raise HTTPException(
+                status_code=404, detail=f"no cluster '{request.cluster_id}'"
+            )
+        workspace_id = db.create_workspace(
+            request.cluster_id, request.name,
+            cluster_yaml_hash=prov.hash_file(root / cluster_row["yaml_path"]),
+            total_power_cap_w=request.total_power_cap_w,
+        )
+        row = db.get_workspace(workspace_id)
+        assert row is not None
+        return _workspace_info(row, db)
+
+    @app.get("/api/workspaces", response_model=list[WorkspaceInfo])
+    def workspaces_list(db: ResultStore = Depends(store)) -> list[WorkspaceInfo]:
+        return [_workspace_info(row, db) for row in db.list_workspaces()]
+
+    @app.get("/api/workspaces/{workspace_id}", response_model=WorkspaceSummaryResponse)
+    @app.get(
+        "/api/workspaces/{workspace_id}/summary",
+        response_model=WorkspaceSummaryResponse,
+    )
+    def workspace_summary(
+        workspace_id: str, db: ResultStore = Depends(store)
+    ) -> WorkspaceSummaryResponse:
+        row = db.get_workspace(workspace_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail=f"no workspace '{workspace_id}'")
+        cluster_row = db.get_cluster(row["cluster_id"])
+        assert cluster_row is not None
+        placements = db.workspace_placements(workspace_id)
+        placed = [p for p in placements if p["status"] == "PLACED"]
+
+        from planner.inventory import load_cluster_spec
+
+        cluster = load_cluster_spec(root / cluster_row["yaml_path"])
+        by_class: dict[str, dict[str, int]] = {}
+        occupied = db.placed_devices(workspace_id)
+        for node in cluster.nodes:
+            for accel in node.accelerators:
+                entry = by_class.setdefault(accel.model, {"total": 0, "free": 0})
+                entry["total"] += 1
+                if f"{node.id}/{accel.id}" not in occupied:
+                    entry["free"] += 1
+        total_accels = sum(v["total"] for v in by_class.values())
+
+        overlay: dict[str, dict[str, Any]] = {}
+        for placement in placed:
+            stored = json.loads(placement["devices_json"])
+            roles = stored if isinstance(stored, dict) else dict.fromkeys(stored)
+            for device, role in roles.items():
+                overlay[device] = {
+                    "placement_id": placement["placement_id"],
+                    "service_id": placement["service_id"],
+                    # FR-W2: color index = seq, stable across add/remove.
+                    "color_index": placement["seq"],
+                    "role": role,
+                }
+
+        graph = build_cluster_graph(root / cluster_row["yaml_path"], root)
+        merged = _RowShim(dict(row))
+        merged["placed_count"] = len(placed)
+
+        return WorkspaceSummaryResponse(
+            workspace=_workspace_info(merged, db),
+            cluster=_cluster_info(cluster_row),
+            resources=WorkspaceResources(
+                total_accels=total_accels,
+                free_accels=total_accels - len(occupied),
+                by_class=by_class,
+            ),
+            power=WorkspacePower(
+                sum_avg_w=sum(p["avg_power_w"] or 0.0 for p in placed),
+                sum_peak_w=sum(p["peak_power_w"] or 0.0 for p in placed),
+                total_power_cap_w=row["total_power_cap_w"],
+            ),
+            placements=[_placement_row(p) for p in placements],
+            graph=graph,
+            topology_overlay=overlay,
+            interference_notice=INTERFERENCE_NOTICE,
+        )
+
+    @app.post(
+        "/api/workspaces/{workspace_id}/placements", response_model=PlacementResponse
+    )
+    def placements_create(
+        workspace_id: str,
+        request: PlacementSloRequest,
+        db: ResultStore = Depends(write_store),
+    ) -> PlacementResponse:
+        workspace = db.get_workspace(workspace_id)
+        if workspace is None:
+            raise HTTPException(status_code=404, detail=f"no workspace '{workspace_id}'")
+
+        jobs: list[tuple[str, Any]] = []  # (service_id, spec)
+        if request.slo == "random":
+            # Index runs 0..count-1 for THIS request: (seed, index) fully
+            # determines the SLO sequence (FR-P7), independent of history.
+            for k in range(request.count):
+                summary = random_workspace_service(
+                    workspace_id, k, request.seed, services_dir
+                )
+                db.upsert_service(summary, origin="random")
+                jobs.append((summary.service_id, load_service_spec(summary.yaml_path)))
+        elif isinstance(request.slo, str):
+            raise HTTPException(
+                status_code=400, detail="slo must be 'random' or an SLO object"
+            )
+        else:
+            seq = len(db.workspace_placements(workspace_id)) + 1
+            try:
+                summary, spec = save_user_service(
+                    workspace_id, seq, request.slo.model_dump(), services_dir
+                )
+            except InteractivePlanError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+            db.upsert_service(summary, origin="user")
+            jobs.append((summary.service_id, spec))
+
+        # count > 1 forces sequential confirmation: each placement must land
+        # before the next one can see the devices it took.
+        confirm = request.confirm or (request.slo == "random" and request.count > 1)
+        rows: list[PlacementRow] = []
+        results: list[dict[str, Any]] = []
+        for service_id, spec in jobs:
+            outcome = place_service(
+                db, workspace_id, service_id, spec,
+                root=root, results_dir=results_dir,
+                envelope_dir=envelope_dir, calibration_dir=calibration_dir,
+                confirm=confirm,
+            )
+            placement = db.workspace_placements(workspace_id)
+            row = next(
+                p for p in placement
+                if p["placement_id"] == outcome["placement_id"]
+            )
+            rows.append(_placement_row(row))
+            results.append(outcome["result"])
+        return PlacementResponse(placements=rows, results=results)
+
+    @app.post(
+        "/api/workspaces/{workspace_id}/placements/{placement_id}/confirm",
+        response_model=PlacementRow,
+    )
+    def placements_confirm(
+        workspace_id: str,
+        placement_id: str,
+        db: ResultStore = Depends(write_store),
+    ) -> PlacementRow:
+        try:
+            db.confirm_placement(placement_id)
+        except StoreError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        row = next(
+            p for p in db.workspace_placements(workspace_id)
+            if p["placement_id"] == placement_id
+        )
+        return _placement_row(row)
+
+    @app.delete("/api/workspaces/{workspace_id}/placements/{placement_id}")
+    def placements_delete(
+        workspace_id: str,
+        placement_id: str,
+        db: ResultStore = Depends(write_store),
+    ) -> dict[str, str]:
+        try:
+            db.remove_placement(placement_id)
+        except StoreError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        return {"placement_id": placement_id, "status": "REMOVED"}
 
     @app.get("/api/batches/{batch_id}/progress")
     def progress(batch_id: str, db: ResultStore = Depends(store)) -> dict[str, Any]:

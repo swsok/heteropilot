@@ -104,13 +104,33 @@ def plan_interactive(
     seed: int = INTERACTIVE_SEED,
     work_dir: str | Path | None = None,
 ) -> dict[str, Any]:
-    """Run the fast path once. Returns the response payload pieces."""
+    """Run the fast path once against a cluster YAML file."""
+    return plan_fast(
+        build_service_spec(slo), load_cluster_spec(cluster_yaml),
+        root=root, envelope_dir=envelope_dir, calibration_dir=calibration_dir,
+        top_k=top_k, num_requests=num_requests, seed=seed, work_dir=work_dir,
+    )
+
+
+def plan_fast(
+    spec: ServiceSpec,
+    cluster: Any,
+    *,
+    root: str | Path = ".",
+    envelope_dir: str | Path | None = None,
+    calibration_dir: str | Path | None = "profiles/calibration",
+    top_k: int = INTERACTIVE_TOP_K,
+    num_requests: int = INTERACTIVE_NUM_REQUESTS,
+    seed: int = INTERACTIVE_SEED,
+    work_dir: str | Path | None = None,
+) -> dict[str, Any]:
+    """The fast path over an in-memory ClusterSpecV2 - the workspace
+    placement engine plans on occupancy OVERLAY copies that exist only in
+    memory (workspace work order §5.1), so this must not require a file."""
     import tempfile
 
     started = time.perf_counter()
     root = Path(root)
-    spec = build_service_spec(slo)
-    cluster = load_cluster_spec(cluster_yaml)
     profiles = load_profiles_for(cluster, root)
     islands = detect_islands(cluster, profiles)
 

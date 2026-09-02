@@ -123,6 +123,9 @@ class ClusterInfo(BaseModel):
     classes: list[str]
     num_islands: int
     has_npu: bool
+    origin: str = "random"
+    link_summary: str | None = None
+    workspaces: int = 0
 
 
 class ClusterDetail(ClusterInfo):
@@ -229,6 +232,112 @@ class PlanResponse(BaseModel):
     calibration: dict[str, Any]
     planner_output: dict[str, Any]
     graph: ClusterGraph
+
+
+# -- workspace mode (workspace work order §6.1/§7) ---------------------------
+
+class IslandInfo(BaseModel):
+    id: str
+    accelerators: int
+    model: str
+    tp_candidates: list[int]
+
+
+class BuildClusterResponse(BaseModel):
+    cluster: ClusterInfo
+    warnings: list[str]
+    islands: list[IslandInfo]
+    already_existed: bool
+
+
+class WorkspaceCreateRequest(BaseModel):
+    cluster_id: str
+    name: str
+    total_power_cap_w: float | None = None
+
+
+class WorkspaceInfo(BaseModel):
+    workspace_id: str
+    cluster_id: str
+    name: str
+    created_at: str
+    status: str
+    total_power_cap_w: float | None
+    placed_count: int = 0
+    #: FR-CAT3: set when the cluster YAML changed after this workspace was made.
+    cluster_changed: bool = False
+
+
+class PlacementSloRequest(BaseModel):
+    """Body of POST /placements: either slo='random' (+count/seed) or a
+    user-typed SLO object (same fields as /api/plan)."""
+
+    slo: str | PlanSloRequest
+    count: int = 1
+    seed: int = 42
+    #: confirm=True places immediately (CLI --yes analogue; also what the
+    #: random-count path uses, since each placement must land before the next
+    #: is planned). confirm=False returns a PLANNING preview (FR-W4).
+    confirm: bool = False
+
+
+class PlacementRow(BaseModel):
+    placement_id: str
+    workspace_id: str
+    service_id: str
+    seq: int
+    status: str
+    devices: list[str]
+    fidelity: str | None
+    calibrated: bool | None
+    slo_ttft_ok: bool | None
+    slo_tpot_ok: bool | None
+    p99_ttft_ms: float | None
+    p99_tpot_ms: float | None
+    avg_power_w: float | None
+    peak_power_w: float | None
+    tokens_per_joule: float | None
+    shared_fabric_warning: bool | None
+    npu_extrapolated: bool | None
+    rejected_reason: dict[str, Any] | None
+    service: dict[str, Any]
+    created_at: str
+    removed_at: str | None
+
+
+class PlacementResponse(BaseModel):
+    placements: list[PlacementRow]
+    #: Full planner outputs, index-aligned with `placements` (preview detail).
+    results: list[dict[str, Any]]
+
+
+class WorkspaceResources(BaseModel):
+    total_accels: int
+    free_accels: int
+    by_class: dict[str, dict[str, int]]
+
+
+class WorkspacePower(BaseModel):
+    #: Sum of PLACED avg predictions.
+    sum_avg_w: float
+    #: Sum of PLACED peaks - a conservative upper bound that assumes
+    #: simultaneous peaks (FR-W3); labelled as such in the UI.
+    sum_peak_w: float
+    total_power_cap_w: float | None
+
+
+class WorkspaceSummaryResponse(BaseModel):
+    workspace: WorkspaceInfo
+    cluster: ClusterInfo
+    resources: WorkspaceResources
+    power: WorkspacePower
+    placements: list[PlacementRow]
+    graph: ClusterGraph
+    #: device id -> {service seq (stable color index), role}
+    topology_overlay: dict[str, dict[str, Any]]
+    #: Standing notice (work order §9): every prediction assumes sole use of
+    #: its devices; inter-service interference is not modelled.
+    interference_notice: str
 
 
 SummaryResponse.model_rebuild()

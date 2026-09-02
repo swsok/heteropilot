@@ -21,7 +21,11 @@ CREATE TABLE IF NOT EXISTS clusters (
     num_free_accels INTEGER NOT NULL,
     classes_json    TEXT NOT NULL,
     num_islands     INTEGER NOT NULL,
-    has_npu         INTEGER NOT NULL
+    has_npu         INTEGER NOT NULL,
+    -- v3 (workspace work order §2.2): who made this cluster and how.
+    origin          TEXT NOT NULL DEFAULT 'random',
+    build_request_json TEXT,
+    link_summary    TEXT
 );
 
 CREATE TABLE IF NOT EXISTS services (
@@ -32,8 +36,49 @@ CREATE TABLE IF NOT EXISTS services (
     rps         REAL NOT NULL,
     ttft_p99_ms REAL NOT NULL,
     tpot_p99_ms REAL NOT NULL,
-    power_cap_w REAL NOT NULL
+    power_cap_w REAL NOT NULL,
+    -- v3: random (generator) | user (typed into the workspace UI/API).
+    origin      TEXT NOT NULL DEFAULT 'random'
 );
+
+-- v3 (workspace work order §1.1): one cluster + sequentially placed services
+-- + a device-occupancy overlay owned by the workspace (the cluster YAML is
+-- immutable; several workspaces can share one cluster independently).
+CREATE TABLE IF NOT EXISTS workspaces (
+    workspace_id      TEXT PRIMARY KEY,
+    cluster_id        TEXT NOT NULL REFERENCES clusters(cluster_id),
+    name              TEXT NOT NULL,
+    created_at        TEXT NOT NULL,
+    status            TEXT NOT NULL DEFAULT 'ACTIVE',
+    cluster_yaml_hash TEXT,
+    total_power_cap_w REAL
+);
+
+CREATE TABLE IF NOT EXISTS placements (
+    placement_id   TEXT PRIMARY KEY,
+    workspace_id   TEXT NOT NULL REFERENCES workspaces(workspace_id),
+    service_id     TEXT NOT NULL REFERENCES services(service_id),
+    seq            INTEGER NOT NULL,
+    status         TEXT NOT NULL,   -- PLANNING|PLACED|REJECTED|FAILED|REMOVED
+    devices_json   TEXT NOT NULL DEFAULT '[]',
+    plan_json_path TEXT,
+    fidelity       TEXT,
+    calibrated     INTEGER,
+    slo_ttft_ok    INTEGER,
+    slo_tpot_ok    INTEGER,
+    p99_ttft_ms    REAL,
+    p99_tpot_ms    REAL,
+    avg_power_w    REAL,
+    peak_power_w   REAL,
+    tokens_per_joule REAL,
+    shared_fabric_warning INTEGER,
+    npu_extrapolated INTEGER,
+    rejected_reason_json TEXT,
+    created_at     TEXT NOT NULL,
+    removed_at     TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_placements_ws ON placements(workspace_id, status);
 
 CREATE TABLE IF NOT EXISTS scenarios (
     scenario_id TEXT PRIMARY KEY,

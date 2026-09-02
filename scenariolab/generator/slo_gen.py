@@ -51,9 +51,14 @@ def generate_service(
     seed: int,
     out_dir: Path,
     lab_config_hash: str,
+    service_id: str | None = None,
 ) -> ServiceSummary:
-    """Generate, self-validate and write service s{index:04d} (FR-S1..S7)."""
-    service_id = f"s{index:04d}"
+    """Generate, self-validate and write a random service (FR-S1..S7).
+
+    `service_id` defaults to the batch convention s{index:04d}; the workspace
+    placement engine passes its own ids so workspace services never collide
+    with batch services in the shared `services` table."""
+    service_id = service_id or f"s{index:04d}"
     rng = rng_for(seed)
 
     # Sampling order is part of the reproducibility contract; do not reorder.

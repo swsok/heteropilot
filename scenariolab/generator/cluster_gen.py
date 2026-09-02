@@ -101,6 +101,13 @@ class ClusterSummary:
     classes: list[str]
     num_islands: int
     has_npu: bool
+    #: 'random' (this generator) or 'custom' (the workspace cluster builder).
+    origin: str = "random"
+    #: One-line inter-node link description for the catalog (FR-CAT1: the
+    #: list view reads only the DB, never re-parses YAML).
+    link_summary: str | None = None
+    #: The verbatim ClusterBuildRequest for custom clusters (idempotency key).
+    build_request_json: str | None = None
 
 
 def load_link_profile(name: str, root: Path) -> LinkProfile:
@@ -344,11 +351,24 @@ def generate_cluster(
             has_npu=any(
                 a.type.value == "NPU" for n in loaded.nodes for a in n.accelerators
             ),
+            link_summary=describe_fabric(loaded),
         )
     raise ClusterGenError(
         f"cluster {cluster_id}: 20 attempts produced no valid cluster. "
         f"Adjust the configured ranges. Failure log: {failures}"
     )
+
+
+def describe_fabric(cluster: ClusterSpecV2) -> str:
+    """One-line inter-node fabric description for the catalog view."""
+    nics = {f"{n.id}/{nic.id}" for n in cluster.nodes for nic in n.nics}
+    for link in cluster.links:
+        if link.src in nics and link.dst in nics:
+            return (
+                f"{link.type.value} {link.bandwidth_gbps:g}Gbps "
+                f"({link.source.value})"
+            )
+    return "single-node"
 
 
 def _fully_connected(cluster: ClusterSpecV2) -> bool:
