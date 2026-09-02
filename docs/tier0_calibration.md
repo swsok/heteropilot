@@ -183,12 +183,38 @@ where the Ascend island is the marginal choice would need the sweep rerun.)
 
 ### E1 — plan agreement (`e1_plan_agreement`)
 
-Four legs per condition (greedy proxy / Tier 0 + sim / Tier 2 + sim = truth
-/ oracle) on the A40 TP-sweep cluster x {llama31-8b, llama31-8b-light};
-metrics: top-1 agreement, top-3 containment, chosen-plan objective error
-under the truth leg's scores, Kendall tau. See
-`outputs/tier_validation/e1/` for the report produced by the full-simulation
-run (`--num-requests 20 --workers 4`).
+Full-simulation run (`--num-requests 20 --workers 4`, seed 42) on the A40
+TP-sweep cluster (42 candidates per condition); ground truth = the measured
+(tier 2) bundle's simulated ranking. rel.err = how much of the true primary
+objective (SLO-goodput/J) the leg's chosen plan gives up, scored under the
+truth leg.
+
+| condition | leg | top-1 | top-3 | rel.err | Kendall tau |
+| --- | --- | --- | --- | --- | --- |
+| llama31-8b | greedy | no | no | 4.3% | 0.018 |
+| llama31-8b | **tier0+sim** | no | no | **0.4%** | **0.914** |
+| llama31-8b | oracle (t2) | yes | yes | 0.0% | 1.000 |
+| llama31-8b-light | greedy | no | yes | 0.0% | 0.071 |
+| llama31-8b-light | **tier0+sim** | no | no | **11.3%** | **0.902** |
+| llama31-8b-light | oracle (t2) | yes | yes | 0.0% | 1.000 |
+
+Reading:
+
+- **Tier 0 + simulator preserves the ORDERING** the planner actually needs:
+  Kendall tau 0.90-0.91 against the measured-bundle ranking, versus the
+  greedy no-simulation proxy's 0.02-0.07. Running the simulator on
+  analytical inputs buys almost the entire ranking structure.
+- **Exact top-1 agreement is 0/2**: near-equivalent candidates at the top
+  swap places under the residual Tier 0 error. The COST of that swap is
+  what matters: 0.4% of the true objective on llama31-8b, 11.3% on the
+  light workload (where near-ties are farther apart).
+- Conclusion for Tier 0's intended use: good enough to screen candidates
+  and shortlist configurations on unowned hardware; the final pick should
+  be confirmed on measured (tier 2) inputs when they exist - which is
+  exactly what the profile_tier caveat machinery enforces in reports.
+- Oracle == tier2 here: bound pruning removed no candidate on this cluster
+  (42 generated, 42 survived), a per-condition oracle-agreement check for
+  free.
 
 ## Reproduction
 
