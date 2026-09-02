@@ -1,0 +1,86 @@
+bundles (raw key counts):
+  A40:Qwen/Qwen3-32B                                 10243
+  A40:meta-llama/Llama-3.1-8B                        10091
+  A5000:meta-llama/Llama-3.1-8B                      10091
+  RNGD:meta-llama/Llama-3.1-8B                       158
+  RNGD-CARD:meta-llama/Llama-3.1-8B                  153
+  RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507        20558
+  RTXPRO6000:Qwen/Qwen3-32B                          20964
+  RTXPRO6000:meta-llama/Llama-3.1-8B                 20812
+  RTXPRO6000X2:meta-llama/Llama-3.1-8B               10091
+
+raw_overlap:
+  A40:Qwen/Qwen3-32B vs A40:meta-llama/Llama-3.1-8B                      inter=     0 jaccard=0.000 overlap=0.000
+  A40:Qwen/Qwen3-32B vs A5000:meta-llama/Llama-3.1-8B                    inter=     0 jaccard=0.000 overlap=0.000
+  A40:Qwen/Qwen3-32B vs RNGD-CARD:meta-llama/Llama-3.1-8B                inter=     0 jaccard=0.000 overlap=0.000
+  A40:Qwen/Qwen3-32B vs RNGD:meta-llama/Llama-3.1-8B                     inter=     0 jaccard=0.000 overlap=0.000
+  A40:Qwen/Qwen3-32B vs RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507      inter=     0 jaccard=0.000 overlap=0.000
+  A40:Qwen/Qwen3-32B vs RTXPRO6000:Qwen/Qwen3-32B                        inter= 10243 jaccard=0.489 overlap=1.000
+  A40:Qwen/Qwen3-32B vs RTXPRO6000:meta-llama/Llama-3.1-8B               inter=     0 jaccard=0.000 overlap=0.000
+  A40:Qwen/Qwen3-32B vs RTXPRO6000X2:meta-llama/Llama-3.1-8B             inter=     0 jaccard=0.000 overlap=0.000
+  A40:meta-llama/Llama-3.1-8B vs A5000:meta-llama/Llama-3.1-8B           inter= 10091 jaccard=1.000 overlap=1.000
+  A40:meta-llama/Llama-3.1-8B vs RNGD-CARD:meta-llama/Llama-3.1-8B       inter=   121 jaccard=0.012 overlap=0.791
+  A40:meta-llama/Llama-3.1-8B vs RNGD:meta-llama/Llama-3.1-8B            inter=   158 jaccard=0.016 overlap=1.000
+  A40:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507 inter=     0 jaccard=0.000 overlap=0.000
+  A40:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-32B               inter=     0 jaccard=0.000 overlap=0.000
+  A40:meta-llama/Llama-3.1-8B vs RTXPRO6000:meta-llama/Llama-3.1-8B      inter= 10091 jaccard=0.485 overlap=1.000
+  A40:meta-llama/Llama-3.1-8B vs RTXPRO6000X2:meta-llama/Llama-3.1-8B    inter= 10091 jaccard=1.000 overlap=1.000
+  A5000:meta-llama/Llama-3.1-8B vs RNGD-CARD:meta-llama/Llama-3.1-8B     inter=   121 jaccard=0.012 overlap=0.791
+  A5000:meta-llama/Llama-3.1-8B vs RNGD:meta-llama/Llama-3.1-8B          inter=   158 jaccard=0.016 overlap=1.000
+  A5000:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507 inter=     0 jaccard=0.000 overlap=0.000
+  A5000:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-32B             inter=     0 jaccard=0.000 overlap=0.000
+  A5000:meta-llama/Llama-3.1-8B vs RTXPRO6000:meta-llama/Llama-3.1-8B    inter= 10091 jaccard=0.485 overlap=1.000
+  A5000:meta-llama/Llama-3.1-8B vs RTXPRO6000X2:meta-llama/Llama-3.1-8B  inter= 10091 jaccard=1.000 overlap=1.000
+  RNGD-CARD:meta-llama/Llama-3.1-8B vs RNGD:meta-llama/Llama-3.1-8B      inter=   111 jaccard=0.555 overlap=0.725
+  RNGD-CARD:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507 inter=     0 jaccard=0.000 overlap=0.000
+  RNGD-CARD:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-32B         inter=     0 jaccard=0.000 overlap=0.000
+  RNGD-CARD:meta-llama/Llama-3.1-8B vs RTXPRO6000:meta-llama/Llama-3.1-8B inter=   121 jaccard=0.006 overlap=0.791
+  RNGD-CARD:meta-llama/Llama-3.1-8B vs RTXPRO6000X2:meta-llama/Llama-3.1-8B inter=   121 jaccard=0.012 overlap=0.791
+  RNGD:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507 inter=     0 jaccard=0.000 overlap=0.000
+  RNGD:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-32B              inter=     0 jaccard=0.000 overlap=0.000
+  RNGD:meta-llama/Llama-3.1-8B vs RTXPRO6000:meta-llama/Llama-3.1-8B     inter=   158 jaccard=0.008 overlap=1.000
+  RNGD:meta-llama/Llama-3.1-8B vs RTXPRO6000X2:meta-llama/Llama-3.1-8B   inter=   158 jaccard=0.016 overlap=1.000
+  RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507 vs RTXPRO6000:Qwen/Qwen3-32B inter=     0 jaccard=0.000 overlap=0.000
+  RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507 vs RTXPRO6000:meta-llama/Llama-3.1-8B inter=     0 jaccard=0.000 overlap=0.000
+  RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507 vs RTXPRO6000X2:meta-llama/Llama-3.1-8B inter=     0 jaccard=0.000 overlap=0.000
+  RTXPRO6000:Qwen/Qwen3-32B vs RTXPRO6000:meta-llama/Llama-3.1-8B        inter=     0 jaccard=0.000 overlap=0.000
+  RTXPRO6000:Qwen/Qwen3-32B vs RTXPRO6000X2:meta-llama/Llama-3.1-8B      inter=     0 jaccard=0.000 overlap=0.000
+  RTXPRO6000:meta-llama/Llama-3.1-8B vs RTXPRO6000X2:meta-llama/Llama-3.1-8B inter= 10091 jaccard=0.485 overlap=1.000
+
+normalized_overlap:
+  A40:Qwen/Qwen3-32B vs A40:meta-llama/Llama-3.1-8B                      inter=   104 jaccard=0.016 overlap=0.033
+  A40:Qwen/Qwen3-32B vs A5000:meta-llama/Llama-3.1-8B                    inter=   104 jaccard=0.016 overlap=0.033
+  A40:Qwen/Qwen3-32B vs RNGD-CARD:meta-llama/Llama-3.1-8B                inter=     0 jaccard=0.000 overlap=0.000
+  A40:Qwen/Qwen3-32B vs RNGD:meta-llama/Llama-3.1-8B                     inter=     0 jaccard=0.000 overlap=0.000
+  A40:Qwen/Qwen3-32B vs RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507      inter=   278 jaccard=0.017 overlap=0.085
+  A40:Qwen/Qwen3-32B vs RTXPRO6000:Qwen/Qwen3-32B                        inter=  3275 jaccard=0.241 overlap=1.000
+  A40:Qwen/Qwen3-32B vs RTXPRO6000:meta-llama/Llama-3.1-8B               inter=   104 jaccard=0.006 overlap=0.032
+  A40:Qwen/Qwen3-32B vs RTXPRO6000X2:meta-llama/Llama-3.1-8B             inter=   104 jaccard=0.016 overlap=0.033
+  A40:meta-llama/Llama-3.1-8B vs A5000:meta-llama/Llama-3.1-8B           inter=  3139 jaccard=1.000 overlap=1.000
+  A40:meta-llama/Llama-3.1-8B vs RNGD-CARD:meta-llama/Llama-3.1-8B       inter=   112 jaccard=0.035 overlap=0.783
+  A40:meta-llama/Llama-3.1-8B vs RNGD:meta-llama/Llama-3.1-8B            inter=   134 jaccard=0.043 overlap=1.000
+  A40:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507 inter=   196 jaccard=0.012 overlap=0.062
+  A40:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-32B               inter=   104 jaccard=0.006 overlap=0.033
+  A40:meta-llama/Llama-3.1-8B vs RTXPRO6000:meta-llama/Llama-3.1-8B      inter=  3139 jaccard=0.233 overlap=1.000
+  A40:meta-llama/Llama-3.1-8B vs RTXPRO6000X2:meta-llama/Llama-3.1-8B    inter=  3139 jaccard=1.000 overlap=1.000
+  A5000:meta-llama/Llama-3.1-8B vs RNGD-CARD:meta-llama/Llama-3.1-8B     inter=   112 jaccard=0.035 overlap=0.783
+  A5000:meta-llama/Llama-3.1-8B vs RNGD:meta-llama/Llama-3.1-8B          inter=   134 jaccard=0.043 overlap=1.000
+  A5000:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507 inter=   196 jaccard=0.012 overlap=0.062
+  A5000:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-32B             inter=   104 jaccard=0.006 overlap=0.033
+  A5000:meta-llama/Llama-3.1-8B vs RTXPRO6000:meta-llama/Llama-3.1-8B    inter=  3139 jaccard=0.233 overlap=1.000
+  A5000:meta-llama/Llama-3.1-8B vs RTXPRO6000X2:meta-llama/Llama-3.1-8B  inter=  3139 jaccard=1.000 overlap=1.000
+  RNGD-CARD:meta-llama/Llama-3.1-8B vs RNGD:meta-llama/Llama-3.1-8B      inter=   102 jaccard=0.583 overlap=0.761
+  RNGD-CARD:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507 inter=    20 jaccard=0.002 overlap=0.140
+  RNGD-CARD:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-32B         inter=     0 jaccard=0.000 overlap=0.000
+  RNGD-CARD:meta-llama/Llama-3.1-8B vs RTXPRO6000:meta-llama/Llama-3.1-8B inter=   112 jaccard=0.008 overlap=0.783
+  RNGD-CARD:meta-llama/Llama-3.1-8B vs RTXPRO6000X2:meta-llama/Llama-3.1-8B inter=   112 jaccard=0.035 overlap=0.783
+  RNGD:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507 inter=    22 jaccard=0.002 overlap=0.164
+  RNGD:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-32B              inter=     0 jaccard=0.000 overlap=0.000
+  RNGD:meta-llama/Llama-3.1-8B vs RTXPRO6000:meta-llama/Llama-3.1-8B     inter=   134 jaccard=0.010 overlap=1.000
+  RNGD:meta-llama/Llama-3.1-8B vs RTXPRO6000X2:meta-llama/Llama-3.1-8B   inter=   134 jaccard=0.043 overlap=1.000
+  RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507 vs RTXPRO6000:Qwen/Qwen3-32B inter=   342 jaccard=0.013 overlap=0.026
+  RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507 vs RTXPRO6000:meta-llama/Llama-3.1-8B inter=   196 jaccard=0.007 overlap=0.015
+  RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507 vs RTXPRO6000X2:meta-llama/Llama-3.1-8B inter=   196 jaccard=0.012 overlap=0.062
+  RTXPRO6000:Qwen/Qwen3-32B vs RTXPRO6000:meta-llama/Llama-3.1-8B        inter=   104 jaccard=0.004 overlap=0.008
+  RTXPRO6000:Qwen/Qwen3-32B vs RTXPRO6000X2:meta-llama/Llama-3.1-8B      inter=   104 jaccard=0.006 overlap=0.033
+  RTXPRO6000:meta-llama/Llama-3.1-8B vs RTXPRO6000X2:meta-llama/Llama-3.1-8B inter=  3139 jaccard=0.233 overlap=1.000

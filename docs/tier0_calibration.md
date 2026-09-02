@@ -133,6 +133,63 @@ Findings:
   the scalar: at 5% share, scalar-only reaches 39.1% while piecewise
   reaches 29.7%.
 
+## Validation experiments E1-E4 (STEP 11)
+
+Harnesses live in `experiments/tier_validation/`; JSON+table reports (with
+§3.8 provenance) under `outputs/tier_validation/e<N>/`. Results below were
+produced 2026-09-02 on this repo's committed measured bundles.
+
+### E2 — where should a measurement budget go? (`e2_budget_pareto`)
+
+A40 / Llama-3.1-8B, budget 200 anchors, hold-out MAPE vs the measured bundle:
+
+| condition | measured points | hold-out MAPE |
+| --- | --- | --- |
+| A: Tier 0, no anchors | 0 | 38.9% |
+| B: 200 anchors, ALL attention | 200 | **29.5%** |
+| C: 200 anchors, uniform spread | 200 | 42.9% |
+| D: fully measured | 10 091 | 0% |
+
+Attention-focused anchoring buys most of the Tier 1 gain (consistent with
+the KernelSight-LM observation and the hold-out curve above). The uniform
+condition actually LOST accuracy: spreading 200 anchors across five
+families leaves each non-attention family with a handful of deterministic
+picks whose launch-floor keys skew the fitted scalars - the same failure
+mode the `min_family_anchors` guard bounds but cannot eliminate at
+tiny per-family counts.
+
+### E3 — shape overlap across bundles (`e3_shape_overlap`)
+
+Raw keys are model-namespaced (a raw `(layer, tokens)` key only names the
+same GEMM within one model); normalization reduces every row to its
+physical work signature (family, FLOPs, bytes).
+
+- **Same model, different hardware: 100% key overlap** (identical grids) -
+  the grid transfers, the measurements do not.
+- **Different models on one hardware: near-zero shape reuse** - normalized
+  overlap is 0.8% (Qwen3-32B vs Llama-3.1-8B), 2.6% (Qwen3-30B-A3B vs
+  Qwen3-32B), 16% max on any cross-model pair. A shape cache across THIS
+  model catalog would save almost nothing (vs Dooly's 56.4%, which counts
+  intra-workload reuse) - the S2 follow-up is not currently worth building.
+
+### E4 — Ascend datasheet sensitivity (`e4_sensitivity`)
+
+hetero-gpu-ascend x qwen3-32b, each of {peak_tflops, memory_bandwidth_gbps,
+flops_efficiency, mem_efficiency} swept +-30% (13 steps, datasheet-driven
+analytical predictor): **the recommended plan never flips** - the RTXPRO6000
+plan dominates across the whole sweep, so the secondary-source uncertainty
+in the Ascend datasheet does not change this cluster's decision. (A cluster
+where the Ascend island is the marginal choice would need the sweep rerun.)
+
+### E1 — plan agreement (`e1_plan_agreement`)
+
+Four legs per condition (greedy proxy / Tier 0 + sim / Tier 2 + sim = truth
+/ oracle) on the A40 TP-sweep cluster x {llama31-8b, llama31-8b-light};
+metrics: top-1 agreement, top-3 containment, chosen-plan objective error
+under the truth leg's scores, Kendall tau. See
+`outputs/tier_validation/e1/` for the report produced by the full-simulation
+run (`--num-requests 20 --workers 4`).
+
 ## Reproduction
 
 ```bash

@@ -1,0 +1,404 @@
+{
+  "bundles": {
+    "A40:Qwen/Qwen3-32B": 10243,
+    "A40:meta-llama/Llama-3.1-8B": 10091,
+    "A5000:meta-llama/Llama-3.1-8B": 10091,
+    "RNGD:meta-llama/Llama-3.1-8B": 158,
+    "RNGD-CARD:meta-llama/Llama-3.1-8B": 153,
+    "RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507": 20558,
+    "RTXPRO6000:Qwen/Qwen3-32B": 20964,
+    "RTXPRO6000:meta-llama/Llama-3.1-8B": 20812,
+    "RTXPRO6000X2:meta-llama/Llama-3.1-8B": 10091
+  },
+  "raw_overlap": {
+    "A40:Qwen/Qwen3-32B vs A40:meta-llama/Llama-3.1-8B": {
+      "intersection": 0,
+      "jaccard": 0.0,
+      "overlap_coefficient": 0.0
+    },
+    "A40:Qwen/Qwen3-32B vs A5000:meta-llama/Llama-3.1-8B": {
+      "intersection": 0,
+      "jaccard": 0.0,
+      "overlap_coefficient": 0.0
+    },
+    "A40:Qwen/Qwen3-32B vs RNGD-CARD:meta-llama/Llama-3.1-8B": {
+      "intersection": 0,
+      "jaccard": 0.0,
+      "overlap_coefficient": 0.0
+    },
+    "A40:Qwen/Qwen3-32B vs RNGD:meta-llama/Llama-3.1-8B": {
+      "intersection": 0,
+      "jaccard": 0.0,
+      "overlap_coefficient": 0.0
+    },
+    "A40:Qwen/Qwen3-32B vs RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507": {
+      "intersection": 0,
+      "jaccard": 0.0,
+      "overlap_coefficient": 0.0
+    },
+    "A40:Qwen/Qwen3-32B vs RTXPRO6000:Qwen/Qwen3-32B": {
+      "intersection": 10243,
+      "jaccard": 0.4885995039114673,
+      "overlap_coefficient": 1.0
+    },
+    "A40:Qwen/Qwen3-32B vs RTXPRO6000:meta-llama/Llama-3.1-8B": {
+      "intersection": 0,
+      "jaccard": 0.0,
+      "overlap_coefficient": 0.0
+    },
+    "A40:Qwen/Qwen3-32B vs RTXPRO6000X2:meta-llama/Llama-3.1-8B": {
+      "intersection": 0,
+      "jaccard": 0.0,
+      "overlap_coefficient": 0.0
+    },
+    "A40:meta-llama/Llama-3.1-8B vs A5000:meta-llama/Llama-3.1-8B": {
+      "intersection": 10091,
+      "jaccard": 1.0,
+      "overlap_coefficient": 1.0
+    },
+    "A40:meta-llama/Llama-3.1-8B vs RNGD-CARD:meta-llama/Llama-3.1-8B": {
+      "intersection": 121,
+      "jaccard": 0.011952978366097006,
+      "overlap_coefficient": 0.7908496732026143
+    },
+    "A40:meta-llama/Llama-3.1-8B vs RNGD:meta-llama/Llama-3.1-8B": {
+      "intersection": 158,
+      "jaccard": 0.01565751659894956,
+      "overlap_coefficient": 1.0
+    },
+    "A40:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507": {
+      "intersection": 0,
+      "jaccard": 0.0,
+      "overlap_coefficient": 0.0
+    },
+    "A40:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-32B": {
+      "intersection": 0,
+      "jaccard": 0.0,
+      "overlap_coefficient": 0.0
+    },
+    "A40:meta-llama/Llama-3.1-8B vs RTXPRO6000:meta-llama/Llama-3.1-8B": {
+      "intersection": 10091,
+      "jaccard": 0.48486450124927927,
+      "overlap_coefficient": 1.0
+    },
+    "A40:meta-llama/Llama-3.1-8B vs RTXPRO6000X2:meta-llama/Llama-3.1-8B": {
+      "intersection": 10091,
+      "jaccard": 1.0,
+      "overlap_coefficient": 1.0
+    },
+    "A5000:meta-llama/Llama-3.1-8B vs RNGD-CARD:meta-llama/Llama-3.1-8B": {
+      "intersection": 121,
+      "jaccard": 0.011952978366097006,
+      "overlap_coefficient": 0.7908496732026143
+    },
+    "A5000:meta-llama/Llama-3.1-8B vs RNGD:meta-llama/Llama-3.1-8B": {
+      "intersection": 158,
+      "jaccard": 0.01565751659894956,
+      "overlap_coefficient": 1.0
+    },
+    "A5000:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507": {
+      "intersection": 0,
+      "jaccard": 0.0,
+      "overlap_coefficient": 0.0
+    },
+    "A5000:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-32B": {
+      "intersection": 0,
+      "jaccard": 0.0,
+      "overlap_coefficient": 0.0
+    },
+    "A5000:meta-llama/Llama-3.1-8B vs RTXPRO6000:meta-llama/Llama-3.1-8B": {
+      "intersection": 10091,
+      "jaccard": 0.48486450124927927,
+      "overlap_coefficient": 1.0
+    },
+    "A5000:meta-llama/Llama-3.1-8B vs RTXPRO6000X2:meta-llama/Llama-3.1-8B": {
+      "intersection": 10091,
+      "jaccard": 1.0,
+      "overlap_coefficient": 1.0
+    },
+    "RNGD-CARD:meta-llama/Llama-3.1-8B vs RNGD:meta-llama/Llama-3.1-8B": {
+      "intersection": 111,
+      "jaccard": 0.555,
+      "overlap_coefficient": 0.7254901960784313
+    },
+    "RNGD-CARD:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507": {
+      "intersection": 0,
+      "jaccard": 0.0,
+      "overlap_coefficient": 0.0
+    },
+    "RNGD-CARD:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-32B": {
+      "intersection": 0,
+      "jaccard": 0.0,
+      "overlap_coefficient": 0.0
+    },
+    "RNGD-CARD:meta-llama/Llama-3.1-8B vs RTXPRO6000:meta-llama/Llama-3.1-8B": {
+      "intersection": 121,
+      "jaccard": 0.005805027825753214,
+      "overlap_coefficient": 0.7908496732026143
+    },
+    "RNGD-CARD:meta-llama/Llama-3.1-8B vs RTXPRO6000X2:meta-llama/Llama-3.1-8B": {
+      "intersection": 121,
+      "jaccard": 0.011952978366097006,
+      "overlap_coefficient": 0.7908496732026143
+    },
+    "RNGD:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507": {
+      "intersection": 0,
+      "jaccard": 0.0,
+      "overlap_coefficient": 0.0
+    },
+    "RNGD:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-32B": {
+      "intersection": 0,
+      "jaccard": 0.0,
+      "overlap_coefficient": 0.0
+    },
+    "RNGD:meta-llama/Llama-3.1-8B vs RTXPRO6000:meta-llama/Llama-3.1-8B": {
+      "intersection": 158,
+      "jaccard": 0.007591773976551989,
+      "overlap_coefficient": 1.0
+    },
+    "RNGD:meta-llama/Llama-3.1-8B vs RTXPRO6000X2:meta-llama/Llama-3.1-8B": {
+      "intersection": 158,
+      "jaccard": 0.01565751659894956,
+      "overlap_coefficient": 1.0
+    },
+    "RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507 vs RTXPRO6000:Qwen/Qwen3-32B": {
+      "intersection": 0,
+      "jaccard": 0.0,
+      "overlap_coefficient": 0.0
+    },
+    "RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507 vs RTXPRO6000:meta-llama/Llama-3.1-8B": {
+      "intersection": 0,
+      "jaccard": 0.0,
+      "overlap_coefficient": 0.0
+    },
+    "RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507 vs RTXPRO6000X2:meta-llama/Llama-3.1-8B": {
+      "intersection": 0,
+      "jaccard": 0.0,
+      "overlap_coefficient": 0.0
+    },
+    "RTXPRO6000:Qwen/Qwen3-32B vs RTXPRO6000:meta-llama/Llama-3.1-8B": {
+      "intersection": 0,
+      "jaccard": 0.0,
+      "overlap_coefficient": 0.0
+    },
+    "RTXPRO6000:Qwen/Qwen3-32B vs RTXPRO6000X2:meta-llama/Llama-3.1-8B": {
+      "intersection": 0,
+      "jaccard": 0.0,
+      "overlap_coefficient": 0.0
+    },
+    "RTXPRO6000:meta-llama/Llama-3.1-8B vs RTXPRO6000X2:meta-llama/Llama-3.1-8B": {
+      "intersection": 10091,
+      "jaccard": 0.48486450124927927,
+      "overlap_coefficient": 1.0
+    }
+  },
+  "normalized_overlap": {
+    "A40:Qwen/Qwen3-32B vs A40:meta-llama/Llama-3.1-8B": {
+      "intersection": 104,
+      "jaccard": 0.01648177496038035,
+      "overlap_coefficient": 0.03313157056387384
+    },
+    "A40:Qwen/Qwen3-32B vs A5000:meta-llama/Llama-3.1-8B": {
+      "intersection": 104,
+      "jaccard": 0.01648177496038035,
+      "overlap_coefficient": 0.03313157056387384
+    },
+    "A40:Qwen/Qwen3-32B vs RNGD-CARD:meta-llama/Llama-3.1-8B": {
+      "intersection": 0,
+      "jaccard": 0.0,
+      "overlap_coefficient": 0.0
+    },
+    "A40:Qwen/Qwen3-32B vs RNGD:meta-llama/Llama-3.1-8B": {
+      "intersection": 0,
+      "jaccard": 0.0,
+      "overlap_coefficient": 0.0
+    },
+    "A40:Qwen/Qwen3-32B vs RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507": {
+      "intersection": 278,
+      "jaccard": 0.017213622291021673,
+      "overlap_coefficient": 0.08488549618320611
+    },
+    "A40:Qwen/Qwen3-32B vs RTXPRO6000:Qwen/Qwen3-32B": {
+      "intersection": 3275,
+      "jaccard": 0.24064957013740906,
+      "overlap_coefficient": 1.0
+    },
+    "A40:Qwen/Qwen3-32B vs RTXPRO6000:meta-llama/Llama-3.1-8B": {
+      "intersection": 104,
+      "jaccard": 0.006248497957221821,
+      "overlap_coefficient": 0.0317557251908397
+    },
+    "A40:Qwen/Qwen3-32B vs RTXPRO6000X2:meta-llama/Llama-3.1-8B": {
+      "intersection": 104,
+      "jaccard": 0.01648177496038035,
+      "overlap_coefficient": 0.03313157056387384
+    },
+    "A40:meta-llama/Llama-3.1-8B vs A5000:meta-llama/Llama-3.1-8B": {
+      "intersection": 3139,
+      "jaccard": 1.0,
+      "overlap_coefficient": 1.0
+    },
+    "A40:meta-llama/Llama-3.1-8B vs RNGD-CARD:meta-llama/Llama-3.1-8B": {
+      "intersection": 112,
+      "jaccard": 0.03533123028391167,
+      "overlap_coefficient": 0.7832167832167832
+    },
+    "A40:meta-llama/Llama-3.1-8B vs RNGD:meta-llama/Llama-3.1-8B": {
+      "intersection": 134,
+      "jaccard": 0.042688754380375914,
+      "overlap_coefficient": 1.0
+    },
+    "A40:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507": {
+      "intersection": 196,
+      "jaccard": 0.012176938369781311,
+      "overlap_coefficient": 0.06244026760114686
+    },
+    "A40:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-32B": {
+      "intersection": 104,
+      "jaccard": 0.006248497957221821,
+      "overlap_coefficient": 0.03313157056387384
+    },
+    "A40:meta-llama/Llama-3.1-8B vs RTXPRO6000:meta-llama/Llama-3.1-8B": {
+      "intersection": 3139,
+      "jaccard": 0.23298448749350553,
+      "overlap_coefficient": 1.0
+    },
+    "A40:meta-llama/Llama-3.1-8B vs RTXPRO6000X2:meta-llama/Llama-3.1-8B": {
+      "intersection": 3139,
+      "jaccard": 1.0,
+      "overlap_coefficient": 1.0
+    },
+    "A5000:meta-llama/Llama-3.1-8B vs RNGD-CARD:meta-llama/Llama-3.1-8B": {
+      "intersection": 112,
+      "jaccard": 0.03533123028391167,
+      "overlap_coefficient": 0.7832167832167832
+    },
+    "A5000:meta-llama/Llama-3.1-8B vs RNGD:meta-llama/Llama-3.1-8B": {
+      "intersection": 134,
+      "jaccard": 0.042688754380375914,
+      "overlap_coefficient": 1.0
+    },
+    "A5000:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507": {
+      "intersection": 196,
+      "jaccard": 0.012176938369781311,
+      "overlap_coefficient": 0.06244026760114686
+    },
+    "A5000:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-32B": {
+      "intersection": 104,
+      "jaccard": 0.006248497957221821,
+      "overlap_coefficient": 0.03313157056387384
+    },
+    "A5000:meta-llama/Llama-3.1-8B vs RTXPRO6000:meta-llama/Llama-3.1-8B": {
+      "intersection": 3139,
+      "jaccard": 0.23298448749350553,
+      "overlap_coefficient": 1.0
+    },
+    "A5000:meta-llama/Llama-3.1-8B vs RTXPRO6000X2:meta-llama/Llama-3.1-8B": {
+      "intersection": 3139,
+      "jaccard": 1.0,
+      "overlap_coefficient": 1.0
+    },
+    "RNGD-CARD:meta-llama/Llama-3.1-8B vs RNGD:meta-llama/Llama-3.1-8B": {
+      "intersection": 102,
+      "jaccard": 0.5828571428571429,
+      "overlap_coefficient": 0.7611940298507462
+    },
+    "RNGD-CARD:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507": {
+      "intersection": 20,
+      "jaccard": 0.0015064778547755348,
+      "overlap_coefficient": 0.13986013986013987
+    },
+    "RNGD-CARD:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-32B": {
+      "intersection": 0,
+      "jaccard": 0.0,
+      "overlap_coefficient": 0.0
+    },
+    "RNGD-CARD:meta-llama/Llama-3.1-8B vs RTXPRO6000:meta-llama/Llama-3.1-8B": {
+      "intersection": 112,
+      "jaccard": 0.008293838862559242,
+      "overlap_coefficient": 0.7832167832167832
+    },
+    "RNGD-CARD:meta-llama/Llama-3.1-8B vs RTXPRO6000X2:meta-llama/Llama-3.1-8B": {
+      "intersection": 112,
+      "jaccard": 0.03533123028391167,
+      "overlap_coefficient": 0.7832167832167832
+    },
+    "RNGD:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507": {
+      "intersection": 22,
+      "jaccard": 0.0016584998115341124,
+      "overlap_coefficient": 0.16417910447761194
+    },
+    "RNGD:meta-llama/Llama-3.1-8B vs RTXPRO6000:Qwen/Qwen3-32B": {
+      "intersection": 0,
+      "jaccard": 0.0,
+      "overlap_coefficient": 0.0
+    },
+    "RNGD:meta-llama/Llama-3.1-8B vs RTXPRO6000:meta-llama/Llama-3.1-8B": {
+      "intersection": 134,
+      "jaccard": 0.009945817561048021,
+      "overlap_coefficient": 1.0
+    },
+    "RNGD:meta-llama/Llama-3.1-8B vs RTXPRO6000X2:meta-llama/Llama-3.1-8B": {
+      "intersection": 134,
+      "jaccard": 0.042688754380375914,
+      "overlap_coefficient": 1.0
+    },
+    "RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507 vs RTXPRO6000:Qwen/Qwen3-32B": {
+      "intersection": 342,
+      "jaccard": 0.012944738834216502,
+      "overlap_coefficient": 0.026001672622215463
+    },
+    "RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507 vs RTXPRO6000:meta-llama/Llama-3.1-8B": {
+      "intersection": 196,
+      "jaccard": 0.00741581536133182,
+      "overlap_coefficient": 0.014901543374135177
+    },
+    "RTXPRO6000:Qwen/Qwen3-30B-A3B-Instruct-2507 vs RTXPRO6000X2:meta-llama/Llama-3.1-8B": {
+      "intersection": 196,
+      "jaccard": 0.012176938369781311,
+      "overlap_coefficient": 0.06244026760114686
+    },
+    "RTXPRO6000:Qwen/Qwen3-32B vs RTXPRO6000:meta-llama/Llama-3.1-8B": {
+      "intersection": 104,
+      "jaccard": 0.003854992957224405,
+      "overlap_coefficient": 0.0077191419876790615
+    },
+    "RTXPRO6000:Qwen/Qwen3-32B vs RTXPRO6000X2:meta-llama/Llama-3.1-8B": {
+      "intersection": 104,
+      "jaccard": 0.006248497957221821,
+      "overlap_coefficient": 0.03313157056387384
+    },
+    "RTXPRO6000:meta-llama/Llama-3.1-8B vs RTXPRO6000X2:meta-llama/Llama-3.1-8B": {
+      "intersection": 3139,
+      "jaccard": 0.23298448749350553,
+      "overlap_coefficient": 1.0
+    }
+  },
+  "provenance": {
+    "git_commit": "d6d07ecf120e8686f13ebdf34543ab9add603a86",
+    "git_dirty": true,
+    "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
+    "vllm_version": null,
+    "backend_version": null,
+    "model_revision": null,
+    "hardware_profile_hash": null,
+    "cluster_spec_hash": null,
+    "service_spec_hash": null,
+    "dataset_hash": null,
+    "random_seed": null,
+    "command": "e3_shape_overlap.py --out outputs/tier_validation/e3",
+    "timestamp": "2026-09-02T12:09:39.393716+00:00",
+    "python_version": "3.10.12",
+    "platform": "Linux-6.8.0-124-generic-x86_64-with-glibc2.35",
+    "hostname": "node02-ai",
+    "cpu_count": 20,
+    "accelerators": {
+      "cuda": {
+        "count": 1,
+        "model": "NVIDIA RTX A5000"
+      },
+      "rngd_cards": null,
+      "atom_devices": 0
+    }
+  }
+}

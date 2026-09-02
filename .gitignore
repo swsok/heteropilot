@@ -83,3 +83,4 @@ outputs/rngd_edf_bundle/sim_sparse*.csv
 # measured and synthetic data must not mix in the tree - rules A1/A3).
 profiler/perf/*-t0/
 profiler/perf/*-t1/
+outputs/e1-*/
