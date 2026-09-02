@@ -4,14 +4,27 @@ Outputs are instances of the existing planner schema - no new schema. Every
 hardware number is copied from profiles/ (accelerator profiles and the link
 classes under profiles/networks/); the generator invents nothing (FR-C8).
 
-Interconnects are dictated by the accelerator class (FR-C4): PCIe-attached
-cards get PCIE links on a shared root complex, NVLink-capable cards get
-NVLINK, and an RNGD card is a single device whose fabric is internal, so it
-gets no intra-node link at all and forms singleton islands by design.
+Intra-node topology models the host, not just the fabric (topology v2):
+
+- Every accelerator sits on a PCIe ROOT COMPLEX; a root hosts at most
+  DEVICES_PER_ROOT (4) devices, mirroring how real servers hang ~4 cards off
+  one CPU's bus. Devices on one root are fully meshed with PCIE links sharing
+  that root's contention group; roots are bridged through the CPU
+  interconnect (one PCIE link between root representatives, its own
+  contention group).
+- The NIC hangs off root 0, so every device reaches the fabric through the
+  host - the whole node is one connected component by construction.
+- Classes with a fast fabric (FR-C4: rtxpro6000 -> NVLINK) additionally get
+  an all-pairs fabric mesh on top of the host PCIe tree, exactly like the
+  example clusters (NVLink pair + PCIe NIC attach).
+- An RNGD card's internal fabric stays internal (no ONPACKAGE links between
+  cards), but the cards live on the host PCIe tree like any other device -
+  a card with no path to its own node's NIC would be unusable in reality.
 """
 
 from __future__ import annotations
 
+import itertools
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -40,17 +53,23 @@ from scenariolab.generator.sampling import rng_for
 NETWORK_DIR = Path("profiles/networks")
 
 #: Per-class generation facts that are not (and should not be) in the
-#: accelerator profile: which intra-node link class the card family uses and a
-#: realistic per-node card count cap. Adding a pool entry requires a row here -
-#: failing loudly beats guessing an interconnect (FR-C4).
+#: accelerator profile: whether the card family has a fast peer fabric on top
+#: of the host PCIe tree, and a realistic per-node card count cap. Adding a
+#: pool entry requires a row here - failing loudly beats guessing an
+#: interconnect (FR-C4).
 CLASS_FACTS: dict[str, dict] = {
-    "a40": {"intra_link": "pcie_gen4", "max_per_node": 8},
-    "a5000": {"intra_link": "pcie_gen4", "max_per_node": 8},
-    "rtxpro6000": {"intra_link": "nvlink", "max_per_node": 8},
-    # One accelerator is one whole RNGD card (TP=8 internally); the card's
-    # fabric is on-package, so there is no intra-node accelerator link.
-    "furiosa_rngd_card": {"intra_link": None, "max_per_node": 4},
+    "a40": {"fast_fabric": None, "max_per_node": 8},
+    "a5000": {"fast_fabric": None, "max_per_node": 8},
+    "rtxpro6000": {"fast_fabric": "nvlink", "max_per_node": 8},
+    # One accelerator is one whole RNGD card (TP=8 internally); its fabric is
+    # on-package, so cards get no peer fabric - only the host PCIe tree.
+    "furiosa_rngd_card": {"fast_fabric": None, "max_per_node": 4},
 }
+
+#: How many devices share one PCIe root complex (one CPU's bus). Real servers
+#: typically hang ~4 cards off each socket's root; an 8-GPU node therefore
+#: has two roots bridged by the CPU interconnect.
+DEVICES_PER_ROOT = 4
 
 
 class LinkProfile(BaseModel):
@@ -97,12 +116,24 @@ def _accel_kind(profile: AcceleratorProfile) -> str:
     return "GPU" if profile.backend == "cuda" else "NPU"
 
 
+def _pcie_link(
+    link_id: str, src: str, dst: str, pcie: LinkProfile, contention_group: str
+) -> Link:
+    return Link(
+        id=link_id, src=src, dst=dst, type=pcie.type,
+        bandwidth_gbps=pcie.bandwidth_gbps, latency_ns=pcie.latency_ns,
+        energy_per_bit_pj=pcie.energy_per_bit_pj,
+        contention_group=contention_group, source=pcie.source,
+    )
+
+
 def _make_node(
     node_index: int,
     pool_entry: str,
     profile: AcceleratorProfile,
     num_accels: int,
-    intra_link: LinkProfile | None,
+    pcie: LinkProfile,
+    fast_fabric: LinkProfile | None,
     nic_speed_gbps: float,
     nic_type: str,
 ) -> tuple[Node, list[Link]]:
@@ -127,26 +158,47 @@ def _make_node(
     node = Node(id=node_id, accelerators=accels, nics=[nic], power=NodePower())
 
     links: list[Link] = []
-    if intra_link is not None:
-        group = (
-            f"{node_id}-pcie-root" if intra_link.type == LinkType.PCIE
-            else f"{node_id}-{intra_link.link_id}"
-        )
-        for a in range(num_accels):
-            for b in range(a + 1, num_accels):
-                links.append(
-                    Link(
-                        id=f"{intra_link.link_id}-{node_id}-{accels[a].id}-{accels[b].id}",
-                        src=f"{node_id}/{accels[a].id}",
-                        dst=f"{node_id}/{accels[b].id}",
-                        type=intra_link.type,
-                        bandwidth_gbps=intra_link.bandwidth_gbps,
-                        latency_ns=intra_link.latency_ns,
-                        energy_per_bit_pj=intra_link.energy_per_bit_pj,
-                        contention_group=group,
-                        source=intra_link.source,
-                    )
+
+    # Host PCIe tree: full mesh within each root complex...
+    roots = [accels[i:i + DEVICES_PER_ROOT] for i in range(0, num_accels, DEVICES_PER_ROOT)]
+    for r, members in enumerate(roots):
+        for a, b in itertools.combinations(members, 2):
+            links.append(_pcie_link(
+                f"pcie-{node_id}-{a.id}-{b.id}",
+                f"{node_id}/{a.id}", f"{node_id}/{b.id}",
+                pcie, f"{node_id}-pcie-root{r}",
+            ))
+    # ...roots bridged through the CPU interconnect (one link per root pair,
+    # between the roots' first devices - the path any cross-root P2P takes)...
+    for r1, r2 in itertools.combinations(range(len(roots)), 2):
+        links.append(_pcie_link(
+            f"cpu-{node_id}-root{r1}-root{r2}",
+            f"{node_id}/{roots[r1][0].id}", f"{node_id}/{roots[r2][0].id}",
+            pcie, f"{node_id}-cpu-interconnect",
+        ))
+    # ...and the NIC hanging off root 0, so every device reaches the fabric.
+    links.append(_pcie_link(
+        f"pcie-{node_id}-{roots[0][0].id}-nic0",
+        f"{node_id}/{roots[0][0].id}", f"{node_id}/nic0",
+        pcie, f"{node_id}-pcie-root0",
+    ))
+
+    # Fast peer fabric (e.g. NVLink/NVSwitch) on top of the host tree.
+    if fast_fabric is not None:
+        for a, b in itertools.combinations(accels, 2):
+            links.append(
+                Link(
+                    id=f"{fast_fabric.link_id}-{node_id}-{a.id}-{b.id}",
+                    src=f"{node_id}/{a.id}",
+                    dst=f"{node_id}/{b.id}",
+                    type=fast_fabric.type,
+                    bandwidth_gbps=fast_fabric.bandwidth_gbps,
+                    latency_ns=fast_fabric.latency_ns,
+                    energy_per_bit_pj=fast_fabric.energy_per_bit_pj,
+                    contention_group=f"{node_id}-{fast_fabric.link_id}-switch",
+                    source=fast_fabric.source,
                 )
+            )
     return node, links
 
 
@@ -170,7 +222,8 @@ def _build_once(
     cluster_id: str,
     rng,
     profiles: dict[str, AcceleratorProfile],
-    intra_links: dict[str, LinkProfile | None],
+    pcie: LinkProfile,
+    fast_fabrics: dict[str, LinkProfile | None],
     internode_links: dict[str, LinkProfile],
 ) -> ClusterSpecV2:
     num_nodes = config.nodes_per_cluster.sample(rng)
@@ -187,27 +240,11 @@ def _build_once(
         cap = CLASS_FACTS[entry]["max_per_node"]
         count = min(config.accelerators_per_node.sample(rng), cap)
         node, node_links = _make_node(
-            i, entry, profile, count, intra_links[entry],
+            i, entry, profile, count, pcie, fast_fabrics[entry],
             nic_speed_gbps=fabric.bandwidth_gbps, nic_type=nic_type,
         )
         nodes.append(node)
         links.extend(node_links)
-        # Host-side NIC attachment mirrors the example clusters: the first
-        # accelerator reaches the NIC over PCIe (values copied from pcie_gen4).
-        pcie = internode_links.get("__pcie_attach__")
-        if pcie is not None:
-            links.append(
-                Link(
-                    id=f"pcie-{node.id}-{node.accelerators[0].id}-nic0",
-                    src=f"{node.id}/{node.accelerators[0].id}",
-                    dst=f"{node.id}/nic0",
-                    type=pcie.type,
-                    bandwidth_gbps=pcie.bandwidth_gbps,
-                    latency_ns=pcie.latency_ns,
-                    contention_group=f"{node.id}-pcie-root",
-                    source=pcie.source,
-                )
-            )
 
     for i in range(num_nodes):
         for j in range(i + 1, num_nodes):
@@ -248,23 +285,25 @@ def generate_cluster(
     profiles = {
         entry: _load_profile(entry, root) for entry in config.accelerator_pool
     }
-    intra_links = {
+    pcie = load_link_profile("pcie_gen4", root)
+    fast_fabrics = {
         entry: (
-            load_link_profile(CLASS_FACTS[entry]["intra_link"], root)
-            if CLASS_FACTS[entry]["intra_link"] else None
+            load_link_profile(CLASS_FACTS[entry]["fast_fabric"], root)
+            if CLASS_FACTS[entry]["fast_fabric"] else None
         )
         for entry in config.accelerator_pool
     }
     internode_links = {
         name: load_link_profile(name, root) for name in config.internode_link_pool
     }
-    internode_links["__pcie_attach__"] = load_link_profile("pcie_gen4", root)
 
     cluster_id = f"c{index:04d}"
     rng = rng_for(seed)
     failures: list[str] = []
     for _attempt in range(20):
-        spec = _build_once(config, cluster_id, rng, profiles, intra_links, internode_links)
+        spec = _build_once(
+            config, cluster_id, rng, profiles, pcie, fast_fabrics, internode_links
+        )
         path = _write_yaml(spec, seed, out_dir, lab_config_hash)
         try:
             loaded = load_cluster_spec(path)
@@ -275,6 +314,10 @@ def generate_cluster(
             continue
         if not islands:
             failures.append("no FREE execution island")
+            path.unlink(missing_ok=True)
+            continue
+        if not _fully_connected(loaded):
+            failures.append("cluster graph is not one connected component")
             path.unlink(missing_ok=True)
             continue
         num_accels = sum(len(n.accelerators) for n in loaded.nodes)
@@ -306,6 +349,32 @@ def generate_cluster(
         f"cluster {cluster_id}: 20 attempts produced no valid cluster. "
         f"Adjust the configured ranges. Failure log: {failures}"
     )
+
+
+def _fully_connected(cluster: ClusterSpecV2) -> bool:
+    """Every accelerator and NIC in one component over the union of links.
+
+    A device with no path to its node's NIC (and through it, to the rest of
+    the cluster) would be unusable in reality; the generator must never emit
+    one (topology v2 invariant).
+    """
+    vertices: set[str] = set()
+    for n in cluster.nodes:
+        vertices.update(f"{n.id}/{a.id}" for a in n.accelerators)
+        vertices.update(f"{n.id}/{nic.id}" for nic in n.nics)
+    adjacency: dict[str, set[str]] = {v: set() for v in vertices}
+    for link in cluster.links:
+        adjacency[link.src].add(link.dst)
+        adjacency[link.dst].add(link.src)
+    start = next(iter(vertices))
+    seen = {start}
+    stack = [start]
+    while stack:
+        for peer in adjacency[stack.pop()]:
+            if peer not in seen:
+                seen.add(peer)
+                stack.append(peer)
+    return seen == vertices
 
 
 def _load_profile(entry: str, root: Path) -> AcceleratorProfile:

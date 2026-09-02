@@ -43,6 +43,11 @@ def cmd_run(args: argparse.Namespace) -> int:
     config, digest = load_lab_config(args.config, args.root)
     if args.workers is not None:
         config.runner.workers = args.workers
+    if args.skip_verify:
+        # The fast path finishes in minutes; the sampled full-sim pass can
+        # take hours. Zeroing the fraction skips it for this invocation only.
+        config.runner.verification.fraction = 0.0
+        config.runner.verification.min_count = 0
     runner = BatchRunner(config, digest, Path(args.config).read_text(), args.root)
     with ResultStore(Path(args.root) / config.store.db_path) as store:
         runner.run(store, quiet=args.quiet)
@@ -121,6 +126,9 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--root", type=Path, default=Path("."))
     run.add_argument("--workers", type=int, default=None,
                      help="Override runner.workers from the config.")
+    run.add_argument("--skip-verify", action="store_true",
+                     help="Skip the sampled full-sim verification pass for this "
+                          "run (fast path only); run it later with 'verify'.")
     run.add_argument("--quiet", action="store_true")
     run.set_defaults(func=cmd_run)
 
