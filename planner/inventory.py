@@ -242,6 +242,60 @@ class ProfilePower(_Strict):
     source: Source = Source.PLACEHOLDER
 
 
+class Datasheet(_Strict):
+    """Datasheet values needed for Tier 0 roofline generation.
+
+    Every field is optional. A missing value must make Tier 0 generation FAIL
+    (absolute rule A2) - it is never quietly defaulted. ``datasheet_source``
+    is mandatory whenever any value is present (absolute rule 3: no
+    unattributed hardware numbers). ``Source`` is deliberately NOT extended:
+    it labels accelerator-YAML numbers, while ProfileTier labels bundles -
+    two different concepts.
+    """
+
+    #: dtype -> dense peak TFLOP/s. Keys like 'bf16', 'fp16', 'fp8', 'int8'.
+    peak_tflops: dict[str, float] = Field(default_factory=dict)
+    #: Compute-unit count (GPU: SMs; NPU: PE clusters/cores). Backend-neutral.
+    compute_units: int | None = Field(default=None, gt=0)
+    clock_mhz: float | None = Field(default=None, gt=0)
+    l2_cache_mb: float | None = Field(default=None, gt=0)
+    #: Kernel-launch overhead floor in us (KernelSight-LM's t_0 term).
+    kernel_launch_us: float | None = Field(default=None, gt=0)
+    #: Roofline derating. Absent means Tier 0 generation is impossible (A2);
+    #: it is fitted from measurements (STEP 8), never assumed.
+    flops_efficiency: float | None = Field(default=None, gt=0, le=1)
+    mem_efficiency: float | None = Field(default=None, gt=0, le=1)
+    #: Per-kernel-family overrides. Keys like 'gemm','attention','elementwise','moe'.
+    family_efficiency: dict[str, float] = Field(default_factory=dict)
+    #: Where these numbers come from. Required for A1 compliance.
+    datasheet_source: str = ""
+
+    @model_validator(mode="after")
+    def _rules(self) -> Datasheet:
+        has_values = bool(
+            self.peak_tflops
+            or self.family_efficiency
+            or any(
+                v is not None
+                for v in (
+                    self.compute_units, self.clock_mhz, self.l2_cache_mb,
+                    self.kernel_launch_us, self.flops_efficiency, self.mem_efficiency,
+                )
+            )
+        )
+        if has_values and not self.datasheet_source.strip():
+            raise ValueError(
+                "datasheet has values but datasheet_source is empty - "
+                "unattributed hardware numbers are forbidden (absolute rule 3)"
+            )
+        for family, eff in self.family_efficiency.items():
+            if not (0 < eff <= 1):
+                raise ValueError(
+                    f"family_efficiency[{family!r}]={eff} outside (0, 1]"
+                )
+        return self
+
+
 class AcceleratorProfile(_Strict):
     profile_id: str
     vendor: str
@@ -259,6 +313,29 @@ class AcceleratorProfile(_Strict):
     supported_models: list[SupportedModel] = Field(default_factory=list)
     max_tp_size: int = Field(default=8, ge=1)
     notes: str = ""
+    #: Vendor datasheet values for Tier 0/1 synthetic bundles. None for
+    #: profiles that only ever use measured bundles.
+    datasheet: Datasheet | None = None
+
+    @model_validator(mode="after")
+    def _tier_label_rules(self) -> AcceleratorProfile:
+        # A synthetic sim_hardware label promises a generated bundle, which is
+        # impossible without datasheet values (tiered-profiles STEP 3).
+        synthetic_label = self.sim_hardware is not None and (
+            self.sim_hardware.endswith("-t0") or self.sim_hardware.endswith("-t1")
+        )
+        if synthetic_label and self.datasheet is None:
+            raise ValueError(
+                f"sim_hardware '{self.sim_hardware}' names a synthetic (Tier 0/1) "
+                f"bundle but the profile has no datasheet: - Tier 0 generation "
+                f"needs datasheet values (absolute rule A2)"
+            )
+        if self.datasheet is not None and not self.datasheet.datasheet_source.strip():
+            raise ValueError(
+                f"profile {self.profile_id}: datasheet present but datasheet_source "
+                f"is empty - unattributed hardware numbers are forbidden (rule 3)"
+            )
+        return self
 
 
 class ExecutionIsland(BaseModel):
