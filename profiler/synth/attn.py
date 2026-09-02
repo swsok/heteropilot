@@ -16,9 +16,11 @@ from profiler.synth.device import S_TO_US, DeviceSpec
 from profiler.synth.dims import ModelDims
 
 #: How the fused-step time combines prefill and decode work. "max" applies
-#: one roofline to the summed FLOPs/bytes (fused kernel, the default);
-#: "sum" prices the two phases as separate kernels and adds them. STEP 8's
-#: diff decides which stays the default.
+#: one roofline to the summed FLOPs/bytes; "sum" prices the two phases as
+#: separate kernels and adds them. STEP 8's measured diff chose "sum" as the
+#: default: variant V3 (bytes=sum, attn=sum) gives the lowest overall MAPE on
+#: both fitted hardware (A40 38.9%% vs 40.3%%, RTXPRO6000 33.0%% vs 37.1%%);
+#: see docs/tier0_calibration.md.
 ATTN_MODES = ("max", "sum")
 
 
@@ -40,10 +42,10 @@ class AttentionKey(Protocol):
 class AttentionCostModel:
     """Attention cost of one mixed (chunked-prefill + decode) step.
 
-    A step may carry a prefill chunk and decode sequences at once. The
-    kernel is fused, so the default prices ONE roofline over the summed
-    FLOPs / bytes rather than adding two phase times; the "sum" variant
-    exists for the STEP 8 decision.
+    A step may carry a prefill chunk and decode sequences at once. Two
+    combination modes exist: "max" prices one fused roofline over the summed
+    FLOPs/bytes; "sum" prices the phases separately and adds them. STEP 8's
+    measured diff adopted "sum" as the default (see ATTN_MODES above).
 
     Degenerate keys: the measured attention.csv contains no row with
     prefill_chunk == 0 and n_decode == 0 (verified 2026-09-02 on the A40
@@ -57,7 +59,7 @@ class AttentionCostModel:
         device: DeviceSpec,
         tp: int,
         *,
-        mode: str = "max",
+        mode: str = "sum",
         scaling=None,
     ) -> None:
         if tp < 1:

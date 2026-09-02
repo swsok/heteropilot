@@ -28,8 +28,13 @@ def _minimal_profile(**overrides) -> dict:
 
 
 def test_all_shipped_profiles_still_load():
-    """Every profiles/accelerators/*.yaml still parses (backward compat)."""
-    files = sorted(PROFILE_DIR.glob("*.yaml"))
+    """Every profiles/accelerators/*.yaml still parses (backward compat).
+
+    *.efficiency.yaml files are STEP 8 fit artifacts, not profiles.
+    """
+    files = sorted(
+        p for p in PROFILE_DIR.glob("*.yaml") if not p.name.endswith(".efficiency.yaml")
+    )
     assert len(files) >= 7
     for path in files:
         load_accelerator_profile(path)

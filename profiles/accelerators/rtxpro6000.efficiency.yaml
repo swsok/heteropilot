@@ -1,0 +1,23 @@
+flops_efficiency: 0.710159612256386
+mem_efficiency: 1.0070498212272037
+family_efficiency:
+  attention: 0.3537678538547568
+  elementwise: 1.0070498212272037
+  gather: 0.6895874127431858
+  gemm: 0.710159612256386
+n_per_family:
+  attention: 19364
+  elementwise: 648
+  gather: 152
+  gemm: 648
+derived_from:
+  measured_bundle: profiler/perf/RTXPRO6000/meta-llama/Llama-3.1-8B/bf16
+  git_commit: 250bb98c3a922db8f0b5990e7e6dd4aa9864607e
+  date: '2026-09-02T11:34:58+00:00'
+  bytes_mode: sum
+  attn_mode: sum
+  tp: '1'
+  model: meta-llama/Llama-3.1-8B
+  variant: bf16
+bound_violations:
+  elementwise: 1.0070498212272037

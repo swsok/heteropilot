@@ -52,7 +52,7 @@ class AnalyticalProfileBackend(ProfileBackend):
         tp: int,
         *,
         bytes_mode: str = "sum",
-        attn_mode: str = "max",
+        attn_mode: str = "sum",
         scaling: ScalingTable | None = None,
     ) -> None:
         self.dims = dims
