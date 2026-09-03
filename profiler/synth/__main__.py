@@ -54,10 +54,39 @@ def _build_emit_parser(sub: argparse._SubParsersAction) -> None:
     p.add_argument("--scaling", type=Path, default=None,
                    help="ScalingTable YAML from 'calibrate'; makes the bundle "
                         "tier: calibrated (label must end -t1)")
+    p.add_argument("--efficiency", type=Path, default=None,
+                   help="fit-efficiency YAML overlaying the datasheet's "
+                        "efficiencies (families fitted > 1.0 are skipped: they "
+                        "broke the bound and cannot be datasheet values)")
 
 
 def _cmd_emit(args: argparse.Namespace) -> int:
     profile = load_accelerator_profile(args.accelerator)
+    if args.efficiency is not None:
+        import yaml
+
+        eff = yaml.safe_load(args.efficiency.read_text())
+        ds = profile.datasheet
+        if ds is None:
+            print(f"error: {args.accelerator} has no datasheet block", file=sys.stderr)
+            return 2
+        flops_eff, mem_eff = eff.get("flops_efficiency"), eff.get("mem_efficiency")
+        if (flops_eff or 0) > 1.0 or (mem_eff or 0) > 1.0:
+            # Never clamp a bound-breaking fit into a plausible number.
+            print(
+                f"error: {args.efficiency} carries a base efficiency > 1.0 "
+                f"(bound violation); resolve it before emitting",
+                file=sys.stderr,
+            )
+            return 2
+        profile = profile.model_copy(update={"datasheet": ds.model_copy(update={
+            "flops_efficiency": flops_eff,
+            "mem_efficiency": mem_eff,
+            "family_efficiency": {
+                k: v for k, v in (eff.get("family_efficiency") or {}).items()
+                if v <= 1.0  # >1.0 families skipped (recorded bound violations)
+            },
+        })})
     config_path = args.model_config or (REPO_ROOT / "configs" / "model" / f"{args.model}.json")
     dims = ModelDims.from_hf_config(config_path, args.variant)
     arch = load_architecture(REPO_ROOT / "profiler" / "models" / f"{dims.model_type}.yaml")

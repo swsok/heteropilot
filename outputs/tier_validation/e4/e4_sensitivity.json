@@ -1,0 +1,132 @@
+{
+  "params": {
+    "peak_tflops": {
+      "baseline_pick": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+      "picks": {
+        "0.700": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "0.750": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "0.800": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "0.850": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "0.900": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "0.950": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "1.000": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "1.050": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "1.100": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "1.150": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "1.200": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "1.250": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "1.300": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048"
+      },
+      "flip_below": null,
+      "flip_above": null,
+      "stable": true
+    },
+    "memory_bandwidth_gbps": {
+      "baseline_pick": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+      "picks": {
+        "0.700": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "0.750": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "0.800": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "0.850": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "0.900": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "0.950": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "1.000": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "1.050": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "1.100": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "1.150": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "1.200": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "1.250": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "1.300": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048"
+      },
+      "flip_below": null,
+      "flip_above": null,
+      "stable": true
+    },
+    "flops_efficiency": {
+      "baseline_pick": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+      "picks": {
+        "0.700": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "0.750": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "0.800": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "0.850": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "0.900": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "0.950": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "1.000": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "1.050": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "1.100": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "1.150": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "1.200": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "1.250": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "1.300": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048"
+      },
+      "flip_below": null,
+      "flip_above": null,
+      "stable": true
+    },
+    "mem_efficiency": {
+      "baseline_pick": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+      "picks": {
+        "0.700": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "0.750": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "0.800": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "0.850": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "0.900": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "0.950": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "1.000": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "1.050": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "1.100": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "1.150": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "1.200": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "1.250": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048",
+        "1.300": "cuda-rtxpro6000-node0-tp2-dp1-s256-t2048"
+      },
+      "flip_below": null,
+      "flip_above": null,
+      "stable": true
+    }
+  },
+  "factors": [
+    0.7,
+    0.75,
+    0.7999999999999999,
+    0.85,
+    0.8999999999999999,
+    0.95,
+    1.0,
+    1.05,
+    1.0999999999999999,
+    1.15,
+    1.2,
+    1.25,
+    1.2999999999999998
+  ],
+  "provenance": {
+    "git_commit": "d6d07ecf120e8686f13ebdf34543ab9add603a86",
+    "git_dirty": true,
+    "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
+    "vllm_version": null,
+    "backend_version": null,
+    "model_revision": null,
+    "hardware_profile_hash": null,
+    "cluster_spec_hash": null,
+    "service_spec_hash": null,
+    "dataset_hash": null,
+    "random_seed": null,
+    "command": "e4_sensitivity.py --out outputs/tier_validation/e4",
+    "timestamp": "2026-09-02T12:13:57.192288+00:00",
+    "python_version": "3.10.12",
+    "platform": "Linux-6.8.0-124-generic-x86_64-with-glibc2.35",
+    "hostname": "node02-ai",
+    "cpu_count": 20,
+    "accelerators": {
+      "cuda": {
+        "count": 1,
+        "model": "NVIDIA RTX A5000"
+      },
+      "rngd_cards": null,
+      "atom_devices": 0
+    },
+    "predictor": "AnalyticalPredictor",
+    "steps": 13
+  }
+}

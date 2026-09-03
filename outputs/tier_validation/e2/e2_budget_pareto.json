@@ -1,0 +1,58 @@
+{
+  "budget": 200,
+  "natural_attention_share": 0.8565057972450698,
+  "conditions": [
+    {
+      "condition": "A_tier0",
+      "measurement_score": 0,
+      "holdout_rows": 10091,
+      "mape_vs_tier2": 0.38875811006420014
+    },
+    {
+      "condition": "B_attention_anchors",
+      "measurement_score": 200,
+      "holdout_rows": 9891,
+      "mape_vs_tier2": 0.2950592981449794
+    },
+    {
+      "condition": "C_uniform_anchors",
+      "measurement_score": 200,
+      "holdout_rows": 9891,
+      "mape_vs_tier2": 0.4288226669650955
+    },
+    {
+      "condition": "D_tier2",
+      "measurement_score": 10091,
+      "holdout_rows": 0,
+      "mape_vs_tier2": 0.0
+    }
+  ],
+  "provenance": {
+    "git_commit": "d6d07ecf120e8686f13ebdf34543ab9add603a86",
+    "git_dirty": true,
+    "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
+    "vllm_version": null,
+    "backend_version": null,
+    "model_revision": null,
+    "hardware_profile_hash": null,
+    "cluster_spec_hash": null,
+    "service_spec_hash": null,
+    "dataset_hash": null,
+    "random_seed": null,
+    "command": "e2_budget_pareto.py --out outputs/tier_validation/e2",
+    "timestamp": "2026-09-02T12:13:57.679245+00:00",
+    "python_version": "3.10.12",
+    "platform": "Linux-6.8.0-124-generic-x86_64-with-glibc2.35",
+    "hostname": "node02-ai",
+    "cpu_count": 20,
+    "accelerators": {
+      "cuda": {
+        "count": 1,
+        "model": "NVIDIA RTX A5000"
+      },
+      "rngd_cards": null,
+      "atom_devices": 0
+    },
+    "budget": 200
+  }
+}

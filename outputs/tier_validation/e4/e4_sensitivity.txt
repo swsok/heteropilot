@@ -1,0 +1,5 @@
+parameter                baseline pick                             flips below  flips above
+peak_tflops              cuda-rtxpro6000-node0-tp2-dp1-s256-t2048         None         None
+memory_bandwidth_gbps    cuda-rtxpro6000-node0-tp2-dp1-s256-t2048         None         None
+flops_efficiency         cuda-rtxpro6000-node0-tp2-dp1-s256-t2048         None         None
+mem_efficiency           cuda-rtxpro6000-node0-tp2-dp1-s256-t2048         None         None

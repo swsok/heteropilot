@@ -133,6 +133,89 @@ Findings:
   the scalar: at 5% share, scalar-only reaches 39.1% while piecewise
   reaches 29.7%.
 
+## Validation experiments E1-E4 (STEP 11)
+
+Harnesses live in `experiments/tier_validation/`; JSON+table reports (with
+§3.8 provenance) under `outputs/tier_validation/e<N>/`. Results below were
+produced 2026-09-02 on this repo's committed measured bundles.
+
+### E2 — where should a measurement budget go? (`e2_budget_pareto`)
+
+A40 / Llama-3.1-8B, budget 200 anchors, hold-out MAPE vs the measured bundle:
+
+| condition | measured points | hold-out MAPE |
+| --- | --- | --- |
+| A: Tier 0, no anchors | 0 | 38.9% |
+| B: 200 anchors, ALL attention | 200 | **29.5%** |
+| C: 200 anchors, uniform spread | 200 | 42.9% |
+| D: fully measured | 10 091 | 0% |
+
+Attention-focused anchoring buys most of the Tier 1 gain (consistent with
+the KernelSight-LM observation and the hold-out curve above). The uniform
+condition actually LOST accuracy: spreading 200 anchors across five
+families leaves each non-attention family with a handful of deterministic
+picks whose launch-floor keys skew the fitted scalars - the same failure
+mode the `min_family_anchors` guard bounds but cannot eliminate at
+tiny per-family counts.
+
+### E3 — shape overlap across bundles (`e3_shape_overlap`)
+
+Raw keys are model-namespaced (a raw `(layer, tokens)` key only names the
+same GEMM within one model); normalization reduces every row to its
+physical work signature (family, FLOPs, bytes).
+
+- **Same model, different hardware: 100% key overlap** (identical grids) -
+  the grid transfers, the measurements do not.
+- **Different models on one hardware: near-zero shape reuse** - normalized
+  overlap is 0.8% (Qwen3-32B vs Llama-3.1-8B), 2.6% (Qwen3-30B-A3B vs
+  Qwen3-32B), 16% max on any cross-model pair. A shape cache across THIS
+  model catalog would save almost nothing (vs Dooly's 56.4%, which counts
+  intra-workload reuse) - the S2 follow-up is not currently worth building.
+
+### E4 — Ascend datasheet sensitivity (`e4_sensitivity`)
+
+hetero-gpu-ascend x qwen3-32b, each of {peak_tflops, memory_bandwidth_gbps,
+flops_efficiency, mem_efficiency} swept +-30% (13 steps, datasheet-driven
+analytical predictor): **the recommended plan never flips** - the RTXPRO6000
+plan dominates across the whole sweep, so the secondary-source uncertainty
+in the Ascend datasheet does not change this cluster's decision. (A cluster
+where the Ascend island is the marginal choice would need the sweep rerun.)
+
+### E1 — plan agreement (`e1_plan_agreement`)
+
+Full-simulation run (`--num-requests 20 --workers 4`, seed 42) on the A40
+TP-sweep cluster (42 candidates per condition); ground truth = the measured
+(tier 2) bundle's simulated ranking. rel.err = how much of the true primary
+objective (SLO-goodput/J) the leg's chosen plan gives up, scored under the
+truth leg.
+
+| condition | leg | top-1 | top-3 | rel.err | Kendall tau |
+| --- | --- | --- | --- | --- | --- |
+| llama31-8b | greedy | no | no | 4.3% | 0.018 |
+| llama31-8b | **tier0+sim** | no | no | **0.4%** | **0.914** |
+| llama31-8b | oracle (t2) | yes | yes | 0.0% | 1.000 |
+| llama31-8b-light | greedy | no | yes | 0.0% | 0.071 |
+| llama31-8b-light | **tier0+sim** | no | no | **11.3%** | **0.902** |
+| llama31-8b-light | oracle (t2) | yes | yes | 0.0% | 1.000 |
+
+Reading:
+
+- **Tier 0 + simulator preserves the ORDERING** the planner actually needs:
+  Kendall tau 0.90-0.91 against the measured-bundle ranking, versus the
+  greedy no-simulation proxy's 0.02-0.07. Running the simulator on
+  analytical inputs buys almost the entire ranking structure.
+- **Exact top-1 agreement is 0/2**: near-equivalent candidates at the top
+  swap places under the residual Tier 0 error. The COST of that swap is
+  what matters: 0.4% of the true objective on llama31-8b, 11.3% on the
+  light workload (where near-ties are farther apart).
+- Conclusion for Tier 0's intended use: good enough to screen candidates
+  and shortlist configurations on unowned hardware; the final pick should
+  be confirmed on measured (tier 2) inputs when they exist - which is
+  exactly what the profile_tier caveat machinery enforces in reports.
+- Oracle == tier2 here: bound pruning removed no candidate on this cluster
+  (42 generated, 42 survived), a per-condition oracle-agreement check for
+  free.
+
 ## Reproduction
 
 ```bash

@@ -22,4 +22,15 @@ python -m profiler.synth emit \
   --generated-at "$GENERATED_AT" \
   --out profiler/perf --force
 
+# A40 Tier 0 twin of the measured bundle (experiment E1's tier0 leg):
+# mirror keys from the measured A40 bundle, efficiencies from the STEP 8 fit.
+python -m profiler.synth emit \
+  --accelerator profiles/accelerators/a40.yaml \
+  --efficiency profiles/accelerators/a40.efficiency.yaml \
+  --model meta-llama/Llama-3.1-8B --variant bf16 --tp 1,2,4 \
+  --hardware-label A40-t0 \
+  --mirror-keys profiler/perf/A40/meta-llama/Llama-3.1-8B/bf16 \
+  --generated-at "$GENERATED_AT" \
+  --out profiler/perf --force
+
 echo "Tier 0 bundles regenerated under profiler/perf/ (gitignored)."
