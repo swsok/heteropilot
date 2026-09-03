@@ -312,9 +312,14 @@ def validate_bundle(variant_root: Path, tp_degrees: list[int], is_moe: bool) -> 
         for schema in SCHEMAS:
             if schema.moe_only and not is_moe:
                 continue
+            # moe.csv lives in tp1/ only: the profiler measures MoE once at
+            # TP=1 and the simulator scales per-expert time by ep_size
+            # (categories_for; verified 2026-09-02 - the shipped Qwen3-30B
+            # bundle has moe.csv in tp1/ and not tp2/). Real artifacts win.
+            required = schema.required and not (schema.moe_only and tp != 1)
             path = tp_dir / schema.filename
             if not path.exists():
-                if schema.required:
+                if required:
                     raise ProfileContractError(
                         f"required file missing: {path} "
                         f"(contract requires {schema.filename} in every tp<N>/"
