@@ -994,3 +994,21 @@ schema from Rebellions — the tracer already records what is needed, so this is
 documentation request; (2) a torch backend registering device `rbln`, which
 enables the vLLM-native path; (3) a llama entry in vllm-rbln's native model
 registry, after (2).
+
+## D21 — Tier 0 introduction: `datasheet:` fields are vendor spec, not measurements · Decided 2026-09-02
+
+**What.** The tiered-profile work (WORK_ORDER_tiered_profiles.md) adds a
+`datasheet:` block to `AcceleratorProfile` so a roofline generator can emit
+synthetic (`analytical`/`calibrated`) perf bundles for hardware we do not
+own. Those numbers are copied from public vendor documents and are labelled
+by `datasheet_source`; they are **never** measurements, and the bundles they
+produce carry `tier: analytical` (or `calibrated`) plus a `-t0`/`-t1`
+hardware-label suffix so they can never shadow a measured bundle.
+
+**Discipline.** `flops_efficiency` / `mem_efficiency` are left empty until
+they are fitted from a real measured bundle (STEP 8 of that work order):
+pre-filling them would present an invented derating as usable. A profile
+whose `sim_hardware` ends in `-t0`/`-t1` without a `datasheet:` block is
+rejected at load time. The planner propagates the weakest bundle tier into
+`PlannerOutput.profile_tier` with a mandatory caveat, so an analytical plan
+can never be read as a measured result.
