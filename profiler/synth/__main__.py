@@ -5,7 +5,8 @@
         --model meta-llama/Llama-3.1-8B --variant bf16 --tp 1,2 \\
         --hardware-label ASCEND_TARGET-t0 --out profiler/perf
 
-Subcommands `calibrate` / `pick-anchors` / `diff` arrive in STEPs 8-9.
+Subcommands: emit (Tier 0/1 bundles), diff, fit-efficiency (STEP 8),
+calibrate + pick-anchors (Tier 1, STEP 9).
 """
 
 from __future__ import annotations
@@ -50,6 +51,9 @@ def _build_emit_parser(sub: argparse._SubParsersAction) -> None:
                    help="replace an existing destination bundle")
     p.add_argument("--generated-at", default=None,
                    help="ISO timestamp override for reproducible meta.yaml")
+    p.add_argument("--scaling", type=Path, default=None,
+                   help="ScalingTable YAML from 'calibrate'; makes the bundle "
+                        "tier: calibrated (label must end -t1)")
 
 
 def _cmd_emit(args: argparse.Namespace) -> int:
@@ -61,13 +65,39 @@ def _cmd_emit(args: argparse.Namespace) -> int:
     device = DeviceSpec.from_profile(profile, weight_dtype)
 
     tp_degrees = sorted({int(t) for t in args.tp.split(",") if t.strip()})
-    backends = {
-        tp: AnalyticalProfileBackend(
-            dims, arch, device, tp,
-            bytes_mode=args.bytes_mode, attn_mode=args.attn_mode,
-        )
-        for tp in tp_degrees
-    }
+    scaling = None
+    calibration_anchors = None
+    backends: dict[int, AnalyticalProfileBackend]
+    if args.scaling is not None:
+        import yaml
+
+        from profiler.synth.backend import CalibratedProfileBackend
+        from profiler.synth.calibrate import ScalingTable
+
+        scaling = ScalingTable.load(args.scaling)
+        raw = yaml.safe_load(args.scaling.read_text())
+        calibration_anchors = {
+            "n_anchors": raw.get("n_anchors"),
+            "anchors_per_family": raw.get("anchors_per_family"),
+            "derived_from": raw.get("derived_from"),
+            "scaling_table": str(args.scaling),
+        }
+        backends = {
+            tp: CalibratedProfileBackend(
+                dims, arch, device, tp,
+                bytes_mode=args.bytes_mode, attn_mode=args.attn_mode,
+                scaling=scaling,
+            )
+            for tp in tp_degrees
+        }
+    else:
+        backends = {
+            tp: AnalyticalProfileBackend(
+                dims, arch, device, tp,
+                bytes_mode=args.bytes_mode, attn_mode=args.attn_mode,
+            )
+            for tp in tp_degrees
+        }
     ds = profile.datasheet
     assert ds is not None  # DeviceSpec.from_profile already enforced this
     emitter = BundleEmitter(
@@ -93,6 +123,7 @@ def _cmd_emit(args: argparse.Namespace) -> int:
             "bytes_mode": args.bytes_mode,
             "attn_mode": args.attn_mode,
         },
+        calibration_anchors=calibration_anchors,
         force=args.force,
         generated_at=args.generated_at,
     )
@@ -228,12 +259,150 @@ def _cmd_fit(args: argparse.Namespace) -> int:
     return 0
 
 
+def _build_calibrate_parser(sub: argparse._SubParsersAction) -> None:
+    p = sub.add_parser(
+        "calibrate",
+        help="Fit a Tier 1 ScalingTable from anchor measurements (STEP 9).",
+    )
+    p.add_argument("--anchors", required=True, type=Path,
+                   help="variant root (or tp dir) holding anchor-subset CSVs")
+    p.add_argument("--accelerator", required=True, type=Path)
+    p.add_argument("--model", required=True)
+    p.add_argument("--variant", default="bf16")
+    p.add_argument("--tp", type=int, default=1)
+    p.add_argument("--bytes-mode", choices=("sum", "max"), default="sum")
+    p.add_argument("--attn-mode", choices=("max", "sum"), default="sum")
+    p.add_argument("--bins", type=int, default=8)
+    p.add_argument("--model-config", type=Path, default=None)
+    p.add_argument("--out", required=True, type=Path)
+
+
+def _cmd_calibrate(args: argparse.Namespace) -> int:
+    import datetime
+
+    from planner.util import provenance as prov
+    from profiler.synth.calibrate import fit_from_anchors
+
+    profile = load_accelerator_profile(args.accelerator)
+    config_path = args.model_config or (
+        REPO_ROOT / "configs" / "model" / f"{args.model}.json"
+    )
+    dims = ModelDims.from_hf_config(config_path, args.variant)
+    arch = load_architecture(
+        REPO_ROOT / "profiler" / "models" / f"{dims.model_type}.yaml"
+    )
+    device = DeviceSpec.from_profile(profile, args.variant.split("-")[0])
+    backend = AnalyticalProfileBackend(
+        dims, arch, device, args.tp,
+        bytes_mode=args.bytes_mode, attn_mode=args.attn_mode,
+    )
+    table = fit_from_anchors(
+        args.anchors, backend, tp=args.tp, bins=args.bins,
+        derived_from={
+            "anchors": str(args.anchors),
+            "accelerator": str(args.accelerator),
+            "git_commit": prov.git_commit() or "unknown",
+            "date": datetime.datetime.now(datetime.timezone.utc).isoformat(
+                timespec="seconds"
+            ),
+            "bytes_mode": args.bytes_mode,
+            "attn_mode": args.attn_mode,
+            "tp": str(args.tp),
+        },
+    )
+    table.save(args.out)
+    print(f"wrote {args.out}")
+    for family, count in table.anchors_per_family().items():
+        pieces = len(table.piecewise.get(family, ()))
+        print(
+            f"  {family:<12} scalar={table.scalars[family]:.4f}  anchors={count}"
+            + (f"  piecewise bins={pieces}" if pieces else "")
+        )
+    return 0
+
+
+def _build_pick_parser(sub: argparse._SubParsersAction) -> None:
+    p = sub.add_parser(
+        "pick-anchors",
+        help="Plan which grid keys to measure as Tier 1 anchors.",
+    )
+    p.add_argument("--model", required=True)
+    p.add_argument("--variant", default="bf16")
+    p.add_argument("--tp", type=int, default=1)
+    p.add_argument("--budget", type=int, required=True)
+    p.add_argument("--attention-share", type=float, default=0.7,
+                   help="fraction of the budget spent on attention keys "
+                        "(default 0.7 - attention does not transfer across "
+                        "devices, STEP 6 background)")
+    p.add_argument("--max-num-batched-tokens", type=int, default=2048)
+    p.add_argument("--max-num-seqs", type=int, default=256)
+    p.add_argument("--attention-max-kv", type=int, default=16384)
+    p.add_argument("--model-config", type=Path, default=None)
+    p.add_argument("--out", required=True, type=Path)
+
+
+def _cmd_pick(args: argparse.Namespace) -> int:
+    import csv as _csv
+
+    from profiler.synth.calibrate import pick_anchors
+    from profiler.synth.emit import enumerate_grid_keys
+
+    config_path = args.model_config or (
+        REPO_ROOT / "configs" / "model" / f"{args.model}.json"
+    )
+    dims = ModelDims.from_hf_config(config_path, args.variant)
+    arch = load_architecture(
+        REPO_ROOT / "profiler" / "models" / f"{dims.model_type}.yaml"
+    )
+    grid = GridParams(
+        max_num_batched_tokens=args.max_num_batched_tokens,
+        max_num_seqs=args.max_num_seqs,
+        attention_max_kv=args.attention_max_kv,
+    )
+    files = ["dense.csv", "per_sequence.csv", "attention.csv"]
+    if dims.is_moe:
+        files.append("moe.csv")
+    keys_by_file = {
+        f: enumerate_grid_keys(dims, arch, grid, args.tp, f) for f in files
+    }
+    plan = pick_anchors(
+        keys_by_file, args.budget, attention_share=args.attention_share
+    )
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    columns = ["file", "layer", "tokens", "sequences",
+               "prefill_chunk", "kv_prefill", "n_decode", "kv_decode",
+               "activated_experts"]
+    with args.out.open("w", newline="") as f:
+        writer = _csv.DictWriter(f, fieldnames=columns)
+        writer.writeheader()
+        for filename, keys in plan.items():
+            for key in keys:
+                row = {"file": filename}
+                if filename == "dense.csv":
+                    row.update(layer=key[0], tokens=key[1])
+                elif filename == "per_sequence.csv":
+                    row.update(layer=key[0], sequences=key[1])
+                elif filename == "attention.csv":
+                    row.update(prefill_chunk=key[0], kv_prefill=key[1],
+                               n_decode=key[2], kv_decode=key[3])
+                elif filename == "moe.csv":
+                    row.update(tokens=key[0], activated_experts=key[1])
+                writer.writerow(row)
+    total = sum(len(v) for v in plan.values())
+    print(f"wrote {args.out} ({total} anchor keys)")
+    for filename, keys in plan.items():
+        print(f"  {filename:<18} {len(keys)}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m profiler.synth")
     sub = parser.add_subparsers(dest="command", required=True)
     _build_emit_parser(sub)
     _build_diff_parser(sub)
     _build_fit_parser(sub)
+    _build_calibrate_parser(sub)
+    _build_pick_parser(sub)
     args = parser.parse_args(argv)
     if args.command == "emit":
         return _cmd_emit(args)
@@ -241,6 +410,10 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_diff(args)
     if args.command == "fit-efficiency":
         return _cmd_fit(args)
+    if args.command == "calibrate":
+        return _cmd_calibrate(args)
+    if args.command == "pick-anchors":
+        return _cmd_pick(args)
     parser.error(f"unknown command {args.command!r}")
     return 2
 

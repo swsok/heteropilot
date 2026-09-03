@@ -112,6 +112,58 @@ def _mirror_keys(mirror_root: Path, tp: int, filename: str) -> list[tuple]:
     return keys
 
 
+def enumerate_grid_keys(
+    dims: ModelDims,
+    arch: Architecture,
+    grid: GridParams,
+    tp: int,
+    filename: str,
+    *,
+    hardware_label: str = "plan",
+) -> list[tuple]:
+    """Enumerate one CSV's key tuples via categories.py's own grid generators.
+
+    Shared by BundleEmitter (grid mode) and the pick-anchors planner so both
+    see exactly the keys a measured sweep with these parameters would."""
+    args = ProfileArgs(
+        architecture=dims.model_type,
+        model=dims.model,
+        hardware=hardware_label,
+        tp_degrees=[tp],
+        attention_max_kv=grid.attention_max_kv,
+        attention_chunk_factor=grid.attention_chunk_factor,
+        attention_kv_factor=grid.attention_kv_factor,
+    )
+    limits = _GridLimits(
+        max_num_batched_tokens=grid.max_num_batched_tokens,
+        max_num_seqs=grid.max_num_seqs,
+        num_cache_tokens=grid.num_cache_tokens,
+        max_model_len=grid.max_model_len,
+        num_experts=dims.num_experts,
+        top_k=dims.experts_per_token,
+    )
+    by_file = {
+        "dense.csv": DenseCategory,
+        "per_sequence.csv": SequenceCategory,
+        "attention.csv": AttentionCategory,
+        "moe.csv": ExpertCategory,
+    }
+    wanted = by_file[filename]
+    keys: list[tuple] = []
+    for cat in categories_for(arch, tp):
+        if not isinstance(cat, wanted):
+            continue
+        for shot in cat.compose_shots(arch, args, limits, tp):
+            keys.append(cat.shot_key(shot))
+    if filename == "dense.csv":
+        layers = list(arch.catalog.dense)
+        return [(layer, k[0]) for k in keys for layer in layers]
+    if filename == "per_sequence.csv":
+        layers = list(arch.catalog.per_sequence)
+        return [(layer, k[0]) for k in keys for layer in layers]
+    return keys
+
+
 class BundleEmitter:
     """Write one synthetic bundle under out_root/<label>/<model>/<variant>/."""
 
@@ -216,44 +268,10 @@ class BundleEmitter:
         return self._grid_keys(tp, filename)
 
     def _grid_keys(self, tp: int, filename: str) -> list[tuple]:
-        g = self.grid
-        args = ProfileArgs(
-            architecture=self.dims.model_type,
-            model=self.dims.model,
-            hardware=self.hardware_label,
-            tp_degrees=[tp],
-            attention_max_kv=g.attention_max_kv,
-            attention_chunk_factor=g.attention_chunk_factor,
-            attention_kv_factor=g.attention_kv_factor,
+        return enumerate_grid_keys(
+            self.dims, self.arch, self.grid, tp, filename,
+            hardware_label=self.hardware_label,
         )
-        limits = _GridLimits(
-            max_num_batched_tokens=g.max_num_batched_tokens,
-            max_num_seqs=g.max_num_seqs,
-            num_cache_tokens=g.num_cache_tokens,
-            max_model_len=g.max_model_len,
-            num_experts=self.dims.num_experts,
-            top_k=self.dims.experts_per_token,
-        )
-        by_file = {
-            "dense.csv": DenseCategory,
-            "per_sequence.csv": SequenceCategory,
-            "attention.csv": AttentionCategory,
-            "moe.csv": ExpertCategory,
-        }
-        wanted = by_file[filename]
-        keys: list[tuple] = []
-        for cat in categories_for(self.arch, tp):
-            if not isinstance(cat, wanted):
-                continue
-            for shot in cat.compose_shots(self.arch, args, limits, tp):
-                keys.append(cat.shot_key(shot))
-        if filename == "dense.csv":
-            layers = list(self.arch.catalog.dense)
-            return [(layer, k[0]) for k in keys for layer in layers]
-        if filename == "per_sequence.csv":
-            layers = list(self.arch.catalog.per_sequence)
-            return [(layer, k[0]) for k in keys for layer in layers]
-        return keys
 
     def _emit_tp(self, dest: Path, tp: int) -> dict[str, int]:
         backend = self.backends[tp]

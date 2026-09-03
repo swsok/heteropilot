@@ -22,9 +22,10 @@ from profiler.synth.shapes import OpCost
 class ScalingTable(Protocol):
     """Tier 1's per-kernel-family multiplier table (filled in STEP 9).
 
-    ``feature`` is a size proxy for the op - RooflineModel passes
-    ``max(flops, bytes_moved)`` - so a piecewise Tier 1 fit can scale small
-    ops differently from large ones. Tier 0 passes None and gets 1.0.
+    ``feature`` is the UNSCALED Tier 0 estimate in us - a monotone size
+    proxy both the fit and the apply side can compute identically - so a
+    piecewise Tier 1 fit can scale small ops differently from large ones.
+    Tier 0 passes no table and gets 1.0.
     """
 
     def scale(self, family: str, feature: float) -> float: ...
@@ -44,5 +45,6 @@ class RooflineModel:
         launch_s = self.device.kernel_launch_us / S_TO_US
         t_us = max(compute_s, memory_s, launch_s) * S_TO_US
         if self.scaling is not None:
-            t_us *= self.scaling.scale(cost.family, max(cost.flops, cost.bytes_moved))
+            # feature = the unscaled Tier 0 time (see ScalingTable docstring).
+            t_us *= self.scaling.scale(cost.family, t_us)
         return t_us
