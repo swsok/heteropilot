@@ -36,6 +36,29 @@ supported_models:
 
 max_tp_size: 2
 
+# Tier 0 datasheet values (tiered-profiles STEP 8). Source: NVIDIA RTX
+# Blackwell PRO GPU Architecture whitepaper v1.0, Appendix A Table 4,
+# "RTX PRO 6000 Blackwell Workstation Edition" column.
+# https://www.nvidia.com/content/dam/en-zz/Solutions/design-visualization/quadro-product-literature/NVIDIA-RTX-Blackwell-PRO-GPU-Architecture-v1.0.pdf
+# Efficiencies are deliberately absent until fitted from the measured bundle
+# (rtxpro6000.efficiency.yaml carries the fit; merging is a human decision).
+datasheet:
+  peak_tflops:
+    bf16: 503.8  # Peak BF16 Tensor TFLOPS with FP32 accumulate, DENSE
+                 # (1007.6 is the sparsity figure; footnote 2)
+    fp16: 503.8  # Peak FP16 Tensor TFLOPS with FP32 accumulate, dense
+  compute_units: 188      # SMs (Table 4)
+  clock_mhz: 2617         # GPU boost clock (Table 4; peak rates use boost)
+  l2_cache_mb: 128        # 131072 KB L2 (Table 4)
+  # Vendor bandwidth (Table 4: 1792 GB/s). The profile-level 1597 above is
+  # upstream's simulator figure; Tier 0 rooflines use the sourced vendor one.
+  memory_bandwidth_gbps: 1792
+  datasheet_source: >
+    NVIDIA RTX Blackwell PRO GPU Architecture whitepaper v1.0, Appendix A
+    Table 4 (RTX PRO 6000 Blackwell Workstation Edition):
+    https://www.nvidia.com/content/dam/en-zz/Solutions/design-visualization/quadro-product-literature/NVIDIA-RTX-Blackwell-PRO-GPU-Architecture-v1.0.pdf.
+    BF16/FP16 dense = with-FP32-accumulate non-sparsity figures.
+
 notes: >
   The only hardware class shipped by upstream. Profiled on CUDA 13.0 /
   Blackwell, whereas our A5000 bundle is CUDA 12.8 / Ampere - when comparing

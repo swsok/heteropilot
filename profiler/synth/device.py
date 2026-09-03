@@ -61,10 +61,11 @@ class DeviceSpec:
                 f"flops_efficiency/mem_efficiency - they must be fitted from "
                 f"measurements, never assumed 1.0 (A2)"
             )
+        bandwidth_gbps = ds.memory_bandwidth_gbps or profile.memory_bandwidth_gbps
         return cls(
             label=profile.sim_hardware or profile.model,
             peak_flops=ds.peak_tflops[dtype] * TFLOPS_TO_FLOPS,
-            mem_bandwidth_bytes=profile.memory_bandwidth_gbps * GBPS_TO_BPS,
+            mem_bandwidth_bytes=bandwidth_gbps * GBPS_TO_BPS,
             flops_efficiency=ds.flops_efficiency,
             mem_efficiency=ds.mem_efficiency,
             family_efficiency=dict(ds.family_efficiency),

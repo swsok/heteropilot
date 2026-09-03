@@ -42,7 +42,7 @@ def _build_emit_parser(sub: argparse._SubParsersAction) -> None:
     p.add_argument("--attention-chunk-factor", type=float, default=2.0)
     p.add_argument("--attention-kv-factor", type=float, default=2.0)
     p.add_argument("--bytes-mode", choices=("sum", "max"), default="sum")
-    p.add_argument("--attn-mode", choices=("max", "sum"), default="max")
+    p.add_argument("--attn-mode", choices=("max", "sum"), default="sum")
     p.add_argument("--model-config", type=Path, default=None,
                    help="HF config path; default configs/model/<model>.json")
     p.add_argument("--out", required=True, type=Path, help="perf root to write under")
@@ -104,13 +104,143 @@ def _cmd_emit(args: argparse.Namespace) -> int:
     return 0
 
 
+def _build_diff_parser(sub: argparse._SubParsersAction) -> None:
+    p = sub.add_parser("diff", help="Compare a measured and a synthetic bundle.")
+    p.add_argument("--measured", required=True, type=Path, help="variant root")
+    p.add_argument("--synth", required=True, type=Path, help="variant root")
+    p.add_argument("--tp", type=int, default=1)
+    p.add_argument("--out", type=Path, default=None, help="write the JSON report here")
+    p.add_argument("--format", choices=("table", "json"), default="table")
+
+
+def _cmd_diff(args: argparse.Namespace) -> int:
+    import json
+
+    from profiler.synth.diff import diff_bundles
+
+    report = diff_bundles(args.measured, args.synth, args.tp)
+    if args.out is not None:
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(json.dumps(report.to_dict(), indent=2))
+        print(f"wrote {args.out}")
+    if args.format == "json":
+        print(json.dumps(report.to_dict(), indent=2))
+    else:
+        print(report.render_table())
+    return 0
+
+
+def _build_fit_parser(sub: argparse._SubParsersAction) -> None:
+    p = sub.add_parser(
+        "fit-efficiency",
+        help="Fit per-family efficiencies against a measured bundle "
+             "(writes a separate YAML; never edits accelerator profiles).",
+    )
+    p.add_argument("--accelerator", required=True, type=Path)
+    p.add_argument("--measured", required=True, type=Path, help="variant root")
+    p.add_argument("--model", required=True)
+    p.add_argument("--variant", default="bf16")
+    p.add_argument("--tp", type=int, default=1)
+    p.add_argument("--bytes-mode", choices=("sum", "max"), default="sum")
+    p.add_argument("--attn-mode", choices=("max", "sum"), default="sum")
+    p.add_argument("--model-config", type=Path, default=None)
+    p.add_argument("--out", required=True, type=Path)
+
+
+def _cmd_fit(args: argparse.Namespace) -> int:
+    import datetime
+
+    import yaml
+
+    from planner.util import provenance as prov
+    from profiler.synth.diff import fit_efficiency
+
+    profile = load_accelerator_profile(args.accelerator)
+    ds = profile.datasheet
+    if ds is None:
+        print(f"error: {args.accelerator} has no datasheet block", file=sys.stderr)
+        return 2
+    config_path = args.model_config or (
+        REPO_ROOT / "configs" / "model" / f"{args.model}.json"
+    )
+    dims = ModelDims.from_hf_config(config_path, args.variant)
+    arch = load_architecture(
+        REPO_ROOT / "profiler" / "models" / f"{dims.model_type}.yaml"
+    )
+    weight_dtype = args.variant.split("-")[0]
+    # Theoretical-lower-bound mode: eff=1.0 injected explicitly.
+    lb_profile = profile.model_copy(
+        update={
+            "datasheet": ds.model_copy(
+                update={"flops_efficiency": 1.0, "mem_efficiency": 1.0,
+                        "family_efficiency": {}}
+            )
+        }
+    )
+    device = DeviceSpec.from_profile(lb_profile, weight_dtype)
+    backend = AnalyticalProfileBackend(
+        dims, arch, device, args.tp,
+        bytes_mode=args.bytes_mode, attn_mode=args.attn_mode,
+    )
+    fit = fit_efficiency(
+        args.measured, args.tp, backend,
+        derived_from={
+            "measured_bundle": str(args.measured),
+            "git_commit": prov.git_commit() or "unknown",
+            "date": datetime.datetime.now(datetime.timezone.utc).isoformat(
+                timespec="seconds"
+            ),
+            "bytes_mode": args.bytes_mode,
+            "attn_mode": args.attn_mode,
+            "tp": str(args.tp),
+            "model": args.model,
+            "variant": args.variant,
+        },
+    )
+    out = {
+        # gemm derates the compute term, elementwise the memory term; the
+        # full per-family table is authoritative.
+        "flops_efficiency": fit.family_efficiency.get("gemm"),
+        "mem_efficiency": fit.family_efficiency.get("elementwise"),
+        "family_efficiency": fit.family_efficiency,
+        "n_per_family": fit.n_per_family,
+        "derived_from": fit.derived_from,
+    }
+    if fit.bound_violations:
+        # Recorded as-is, never clamped: a >1.0 value means the measurement
+        # beat the 'theoretical' bound (usually large-L2 caching of small
+        # working sets) and must stay visible in the artifact.
+        out["bound_violations"] = fit.bound_violations
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text(yaml.safe_dump(out, sort_keys=False))
+    print(f"wrote {args.out}")
+    for family, eff in fit.family_efficiency.items():
+        print(f"  {family:<12} eff={eff:.4f}  (n={fit.n_per_family[family]})")
+    if fit.bound_violations:
+        print(
+            f"warning: fitted efficiency > 1.0 for {fit.bound_violations} - "
+            f"the DRAM-bandwidth 'lower bound' was beaten (typically large-L2 "
+            f"caching). Recorded unclamped; such a family cannot be merged "
+            f"into a Datasheet (which requires (0, 1]).",
+            file=sys.stderr,
+        )
+        return 3
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m profiler.synth")
     sub = parser.add_subparsers(dest="command", required=True)
     _build_emit_parser(sub)
+    _build_diff_parser(sub)
+    _build_fit_parser(sub)
     args = parser.parse_args(argv)
     if args.command == "emit":
         return _cmd_emit(args)
+    if args.command == "diff":
+        return _cmd_diff(args)
+    if args.command == "fit-efficiency":
+        return _cmd_fit(args)
     parser.error(f"unknown command {args.command!r}")
     return 2
 

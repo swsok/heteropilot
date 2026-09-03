@@ -255,6 +255,11 @@ class Datasheet(_Strict):
 
     #: dtype -> dense peak TFLOP/s. Keys like 'bf16', 'fp16', 'fp8', 'int8'.
     peak_tflops: dict[str, float] = Field(default_factory=dict)
+    #: Vendor-spec memory bandwidth for Tier 0 rooflines. Optional override:
+    #: the profile-level memory_bandwidth_gbps sometimes carries an upstream
+    #: simulator figure rather than the vendor datasheet number (rtxpro6000:
+    #: 1597 vs the whitepaper's 1792); Tier 0 must compute on the sourced one.
+    memory_bandwidth_gbps: float | None = Field(default=None, gt=0)
     #: Compute-unit count (GPU: SMs; NPU: PE clusters/cores). Backend-neutral.
     compute_units: int | None = Field(default=None, gt=0)
     clock_mhz: float | None = Field(default=None, gt=0)
