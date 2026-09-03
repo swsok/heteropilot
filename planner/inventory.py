@@ -72,6 +72,11 @@ class Source(str, enum.Enum):
     MEASURED = "measured"
     VENDOR_SPEC = "vendor_spec"
     PLACEHOLDER = "placeholder"
+    #: A number typed in by a user (ScenarioLab cluster builder). Distinct
+    #: from PLACEHOLDER: it is a deliberate what-if input, not a stand-in
+    #: awaiting measurement - but it is still not a measurement and must be
+    #: displayed as user_defined wherever it flows.
+    USER_DEFINED = "user_defined"
 
 
 #: Link types that keep accelerators inside one execution island. Anything else
