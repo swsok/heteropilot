@@ -461,7 +461,14 @@ fixture that deviation D16 describes.
 > *ordering* of the regimes below is still unaffected -- it is driven by energy and
 > TTFT feasibility, not by that throughput margin -- and no absolute TTFT figure
 > from the card rows should be quoted until `pd_slo_sweep.py` is re-run at a
-> defensible load. `experiments/results/rngd_concurrency_envelope.md`, D22.
+> defensible load. *(corrected 2026-09-03: that sentence was written 2026-08-31,
+> before the margin re-run in the paragraph above. The **loose-TTFT regime WAS
+> overturned** by it — `agg[furiosa:tp8]` at 4.956 tok/J is infeasible and the
+> winner is `agg[cuda:tp4]` at 2.595. Only the tight-TTFT regime is still
+> undetermined, and for a different reason: every `pd_cuda-a40-tp4` candidate
+> timed out at `--timeout 1080`. The rest of the sentence stands — the throughput
+> margin is not what decides the ordering, and no absolute card-row TTFT figure
+> should be quoted.)* `experiments/results/rngd_concurrency_envelope.md`, D22.
 
 Two 8-point TTFT-SLO sweeps (300 requests, seed 42), one per fixture.
 `experiments/results/pd_slo_sweep.md`.

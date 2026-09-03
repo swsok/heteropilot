@@ -4,6 +4,25 @@
 Branch: `fix/scaling-curve-provenance-and-npu-envelope`. Self-contained: every
 number you need is inlined.*
 
+> **EXECUTED 2026-08-31 on the NPU node. Results:
+> `experiments/results/rngd_concurrency_envelope.md`, deviations D22.**
+>
+> Both of this document's premises turned out to be wrong in the same direction,
+> and D22 records the retraction: "the highest concurrency ever run on RNGD
+> hardware is 32" was a 24-request pool running at an **effective** concurrency of
+> 21.2, and the ~1.6x margin below came from an exponent fitted over an interval
+> that same pool capped at x1.74. The envelope was then measured to c128: the card
+> serves eff 107.2 at 1473 output tok/s with zero failures, so the sweep's 76 is
+> inside the hardware's range — but at eff 76 the simulator is 1.31x optimistic on
+> throughput and 18 % optimistic on TPOT. Re-running the sweeps with that 18 % as a
+> TPOT feasibility margin rejects every RNGD configuration in the loose-TTFT regime
+> (`experiments/results/pd_slo_sweep_margin.md`). The tight-TTFT half is still
+> undetermined — every `pd_cuda-a40-tp4` candidate timed out — and finishing it is
+> STEP 2 of `WORK_ORDER_consolidation.md`.
+>
+> This file is kept as the historical statement of the gap. Read the two result
+> documents above for what is true now; nothing below this banner has been edited.
+
 ---
 
 ## 1. The gap, stated precisely
