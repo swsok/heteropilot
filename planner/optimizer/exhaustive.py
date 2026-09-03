@@ -37,6 +37,7 @@ from planner.predictor import Predictor, SimResult
 from planner.spec import ServiceSpec
 from planner.topology import TopologyError, TopologyGraph
 from planner.util import kv_transfer
+from planner.util import tier as tierutil
 from planner.util.parallel import predict_all
 
 PD_TRANSFER_CAVEAT = (
@@ -441,6 +442,62 @@ def _suggestions(
     return out
 
 
+def _profile_tiers(
+    spec: ServiceSpec,
+    islands: list[ExecutionIsland],
+    profiles: dict[str, AcceleratorProfile],
+    perf_root=None,
+) -> tuple[dict[str, tierutil.ProfileTier], dict[str, str], list[str]]:
+    """Resolve every island's bundle tier (STEP 2 of the tiered-profile work).
+
+    Returns (island_id -> tier, island_id -> hardware label, warnings). An
+    island with no profile or no sim_hardware has no bundle at all, which is
+    PLACEHOLDER by definition.
+    """
+    variant = tierutil.resolve_variant(spec.service.dtype, spec.service.kv_cache_dtype)
+    tiers: dict[str, tierutil.ProfileTier] = {}
+    hw_labels: dict[str, str] = {}
+    warnings: list[str] = []
+    for island in islands:
+        profile = profiles.get(island.accelerator_model)
+        hardware = profile.sim_hardware if profile is not None else None
+        if hardware is None:
+            tiers[island.id] = tierutil.ProfileTier.PLACEHOLDER
+            hw_labels[island.id] = island.accelerator_model
+            continue
+        res = tierutil.resolve_bundle_tier_report(perf_root, hardware, spec.model, variant)
+        tiers[island.id] = res.tier
+        hw_labels[island.id] = hardware
+        warnings.extend(res.warnings)
+    return tiers, hw_labels, warnings
+
+
+def _tier_summary(
+    used_island_ids: set[str],
+    tiers: dict[str, tierutil.ProfileTier],
+    hw_labels: dict[str, str],
+) -> tuple[str, list[str]]:
+    """Weakest tier over the islands the reported plans actually use, plus the
+    mandatory caveat per distinct non-measurement (tier, hardware) pair."""
+    used = sorted(used_island_ids & set(tiers)) or sorted(tiers)
+    overall = tierutil.min_tier(tiers[i] for i in used)
+    caveats: list[str] = []
+    for island_id in used:
+        c = tierutil.caveat_for(tiers[island_id], hw_labels[island_id])
+        if c is not None and c not in caveats:
+            caveats.append(c)
+    return overall.value, caveats
+
+
+def _islands_of_plans(plans) -> set[str]:
+    out: set[str] = set()
+    for plan in plans:
+        if plan is None:
+            continue
+        out.update(a.island_id for a in plan.candidate.assignments)
+    return out
+
+
 def search(
     spec: ServiceSpec,
     cluster: ClusterSpecV2,
@@ -448,6 +505,7 @@ def search(
     profiles: dict[str, AcceleratorProfile],
     predictor: Predictor,
     *,
+    perf_root=None,
     enable_bound_pruning: bool = True,
     enable_pd: bool = False,
     cache: EnvelopeCache | None = None,
@@ -517,9 +575,12 @@ def search(
         progress=progress,
     )
 
+    island_tiers, island_hw, tier_warnings = _profile_tiers(spec, islands, profiles, perf_root)
+
     all_rejections = generation.rejections + surrogate_rejections + evaluation.rejections
     summary = summarize_rejections(all_rejections)
     caveats = [PHASE2_PREFIX_CACHE_CAVEAT]
+    caveats.extend(tier_warnings)
     if not enable_bound_pruning:
         caveats.append(
             "Oracle mode: bound-based pruning was disabled, so every structurally "
@@ -584,6 +645,13 @@ def search(
         if by_cand.get(best.plan.candidate.id, {}).get("class_default"):
             feasible_caveats.insert(0, PD_TRANSFER_CLASS_DEFAULT_CAVEAT)
 
+        used = _islands_of_plans(
+            [best.plan, *(s.plan for s in alternatives), *(u.plan for u in unscored)]
+        )
+        tier_value, tier_caveats = _tier_summary(used, island_tiers, island_hw)
+        prov["profile_tier"] = tier_value
+        prov["profile_tiers"] = {i: t.value for i, t in sorted(island_tiers.items())}
+
         return PlannerOutput(
             feasible=True,
             service_model=spec.model,
@@ -595,13 +663,23 @@ def search(
             evaluated_candidates=evaluation.evaluated,
             generated_candidates=generation.generated,
             provenance=prov,
-            caveats=feasible_caveats + evaluation.notes,
+            caveats=feasible_caveats + evaluation.notes + tier_caveats,
+            profile_tier=tier_value,
+            profile_tiers=prov["profile_tiers"],
         )
 
     closest_pair = min(
         evaluation.infeasible_plans, key=lambda pair: pair[1].worst_overshoot, default=None
     )
     closest, report = closest_pair if closest_pair else (None, None)
+
+    used = _islands_of_plans(
+        [closest, *(u.plan for u in unscored), *(p for p, _ in evaluation.infeasible_plans)]
+    )
+    tier_value, tier_caveats = _tier_summary(used, island_tiers, island_hw)
+    prov["profile_tier"] = tier_value
+    prov["profile_tiers"] = {i: t.value for i, t in sorted(island_tiers.items())}
+
     return PlannerOutput(
         feasible=False,
         service_model=spec.model,
@@ -619,7 +697,9 @@ def search(
         evaluated_candidates=evaluation.evaluated,
         generated_candidates=generation.generated,
         provenance=prov,
-        caveats=caveats + evaluation.notes,
+        caveats=caveats + evaluation.notes + tier_caveats,
+        profile_tier=tier_value,
+        profile_tiers=prov["profile_tiers"],
     )
 
 

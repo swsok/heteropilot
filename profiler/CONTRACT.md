@@ -147,6 +147,10 @@ Synthetic bundles must never share a hardware label with measured ones:
 | Tier 1 (`calibrated`) | `<LABEL>-t1` | `RNGD-CARD-t1` |
 
 The suffix is a secondary signal only; `meta.yaml`'s `tier` field decides.
+One exception: a bundle whose `meta.yaml` is an upstream-tracked file this
+fork must not edit (the RTXPRO6000 bundles) records its tier in a fork-owned
+`tier.yaml` sidecar next to `meta.yaml`; readers consult it only when
+`meta.yaml` carries neither `tier` nor `source`.
 A measured bundle can therefore never be silently shadowed by a synthetic
 one, and the label alone reveals the tier at a glance.
 
