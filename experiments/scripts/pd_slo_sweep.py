@@ -77,6 +77,15 @@ def main() -> int:
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     parser.add_argument("--timeout", type=float, default=1800.0)
     parser.add_argument("--workers", type=int, default=None)
+    parser.add_argument(
+        "--tpot-margin-percent", type=float, default=0.0,
+        help="inflate simulated p-TPOT by this %% before the feasibility check. "
+             "Use it to encode a MEASURED model error rather than a guess: at the "
+             "concurrency the card fixture runs at, the simulator is 18 %% "
+             "optimistic on TPOT (deviations D22).")
+    parser.add_argument(
+        "--ttft-margin-percent", type=float, default=0.0,
+        help="same, for TTFT.")
     # work-dir and cache-dir DERIVE from --output-dir unless given explicitly.
     # They used to default to literal outputs/.hp-pd-slo/{work,cache}, so passing a
     # different --output-dir moved only the summary JSON and left the simulations
@@ -135,6 +144,8 @@ def main() -> int:
         output = exhaustive.search(
             spec, cluster, islands, profiles, predictor,
             enable_pd=True, cache=cache, max_workers=args.workers,
+            tpot_margin_percent=args.tpot_margin_percent,
+            ttft_margin_percent=args.ttft_margin_percent,
         )
         row = {
             "ttft_slo_max_ms": ttft,

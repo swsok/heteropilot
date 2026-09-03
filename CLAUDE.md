@@ -16,6 +16,7 @@ Authoritative documents, all of which outrank this file:
 | `WORK_ORDER_heteropilot.md` | HeteroPilot schemas, module contracts, phase gates (Korean, v1.0) | The HeteroPilot spec |
 | `docs/phase0_formats.md` | Real CSV / stdout / cluster-config schemas, verified at the pin | Basis for the §5.5 compiler and parser |
 | `docs/deviations.md` | Where the work order and upstream disagree, and how we adapt | Read before implementing any Phase 2+ module |
+| `docs/rps_aware_planning_design.md` | Design for RPS-dependent GPU/NPU selection: performance envelopes, operating-point solving, accuracy domains | Proposal, not built; read before adding any RPS or concurrency axis |
 | `docs/phase0_bench_plan.md` | What was measured vs simulated, and what a node can actually run | Provenance discipline |
 | `docs/nodes/{a40,a5000,npu}.md` | Per-node inventory, topology and traps | Read the one `scripts/whichnode.sh` names — never all three |
 | `docs/HANDOVER.md` | Current state, next work by node, traps that cost a session | The live handover; the `HANDOVER_*.md` files are historical |
