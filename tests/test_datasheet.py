@@ -118,8 +118,14 @@ def test_a40_efficiency_not_prefilled():
     assert profile.datasheet.mem_efficiency is None
 
 
-def test_ascend_target_still_placeholder():
-    """ascend_target.yaml is untouched by STEP 3 (datasheet arrives in STEP 10)."""
+def test_ascend_target_is_tier0():
+    """ascend_target.yaml is a Tier 0 profile since STEP 10 (D4 resolution)."""
     raw = yaml.safe_load((PROFILE_DIR / "ascend_target.yaml").read_text())
-    assert raw.get("sim_hardware") is None
-    assert "datasheet" not in raw
+    assert raw["sim_hardware"] == "ASCEND_TARGET-t0"
+    assert raw["source"] == "vendor_spec"
+    profile = load_accelerator_profile(PROFILE_DIR / "ascend_target.yaml")
+    assert profile.datasheet is not None
+    assert profile.datasheet.datasheet_source.strip()
+    # Efficiencies are transferred from the A40 fit, never measured on Ascend;
+    # the datasheet_source must say so.
+    assert "A40" in profile.datasheet.datasheet_source

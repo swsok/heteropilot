@@ -75,8 +75,10 @@ def test_all_generated_clusters_valid(tmp_path: Path) -> None:
 
 
 def test_placeholder_pool_rejected(tmp_path: Path) -> None:
+    # rbln_atom is the remaining source=placeholder profile; ascend_target
+    # was promoted to vendor_spec by the tiered-profiles STEP 10 (Tier 0).
     path = write_lab_config(
-        tmp_path, **{"cluster_generator.accelerator_pool": ["a5000", "ascend_target"]}
+        tmp_path, **{"cluster_generator.accelerator_pool": ["a5000", "rbln_atom"]}
     )
     with pytest.raises(LabConfigError, match="placeholder"):
         load_lab_config(path, ROOT)

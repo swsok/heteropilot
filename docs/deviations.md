@@ -134,7 +134,7 @@ GB/s). Key points:
 
 ---
 
-## D4 — Only one hardware profile exists · **Resolution path secured 2026-08-14** (real hardware incoming)
+## D4 — Only one hardware profile exists · **Resolved 2026-09-02 (Tier 0 synthetic-bundle path)**
 
 **Work order §2.1 / §3.3 / Phase 3** assume `h100.yaml`, `rtxpro6000.yaml`, `ascend_target.yaml`,
 and a Phase 3 exit criterion of "2–3 accelerator classes appearing as candidates".
@@ -1012,3 +1012,25 @@ whose `sim_hardware` ends in `-t0`/`-t1` without a `datasheet:` block is
 rejected at load time. The planner propagates the weakest bundle tier into
 `PlannerOutput.profile_tier` with a mandatory caveat, so an analytical plan
 can never be read as a measured result.
+
+### D4 addendum (2026-09-02): resolved via the Tier 0 path
+
+The tiered-profile work (WORK_ORDER_tiered_profiles.md, D21) closed the gap
+without waiting for external measurements: `profiler.synth` generates a
+datasheet-derived (`tier: analytical`) bundle under
+`profiler/perf/ASCEND_TARGET-t0/` (regenerated deterministically by
+`scripts/gen-tier0-bundles.sh`; synthetic bundles are gitignored so measured
+and synthetic data never mix in the tree). `ascend_target.yaml` now points
+`sim_hardware` at that label, so Ascend islands survive candidate generation
+and full simulation; every resulting plan carries
+`profile_tier: analytical` and the simulator-only caveat. Measured/imported
+data (the original Phase 3 path) still supersedes this whenever it arrives.
+
+**Coexistence note (STEP 10 item 5).** The candidate generator's stage-5
+analytical bound (`candidate_generator._stage5_analytical_ok`, memory-BW
+decode lower bound) and the Tier 0 `RooflineModel` remain two separate code
+paths on purpose: stage-5 is a *pruning relaxation* whose only permitted
+failure mode is under-rejection, while the Tier 0 model is a *bundle
+generator* whose numbers feed the simulator. Unifying them (adding a compute
+term to stage-5) is deferred to the optional S1 follow-up, which needs its
+own golden-update plan.
