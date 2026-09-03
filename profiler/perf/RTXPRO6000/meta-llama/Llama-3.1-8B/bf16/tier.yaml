@@ -1,0 +1,9 @@
+# Fork-owned sidecar. The adjacent meta.yaml is an upstream-tracked file this
+# fork must not edit before Phase 5 (CLAUDE.md absolute rule 1), so the bundle
+# tier is recorded here instead. planner/util/tier.py consults this file only
+# when meta.yaml carries neither `tier` nor `source`.
+tier: measured
+reason: >
+  Upstream-shipped measured bundle: profiled by casys-kaist/LLMServingSim on a
+  real RTX PRO 6000 (meta.yaml records gpu/vllm_version/cuda_version). Recording
+  that fact is provenance, not invention.
