@@ -441,14 +441,27 @@ fixture that deviation D16 describes.
 
 ### 4.8.7 Does heterogeneous RNGD+GPU P/D ever pay?
 
-> **Envelope caveat (D19 follow-up, 2026-08-28).** The card fixture's winner runs
-> each RNGD card at ~76 concurrent sequences, against 16.6 in the validation run
-> and 32 the highest ever tested. Extrapolating the measured scaling curve puts the
-> card ~1.6x below what the simulator assumes there. The *ordering* of the regimes
-> below is unaffected -- it is driven by energy and TTFT feasibility, not by that
-> throughput margin -- but no absolute TTFT figure from the card rows should be
-> quoted. `experiments/results/pd_slo_sweep.md`. Settling it needs a c64/c128 run
-> on the hardware: `docs/npu_concurrency_envelope_work_order.md`.
+> **SUPERSEDED IN PART 2026-09-02.** Re-run with the measured TPOT optimism as a
+> feasibility margin, **every RNGD configuration is rejected on both fixtures** and
+> the loose-TTFT winner becomes `agg[cuda:tp4]` at 2.595 tok/J against the RNGD
+> rows' 3.164 / 4.956. The committed winners clear the 50 ms TPOT SLO by 1.59 ms,
+> so any margin above 3.3 % rejects them. They are infeasible, not optimistic.
+> `experiments/results/pd_slo_sweep_margin.md`. The tight-TTFT regime is *not*
+> overturned — it was not determined by that run.
+>
+> **Envelope caveat — MEASURED 2026-08-31 (D22).** The card fixture's winner runs
+> each RNGD card at ~76 concurrent sequences. That range has now been measured on
+> the hardware to c128: the card **does** serve it (eff 107.2 at 1473 output tok/s,
+> zero failures), but at eff 76 the simulator is **1.31x optimistic on throughput**
+> (1767 vs 1346) and **18 % optimistic on TPOT** (43.2 vs 52.7 ms) -- the decode
+> model, accurate to -3.1 % at the concurrency it was fitted on, degrades above it.
+> Two figures this caveat previously rested on are retracted: "32 the highest ever
+> tested" was a 24-request pool running at **eff 21.2**, and the ~1.6x margin came
+> from an exponent computed over an interval that pool capped at x1.74. The
+> *ordering* of the regimes below is still unaffected -- it is driven by energy and
+> TTFT feasibility, not by that throughput margin -- and no absolute TTFT figure
+> from the card rows should be quoted until `pd_slo_sweep.py` is re-run at a
+> defensible load. `experiments/results/rngd_concurrency_envelope.md`, D22.
 
 Two 8-point TTFT-SLO sweeps (300 requests, seed 42), one per fixture.
 `experiments/results/pd_slo_sweep.md`.
