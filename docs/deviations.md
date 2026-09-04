@@ -648,6 +648,7 @@ drops, TTFT flat, `none`-mode control flat — all PASS) and `tests/test_sim_pd_
 | D21 | Phase 3 | **Decided 2026-09-02** — Tier 0/1 synthetic profiles: `datasheet:` fields are vendor spec, never measurements. Generated bundles carry `tier: analytical`/`calibrated` and a `-t0`/`-t1` hardware-label suffix so they can never shadow a measured bundle; `PlannerOutput.profile_tier` propagates the weakest tier with a mandatory caveat. `flops_efficiency`/`mem_efficiency` stay empty until fitted against a measured bundle |
 | D22 | Phase 4 | **Resolved** (retraction + measurement) — the c1–c32 curve's top point was a 24-request pool running at eff 21.2, not c32; envelope measured to eff 107.2. At eff 76 the simulator is 1.31× optimistic on throughput and 18 % on TPOT. The re-run is **done for the loose-TTFT regime**: with the measured 18 % margin every RNGD config is rejected on both fixtures and the winner becomes `agg[cuda:tp4]` at 2.595 tok/J — the committed winner is infeasible, not merely optimistic. Tight-TTFT rows still open — the 1800 s re-run kept them undetermined, and D23 explains why: those candidates livelock |
 | D23 | Phase 4 / Phase 5 | **Open** — every `pd_*`/`mix_*` tight-TTFT candidate livelocks: 52,903 progress ticks with prefill pinned at 1 running request, decode never fed, memory flat at 9 %. Not D12 (no memory growth, prefix caching off) and not a timeout (3600 s fails too). The same candidate completed in 280.6 s in an earlier committed run, so it is a regression; cause open. Blocks the sub-second regime of the three-regime table |
+| D24 | — | **Resolved** — the work order's layout lists `profiles/networks/`, but Level-1 interconnect-class values live inline in `planner/topology.py` and the YAMLs were an unread duplicate read only by ScenarioLab's cluster generator. Moved out with it (STEP 3.3); recoverable if Phase 5 ever wants them as data |
 
 ---
 
@@ -1266,3 +1267,42 @@ bandwidth effect; (2) diff the simulator inputs of the `.hp-pd-slo` run against
 this one beyond `cluster.json`, in particular the A40 perf bundle, which the Tier 0
 merge touched; (3) instrument the prefill instance's admission path. All three
 belong to the RPS-aware work order, not to this sprint.
+
+---
+
+## D24 — `profiles/networks/` is in the work order's layout but not in the planner's Level-1 path · Resolved (moved out with ScenarioLab)
+
+**Work order §(repo layout)** lists `profiles/networks/{nvlink,pcie_gen5,ib_100g,ib_400g}.yaml`
+under "[신규] 하드웨어/네트워크 profile catalog", alongside `profiles/accelerators/`.
+
+**The real code puts those values somewhere else.** CLAUDE.md's two-level topology
+model says Level 1 is "interconnect-class representative values", and that is
+implemented inline in `planner/topology.py`:
+
+```python
+CLASS_DEFAULT_GBPS = {LinkType.INFINIBAND: 400.0, ...}    # ib_400g.yaml: bandwidth_gbps 400
+CLASS_DEFAULT_LAT_NS = {LinkType.INFINIBAND: 5000.0, ...} # ib_400g.yaml: latency_ns 5000
+```
+
+The YAML files duplicate the same numbers and nothing in `planner/`, `examples/`,
+`experiments/` or `tests/` reads them — verified by grep before removal. Their own
+headers say what they are for: *"Inter-node 400G InfiniBand link class used by
+ScenarioLab's random cluster generator"*, with every value `source: placeholder`,
+copied verbatim from `examples/clusters/heterogeneous-lab.yaml`.
+
+**How we adapt.** They moved to `swsok/heteropilot-scenariolab` with the rest of
+ScenarioLab (`WORK_ORDER_consolidation.md` STEP 3.3), where the random cluster
+generator is their only consumer and they are anchored at that repo's root rather
+than at a heteropilot-relative path. `experiments/configs/lab/*.yaml`, their only
+other referent, went with them.
+
+This follows CLAUDE.md's standing rule for this class of divergence — *"When spec
+and reality diverge, the real code wins. Record the difference in
+`docs/deviations.md` and continue"* — rather than the consolidation work order's
+§0.5 stop-and-report, because the layout list is not a functional requirement and
+the planner never grew a code path that reads the files.
+
+**If Phase 5 ever needs per-class profiles as data** rather than as constants, the
+place to put them back is `profiles/networks/`, and the values are recoverable
+from `planner/topology.py` or from the split repo. Nothing about this removal
+forecloses that; it removes an unread duplicate, not a capability.

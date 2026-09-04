@@ -33,14 +33,9 @@ extend-exclude = [
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "C4", "RUF", "SIM"]
 
-[tool.ruff.lint.flake8-bugbear]
-# FastAPI's dependency-injection idiom: Depends/Query in defaults is the API,
-# not a mutable-default bug (scenariolab/api/server.py).
-extend-immutable-calls = ["fastapi.Depends", "fastapi.Query"]
-
 [tool.mypy]
 python_version = "3.10"
-files = ["planner", "scenariolab", "profiler/synth", "profiler/contract.py"]
+files = ["planner", "profiler/synth", "profiler/contract.py"]
 ignore_missing_imports = true
 warn_unused_ignores = true
 # serving/ is upstream and not type-clean; check that our calls into it are
