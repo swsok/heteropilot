@@ -74,6 +74,128 @@ loose-TTFT finding above is unaffected: **zero RNGD candidates timed out** on th
 card fixture (54 attempted, 0 timeouts), so the rejection rests entirely on
 completed simulations.
 
+> **The re-run was done 2026-09-03 and the diagnosis above is wrong** — not about
+> the loose-TTFT finding, which stands, but about the cause. `--timeout` was never
+> the binding constraint: these candidates *livelock*. See
+> "Tight-TTFT regime" below. The paragraph is kept because it records what was
+> reasonable to believe from a 1080 s run.
+
+## Tight-TTFT regime (re-run 2026-09-03, `--timeout 1800`)
+
+*Artifacts: `outputs/pd_slo_sweep_margin18/tight/`. Ran 06:10:10Z-10:47:08Z on the
+NPU node, both fixtures, `--ttft-ms 500,8000` only (the loose point was already
+settled above), `--workers 64`, same service spec, seed and 300-request trace.*
+
+**The tight-TTFT regime is still undetermined, and now for a reason no timeout can
+fix.** All four points printed INFEASIBLE, and all four must again be read as
+"not evaluated" rather than "rejected".
+
+| fixture | TTFT SLO | verdict | simulations | completed | **timed out** |
+| --- | ---: | --- | ---: | ---: | ---: |
+| `pd-rngd-gpu-card` | ≤ 8 s | INFEASIBLE | 222 | 151 | **71** |
+| `pd-rngd-gpu-card` | ≤ 500 ms | INFEASIBLE | 222 | 151 | **71** |
+| `pd-rngd-gpu` (tp4) | ≤ 8 s | INFEASIBLE | 252 | 126 | **126** |
+| `pd-rngd-gpu` (tp4) | ≤ 500 ms | INFEASIBLE | 252 | 126 | **126** |
+
+Full lists: `tight/timeouts_pd-rngd-gpu-card.txt` (71 entries),
+`tight/timeouts_pd-rngd-gpu.txt` (126). These are work-dir signatures, not
+candidate ids — the simulator dedups candidates sharing an (island placement,
+`max_num_seqs`, `max_num_batched_tokens`) signature, so one line can stand for
+several of the 468/496 enumerated candidates. Timeouts are not cached and are
+retried once per TTFT point.
+
+Timeouts by family:
+
+| family | card | tp4 |
+| --- | ---: | ---: |
+| `pd_cuda-a40` | 29 | 30 |
+| `mix_cuda-a40` | 24 | 36 |
+| `pd_furiosa-rngd*` | 12 | 24 |
+| `mix_furiosa-rngd` | — | 24 |
+| `cuda-a40` (aggregated) | 6 | 6 |
+| `furiosa-rngd` (aggregated) | — | 6 |
+
+### The committed winner did not complete, at any timeout
+
+The question this re-run existed to answer: does `P[cuda:tp4] D[cuda:tp4]`, the
+committed tight-TTFT winner, still win once its p99 TPOT of 37.27 ms is inflated
+by the measured 18 %? **It cannot be answered, because the candidate has still
+never been simulated to completion.** All six of its knob variants timed out at
+1800 s. The variant that is the committed winner is `-s256-t8192`, identified by
+p99 TTFT 371 ms.
+
+Work order §7 permits exactly one escalation — **1 candidate, 3600 s, single
+retry** — and it was taken. It also failed: `exit=124`, elapsed 3601 s, no CSV.
+
+### It is a livelock, not a slow simulation
+
+That hour is the useful part of the result. The simulator printed **52,903
+progress ticks**, so its simulated clock was advancing the whole time. What never
+advanced is the work:
+
+```
+Instance[0] (prefill): 1 reqs running at EVERY tick, Waiting 7 -> 299
+Instance[1] (decode) : 0 reqs running, 0 waiting, for the entire hour
+memory               : flat at 9.304 % / 9.234 %, both instances
+```
+
+The prefill instance admits exactly one request and never retires it; the decode
+instance is never handed anything; the arrival queue fills with the whole
+300-request trace. Evidence, including every distinct state either instance
+reported: `tight/retry3600_livelock_evidence.txt`.
+
+This is **not** the memory-saturation deadlock of deviations D12 — memory is flat
+at 9 %, and this run had prefix caching disabled. It is a distinct failure, and it
+explains the whole history: `--timeout 1080` "timing out all 72 `pd_cuda-a40-tp4`
+candidates", 1800 s not helping, and 3600 s not helping either. Raising the
+timeout further would not help, so per §7 it was not raised again.
+
+### The same candidate used to finish in 280 seconds
+
+`outputs/.hp-pd-slo/` — an earlier committed sweep of this fixture — has the same
+candidate completed and cached:
+
+| run | `link_bw` | `-s256-t8192` |
+| --- | ---: | --- |
+| `.hp-pd-slo` | 35.0 | **completed in 280.6 s**, p99 TPOT 37.32, p99 TTFT 361.6, 2.206 tok/J |
+| this re-run | 35.2 | livelocked past 3600 s |
+
+So this is a regression of at least 12.8x, into non-termination, and it postdates
+that run. **The cause is not settled.** The only difference found in the compiled
+simulator input is `link_bw` 35.0 -> 35.2 GB/s from the D18 fabric recomputation,
+which is a 0.6 % change and an unconvincing explanation on its own; the
+intermediate `pd_slo_sweep_measured_fabric` run completed the same candidate, but
+its work directory has been cleaned, so its `link_bw` cannot be read back. No
+further experiment was run, because this sprint makes no new numbers (work order
+§0.3).
+
+This is worth stating plainly against D18's own summary, "the fixtures were
+recomputed, and the sweeps cannot see it": that is true of the sweeps' **numbers**
+and appears to be false of the simulator's **runtime**.
+
+### Conclusion
+
+Of the three the work order allows — (i) tight regime holds, (ii) tight regime
+overturned, (iii) still undetermined — this is **(iii)**, with the reason
+upgraded from "the timeout was too short" to "the simulator does not terminate on
+these configurations". The committed three-regime table's sub-second row is
+neither confirmed nor refuted, and cannot be until the livelock is diagnosed.
+
+### Runtime, predicted and actual (work order instruction 3)
+
+Predicted before the run: 1.5-2.5 h, from a model that priced only the timeout
+tail. Actual: **4 h 37 min** (card 1 h 45 m, tp4 2 h 52 m). The estimate was wrong
+because it counted timeouts and treated the successful simulations as free; the
+candidate population dominates. The card fixture reran with 151 results already
+cached and still took 1 h 45 m against the cold run's 2 h 02 m — 86 % of its wall
+clock is candidates that never finish.
+
+An earlier attempt was killed 30 minutes into the second fixture because it was
+started as a session-owned background job rather than detached; work order
+instruction 1 says `nohup`/`tmux` for exactly this reason. Its 84 completed
+simulations were lost: the envelope cache is written when a TTFT point joins, so
+a run killed mid-point caches nothing.
+
 ## Method, and what was reduced
 
 | | committed run | this run |
