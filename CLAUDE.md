@@ -215,7 +215,11 @@ python -m bench validate  # bench vs sim comparison (works offline against commi
 ```
 
 Use `--run-id` / `--inputs-root` for concurrent candidate evaluation — each run gets an isolated
-ASTRA-Sim input root, so parallel simulations need no extra locking.
+ASTRA-Sim input root. **That isolation is not sufficient:** ASTRA-Sim's analytical backend also
+writes a fixed, cwd-relative `tmp__mem/*.json`, which no flag reaches, so concurrent runs race and
+some die at startup (13 of 64 in measurement). The frontend then spins instead of reporting it.
+Read D23 before running anything in parallel, and wrap it in
+`experiments/scripts/livelock_watch.sh`.
 
 Never write simulator output into `bench/examples/` or over `outputs/example_*` — those are
 upstream tracked files, and `bench/examples/run.sh` overwrites them in place. Redirect to

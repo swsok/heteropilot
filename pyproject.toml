@@ -33,6 +33,13 @@ extend-exclude = [
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "C4", "RUF", "SIM"]
 
+[tool.ruff.lint.per-file-ignores]
+# The fixtures are simulator progress lines copied verbatim from the D23 evidence
+# and from a run that completed. Re-wrapping them to 100 columns would make them
+# something other than what the watcher actually parses, which is the whole point
+# of using real output rather than invented output.
+"tests/test_livelock_watch.py" = ["E501"]
+
 [tool.mypy]
 python_version = "3.10"
 files = ["planner", "profiler/synth", "profiler/contract.py"]

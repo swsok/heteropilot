@@ -93,6 +93,12 @@ sweeps can speak at all. Two separate reasons, and neither is "we did not look":
   in **280.6 s** in an earlier committed run, so it is a regression with an open
   cause. Evidence:
   `outputs/pd_slo_sweep_margin18/tight/retry3600_livelock_evidence.txt`.
+  **Updated 2026-09-04:** the candidates do *not* livelock — one completes alone in
+  343 s at N=300. ASTRA-Sim races on a fixed cwd-relative `tmp__mem/*.json` (13 of
+  64 bare processes fail) and the frontend spins forever on the dead child. Both
+  bugs are unfixed upstream. The regime is still undetermined, but the reason is
+  now a harness fault, not a property of the candidates. D23,
+  `docs/d23_spike.md`.
 
 **The shape the industry recommends cannot even be enumerated.** `A40 tp4 prefill +
 RNGD tp8 decode` needs asymmetric TP per phase, and the simulator's topology
