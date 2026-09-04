@@ -1,0 +1,66 @@
+# Provenance for pd-asym-a40tp4-rngdtp8.json
+#
+# WARNING -- THIS FIXTURE DOES NOT WORK ON `main`, AND FAILS SILENTLY.
+#
+# It sets `topology_mode: "slab3d"`, an opt-in key that exists only on the
+# `spike/d14-asym-tp` branch (PR #55, never merged -- WORK_ORDER_spikes.md rule
+# A3). `main`'s `serving/core/config_builder.py` does not read the key and does
+# not reject it: the fixture is accepted, `topology_mode` is ignored, and the
+# instances are folded through `_compute_network_dims`' integer division into
+#
+#     npus_count: [5, 3]      # 15 ranks for instances that occupy 16
+#
+# Rank 15 then has nowhere to live, the collective never completes, the
+# ASTRA-Sim child dies, and the frontend spins on EOF (D23) -- the run emits no
+# progress line at all and sits until its timeout. Measured 2026-09-04: exit 4
+# from `livelock_watch.sh` after 300 s, with only NPU[7] reporting `iteration 0`.
+#
+# So: on `main` this fixture is documentation, not a runnable configuration. It
+# is committed here because `docs/d14_spike.md` cites it and because the shape it
+# encodes is the one D16(c) names as industry-recommended. To actually run it,
+# check out `spike/d14-asym-tp`, and note that a third topology dimension also
+# needs `experiments/scripts/b3_widecol_run.py`
+# (docs/upstream_issues/llmservingsim-trace-column-overflow.md).
+#
+# Absolute rule 3: nothing below is invented.
+
+instances:
+  node0:
+    hardware: A40
+    role: prefill, tp4
+    npu_mem:
+      source: measured
+      note: >
+        40.5 GiB usable, mem_bw 696 GB/s -- the same A40 block used throughout
+        experiments/configs/clusters/, see a40-llama31-8b-tp1.provenance.yaml.
+  node1:
+    hardware: RNGD
+    role: decode, tp8
+    npu_mem:
+      source: measured
+      note: >
+        Copied verbatim from experiments/configs/clusters/rngd-llama31-8b-tp8.json
+        (6 GiB per PE, mem_bw 200 GB/s).
+
+link_bw:
+  value: 12.6
+  source: derived_from_measurement
+  note: >
+    Taken verbatim from the planner's own emitted cluster.json for this exact
+    A40+RNGD pair:
+    outputs/.hp-slo-margin18-tight-pd-rngd-gpu/work/
+      pd_cuda-a40-node_a40a-tp4-dp1_P___furiosa-rngd-node_rngd0-tp4-dp1_D_-s256-t2048/
+    NOT the 35.2 of the colocated A40 fixture -- that is an A40<->A40 value and
+    does not describe this path.
+
+link_latency:
+  value: 20000
+  source: convention
+  note: D3's scalar convention, as in every other fixture here.
+
+power:
+  source: derived_from_measurement
+  note: >
+    Both blocks copied verbatim from the same emitted cluster.json above, so no
+    power number here is invented. The A40 block is the measured one used
+    elsewhere; the RNGD block is the planner's.

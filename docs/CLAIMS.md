@@ -100,12 +100,26 @@ sweeps can speak at all. Two separate reasons, and neither is "we did not look":
   now a harness fault, not a property of the candidates. D23,
   `docs/d23_spike.md`.
 
-**The shape the industry recommends cannot even be enumerated.** `A40 tp4 prefill +
-RNGD tp8 decode` needs asymmetric TP per phase, and the simulator's topology
-inference requires uniform instance sizes (D14). Card-as-device sidesteps it by
-folding TP=8 inside the device; it does not lift the constraint. So "heterogeneous
-P/D does not pay" is **not** a claim this repository can make — it has not tested
-the configuration most likely to pay.
+**The shape the industry recommends is not enumerated — but it is no longer
+unsimulable.** `A40 tp4 prefill + RNGD tp8 decode` needs asymmetric TP per phase,
+and our compiler's topology inference requires uniform instance sizes (D14).
+Card-as-device sidesteps it by folding TP=8 inside the device; it does not lift the
+constraint. So "heterogeneous P/D does not pay" is still **not** a claim this
+repository can make — it has not tested the configuration most likely to pay.
+
+*Updated 2026-09-04.* A spike (`docs/d14_spike.md`) ran that exact configuration to
+completion — 86 s, 21 rows, TTFT 2.21× the A40 standalone and TPOT 0.73× the RNGD
+standalone. Three things follow, and the third is why this claim stays in §2:
+
+- The constraint is **ours**, in two sites of `serving/core/config_builder.py`, not
+  ASTRA-Sim's. Under `auto` the same fixture compiles to a **15-rank topology for
+  16 ranks** and hangs the harness rather than erroring — worse than D14 recorded.
+- The accuracy cost of the fix is measured: **24.4 %** on TPOT, closing to
+  **0.008 %** with a per-dim `link_latency` the config already supports.
+- **The prototype is not merged** and the 4× correction is a constant fitted at one
+  bandwidth and one split, with no calibration domain. So nothing here licenses a
+  number. What has changed is the *reason* the claim is unavailable: from "the
+  simulator cannot express it" to "we have not productionised or calibrated it".
 
 **RNGD's low-load regime is unmeasured.** The envelope starts at eff 15.3. The
 crossover the design document expects — where the NPU's efficiency advantage

@@ -530,6 +530,47 @@ A cold-cache run reporting a non-zero hit count is a bug, not a nicety — worth
 
 ## D14 — The simulator's topology inference requires uniform instance sizes · Resolved (constraint enumerated around)
 
+### Measured 2026-09-04 (`WORK_ORDER_spikes.md` STEP B) — the constraint is liftable, and worse than recorded
+
+`docs/d14_spike.md`. Two corrections to what follows, both measured on
+`A40 tp4 prefill + RNGD tp8 decode` — the configuration D16(c) names as
+industry-recommended and unavailable:
+
+**1. It is worse than "wrong numbers, not an error".** That configuration compiles
+today to `npus_count: [5, 3]` — **15 ranks for instances that occupy 16**
+(`total_npu` 16, `total_pp` 3, `16 // 3 = 5`). Rank 15 has nowhere to live, so the
+collective never completes: of the four instance-boundary ranks only NPU[7] reports
+`iteration 0`, the ASTRA-Sim child dies, and the frontend spins on EOF (D23). The
+run emits **no progress line in 300 s**. It does not produce wrong numbers; it
+produces none and hangs the harness.
+
+**2. The constraint is two sites in `config_builder.py`, and both are liftable.**
+Not only `_compute_network_dims`'s integer division, but also `_resolve_dp_groups`,
+which hands *every* instance the same `local_dim`. With an opt-in
+`topology_mode: "slab3d"` bypassing both, the same fixture compiles to
+`npus_count: [4, 2, 2]`, all four boundary ranks report, and the run **completes**
+(86 s, 21 rows). TTFT lands 2.21× the A40 standalone and TPOT 0.73× the RNGD
+standalone — the right side of each, for the right reason.
+
+The prototype is **spike-only** (`spike/d14-asym-tp`, not merged); `serving/` on
+`main` is unchanged and the `auto` path is byte-identical (`sha256`-equal CSVs,
+460 tests, golden included). Two costs were measured and are the real gate:
+
+- splitting one TP group across two dims changes TPOT by **24.4 %** — but a
+  per-dim `link_latency` of **4× the scalar**, which `_normalize_network_dim_values`
+  already accepts, closes it to **0.008 %**. The 4× is a fitted constant at one
+  bandwidth and one split; it needs a calibration domain before any absolute number
+  is quoted from a slab3d plan.
+- a 3-D collective tag `ALLREDUCE:1,1,0` is **exactly** the 15 characters of
+  `utils.py::_FMT`'s `comm_type` column, so it abuts `comm_size`, and
+  `generate_trace` re-reads its own fixed-width file with `re.findall(r'\S+')`
+  (`trace_generator.py:1514`) and gets 10 fields instead of 11. An upstream bug,
+  unreachable at ≤ 2 dims. Not fixed here (§7); recorded, with a runtime
+  workaround in `experiments/scripts/b3_widecol_run.py`.
+
+*Original entry follows, unchanged.*
+
+
 **Work order §1.3 / Exp 2** exploit heterogeneity at replica granularity: replicas of the same
 model on different islands, requests spread by the router. Nothing in the work order restricts the
 per-island parallelism of those replicas.
@@ -705,6 +746,14 @@ over PCIe into **size-4** islands, exactly as
 tp ∈ {1, 2, 4} so that **tp=4 is a shared degree**. Both mixed combos then
 appear.
 
+**Update 2026-09-04 (STEP B spike)**: `docs/d14_spike.md` measured that lifting
+D14 is a `config_builder.py` change of two sites, and ran
+`A40 tp4 prefill + RNGD tp8 decode` to completion under it. So "unrepresentable"
+is now "unrepresentable **by the compiler we ship**", with a demonstrated path out
+and a measured accuracy cost. The `tp_p == tp_d` guard in
+`planner/candidate_generator.py` stays until that path is productionised — the
+spike is not merged — but it is no longer a statement about the simulator.
+
 **Why this stays open**: the workaround requires the island sizes to be
 *choosable*. On hardware where the per-device memory forces disjoint TP sets and
 the island sizes are fixed by the fabric, heterogeneous P/D remains
@@ -734,7 +783,13 @@ The consequence for our results is concrete. Dynamo's recommendation — big TP 
 decode — is exactly what RNGD needs: tp8 holds 246,079 KV tokens against 61,775
 at tp4. So `GPU tp4 prefill + RNGD tp8 decode` is both the industry-recommended
 shape and the one that uses RNGD's measured bandwidth advantage, and D14 forbids
-it. **Any "heterogeneous P/D does not pay" statement from this repo is therefore
+it.
+
+**Measured 2026-09-04**: that exact configuration has now been **simulated to
+completion** on the spike branch (`docs/d14_spike.md`, 86 s, 21 rows, consistency
+check passed). The shape is not unsimulable — it was unsupported by our compiler.
+What the scoping sentence below must still say is that no *shipped* result uses
+it, because the prototype is not merged. **Any "heterogeneous P/D does not pay" statement from this repo is therefore
 scoped to the uniform-TP configurations D14 permits, and must say so.**
 
 One further real-world limit, from FuriosaAI's own llm-d documentation:
