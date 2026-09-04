@@ -469,6 +469,19 @@ fixture that deviation D16 describes.
 > timed out at `--timeout 1080`. The rest of the sentence stands — the throughput
 > margin is not what decides the ordering, and no absolute card-row TTFT figure
 > should be quoted.)* `experiments/results/rngd_concurrency_envelope.md`, D22.
+>
+> **Tight-TTFT re-run, 2026-09-03.** The re-run the first paragraph asks for was
+> done at `--timeout 1800` on both fixtures. All four tight points printed
+> INFEASIBLE and all four are again *not evaluated*: 71 of 222 card-fixture
+> simulations and 126 of 252 tp4-fixture simulations timed out. The committed
+> tight-TTFT winner `P[cuda:tp4] D[cuda:tp4]` is among them, and a sanctioned
+> single retry at 3600 s showed why — it **livelocks**: 52,903 progress ticks, the
+> prefill instance pinned at 1 running request while its queue fills to 299, the
+> decode instance never fed, memory flat at 9 %. The same candidate completed in
+> 280 s in an earlier committed run of this fixture, so this is a regression into
+> non-termination, cause not yet identified. **The sub-second regime below is
+> therefore neither confirmed nor refuted, and no timeout can settle it.**
+> `experiments/results/pd_slo_sweep_margin.md` § Tight-TTFT regime.
 
 Two 8-point TTFT-SLO sweeps (300 requests, seed 42), one per fixture.
 `experiments/results/pd_slo_sweep.md`.

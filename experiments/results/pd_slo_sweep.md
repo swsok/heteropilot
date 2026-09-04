@@ -21,6 +21,16 @@ The SLO is swept because the answer turns out to depend entirely on it.*
 > The tight-TTFT rows are *not* overturned — that regime was not determined by the
 > re-run (a timeout artifact, see the results file), and the committed winner there
 > passes the margin at 43.98 ms.
+>
+> **Updated 2026-09-03 after the `--timeout 1800` re-run.** The tight rows are
+> still undetermined, but "a timeout artifact" understates it: the committed
+> winner `P[cuda:tp4] D[cuda:tp4]` does not terminate. Given a sanctioned single
+> retry at 3600 s it livelocked — 52,903 progress ticks with the prefill instance
+> pinned at 1 running request, the decode instance never fed, and memory flat at
+> 9 %. The 43.98 ms figure above comes from an earlier run of the same candidate
+> that completed in 280 s; it has not been reproduced since. Raising the timeout
+> cannot settle these rows.
+> `experiments/results/pd_slo_sweep_margin.md` § Tight-TTFT regime.
 
 **Three regimes, and heterogeneous P/D wins in none of them.**
 
