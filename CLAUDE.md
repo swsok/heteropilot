@@ -6,7 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is **HeteroPilot** — a fork of `casys-kaist/LLMServingSim` that adds a control plane for LLM
 serving on heterogeneous GPU/NPU clusters. Everything outside `planner/`, `profiles/`,
-`experiments/`, `examples/`, and `tests/` is upstream simulator code.
+`experiments/`, `examples/`, `tests/`, `profiler/synth/` and `profiler/contract.py` is upstream
+simulator code.
+
+**ScenarioLab moved out** on 2026-09-03 (`WORK_ORDER_consolidation.md` STEP 3): the batch scenario
+explorer and its planning workspace now live in `swsok/heteropilot-scenariolab`, which pins this
+repo as a submodule at `e79ac4ab`. It imports from `planner/` and never the other way round, so
+nothing here depends on it. `profiles/networks/` and `experiments/configs/lab/` went with it — see
+`docs/deviations.md` D24 for why that does not contradict the work order's layout.
 
 Authoritative documents, all of which outrank this file:
 

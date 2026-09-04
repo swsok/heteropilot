@@ -10,6 +10,14 @@
 >
 > Authority order is unchanged: `WORK_ORDER_heteropilot.md` → `docs/deviations.md`
 > → `CLAUDE.md` → this file.
+>
+> **Stale as of 2026-09-03** — this file still describes 2026-08-31. The
+> consolidation sprint (`WORK_ORDER_consolidation.md`) is rewriting it in its
+> STEP 4; until then, three things it does not know: the tiered-profile work
+> landed and closed D4; the D22 envelope chain landed and the loose-TTFT RNGD
+> win was retracted (D22) while the tight-TTFT regime turned out to livelock
+> (D23); and **ScenarioLab moved out** to `swsok/heteropilot-scenariolab`, which
+> pins this repo at `e79ac4ab`. Its "pytest 284 passed" is also long out of date.
 
 ---
 

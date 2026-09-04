@@ -27,9 +27,6 @@ bench/results/
 # committed explicitly with `git add -f`.
 outputs/.hp-*
 outputs/phase0_bench/
-# ScenarioLab batches: fully regenerable from the committed LabConfig + seed
-# (byte-identical modulo timestamps), so nothing under here is tracked.
-outputs/scenariolab/
 # Per-bandwidth cluster configs written by pd_sim_network_sweep.py. They must
 # live under the repo tree (the simulator prepends "../" to a relative
 # --cluster-config and cannot open an absolute path), so they cannot go to /tmp;
