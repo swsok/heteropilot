@@ -132,6 +132,17 @@ def _render_plan(scored: ScoredPlan, label: str) -> str:
 
 def render(output: PlannerOutput, *, top_n: int = 5) -> str:
     lines: list[str] = []
+    # Non-measured inputs get a banner ABOVE everything else: a plan built on
+    # analytical/calibrated/placeholder/unknown profiles must not be readable
+    # as a measured result (tiered-profiles work, absolute rule A1).
+    if output.profile_tier not in ("measured", "imported"):
+        lines.append("!" * WIDTH)
+        lines.append(
+            f"!!  PROFILE TIER: {output.profile_tier.upper()} - this plan rests on "
+            f"non-measured profile inputs  !!"
+        )
+        lines.append("!" * WIDTH)
+        lines.append("")
     lines.append(_rule("HeteroPilot plan"))
     lines.append(f"service : {output.service_model}")
     lines.append(f"cluster : {output.cluster_id}")

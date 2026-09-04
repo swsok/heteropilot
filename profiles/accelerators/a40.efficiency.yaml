@@ -1,0 +1,21 @@
+flops_efficiency: 0.7468390409816932
+mem_efficiency: 0.5319523056625672
+family_efficiency:
+  attention: 0.26187364905355237
+  elementwise: 0.5319523056625672
+  gather: 0.7961560162297642
+  gemm: 0.7468390409816932
+n_per_family:
+  attention: 8643
+  elementwise: 648
+  gather: 152
+  gemm: 648
+derived_from:
+  measured_bundle: profiler/perf/A40/meta-llama/Llama-3.1-8B/bf16
+  git_commit: 250bb98c3a922db8f0b5990e7e6dd4aa9864607e
+  date: '2026-09-02T11:35:10+00:00'
+  bytes_mode: sum
+  attn_mode: sum
+  tp: '1'
+  model: meta-llama/Llama-3.1-8B
+  variant: bf16

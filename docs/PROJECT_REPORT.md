@@ -441,14 +441,47 @@ fixture that deviation D16 describes.
 
 ### 4.8.7 Does heterogeneous RNGD+GPU P/D ever pay?
 
-> **Envelope caveat (D19 follow-up, 2026-08-28).** The card fixture's winner runs
-> each RNGD card at ~76 concurrent sequences, against 16.6 in the validation run
-> and 32 the highest ever tested. Extrapolating the measured scaling curve puts the
-> card ~1.6x below what the simulator assumes there. The *ordering* of the regimes
-> below is unaffected -- it is driven by energy and TTFT feasibility, not by that
-> throughput margin -- but no absolute TTFT figure from the card rows should be
-> quoted. `experiments/results/pd_slo_sweep.md`. Settling it needs a c64/c128 run
-> on the hardware: `docs/npu_concurrency_envelope_work_order.md`.
+> **SUPERSEDED IN PART 2026-09-02.** Re-run with the measured TPOT optimism as a
+> feasibility margin, **every RNGD configuration is rejected on both fixtures** and
+> the loose-TTFT winner becomes `agg[cuda:tp4]` at 2.595 tok/J against the RNGD
+> rows' 3.164 / 4.956. The committed winners clear the 50 ms TPOT SLO by 1.59 ms,
+> so any margin above 3.3 % rejects them. They are infeasible, not optimistic.
+> `experiments/results/pd_slo_sweep_margin.md`. The tight-TTFT regime is *not*
+> overturned — it was not determined by that run.
+>
+> **Envelope caveat — MEASURED 2026-08-31 (D22).** The card fixture's winner runs
+> each RNGD card at ~76 concurrent sequences. That range has now been measured on
+> the hardware to c128: the card **does** serve it (eff 107.2 at 1473 output tok/s,
+> zero failures), but at eff 76 the simulator is **1.31x optimistic on throughput**
+> (1767 vs 1346) and **18 % optimistic on TPOT** (43.2 vs 52.7 ms) -- the decode
+> model, accurate to -3.1 % at the concurrency it was fitted on, degrades above it.
+> Two figures this caveat previously rested on are retracted: "32 the highest ever
+> tested" was a 24-request pool running at **eff 21.2**, and the ~1.6x margin came
+> from an exponent computed over an interval that pool capped at x1.74. The
+> *ordering* of the regimes below is still unaffected -- it is driven by energy and
+> TTFT feasibility, not by that throughput margin -- and no absolute TTFT figure
+> from the card rows should be quoted until `pd_slo_sweep.py` is re-run at a
+> defensible load. *(corrected 2026-09-03: that sentence was written 2026-08-31,
+> before the margin re-run in the paragraph above. The **loose-TTFT regime WAS
+> overturned** by it — `agg[furiosa:tp8]` at 4.956 tok/J is infeasible and the
+> winner is `agg[cuda:tp4]` at 2.595. Only the tight-TTFT regime is still
+> undetermined, and for a different reason: every `pd_cuda-a40-tp4` candidate
+> timed out at `--timeout 1080`. The rest of the sentence stands — the throughput
+> margin is not what decides the ordering, and no absolute card-row TTFT figure
+> should be quoted.)* `experiments/results/rngd_concurrency_envelope.md`, D22.
+>
+> **Tight-TTFT re-run, 2026-09-03.** The re-run the first paragraph asks for was
+> done at `--timeout 1800` on both fixtures. All four tight points printed
+> INFEASIBLE and all four are again *not evaluated*: 71 of 222 card-fixture
+> simulations and 126 of 252 tp4-fixture simulations timed out. The committed
+> tight-TTFT winner `P[cuda:tp4] D[cuda:tp4]` is among them, and a sanctioned
+> single retry at 3600 s showed why — it **livelocks**: 52,903 progress ticks, the
+> prefill instance pinned at 1 running request while its queue fills to 299, the
+> decode instance never fed, memory flat at 9 %. The same candidate completed in
+> 280 s in an earlier committed run of this fixture, so this is a regression into
+> non-termination, cause not yet identified. **The sub-second regime below is
+> therefore neither confirmed nor refuted, and no timeout can settle it.**
+> `experiments/results/pd_slo_sweep_margin.md` § Tight-TTFT regime.
 
 Two 8-point TTFT-SLO sweeps (300 requests, seed 42), one per fixture.
 `experiments/results/pd_slo_sweep.md`.

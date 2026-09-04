@@ -134,7 +134,7 @@ GB/s). Key points:
 
 ---
 
-## D4 — Only one hardware profile exists · **Resolution path secured 2026-08-14** (real hardware incoming)
+## D4 — Only one hardware profile exists · **Resolved 2026-09-02 (Tier 0 synthetic-bundle path)**
 
 **Work order §2.1 / §3.3 / Phase 3** assume `h100.yaml`, `rtxpro6000.yaml`, `ascend_target.yaml`,
 and a Phase 3 exit criterion of "2–3 accelerator classes appearing as candidates".
@@ -639,12 +639,16 @@ drops, TTFT flat, `none`-mode control flat — all PASS) and `tests/test_sim_pd_
 | --- | --- | --- |
 | D2 | Phase 2 | **Decided** — parse stdout in Phase 2, switch to a `power_model.py` API at Phase 4 |
 | D3 | Phase 5 | **Decided** — Level-1 compile for Phase 2; revisit after adding the link graph and compare the two |
-| D4 | Phase 3 | **Resolution path secured** — A5000 measured locally; A40/ATOM/RNGD hardware reachable from 2026-08-17 (see `docs/hardware_roadmap.md`) |
+| D4 | Phase 3 | **Resolved 2026-09-02** (Tier 0 synthetic-bundle path) — A5000/A40/RNGD measured locally; Ascend closed without external measurements via the datasheet-derived `ASCEND_TARGET-t0` bundle from `profiler.synth`, so Ascend islands survive candidate generation with `profile_tier: analytical`. Measured data still supersedes it whenever it arrives (D21) |
 | D10 | Phase 2 | **Open** — derating factor for the memory feasibility filter; nominal vs KV-matched config for the A5000 comparison |
 | D15 | Phase 5 | **Resolved** — sim-level P/D KV-transfer model, opt-in `--pd-transfer-model bandwidth`, default byte-identical; first sanctioned `serving/` edit (router.py + __main__.py only, scheduler.py pristine) |
-| D18 | Phase 5 | **Resolved** (retraction) — NPU-leg multi-stream bandwidth remeasured; scaling law held, levels ~25 % lower. Fixture `bandwidth_gbps` deliberately left at the old value pending the GPU leg |
+| D18 | Phase 5 | **Resolved** (retraction) — NPU-leg multi-stream bandwidth remeasured; scaling law held, levels ~25 % lower. Fixtures recomputed once the GPU leg landed (all six links now `measured`); the SLO sweeps cannot see the change, for three recorded reasons |
 | D19 | Phase 4 | **Resolved** (retraction) — the card profile's −71 % TTFT error was an arrival-pattern mismatch in the validation harness, not a scheduler difference; matched arrivals give −5.1 %. Both RNGD TTFT calibrations refitted |
 | D20 | Phase 3 / Exp 4 | **Open** — ATOM layerwise profiling blocked: host I/O exceeds the kernels and the device tracer's schema is undocumented. Memory and power measured; no perf bundle, so ATOM stays out of candidate generation |
+| D21 | Phase 3 | **Decided 2026-09-02** — Tier 0/1 synthetic profiles: `datasheet:` fields are vendor spec, never measurements. Generated bundles carry `tier: analytical`/`calibrated` and a `-t0`/`-t1` hardware-label suffix so they can never shadow a measured bundle; `PlannerOutput.profile_tier` propagates the weakest tier with a mandatory caveat. `flops_efficiency`/`mem_efficiency` stay empty until fitted against a measured bundle |
+| D22 | Phase 4 | **Resolved** (retraction + measurement) — the c1–c32 curve's top point was a 24-request pool running at eff 21.2, not c32; envelope measured to eff 107.2. At eff 76 the simulator is 1.31× optimistic on throughput and 18 % on TPOT. The re-run is **done for the loose-TTFT regime**: with the measured 18 % margin every RNGD config is rejected on both fixtures and the winner becomes `agg[cuda:tp4]` at 2.595 tok/J — the committed winner is infeasible, not merely optimistic. Tight-TTFT rows still open — the 1800 s re-run kept them undetermined, and D23 explains why: those candidates livelock |
+| D23 | Phase 4 / Phase 5 | **Open** — every `pd_*`/`mix_*` tight-TTFT candidate livelocks: 52,903 progress ticks with prefill pinned at 1 running request, decode never fed, memory flat at 9 %. Not D12 (no memory growth, prefix caching off) and not a timeout (3600 s fails too). The same candidate completed in 280.6 s in an earlier committed run, so it is a regression; cause open. Blocks the sub-second regime of the three-regime table |
+| D24 | — | **Resolved** — the work order's layout lists `profiles/networks/`, but Level-1 interconnect-class values live inline in `planner/topology.py` and the YAMLs were an unread duplicate read only by ScenarioLab's cluster generator. Moved out with it (STEP 3.3); recoverable if Phase 5 ever wants them as data |
 
 ---
 
@@ -839,17 +843,41 @@ live sysfs enumeration rather than `index // 8`, because npu2 left the PCI bus a
 torch renumbers densely over the cards that remain — under the old arithmetic this
 run's artifact would have been stamped `npu2`, a card no longer in the machine.
 
-**Left open deliberately.** `bandwidth_gbps: 35` on the six `fabric-*` links in
-both P/D fixtures is still the old 8-stream figure. The corrected upper bound is
-26.27, and changing it requires re-running both SLO sweeps. It is left for
-whoever lands the GPU leg, because the composed `1/(1/gpu + 1/npu)` values that
-the work order describes were never committed here — branch
-`feat/gpu-host-bandwidth` is not on `origin` and both fixtures still read
-`source: placeholder`. Composing against GPU figures that exist only in prose
-would repeat exactly the error this entry retracts.
-`experiments/results/rngd_parallel_bandwidth.md` tabulates the new compositions;
-the one to watch is `rngd ↔ rngd` at tp4, which falls 9.6 → 7.68 GB/s and so
-crosses *below* the ~10 GB/s P/D adoption threshold.
+**Left open deliberately at the time — CLOSED 2026-08-28.** When this entry was
+written, `bandwidth_gbps: 35` still sat on the six `fabric-*` links of both P/D
+fixtures, and the corrected NPU leg could not be composed into them because the
+GPU leg existed only as prose: `feat/gpu-host-bandwidth` was not on `origin` and
+both fixtures read `source: placeholder`. Composing against uncommitted figures
+would have repeated exactly the error this entry retracts, so the recomputation
+was deferred rather than guessed.
+
+The GPU leg landed (PR #19) and the recomputation was done. All six links in both
+fixtures now read `source: measured`, and the composed values match what
+`experiments/results/rngd_parallel_bandwidth.md` predicted from the corrected NPU
+leg to within rounding:
+
+| fixture | link | predicted | committed |
+| --- | --- | ---: | ---: |
+| `pd-rngd-gpu.yaml` (tp4) | rngd ↔ a40 | 12.33 | 12.6 |
+| | rngd ↔ rngd | 7.68 | **7.7** |
+| `pd-rngd-gpu-card.yaml` (tp1) | rngd ↔ a40 | 13.07 | 13.0 |
+| | rngd ↔ rngd | 13.13 | 13.1 |
+
+The row this entry flagged to watch behaved as flagged: `rngd ↔ rngd` at tp4
+falls to **7.7 GB/s**, below the ~10 GB/s P/D adoption crossing Exp 3 found.
+
+**But the SLO sweeps could not see it**, and that is the more useful result. Both
+were re-run at the measured fabric: all 16 winners unchanged, the per-PE fixture's
+tight-TTFT row moving 372 → 371 ms, the card fixture byte-identical at all 8
+points. Three reasons, none of them "the number does not matter": the simulator
+prices the P/D KV handoff at **zero** by default (D15) and `pd_slo_sweep.py` does
+not pass `--pd-transfer-model bandwidth`; `link_bw` acts on collectives and the
+card fixture has none, every candidate there being tp1 on both sides; and the
+planner-side penalty is a per-request latency term worth 0.13–0.36 % of the
+cross-vendor candidate's p99. So these sweeps are not evidence that fabric
+bandwidth is irrelevant — they are evidence that *this configuration of them
+cannot answer the question*. See the PR #19 commit chain and
+`experiments/results/pd_slo_sweep.md`.
 
 ---
 
@@ -994,3 +1022,287 @@ schema from Rebellions — the tracer already records what is needed, so this is
 documentation request; (2) a torch backend registering device `rbln`, which
 enables the vLLM-native path; (3) a llama entry in vllm-rbln's native model
 registry, after (2).
+
+---
+
+## D21 — Tier 0 introduction: `datasheet:` fields are vendor spec, not measurements · Decided 2026-09-02
+
+**What.** The tiered-profile work (WORK_ORDER_tiered_profiles.md) adds a
+`datasheet:` block to `AcceleratorProfile` so a roofline generator can emit
+synthetic (`analytical`/`calibrated`) perf bundles for hardware we do not
+own. Those numbers are copied from public vendor documents and are labelled
+by `datasheet_source`; they are **never** measurements, and the bundles they
+produce carry `tier: analytical` (or `calibrated`) plus a `-t0`/`-t1`
+hardware-label suffix so they can never shadow a measured bundle.
+
+**Discipline.** `flops_efficiency` / `mem_efficiency` are left empty until
+they are fitted from a real measured bundle (STEP 8 of that work order):
+pre-filling them would present an invented derating as usable. A profile
+whose `sim_hardware` ends in `-t0`/`-t1` without a `datasheet:` block is
+rejected at load time. The planner propagates the weakest bundle tier into
+`PlannerOutput.profile_tier` with a mandatory caveat, so an analytical plan
+can never be read as a measured result.
+
+### D4 addendum (2026-09-02): resolved via the Tier 0 path
+
+The tiered-profile work (WORK_ORDER_tiered_profiles.md, D21) closed the gap
+without waiting for external measurements: `profiler.synth` generates a
+datasheet-derived (`tier: analytical`) bundle under
+`profiler/perf/ASCEND_TARGET-t0/` (regenerated deterministically by
+`scripts/gen-tier0-bundles.sh`; synthetic bundles are gitignored so measured
+and synthetic data never mix in the tree). `ascend_target.yaml` now points
+`sim_hardware` at that label, so Ascend islands survive candidate generation
+and full simulation; every resulting plan carries
+`profile_tier: analytical` and the simulator-only caveat. Measured/imported
+data (the original Phase 3 path) still supersedes this whenever it arrives.
+
+**Coexistence note (STEP 10 item 5).** The candidate generator's stage-5
+analytical bound (`candidate_generator._stage5_analytical_ok`, memory-BW
+decode lower bound) and the Tier 0 `RooflineModel` remain two separate code
+paths on purpose: stage-5 is a *pruning relaxation* whose only permitted
+failure mode is under-rejection, while the Tier 0 model is a *bundle
+generator* whose numbers feed the simulator. Unifying them (adding a compute
+term to stage-5) is deferred to the optional S1 follow-up, which needs its
+own golden-update plan.
+
+---
+
+## D22 — The RNGD scaling curve's top point was request-pool-limited, and the envelope beyond it is now measured · Resolved (retraction + measurement)
+
+**What was wrong.** `experiments/results/pd_slo_sweep.md`, `docs/PROJECT_REPORT.md`
+§4.8.7 and `docs/npu_concurrency_envelope_work_order.md` all rested on two figures
+from the committed c1–c32 curve: that **32 was the highest concurrency ever run on
+RNGD** at ~648 output tok/s, and that the curve's marginal exponent was **0.598**
+between c16 and c32. Both are artifacts of the harness.
+
+Every committed point used a **24-request pool** while requesting up to 32
+concurrent, so the pool bound the experiment. Average in-flight concurrency by
+Little's law (`Σ latency / wall`):
+
+| committed point | requested | pool | **actually served** | tok/s |
+| --- | ---: | ---: | ---: | ---: |
+| c8 | 8 | 24 | 7.4 | 299.4 |
+| c16 | 16 | 24 | **12.2** | 427.4 |
+| c32 | 32 | 24 | **21.2** | 646.4 |
+
+So the top point was ~21, not 32, and the 0.598 exponent reads a pool-capped ×1.74
+interval as a ×2 doubling. Re-measured at a non-binding pool the same levels give
+**585.8 tok/s at c16 (+37 %)** and **908.6 at c32 (+40 %)**, with TPOT essentially
+unchanged at c32 (30.14 → 31.18 ms) — real throughput the harness was leaving on
+the table, not a bookkeeping difference.
+
+**What the measurement found** (2026-08-31, npu0, TP=8;
+`outputs/rngd_envelope/edf/real_c{16,32,64,128}.json`):
+
+| requested | pool | eff. conc | output tok/s | TPOT avg |
+| ---: | ---: | ---: | ---: | ---: |
+| 16 | 128 | 15.3 | 585.8 | 25.71 |
+| 32 | 128 | 29.3 | 908.6 | 31.18 |
+| 64 | 256 | 59.2 | 1277.0 | 44.54 |
+| 128 | 300 | **107.2** | **1473.3** | 67.88 |
+
+Exponent decays 0.675 → 0.485 → **0.241**; the curve flattens decisively, which it
+had not done by the old top point. All 812 requests succeeded.
+
+**Two simulator errors at the load the card fixture uses.** Interpolated to
+eff 76: measured **1346 tok/s** against the simulator's 1767 (**1.31× optimistic**,
+not the ~1.6× the work order predicted from the bad exponent), and measured TPOT
+**52.7 ms** against 43.2 (**18 % optimistic**). The TPOT divergence is the one the
+work order asked for and did not expect: measured TPOT is already 44.54 ms at
+eff 59, past the simulator's c76 prediction. **The decode model is accurate at the
+concurrency it was fitted on and degrades above it** — its −3.1 % agreement does
+not extend to this range.
+
+**How we adapt.** The correction is a throughput/latency *model* error, not a
+calibration offset: it varies with concurrency, so no scalar expresses it and it
+does not belong in `profiles/calibration/`. It is recorded as a profile-level
+caveat with the curve attached
+(`experiments/results/rngd_concurrency_envelope.md`), and per the work order's
+§4.4 the committed sweep results are **not** silently rescaled —
+`pd_slo_sweep.py` must be re-run at a defensible load before its absolute numbers
+are quoted again.
+
+**The envelope is no longer the largest open risk.** The card reaches eff 107 with
+zero failures, so c76 is inside what the hardware serves; the question moved from
+"can it?" to "at what cost?", and the cost is measured.
+
+**Limits of this measurement.** One card (npu0), one artifact, one dataset. The
+300-line trace caps the pool, so c128 ran at 2.3× headroom and reached eff 107
+rather than 128 — the only point where the pool still binds slightly. TTFT from
+these runs is **not** comparable to the sweep's p99 TTFT: the bench fires the whole
+pool at once (D19), a closed-loop saturation probe, while the sweep offers Poisson
+arrivals. Throughput and TPOT are the valid comparisons.
+
+### The re-run this entry calls for cannot be done by lowering the arrival rate — attempted 2026-09-01 and abandoned
+
+§4.4 asks for `pd_slo_sweep.py` at "a defensible load". The obvious reading is to
+lower the offered load until the winner's per-card concurrency lands where the
+profile was validated (~16.6) rather than at ~76. Per-card concurrency is an
+*outcome* of the Poisson arrival rate, not an input, and the sweep exposes no
+arrival-rate flag, so this was tried with a service spec at **3.3 rps** (9.9 × 25/76,
+targeting ~25 per card) identical to `examples/service_specs/llama31-8b.yaml` in
+every other field. **It does not work, for two independent reasons, and the run
+was killed after 3.7 hours.**
+
+**1. RNGD candidates never terminate at that rate.** After 3.7 hours, by candidate
+class:
+
+| class | attempted | completed |
+| --- | ---: | ---: |
+| `furiosa ↔ furiosa` (RNGD P/D) | 24 | **0** |
+| cross-vendor (`cuda ↔ furiosa`) | 12 | **0** |
+| `cuda ↔ cuda` | 84 | 60 |
+
+Completions decayed 102 → 24 → 6 → 0 per hour as the sweep worked through the
+CUDA-only candidates and reached the RNGD ones. The same candidates complete
+normally at 10 rps — `agg[furiosa:tp8]` is a *winner* in the committed sweep. The
+mechanism is that a slower arrival rate gives the decode scheduler less to batch,
+which lowers throughput, which lengthens the *simulated* time needed to drain 300
+requests. On a device whose per-token cost is already high that is unbounded in
+practice. The naive cost model — "3.3 rps triples the 30 s window to 91 s, so
+expect 3× runtime" — is wrong: the window is the arrival span, not the drain time.
+
+**2. It would not have produced the intended load anyway.** The objective is
+`minimize_energy` then `minimize_active_accelerators`. Lower offered load lets the
+planner satisfy the SLO with *fewer* accelerators, which pushes per-card
+concurrency back up. Reducing the arrival rate therefore does not control
+per-card concurrency; it trades fleet size against it, and the two effects fight.
+
+**So the arrival rate is the wrong knob: it changes the operating regime rather
+than the load level, and the result would not have been comparable to the
+committed sweep point-for-point even if it had finished.** The service spec used
+for the attempt is deliberately **not** committed — a spec that cannot be
+simulated to completion is a trap for whoever finds it.
+
+**What was done instead — and the answer is stronger than "optimistic".** Neither
+the arrival rate nor the fleet is the right knob. `exhaustive.search()` already
+took `tpot_margin_percent`, which inflates predicted p-TPOT before the
+feasibility check; that is exactly the shape of a measured model error, so the
+re-run held 10 rps and applied **18 %**, the TPOT optimism measured at the
+concurrency these plans run at.
+
+**Every RNGD configuration on the card fixture is then rejected**, on both
+fixtures, converging on the same A40 plan — so the result does not depend on
+whether an RNGD accelerator is modelled as a card or as 8 PEs:
+
+| | committed (no margin) | with the measured margin |
+| --- | --- | --- |
+| card fixture, TTFT ≤ 64 s | `agg[furiosa:tp1]` n=2, 3.164 tok/J | `agg[cuda:tp4]` n=4, **2.595 tok/J** |
+| tp4 fixture, TTFT ≤ 64 s | `agg[furiosa:tp8]` n=8, 4.956 tok/J | `agg[cuda:tp4]` n=4, **2.595 tok/J** |
+
+**The committed winner is not optimistic, it is infeasible.** It clears the 50 ms
+TPOT SLO by 1.59 ms, so any margin above **3.3 %** rejects it — and the profile's
+own agreement at its fitted concurrency is −3.1 %. The RNGD arm is squeezed
+between the two SLOs: high per-instance concurrency (s128/s256) meets TTFT and
+breaks TPOT at 56–58 ms; low concurrency (s32) meets TPOT at 38.7 ms and breaks
+TTFT at 57 s, **at any margin including zero**. No setting satisfies both.
+
+So the half of the three-regime answer that says RNGD wins on energy at loose
+TTFT does not survive. Full table and per-candidate arithmetic:
+`experiments/results/pd_slo_sweep_margin.md`.
+
+**Still open: the tight-TTFT regime.** That run printed INFEASIBLE at TTFT ≤ 8 s
+and ≤ 500 ms, and **that is an artifact, not a result** — `--timeout` was lowered
+to 1080 s on card-fixture evidence (no successful sim exceeded 14.9 min) which
+did not hold for tp4, where all 72 `pd_cuda-a40-tp4` candidates timed out. One of
+them is the committed tight-TTFT winner at p99 TPOT 37.27 ms, which *passes* the
+margin at 43.98. That regime needs a re-run at 1800 s. The loose-TTFT finding is
+unaffected: zero RNGD candidates timed out on the card fixture.
+---
+
+## D23 — The P/D tight-TTFT candidates livelock: prefill pinned at one request, decode never fed · **Open (blocks the tight-TTFT regime)**
+
+**What.** Every `pd_*` and `mix_*` candidate that the tight-TTFT sweeps need has
+stopped terminating. The 2026-09-03 re-run (`--timeout 1800`, both P/D fixtures,
+`experiments/results/pd_slo_sweep_margin.md` § Tight-TTFT regime) timed out 71 of
+222 card-fixture simulations and 126 of 252 tp4-fixture simulations, and printed
+INFEASIBLE at all four tight points. Those verdicts are *not evaluated*, not
+rejected.
+
+**It is not a timeout.** Work order §7 permits one escalation for the committed
+winner alone — 1 candidate, 3600 s, single retry — and it was taken on
+`P[cuda:tp4] D[cuda:tp4]` (`-s256-t8192`). It failed the same way, and the hour of
+logs says why. The simulator emitted **52,903 progress ticks**, so its simulated
+clock advanced continuously. What never advanced is the work:
+
+```
+Instance[0] (prefill): 1 reqs running at EVERY tick, Waiting 7 -> 299
+Instance[1] (decode) : 0 reqs running, 0 waiting, for the entire hour
+memory               : flat at 9.304 % / 9.234 %
+```
+
+The prefill instance admits exactly one request and never retires it, the decode
+instance is never handed anything, and the whole 300-request trace piles up in the
+arrival queue. Raising the timeout cannot help.
+
+**Distinct from D12.** D12 is prefix-cache memory growing monotonically until the
+run dies. Here memory is flat at 9 % on both instances and prefix caching was
+disabled for the run (`--no-enable-prefix-caching`). The two share only the
+symptom the predictor reports — `SimOutcome.TIMEOUT`.
+
+**A regression, and the cause is open.** The same candidate is committed as
+completed: `outputs/.hp-pd-slo/` has it at **280.6 s**, p99 TPOT 37.32, p99 TTFT
+361.6, 2.206 tok/J. So this is a fall of at least 12.8x into non-termination. The
+only difference found in the compiled simulator input is `link_bw` 35.0 -> 35.2
+GB/s from the D18 fabric recomputation — a 0.6 % change, unconvincing on its own.
+The intermediate `pd_slo_sweep_measured_fabric` run also completed this candidate,
+but its work directory has been cleaned, so its `link_bw` cannot be read back. No
+bisect was run: the consolidation sprint makes no new numbers (its §0.3).
+
+**What this blocks.** The three-regime table's sub-second row
+(`P[cuda:tp4] D[cuda:tp4]`, 372 ms p99 TTFT) is neither confirmed nor refuted, and
+cannot be until this is diagnosed. D22's loose-TTFT retraction is unaffected: it
+rests on completed simulations.
+
+**How to adapt.** Do not read INFEASIBLE from a P/D sweep without checking the
+timeout count first — the sweep driver does not persist
+`PlannerOutput.rejected_summary`, so the count has to be recovered by counting
+work directories with no `sim*.csv`. Both lists are committed:
+`outputs/pd_slo_sweep_margin18/tight/timeouts_*.txt`, with the retry's tick-level
+evidence in `tight/retry3600_livelock_evidence.txt`.
+
+**What would resolve it**, cheapest first: (1) bisect `link_bw` between 35.0 and
+35.2 on this one candidate — if the cliff is real it is a threshold bug, not a
+bandwidth effect; (2) diff the simulator inputs of the `.hp-pd-slo` run against
+this one beyond `cluster.json`, in particular the A40 perf bundle, which the Tier 0
+merge touched; (3) instrument the prefill instance's admission path. All three
+belong to the RPS-aware work order, not to this sprint.
+
+---
+
+## D24 — `profiles/networks/` is in the work order's layout but not in the planner's Level-1 path · Resolved (moved out with ScenarioLab)
+
+**Work order §(repo layout)** lists `profiles/networks/{nvlink,pcie_gen5,ib_100g,ib_400g}.yaml`
+under "[신규] 하드웨어/네트워크 profile catalog", alongside `profiles/accelerators/`.
+
+**The real code puts those values somewhere else.** CLAUDE.md's two-level topology
+model says Level 1 is "interconnect-class representative values", and that is
+implemented inline in `planner/topology.py`:
+
+```python
+CLASS_DEFAULT_GBPS = {LinkType.INFINIBAND: 400.0, ...}    # ib_400g.yaml: bandwidth_gbps 400
+CLASS_DEFAULT_LAT_NS = {LinkType.INFINIBAND: 5000.0, ...} # ib_400g.yaml: latency_ns 5000
+```
+
+The YAML files duplicate the same numbers and nothing in `planner/`, `examples/`,
+`experiments/` or `tests/` reads them — verified by grep before removal. Their own
+headers say what they are for: *"Inter-node 400G InfiniBand link class used by
+ScenarioLab's random cluster generator"*, with every value `source: placeholder`,
+copied verbatim from `examples/clusters/heterogeneous-lab.yaml`.
+
+**How we adapt.** They moved to `swsok/heteropilot-scenariolab` with the rest of
+ScenarioLab (`WORK_ORDER_consolidation.md` STEP 3.3), where the random cluster
+generator is their only consumer and they are anchored at that repo's root rather
+than at a heteropilot-relative path. `experiments/configs/lab/*.yaml`, their only
+other referent, went with them.
+
+This follows CLAUDE.md's standing rule for this class of divergence — *"When spec
+and reality diverge, the real code wins. Record the difference in
+`docs/deviations.md` and continue"* — rather than the consolidation work order's
+§0.5 stop-and-report, because the layout list is not a functional requirement and
+the planner never grew a code path that reads the files.
+
+**If Phase 5 ever needs per-class profiles as data** rather than as constants, the
+place to put them back is `profiles/networks/`, and the values are recoverable
+from `planner/topology.py` or from the split repo. Nothing about this removal
+forecloses that; it removes an unread duplicate, not a capability.

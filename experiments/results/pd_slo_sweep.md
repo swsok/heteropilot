@@ -7,6 +7,31 @@ The SLO is swept because the answer turns out to depend entirely on it.*
 
 ## The short answer
 
+> ### SUPERSEDED IN PART, 2026-09-02 — the RNGD rows here are infeasible
+>
+> Re-run with the **measured** TPOT optimism applied as a feasibility margin
+> (18 %, D22), **every RNGD configuration is rejected on both fixtures** and the
+> loose-TTFT winner becomes `agg[cuda:tp4]` at 2.595 tok/J. The committed RNGD
+> winners below clear the 50 ms TPOT SLO by 1.59 ms, so **any margin above 3.3 %**
+> rejects them, against a profile whose own agreement is −3.1 %. They are not
+> optimistic; they are infeasible. The energy advantage this page reports for RNGD
+> at loose TTFT therefore **does not survive**.
+> `experiments/results/pd_slo_sweep_margin.md`, deviations D22.
+>
+> The tight-TTFT rows are *not* overturned — that regime was not determined by the
+> re-run (a timeout artifact, see the results file), and the committed winner there
+> passes the margin at 43.98 ms.
+>
+> **Updated 2026-09-03 after the `--timeout 1800` re-run.** The tight rows are
+> still undetermined, but "a timeout artifact" understates it: the committed
+> winner `P[cuda:tp4] D[cuda:tp4]` does not terminate. Given a sanctioned single
+> retry at 3600 s it livelocked — 52,903 progress ticks with the prefill instance
+> pinned at 1 running request, the decode instance never fed, and memory flat at
+> 9 %. The 43.98 ms figure above comes from an earlier run of the same candidate
+> that completed in 280 s; it has not been reproduced since. Raising the timeout
+> cannot settle these rows.
+> `experiments/results/pd_slo_sweep_margin.md` § Tight-TTFT regime.
+
 **Three regimes, and heterogeneous P/D wins in none of them.**
 
 | TTFT p99 SLO | recommended | arch | acc | tok/J | goodput (rps) | p99 TTFT | p99 TPOT | avg W |
@@ -160,15 +185,24 @@ The sweep offers an open-loop Poisson process at 9.9 rps (300 requests over 30.3
 `arrival_rate_rps: 10` in the service spec). At the winner's numbers that puts each
 card at **~76 concurrent sequences**:
 
-| | output tok/s per card | TPOT | implied concurrent |
+| | output tok/s per card | TPOT | concurrent |
 | --- | ---: | ---: | ---: |
 | real, validation run (burst of 20) | 584 | 28.4 ms | 16.6 |
-| real, highest concurrency ever tested (c32) | ~648 | 30.1 ms | ~32 |
+| real, measured to eff 59 (2026-08-31) | 1277 | 44.5 ms | 59.2 |
+| real, measured to eff 107 (2026-08-31) | **1473** | 67.9 ms | 107.2 |
+| real, interpolated at eff 76 | **1346** | **52.7 ms** | 76 |
 | **sim, this sweep's winner** | **1767** | 43.2 ms | **76** |
 
-The measured scaling curve has a marginal exponent of **0.598** between c16 and
-c32 (throughput ×1.51 for concurrency ×2). Extrapolating that to c76 gives
-~1090 output tok/s per card; the simulator assumes 1767, i.e. **~1.6× optimistic**
+**MEASURED 2026-08-31 — see `experiments/results/rngd_concurrency_envelope.md`.**
+The envelope was extended to c128 and the answer is that the card *does* serve
+this concurrency (eff 107, zero failures), but the simulator is **1.31× optimistic
+on throughput and 18 % optimistic on TPOT** at eff 76. Two things this block
+previously said are now retracted: the "highest ever tested c32 / ~648 tok/s" row
+was **request-pool-limited and actually ran at eff 21.2** — re-measured at a
+non-binding pool the same level gives 908.6 tok/s, +40 % — and the **0.598
+exponent** was computed over an interval the pool capped at ×1.74 while treating
+it as ×2. On properly-offered load the exponent decays 0.675 → 0.485 → 0.241,
+so no single factor expresses the correction
 at an operating point **2.4× beyond the highest concurrency ever run on the
 hardware.**
 
@@ -190,10 +224,13 @@ believe the A40 rows.
 > output throughput 64.6 → 646.9 tok/s). The 0.598 exponent is derived from those
 > files, not from prose.
 >
-> What *is* unmeasured is the range beyond them: **c32 is the highest concurrency
-> ever run on RNGD**, and this sweep's winner sits at ~76 per card. That is the
-> gap, and it needs hardware —
-> `docs/npu_concurrency_envelope_work_order.md`.
+> **That range is now measured (2026-08-31).** The gap this paragraph described —
+> "c32 is the highest concurrency ever run on RNGD" — was closed, and closing it
+> showed the claim was doubly wrong: those runs used a 24-request pool, so the c32
+> point ran at **eff 21.2, not 32**, and the 0.598 exponent derived from them reads
+> a pool-capped ×1.74 interval as a ×2 doubling. The envelope now reaches **eff
+> 107.2 at 1473 tok/s** with zero failures.
+> `experiments/results/rngd_concurrency_envelope.md`, deviations D22.
 
 Calibrated, the honest side-by-side at the tight end:
 

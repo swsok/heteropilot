@@ -73,6 +73,30 @@ supported_models:
 
 max_tp_size: 8
 
+# Tier 0 datasheet values (WORK_ORDER_tiered_profiles.md STEP 3). Only values
+# verifiable in public NVIDIA documents are filled; each carries its source.
+# flops_efficiency / mem_efficiency are deliberately ABSENT: they must come
+# from the STEP 8 fit against the measured A40 bundle, and pre-filling them
+# would label an unmeasured number as usable (absolute rule A1).
+datasheet:
+  peak_tflops:
+    # Dense (non-sparse) Tensor Core peaks. The NVIDIA A40 datasheet lists
+    # BF16/FP16 Tensor Core as "149.7 TFLOPS | 299.4 TFLOPS*" where the
+    # asterisked figure is with sparsity; 149.7 is the dense rate.
+    # Cross-check: the measured A40 dense.csv sustains 81.3 TFLOP/s on
+    # down_proj, which exceeds 74.8 (a half-rate misreading) but fits 149.7.
+    bf16: 149.7  # https://images.nvidia.com/content/Solutions/data-center/a40/nvidia-a40-datasheet.pdf
+    fp16: 149.7  # same source
+  compute_units: 84   # GA102, 84 SMs: NVIDIA GA102 whitepaper (A40 uses full GA102)
+                      # https://www.nvidia.com/content/PDF/nvidia-ampere-ga-102-gpu-architecture-whitepaper-v2.pdf
+  clock_mhz: 1740     # boost clock, NVIDIA A40 product page / datasheet
+  l2_cache_mb: 6      # GA102 6144 KB L2, GA102 whitepaper
+  datasheet_source: >
+    NVIDIA A40 datasheet
+    (https://images.nvidia.com/content/Solutions/data-center/a40/nvidia-a40-datasheet.pdf)
+    and NVIDIA GA102 architecture whitepaper. Dense TFLOPS derived by halving
+    the published sparsity figures, as the datasheet footnote instructs.
+
 notes: >
   A40x8 single-node server, reachable from 2026-08-18 (docs/hardware_roadmap.md).
   Qwen3-32B bf16 (~61 GB weights) serves at TP=2 on the 45 GB usable devices

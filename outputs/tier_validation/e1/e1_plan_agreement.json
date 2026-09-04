@@ -1,0 +1,113 @@
+{
+  "results": [
+    {
+      "condition": "a40-tp-sweep-llama31-8b",
+      "ground_truth": "tier2",
+      "truth_top3": [
+        "cuda-a40-node0-tp4-dp1-s128-t8192",
+        "cuda-a40-node0-tp4-dp1-s256-t8192",
+        "cuda-a40-node0-tp4-dp1-s32-t8192"
+      ],
+      "n_feasible_tier2": 40,
+      "legs": {
+        "greedy": {
+          "top1_match": false,
+          "top3_contains": false,
+          "chosen": "cuda-a40-node0-tp2-dp1-s256-t2048",
+          "rel_err_primary_objective": 0.0425531914893617,
+          "kendall_tau": 0.017948717948717947
+        },
+        "tier0": {
+          "top1_match": false,
+          "top3_contains": false,
+          "chosen": "cuda-a40-node0-tp4-dp1-s128-t2048",
+          "rel_err_primary_objective": 0.004402054292002935,
+          "kendall_tau": 0.9142857142857143
+        },
+        "tier2": {
+          "top1_match": true,
+          "top3_contains": true,
+          "chosen": "cuda-a40-node0-tp4-dp1-s128-t8192",
+          "rel_err_primary_objective": 0.0,
+          "kendall_tau": 1.0
+        },
+        "oracle": {
+          "top1_match": true,
+          "top3_contains": true,
+          "chosen": "cuda-a40-node0-tp4-dp1-s128-t8192",
+          "rel_err_primary_objective": 0.0,
+          "kendall_tau": 1.0
+        }
+      }
+    },
+    {
+      "condition": "a40-tp-sweep-llama31-8b-light",
+      "ground_truth": "tier2",
+      "truth_top3": [
+        "cuda-a40-node0-tp2-dp1-s128-t2048",
+        "cuda-a40-node0-tp2-dp1-s128-t8192",
+        "cuda-a40-node0-tp2-dp1-s256-t2048"
+      ],
+      "n_feasible_tier2": 42,
+      "legs": {
+        "greedy": {
+          "top1_match": false,
+          "top3_contains": true,
+          "chosen": "cuda-a40-node0-tp2-dp1-s256-t2048",
+          "rel_err_primary_objective": 0.0,
+          "kendall_tau": 0.07084785133565621
+        },
+        "tier0": {
+          "top1_match": false,
+          "top3_contains": false,
+          "chosen": "cuda-a40-node0-tp4-dp1-s128-t8192",
+          "rel_err_primary_objective": 0.11343612334801753,
+          "kendall_tau": 0.9024390243902439
+        },
+        "tier2": {
+          "top1_match": true,
+          "top3_contains": true,
+          "chosen": "cuda-a40-node0-tp2-dp1-s128-t2048",
+          "rel_err_primary_objective": 0.0,
+          "kendall_tau": 1.0
+        },
+        "oracle": {
+          "top1_match": true,
+          "top3_contains": true,
+          "chosen": "cuda-a40-node0-tp2-dp1-s128-t2048",
+          "rel_err_primary_objective": 0.0,
+          "kendall_tau": 1.0
+        }
+      }
+    }
+  ],
+  "provenance": {
+    "git_commit": "70f4975f03c32c4b8477a73c62035cdc0c914aa9",
+    "git_dirty": null,
+    "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
+    "vllm_version": null,
+    "backend_version": null,
+    "model_revision": null,
+    "hardware_profile_hash": null,
+    "cluster_spec_hash": null,
+    "service_spec_hash": null,
+    "dataset_hash": null,
+    "random_seed": null,
+    "command": "e1_plan_agreement.py --num-requests 20 --workers 4 --out outputs/tier_validation/e1",
+    "timestamp": "2026-09-02T13:45:16.355087+00:00",
+    "python_version": "3.10.12",
+    "platform": "Linux-6.8.0-124-generic-x86_64-with-glibc2.35",
+    "hostname": "node02-ai",
+    "cpu_count": 20,
+    "accelerators": {
+      "cuda": {
+        "count": 1,
+        "model": "NVIDIA RTX A5000"
+      },
+      "rngd_cards": null,
+      "atom_devices": 0
+    },
+    "num_requests": 20,
+    "seed": 42
+  }
+}

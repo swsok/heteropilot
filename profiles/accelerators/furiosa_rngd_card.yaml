@@ -114,6 +114,24 @@ source: measured
 
 perf_data: profiler/perf/RNGD-CARD/
 
+# Tier 0 datasheet values (tiered-profiles STEP 10). The card is MEASURED
+# (sim_hardware: RNGD-CARD above stays authoritative); this block only enables
+# future synthetic axes (fp8 KV, unmeasured configs - work order S5) and the
+# E2/E4 experiments. Efficiencies deliberately absent: they would come from a
+# fit against the measured RNGD-CARD bundle, which nobody has run yet.
+datasheet:
+  peak_tflops:
+    bf16: 256.0   # https://furiosa.ai/renegade-spec (official): BF16 256 TFLOPS
+    fp8: 512.0    # same source: FP8 512 TFLOPS
+  compute_units: 8       # 8 PE clusters (developer.furiosa.ai RNGD overview)
+  clock_mhz: 1000        # 1.0 GHz, furiosa.ai/renegade-spec
+  memory_bandwidth_gbps: 1500  # HBM3 1.5 TB/s vendor figure (measured achieved
+                               # value above is 1750 across 8 PEs)
+  datasheet_source: >
+    FuriosaAI official RNGD specifications page
+    (https://furiosa.ai/renegade-spec): BF16 256 TFLOPS, FP8 512 TFLOPS,
+    48 GB HBM3 at 1.5 TB/s, 1.0 GHz, 256 MB SRAM, 180 W TDP.
+
 # The bundle is built by experiments/scripts/rebuild_rngd_bundle_from_edf.py from
 # six `furiosa-llm serve` runs on npu0 (concurrency 1, 2, 4, 8, 16, 32; 24 sharegpt
 # requests each; 1.74 M stage executions) with EDF_PROFILER_OUTPUT_PATH +

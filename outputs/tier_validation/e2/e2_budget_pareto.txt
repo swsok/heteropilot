@@ -1,0 +1,5 @@
+condition                measured pts  MAPE vs tier2
+A_tier0                             0          38.9%
+B_attention_anchors               200          29.5%
+C_uniform_anchors                 200          42.9%
+D_tier2                         10091           0.0%

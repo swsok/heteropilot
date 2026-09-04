@@ -1,3 +1,4 @@
+tier: measured
 profiler_version: 1.0.0
 source: measured
 imported_by: profiler.core.importer.CsvProfileImporter

@@ -1,0 +1,9 @@
+condition                    leg       top1  top3  rel.err    tau
+a40-tp-sweep-llama31-8b      greedy   False False     4.3%  0.018
+a40-tp-sweep-llama31-8b      tier0    False False     0.4%  0.914
+a40-tp-sweep-llama31-8b      tier2     True  True     0.0%  1.000
+a40-tp-sweep-llama31-8b      oracle    True  True     0.0%  1.000
+a40-tp-sweep-llama31-8b-light greedy   False  True     0.0%  0.071
+a40-tp-sweep-llama31-8b-light tier0    False False    11.3%  0.902
+a40-tp-sweep-llama31-8b-light tier2     True  True     0.0%  1.000
+a40-tp-sweep-llama31-8b-light oracle    True  True     0.0%  1.000
