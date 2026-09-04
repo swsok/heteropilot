@@ -1,0 +1,136 @@
+{
+    "num_nodes": 2,
+    "link_bw": 12.6,
+    "link_latency": 20000.0,
+    "topology_mode": "slab3d",
+    "nodes": [
+        {
+            "num_instances": 1,
+            "cpu_mem": {
+                "mem_size": 512.0,
+                "mem_bw": 256.0,
+                "mem_latency": 0.0
+            },
+            "instances": [
+                {
+                    "model_name": "meta-llama/Llama-3.1-8B",
+                    "hardware": "A40",
+                    "npu_mem": {
+                        "mem_size": 40.5,
+                        "mem_bw": 696.0,
+                        "mem_latency": 0
+                    },
+                    "num_npus": 4,
+                    "tp_size": 4,
+                    "pp_size": 1,
+                    "pd_type": "prefill",
+                    "max_num_seqs": 256,
+                    "max_num_batched_tokens": 8192,
+                    "enable_chunked_prefill": true,
+                    "enable_prefix_caching": false,
+                    "prioritize_prefill": false,
+                    "block_size": 16,
+                    "kv_cache_dtype": "auto"
+                }
+            ],
+            "power": {
+                "base_node_power": 60.0,
+                "npu": {
+                    "A40": {
+                        "idle_power": 31.76,
+                        "standby_power": 152.28,
+                        "active_power": 297.83,
+                        "standby_duration": 2000000000.0
+                    }
+                },
+                "cpu": {
+                    "idle_power": 10.0,
+                    "active_power": 200.0,
+                    "util": 0.15
+                },
+                "dram": {
+                    "dimm_size": 32.0,
+                    "idle_power": 2.0,
+                    "energy_per_bit": 6.0
+                },
+                "link": {
+                    "num_links": 1,
+                    "idle_power": 5.0,
+                    "energy_per_bit": 4.0
+                },
+                "nic": {
+                    "num_nics": 1,
+                    "idle_power": 20.0
+                },
+                "storage": {
+                    "num_devices": 2,
+                    "idle_power": 5.0
+                }
+            }
+        },
+        {
+            "num_instances": 1,
+            "cpu_mem": {
+                "mem_size": 512.0,
+                "mem_bw": 256.0,
+                "mem_latency": 0.0
+            },
+            "instances": [
+                {
+                    "model_name": "meta-llama/Llama-3.1-8B",
+                    "hardware": "RNGD",
+                    "npu_mem": {
+                        "mem_size": 6,
+                        "mem_bw": 200,
+                        "mem_latency": 0
+                    },
+                    "num_npus": 8,
+                    "tp_size": 8,
+                    "pd_type": "decode",
+                    "pp_size": 1,
+                    "max_num_seqs": 256,
+                    "max_num_batched_tokens": 8192,
+                    "enable_chunked_prefill": true,
+                    "enable_prefix_caching": false,
+                    "prioritize_prefill": false,
+                    "block_size": 16,
+                    "kv_cache_dtype": "auto"
+                }
+            ],
+            "power": {
+                "base_node_power": 38.01,
+                "npu": {
+                    "RNGD": {
+                        "idle_power": 0.0,
+                        "standby_power": 28.37,
+                        "active_power": 32.71,
+                        "standby_duration": 2000000000.0
+                    }
+                },
+                "cpu": {
+                    "idle_power": 10.0,
+                    "active_power": 200.0,
+                    "util": 0.15
+                },
+                "dram": {
+                    "dimm_size": 32.0,
+                    "idle_power": 2.0,
+                    "energy_per_bit": 6.0
+                },
+                "link": {
+                    "num_links": 1,
+                    "idle_power": 5.0,
+                    "energy_per_bit": 4.0
+                },
+                "nic": {
+                    "num_nics": 1,
+                    "idle_power": 20.0
+                },
+                "storage": {
+                    "num_devices": 2,
+                    "idle_power": 5.0
+                }
+            }
+        }
+    ]
+}
