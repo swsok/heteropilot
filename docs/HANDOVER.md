@@ -82,6 +82,10 @@ Calibrations (`profiles/calibration/`): `a40.yaml`, `rngd.yaml`, `rngd_card_edf.
 Tier 1 efficiency fits: `a40.efficiency.yaml`, `rtxpro6000.efficiency.yaml`. All
 bucket-scoped — **do not extrapolate outside the bucket named in the file.**
 
+**What can be claimed right now, with the label each claim earns, is one page:
+`docs/CLAIMS.md`.** It is the input to the paper outline — Established / Not
+established / Retracted — and every figure in it points at a committed artifact.
+
 ### What the last cycle established
 
 **The headline finding is negative, and it should be said first: no experiment in

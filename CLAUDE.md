@@ -29,6 +29,7 @@ Authoritative documents, all of which outrank this file:
 | `docs/tier0_calibration.md` | E1–E4 — what a generated profile can and cannot be trusted to rank | Read before quoting any `profile_tier: analytical` plan |
 | `WORK_ORDER_consolidation.md` | The 2026-09-03/04 sprint that merged the three tracks and split ScenarioLab out | Subordinate to the three above it |
 | `docs/nodes/{a40,a5000,npu}.md` | Per-node inventory, topology and traps | Read the one `scripts/whichnode.sh` names — never all three |
+| `docs/CLAIMS.md` | What can be claimed today, with each claim's label and artifact — Established / Not established / Retracted | Read before writing any result into a paper or deck |
 | `docs/HANDOVER.md` | Current state, next work by node, traps that cost a session | The live handover; the `HANDOVER_*.md` files are historical |
 
 Upstream ships `CLAUDE.md` as a symlink to `AGENTS.md`. This fork replaces it with a real file;
