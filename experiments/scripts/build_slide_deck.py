@@ -34,7 +34,11 @@ SLIDES: list[tuple[str, str, str, bool]] = [
     ("", "HeteroPilot",
      """<p class="lede">SLO-goodput/J-optimal LLM serving on heterogeneous GPU/NPU clusters</p>
         <p class="sub">A calibrated, simulator-in-the-loop control plane &middot; fork of LLMServingSim</p>
-        <p class="meta">Project report &middot; 2026-08-25</p>""", False),
+        <p class="meta">Project report &middot; 2026-08-25</p>
+        <p class="meta"><b class="warn">As of 2026-08-25, before D22 and D23.</b>
+        The RNGD arm was still unmeasured when these slides were built. What the
+        measurements later retracted, and what is still undetermined, is in
+        <code>docs/PROJECT_REPORT.md</code> &sect;4.8.7 and &sect;4.9.</p>""", False),
 
     ("The problem", "Choosing how to serve is hard, and getting it wrong wastes energy",
      """<ul>
@@ -107,7 +111,11 @@ SLIDES: list[tuple[str, str, str, bool]] = [
         planner-side <i>and</i> sim-level). <b>Exp 5:</b> the aggregated baseline is more
         efficient (1.655 tok/J) but <b class="bad">infeasible</b> &mdash; P/D pays
         <b>by meeting the SLO</b> (1.081, feasible).
-        <span class="warn">NPU combos are SIM-PROXY.</span></div></div>""", True),
+        <span class="warn">NPU combos are SIM-PROXY.</span>
+        <span class="warn">Superseded 2026-09-03: the SLO sweeps that were to replace
+        these proxy rows retracted the RNGD energy win (D22), and the sub-second
+        regime where P/D paid is undetermined &mdash; those candidates livelock
+        (D23).</span></div></div>""", True),
 
     ("Result &middot; Exp 5", "Heterogeneous P/D &mdash; the four combos",
      f"""<div class="figrow"><div class="figbox">{fig('pd_4combo.png', '4-combo')}</div>
@@ -208,7 +216,11 @@ SLIDES_KO: list[tuple[str, str, str, bool]] = [
     ("", "HeteroPilot",
      """<p class="lede">이기종 GPU/NPU 클러스터에서 SLO-goodput/J 최적 LLM 서빙</p>
         <p class="sub">보정된 simulator-in-the-loop 제어 평면 &middot; LLMServingSim fork</p>
-        <p class="meta">프로젝트 보고 &middot; 2026-08-25</p>""", False),
+        <p class="meta">프로젝트 보고 &middot; 2026-08-25</p>
+        <p class="meta"><b class="warn">2026-08-25 기준, D22&middot;D23 이전.</b>
+        이 슬라이드를 만들 당시 RNGD는 아직 측정 전이었다. 이후 측정이 무엇을
+        철회했고 무엇이 미결로 남았는지는 <code>docs/PROJECT_REPORT.md</code>
+        &sect;4.8.7과 &sect;4.9에 있다.</p>""", False),
 
     ("문제", "서빙 구성 선택은 어렵고, 잘못 고르면 에너지를 낭비한다",
      """<ul>
@@ -281,7 +293,10 @@ SLIDES_KO: list[tuple[str, str, str, bool]] = [
         (planner 수준과 sim 수준 <i>모두</i>에서 재현). <b>Exp 5:</b> aggregated 기준선이
         더 효율적(1.655 tok/J)이지만 <b class="bad">infeasible</b> &mdash; P/D는
         <b>SLO를 맞추는 방식으로</b> 이득을 낸다 (1.081, feasible).
-        <span class="warn">NPU 조합은 SIM-PROXY.</span></div></div>""", True),
+        <span class="warn">NPU 조합은 SIM-PROXY.</span>
+        <span class="warn">2026-09-03 supersede: 이 proxy 행을 대체할 SLO sweep이
+        RNGD 에너지 우위를 철회했고(D22), P/D가 이득을 내던 sub-second 구간은
+        미결이다 &mdash; 해당 후보들이 livelock한다(D23).</span></div></div>""", True),
 
     ("결과 &middot; Exp 5", "이기종 P/D &mdash; 네 가지 조합",
      f"""<div class="figrow"><div class="figbox">{fig('pd_4combo.png', '4-combo')}</div>
