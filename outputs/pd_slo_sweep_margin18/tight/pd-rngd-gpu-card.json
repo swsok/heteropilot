@@ -1,0 +1,46 @@
+{
+  "service": "examples/service_specs/llama31-8b.yaml",
+  "cluster": "experiments/configs/clusters/pd-rngd-gpu-card.yaml",
+  "num_requests": 300,
+  "seed": 42,
+  "islands": [
+    {
+      "id": "furiosa-rngd-card-node_rngd0",
+      "backend": "furiosa",
+      "size": 1
+    },
+    {
+      "id": "furiosa-rngd-card-node_rngd1",
+      "backend": "furiosa",
+      "size": 1
+    },
+    {
+      "id": "cuda-a40-node_a40a",
+      "backend": "cuda",
+      "size": 4
+    },
+    {
+      "id": "cuda-a40-node_a40b",
+      "backend": "cuda",
+      "size": 4
+    }
+  ],
+  "sweep": [
+    {
+      "ttft_slo_max_ms": 8000.0,
+      "feasible": false,
+      "generated": 468,
+      "evaluated": 468,
+      "recommended": null,
+      "reason": "no currently available configuration satisfies all constraints"
+    },
+    {
+      "ttft_slo_max_ms": 500.0,
+      "feasible": false,
+      "generated": 468,
+      "evaluated": 468,
+      "recommended": null,
+      "reason": "no currently available configuration satisfies all constraints"
+    }
+  ]
+}

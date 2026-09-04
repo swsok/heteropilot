@@ -646,7 +646,8 @@ drops, TTFT flat, `none`-mode control flat — all PASS) and `tests/test_sim_pd_
 | D19 | Phase 4 | **Resolved** (retraction) — the card profile's −71 % TTFT error was an arrival-pattern mismatch in the validation harness, not a scheduler difference; matched arrivals give −5.1 %. Both RNGD TTFT calibrations refitted |
 | D20 | Phase 3 / Exp 4 | **Open** — ATOM layerwise profiling blocked: host I/O exceeds the kernels and the device tracer's schema is undocumented. Memory and power measured; no perf bundle, so ATOM stays out of candidate generation |
 | D21 | Phase 3 | **Decided 2026-09-02** — Tier 0/1 synthetic profiles: `datasheet:` fields are vendor spec, never measurements. Generated bundles carry `tier: analytical`/`calibrated` and a `-t0`/`-t1` hardware-label suffix so they can never shadow a measured bundle; `PlannerOutput.profile_tier` propagates the weakest tier with a mandatory caveat. `flops_efficiency`/`mem_efficiency` stay empty until fitted against a measured bundle |
-| D22 | Phase 4 | **Resolved** (retraction + measurement) — the c1–c32 curve's top point was a 24-request pool running at eff 21.2, not c32; envelope measured to eff 107.2. At eff 76 the simulator is 1.31× optimistic on throughput and 18 % on TPOT. The re-run is **done for the loose-TTFT regime**: with the measured 18 % margin every RNGD config is rejected on both fixtures and the winner becomes `agg[cuda:tp4]` at 2.595 tok/J — the committed winner is infeasible, not merely optimistic. Tight-TTFT rows still open (timeout artifact) |
+| D22 | Phase 4 | **Resolved** (retraction + measurement) — the c1–c32 curve's top point was a 24-request pool running at eff 21.2, not c32; envelope measured to eff 107.2. At eff 76 the simulator is 1.31× optimistic on throughput and 18 % on TPOT. The re-run is **done for the loose-TTFT regime**: with the measured 18 % margin every RNGD config is rejected on both fixtures and the winner becomes `agg[cuda:tp4]` at 2.595 tok/J — the committed winner is infeasible, not merely optimistic. Tight-TTFT rows still open — the 1800 s re-run kept them undetermined, and D23 explains why: those candidates livelock |
+| D23 | Phase 4 / Phase 5 | **Open** — every `pd_*`/`mix_*` tight-TTFT candidate livelocks: 52,903 progress ticks with prefill pinned at 1 running request, decode never fed, memory flat at 9 %. Not D12 (no memory growth, prefix caching off) and not a timeout (3600 s fails too). The same candidate completed in 280.6 s in an earlier committed run, so it is a regression; cause open. Blocks the sub-second regime of the three-regime table |
 
 ---
 
@@ -1206,3 +1207,62 @@ did not hold for tp4, where all 72 `pd_cuda-a40-tp4` candidates timed out. One o
 them is the committed tight-TTFT winner at p99 TPOT 37.27 ms, which *passes* the
 margin at 43.98. That regime needs a re-run at 1800 s. The loose-TTFT finding is
 unaffected: zero RNGD candidates timed out on the card fixture.
+---
+
+## D23 — The P/D tight-TTFT candidates livelock: prefill pinned at one request, decode never fed · **Open (blocks the tight-TTFT regime)**
+
+**What.** Every `pd_*` and `mix_*` candidate that the tight-TTFT sweeps need has
+stopped terminating. The 2026-09-03 re-run (`--timeout 1800`, both P/D fixtures,
+`experiments/results/pd_slo_sweep_margin.md` § Tight-TTFT regime) timed out 71 of
+222 card-fixture simulations and 126 of 252 tp4-fixture simulations, and printed
+INFEASIBLE at all four tight points. Those verdicts are *not evaluated*, not
+rejected.
+
+**It is not a timeout.** Work order §7 permits one escalation for the committed
+winner alone — 1 candidate, 3600 s, single retry — and it was taken on
+`P[cuda:tp4] D[cuda:tp4]` (`-s256-t8192`). It failed the same way, and the hour of
+logs says why. The simulator emitted **52,903 progress ticks**, so its simulated
+clock advanced continuously. What never advanced is the work:
+
+```
+Instance[0] (prefill): 1 reqs running at EVERY tick, Waiting 7 -> 299
+Instance[1] (decode) : 0 reqs running, 0 waiting, for the entire hour
+memory               : flat at 9.304 % / 9.234 %
+```
+
+The prefill instance admits exactly one request and never retires it, the decode
+instance is never handed anything, and the whole 300-request trace piles up in the
+arrival queue. Raising the timeout cannot help.
+
+**Distinct from D12.** D12 is prefix-cache memory growing monotonically until the
+run dies. Here memory is flat at 9 % on both instances and prefix caching was
+disabled for the run (`--no-enable-prefix-caching`). The two share only the
+symptom the predictor reports — `SimOutcome.TIMEOUT`.
+
+**A regression, and the cause is open.** The same candidate is committed as
+completed: `outputs/.hp-pd-slo/` has it at **280.6 s**, p99 TPOT 37.32, p99 TTFT
+361.6, 2.206 tok/J. So this is a fall of at least 12.8x into non-termination. The
+only difference found in the compiled simulator input is `link_bw` 35.0 -> 35.2
+GB/s from the D18 fabric recomputation — a 0.6 % change, unconvincing on its own.
+The intermediate `pd_slo_sweep_measured_fabric` run also completed this candidate,
+but its work directory has been cleaned, so its `link_bw` cannot be read back. No
+bisect was run: the consolidation sprint makes no new numbers (its §0.3).
+
+**What this blocks.** The three-regime table's sub-second row
+(`P[cuda:tp4] D[cuda:tp4]`, 372 ms p99 TTFT) is neither confirmed nor refuted, and
+cannot be until this is diagnosed. D22's loose-TTFT retraction is unaffected: it
+rests on completed simulations.
+
+**How to adapt.** Do not read INFEASIBLE from a P/D sweep without checking the
+timeout count first — the sweep driver does not persist
+`PlannerOutput.rejected_summary`, so the count has to be recovered by counting
+work directories with no `sim*.csv`. Both lists are committed:
+`outputs/pd_slo_sweep_margin18/tight/timeouts_*.txt`, with the retry's tick-level
+evidence in `tight/retry3600_livelock_evidence.txt`.
+
+**What would resolve it**, cheapest first: (1) bisect `link_bw` between 35.0 and
+35.2 on this one candidate — if the cliff is real it is a threshold bug, not a
+bandwidth effect; (2) diff the simulator inputs of the `.hp-pd-slo` run against
+this one beyond `cluster.json`, in particular the A40 perf bundle, which the Tier 0
+merge touched; (3) instrument the prefill instance's admission path. All three
+belong to the RPS-aware work order, not to this sprint.

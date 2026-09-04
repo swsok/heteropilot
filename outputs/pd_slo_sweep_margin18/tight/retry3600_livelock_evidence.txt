@@ -1,0 +1,58 @@
+# Evidence that the tight-TTFT candidates livelock rather than run slowly.
+#
+# Work order STEP 2 / section 7 sanctioned retry: 1 candidate, 3600 s, single retry.
+# Candidate: P[cuda:tp4] D[cuda:tp4], -s256-t8192 -- the committed tight-TTFT winner.
+# Result: exit=124 (hit the 3600 s ceiling), elapsed 3601 s, no CSV written.
+#
+# The simulator was NOT stalled: it printed 52903 progress ticks, so its
+# simulated clock advanced throughout. What never advanced is the work.
+#
+## Every DISTINCT state Instance[0] (prefill) reported in the hour
+1 reqs, Waiting: 113 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+1 reqs, Waiting: 122 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+1 reqs, Waiting: 138 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+1 reqs, Waiting: 144 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+1 reqs, Waiting: 148 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+1 reqs, Waiting: 15 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+1 reqs, Waiting: 162 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+1 reqs, Waiting: 167 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+1 reqs, Waiting: 179 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+1 reqs, Waiting: 194 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+1 reqs, Waiting: 201 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+1 reqs, Waiting: 210 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+1 reqs, Waiting: 216 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+1 reqs, Waiting: 223 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+1 reqs, Waiting: 236 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+1 reqs, Waiting: 246 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+1 reqs, Waiting: 257 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+1 reqs, Waiting: 267 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+1 reqs, Waiting: 26 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+1 reqs, Waiting: 273 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+1 reqs, Waiting: 286 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+1 reqs, Waiting: 295 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+1 reqs, Waiting: 299 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+1 reqs, Waiting: 35 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+1 reqs, Waiting: 46 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+1 reqs, Waiting: 60 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+1 reqs, Waiting: 70 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+1 reqs, Waiting: 7 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+1 reqs, Waiting: 81 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+1 reqs, Waiting: 87 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+1 reqs, Waiting: 92 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+
+## Every DISTINCT state Instance[1] (decode) reported in the hour
+0 reqs, Waiting: 0 reqs, Total # 4 NPUs, Each NPU Memory Usage 3829.51 MB (9.234 % Used)
+
+## Reading
+# Instance[0] holds exactly 1 running request at every tick while its queue
+# grows 7 -> 299, i.e. the whole 300-request trace arrives and nothing retires.
+# Instance[1] never receives a single request. Memory is flat at 9.3 % on both,
+# so this is not the memory-saturation deadlock deviations D12 describes, and
+# prefix caching was disabled for this run anyway.
+
+## First and last tick, verbatim
+        ├─Running Instance[0]: 1 reqs, Waiting: 7 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+            ├─Running Instance[0]: 1 reqs, Waiting: 299 reqs, Total # 4 NPUs, Each NPU Memory Usage 3858.51 MB (9.304 % Used)
+
+## Command
+command: /home/swsok/heteropilot/.venv/bin/python -m serving --cluster-config outputs/.hp-slo-margin18-tight-pd-rngd-gpu/work/pd_cuda-a40-node_a40a-tp4-dp1_P___cuda-a40-node_a40b-tp4-dp1_D_-s256-t8192/cluster.json --dataset outputs/.hp-slo-margin18-tight-pd-rngd-gpu/work/sweep_trace.jsonl --output outputs/.hp-slo-margin18-tight-pd-rngd-gpu/work/pd_cuda-a40-node_a40a-tp4-dp1_P___cuda-a40-node_a40b-tp4-dp1_D_-s256-t8192/sim1.csv --num-reqs 300 --dtype bfloat16 --kv-cache-dtype auto --block-size 16 --max-num-seqs 256 --max-num-batched-tokens 8192 --request-routing-policy LOAD --network-backend analytical --log-level WARNING --log-interval 1.0 --run-id pd_cuda-a40-node_a40a-tp4-dp1_P___cuda-a40-node_a40b-tp4-dp1_D_-s256-t8192-a1 --no-enable-prefix-caching
