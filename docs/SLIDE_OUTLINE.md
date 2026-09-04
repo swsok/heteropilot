@@ -1,5 +1,11 @@
 # HeteroPilot — Presentation Slide Outline
 
+> **As of 2026-08-25, before D22 and D23.** The RNGD arm was still unmeasured when
+> this outline was written. The measurements later **retracted** the RNGD energy win
+> at loose TTFT (D22) and left the sub-second regime **undetermined** — those
+> candidates livelock (D23). See `docs/PROJECT_REPORT.md` §4.8.7 and §4.9 before
+> presenting any heterogeneous-P/D claim from here.
+
 *A slide-by-slide skeleton to build the PowerPoint from. Each slide lists its
 title, the bullets to show, the visual to drop in (from `experiments/figures/`),
 and a one-line speaker note. Source of every number: `docs/PROJECT_REPORT.md`.
@@ -86,6 +92,10 @@ approach → method/trust → results → scaling → status/limits → contribu
 - *Visual:* **`pd_network_sweep.png`** (+ `pd_4combo.png` as inset/next slide).
 - *Note:* **NPU combos are SIM-PROXY** — say it out loud; the four identical rows
   are the proxy proof, not a GPU-vs-NPU result.
+- *Superseded 2026-09-03:* the SLO sweeps that were to replace these proxy rows
+  **retracted** the RNGD energy win (D22), and the sub-second regime where P/D paid
+  is **undetermined** — those candidates livelock (D23). Do not present "P/D pays"
+  as settled.
 
 ## Slide 10 — Result: what the sim-guided planner buys (baselines + ablation)
 - Regret vs the exhaustive oracle (oracle goodput/J = 3.138):
