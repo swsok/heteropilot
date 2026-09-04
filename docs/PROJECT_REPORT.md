@@ -1,7 +1,19 @@
 # HeteroPilot — Integrated Project Report
 
-*Status snapshot: 2026-08-27. Basis for the presentation deck. Every quantitative
-result below is reproducible from the committed artifacts named in each section.*
+*Status snapshot: 2026-09-04, `main` = `8bb2f6f`, after the consolidation sprint
+(`WORK_ORDER_consolidation.md`). Basis for the presentation deck. Every
+quantitative result below is reproducible from the committed artifacts named in
+each section.*
+
+> **Read §4.8.7 and §4.9 before quoting anything about heterogeneous P/D.** The
+> "RNGD wins on energy by 1.67x at loose TTFT" headline was **retracted** by this
+> project's own margin discipline (D22), and the sub-second regime that P/D was
+> supposed to buy is **undetermined**, blocked by a simulator livelock (D23). As of
+> this snapshot **no experiment here shows a heterogeneous configuration winning.**
+
+> **ScenarioLab** — the batch scenario explorer and planning workspace — moved to
+> `swsok/heteropilot-scenariolab` on 2026-09-03, pinned to this repo at `e79ac4ab`.
+> Nothing in this report depends on it.
 
 > **Honesty note (project absolute rule 3).** Except where a row is explicitly
 > labelled **measured**, every number here is an **LLMServingSim prediction**, not
@@ -13,6 +25,7 @@ result below is reproducible from the committed artifacts named in each section.
 > | --- | --- |
 > | **FuriosaAI RNGD** | **MEASURED on real silicon on this host**, twice over and by two instruments — a `furiosa.torch` layerwise harness and FuriosaAI's own EDF profiler on the served graph. Power, memory, achieved bandwidth, per-layer latency and the on-package all-reduce are all measured. §4.8. |
 > | Rebellions ATOM | **placeholder stub** — broken vendor install and no free device. `sim_hardware: null`, empty `supported_models`, so it fails loud and stays out of candidate generation. |
+> | Huawei Ascend (target) | **datasheet-derived Tier 0 bundle** since 2026-09-02 — `source: vendor_spec`, `sim_hardware: ASCEND_TARGET-t0`. It participates in candidate generation, and every plan built on it carries `profile_tier: analytical` with a mandatory caveat. Never a measurement. §4.9, D21. |
 > | NVIDIA A40 / RTX A5000 | **measured, but on OTHER machines.** This host has no NVIDIA GPU (`nvidia-smi` cannot reach a driver). Those artifacts stay valid and must never be re-run or relabelled here. |
 > | RTXPRO6000 | vendor-spec profile. |
 >
@@ -84,9 +97,10 @@ yardstick that separates surrogate error from search error.
 | **0** Baseline | upstream reproduction, format archaeology | ✅ done (`docs/phase0_formats.md`, `phase0_bench_plan.md`) |
 | **1** Spec / inventory / islands | ServiceSpec, ClusterSpecV2, island detection | ✅ done (`inspect-cluster`) |
 | **2** Offline planner (MVP) | enumerate → simulate → feasibility → Pareto; oracle | ✅ done (`plan`, oracle-agreement + reproducibility + golden tests) |
-| **3** Heterogeneous profiles | 2nd GPU profile, profiler contract, NPU CSV importer | ✅ done (6 accelerator profiles, `CsvProfileImporter`) |
+| **3** Heterogeneous profiles | 2nd GPU profile, profiler contract, NPU CSV importer | ✅ done (`CsvProfileImporter`) |
+| **Tiered profiles (Tier 0/1)** | roofline generator, datasheet schema, attention cost model, calibration | ✅ done 2026-09-02 — closes D4 without external measurements. §4.9, `WORK_ORDER_tiered_profiles.md`, `docs/tier0_calibration.md` |
 | **4** Real deployment + calibration | vLLM launcher, monitor, sim-vs-real | ✅ done (CUDA; A40 live loop + calibration). NPU launcher is a stub |
-| **5** Topology-aware P/D | KV-transfer cost, P/D placement, Level-2 topology | ✅ core done (sim-level + planner-side P/D transfer, per-dim topology). network-aware routing deferred |
+| **5** Topology-aware P/D | KV-transfer cost, P/D placement, Level-2 topology | ✅ core done (sim-level + planner-side P/D transfer, per-dim topology). Network-aware routing deferred; **the tight-TTFT regime is blocked by D23** |
 | **6** Online replanning | workload estimator, replan triggers | ⛔ not started (requires explicit user approval) |
 
 **Real hardware used.** The project has moved machines twice, so this is per-host:
@@ -531,6 +545,76 @@ artefact and the winner clears ~2 s, not 500 ms.
 **No RNGD P/D result is a deployment claim.** FuriosaAI's own llm-d documentation
 states Furiosa-LLM does not support prefill/decode disaggregation at all today.
 
+## 4.9 Tier 0/1 — planning on hardware we do not own
+
+*Full report: `docs/tier0_calibration.md`. Work order:
+`WORK_ORDER_tiered_profiles.md`. Deviations D21 (the discipline), D4 (what it
+closed).*
+
+D4 — "only one hardware profile exists" — had been waiting on external
+measurements since Phase 0. It was closed instead by **generating** the missing
+bundles from vendor datasheets and labelling them so they can never be mistaken
+for measurements.
+
+**The discipline first, because it is the point.** `datasheet:` fields are copied
+from public vendor documents, attributed by `datasheet_source`, and are **never**
+measurements. The bundles they produce carry `tier: analytical` (or `calibrated`)
+and a `-t0`/`-t1` hardware-label suffix; they are gitignored, so measured and
+synthetic data never coexist in the tree; a profile whose `sim_hardware` ends in
+`-t0`/`-t1` without a `datasheet:` block is **rejected at load time**; and
+`PlannerOutput.profile_tier` propagates the weakest bundle tier into every plan
+with a mandatory caveat. `flops_efficiency`/`mem_efficiency` stay empty until they
+are fitted against a real measured bundle — pre-filling them would present an
+invented derating as usable.
+
+**E1 — does a Tier 0 profile rank candidates like a measured one?** Against the
+measured-bundle ranking:
+
+| condition | top-1 | Kendall τ | cost of the top-1 disagreement |
+| --- | --- | ---: | ---: |
+| `llama31-8b`, tier0+sim | no | **0.914** | **0.4 %** of the true objective |
+| `llama31-8b-light`, tier0+sim | no | **0.902** | **11.3 %** |
+
+Exact top-1 agreement is 0/2, and that is the honest headline — but the candidates
+it confuses are near-equivalent, so the *decision* costs 0.4 % on one leg and
+11.3 % on the other. **Ranking is preserved where ranking matters**; a Tier 0 plan
+is a shortlist, not an oracle.
+
+**E2 — where the error lives, and what buying anchors buys.** Tier 0 with no
+measured anchors is **38.9 % MAPE**. Two hundred anchors spent **entirely on
+attention** take it to **29.5 %**:
+
+| family | MAPE |
+| --- | ---: |
+| gemm | 9.5–11.3 % |
+| overall, no anchors | 38.9 % |
+| overall, 200 attention anchors | **29.5 %** |
+
+GEMM transfers on a single scalar efficiency; attention does not, because its cost
+tracks the batch's KV *diversity* rather than a shape (the same effect D17
+records). So the marginal measurement is worth most when spent on attention, and
+returns flatten quickly after ~1–2 % of the grid.
+
+**E3/E4.** Shape overlap between models is 0.8–16 %, so a bundle generated for one
+model transfers little to another — Tier 0 is per-model, not a universal table.
+The Ascend sensitivity sweep (E4) is what makes `ASCEND_TARGET-t0` usable in
+candidate generation at all.
+
+**What it changes in practice.** `ascend_target.yaml` moved from
+`source: placeholder` / `sim_hardware: null` — excluded, failing loud — to
+`vendor_spec` / `ASCEND_TARGET-t0`. Ascend islands now survive candidate
+generation and full simulation, and every resulting plan says
+`profile_tier: analytical`. Measured data supersedes this the moment it arrives;
+the Phase 3 `CsvProfileImporter` path is unchanged.
+
+**Coexistence with the pruning bounds (deliberate).** The candidate generator's
+stage-5 analytical bound and the Tier 0 `RooflineModel` remain two separate code
+paths. Stage-5 is a *pruning relaxation* whose only permitted failure is
+under-rejection; the Tier 0 model is a *bundle generator* whose numbers feed the
+simulator. Unifying them would need its own golden-update plan and is deferred.
+
+---
+
 ## 5. Engineering & discipline highlights
 
 - **Sim-vs-real calibration (A40, measured).** Linear fit `real = α·sim + β`:
@@ -539,7 +623,7 @@ states Furiosa-LLM does not support prefill/decode disaggregation at all today.
 - **Provenance on every result** — git commits, versions, spec hashes, seed, full
   command line (`planner/util/provenance.py`), so any figure traces to its inputs.
 - **Reproducibility** — same spec + seed ⇒ byte-identical plan; enforced by tests.
-- **Deviations ledger** (`docs/deviations.md`, **D1–D17**) records every place
+- **Deviations ledger** (`docs/deviations.md`, **D1–D24**) records every place
   upstream reality diverges from the work order and how HeteroPilot adapts — e.g.
   D10 (memory model over-estimates KV by +71 % → explicit derating), D3/D15 (no
   link graph in the sim config → Level-2 per-dimension bandwidth + sim-level P/D
@@ -571,9 +655,12 @@ states Furiosa-LLM does not support prefill/decode disaggregation at all today.
 | **Measured NPU profiles** — RNGD | ✅ **done**, twice | Layerwise harness (`profiler/perf/RNGD/`, tp1/2/4/8) *and* vendor EDF rebuild (`profiler/perf/RNGD-CARD/`). §4.8 |
 | **RNGD per-PE power split** | ✅ **done 2026-08-25** | `board = 38.01 + 32.71 × PEs`, R² 0.996, from a 0..8 loaded-PE sweep. This was the Exp-4 blocker and it is gone |
 | **RNGD tokens/J** | ✅ **unblocked** | Power, memory, bandwidth and latency all measured; the node-level denominator is the simulator's, documented in §4.8.7 |
-| **Exp 4 — GPU vs NPU island (SLO-goodput/J)** | superseded in substance | The SLO sweeps of §4.8.7 answer the same question across 8 SLO points and two device abstractions. A dedicated Exp 4 run would add a figure, not a finding |
+| **Exp 4 — GPU vs NPU island (SLO-goodput/J)** | superseded in substance, and its answer changed | The SLO sweeps of §4.8.7 answer the same question across 8 SLO points and two device abstractions — but their loose-TTFT half was retracted (D22) and their tight half is undetermined (D23). What the sweeps now say is that **the GPU wins wherever they can speak at all** |
+| **Tiered profiles / D4** | ✅ **done 2026-09-02** | Closed without external measurements: a datasheet-derived Tier 0 bundle puts Ascend into candidate generation with `profile_tier: analytical`. τ 0.90–0.91 against the measured ranking, top-1 disagreement costing 0.4 %/11.3 %. §4.9 |
+| **The loose-TTFT RNGD energy win (1.67×)** | ✅ **retracted 2026-09-02** | Under the measured 18 % TPOT optimism every RNGD configuration is infeasible on both fixtures; the winner becomes `agg[cuda:tp4]` at 2.595 tok/J. Any margin above 3.3 % rejects the committed winner. D22, `experiments/results/pd_slo_sweep_margin.md` |
+| **The tight-TTFT (sub-second) regime** | **open, blocks the P/D claim** | Every `pd_*`/`mix_*` candidate livelocks: prefill pinned at 1 running request, decode never fed, memory flat at 9 %, at 1080/1800/3600 s alike. The same candidate completed in 280.6 s in an earlier committed run, so it is a regression with an open cause. D23 |
 | **GPU→host leg of the cross-vendor KV path** | ✅ **done 2026-08-27** (A40 server) | Sustained pinned D2H 25.71 GB/s single stream, 82.63 GB/s across 8 GPUs; saturates ~83 GB/s at 40 % of ideal against the NPU leg's 87 %. Unlike RNGD the A40 sustains its peak (0.998), so no D18-style correction was needed — but both legs are now composed from sustained figures. Cross-vendor fixture links land at 12.6–13.0 GB/s against a 35 GB/s placeholder that was 2.7–4.5× too optimistic; still above Exp 3's ~10 GB/s crossing. `experiments/results/gpu_host_bandwidth.md` |
-| **Measured NPU profiles** — ATOM | placeholder stub | `rebel-compiler` 0.11.0 vs `vllm_rbln`/`optimum-rbln` expecting 0.10.2, **and** all four ATOMs held by another tenant's pods |
+| **Measured NPU profiles** — ATOM | placeholder stub (D20) | `rebel-compiler` 0.11.0 vs `vllm_rbln`/`optimum-rbln` expecting 0.10.2, **and** the deeper block: host I/O exceeds the kernels and the device tracer's schema is undocumented, so no bundle can reach contract fidelity |
 | **The −71 % TTFT gap (card profile)** | ✅ **resolved 2026-08-28** (retraction) | Not a scheduler difference. The simulator replayed spread arrivals against a bench that fires everything at once and ignores the trace's `arrival_time_ns`. Matched arrivals: **−5.1 %**. Both TTFT calibrations refitted (card fit error 2.34 → 0.103). Deviations D19, `experiments/results/rngd_ttft_gap_resolved.md` |
 | **ASTRA-Sim collective over-charge** | target measured | 115 µs/layer measured against ~340 µs apparently charged. Calibrating `link_bw`/`link_latency` in `rngd-llama31-8b-tp8.json` should shrink the per-PE model's +25.7 % TPOT error |
 | **Asymmetric TP per phase** (D14) | structural | `A40 tp4 prefill + RNGD tp8 decode` — the industry-recommended shape — cannot be enumerated. Card-as-device *sidesteps* it by folding TP=8 inside the device; it does not lift the constraint |

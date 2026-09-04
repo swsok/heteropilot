@@ -25,6 +25,9 @@ Authoritative documents, all of which outrank this file:
 | `docs/deviations.md` | Where the work order and upstream disagree, and how we adapt | Read before implementing any Phase 2+ module |
 | `docs/rps_aware_planning_design.md` | Design for RPS-dependent GPU/NPU selection: performance envelopes, operating-point solving, accuracy domains | Proposal, not built; read before adding any RPS or concurrency axis |
 | `docs/phase0_bench_plan.md` | What was measured vs simulated, and what a node can actually run | Provenance discipline |
+| `WORK_ORDER_tiered_profiles.md` | Tier 0/1 synthetic profiles: datasheet schema, roofline generator, attention cost model, calibration | Executed; closed D4 |
+| `docs/tier0_calibration.md` | E1–E4 — what a generated profile can and cannot be trusted to rank | Read before quoting any `profile_tier: analytical` plan |
+| `WORK_ORDER_consolidation.md` | The 2026-09-03/04 sprint that merged the three tracks and split ScenarioLab out | Subordinate to the three above it |
 | `docs/nodes/{a40,a5000,npu}.md` | Per-node inventory, topology and traps | Read the one `scripts/whichnode.sh` names — never all three |
 | `docs/HANDOVER.md` | Current state, next work by node, traps that cost a session | The live handover; the `HANDOVER_*.md` files are historical |
 
@@ -295,11 +298,18 @@ Do not begin topology graphs, P/D placement, or replanning before the Phase 0–
 If upstream's actual filenames, config schema, or output columns contradict the work order,
 **the real code wins**. Record the difference in `docs/deviations.md` and continue.
 
-Eleven divergences are recorded there. D2 (power is stdout-only), D3 (no topology graph in the
-cluster config) and D4 (one hardware profile) are decided; **D10 is the one to know before touching
-Phase 2**: the simulator's memory model applies no utilization or activation reserve, so it
-over-estimates usable KV by +71% on a 24 GB card. `planner/util/memory.py` derates explicitly.
-D11 quantifies what profile-grid density costs (~2.2pp of end-to-end accuracy).
+Twenty-four divergences are recorded there. D2 (power is stdout-only) and D3 (no topology graph in
+the cluster config) are decided; **D4 is now closed** by the Tier 0 synthetic-bundle path (D21).
+**D10 is the one to know before touching Phase 2**: the simulator's memory model applies no
+utilization or activation reserve, so it over-estimates usable KV by +71% on a 24 GB card.
+`planner/util/memory.py` derates explicitly. D11 quantifies what profile-grid density costs
+(~2.2pp of end-to-end accuracy).
+
+**Three open ones gate current work.** D12 (prefix-cache memory grows until the run dies) still
+blocks Phase 2 — read it before retrying, both earlier fixes were wrong and were reverted. D20
+blocks ATOM. **D23 blocks the tight-TTFT regime**: every `pd_*`/`mix_*` candidate livelocks, which
+is why no timeout settles that half of the three-regime table. And note D22 — the "RNGD wins on
+energy by 1.67×" headline is **retracted**; do not quote it.
 
 Derive schemas from real artifacts, with one trap: **`outputs/example_*_run.csv` are stale** and
 must not be used as golden references — their `output` column counts `input + output` tokens while
