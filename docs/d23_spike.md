@@ -97,6 +97,51 @@ captured. No frontend, no planner, no Chakra:
 
 **13 of 64.** `outputs/d23/evidence/bare64_{exit_codes,stderr}.txt`.
 
+## Isolating the shared path fixes it — measured, end to end
+
+The fault is the shared working directory, and nothing else. Three conditions, the
+same 64 concurrent processes, the same inputs:
+
+| condition | bare `AnalyticalAstra` | full `python -m serving`, N=300 |
+| --- | --- | --- |
+| shared cwd (today) | **13 of 64 fail** | 4 of 64 stuck (run a and run b, different instances each time) |
+| per-process cwd | **64 / 64** | — |
+| private tmpfs over `tmp__mem` | **64 / 64** | **64 / 64**, 503–566 s (median 522) |
+
+`experiments/scripts/astra_isolated.sh` implements the third, with
+`tests/test_astra_isolated.py` (7 tests). It puts an unprivileged mount namespace
+and a tmpfs over that one directory, so **nothing in `serving/` or `astra-sim/` is
+modified** — which matters, because absolute rule 1 forbids touching `astra-sim/`
+before Phase 5.
+
+It **refuses** (exit 2) when namespaces are unavailable rather than falling back to
+an unisolated run. A silent fallback would reintroduce a race whose failure mode is
+a four-hour timeout rather than an error.
+
+Available on this node: `unprivileged_userns_clone=1`,
+`apparmor_restrict_unprivileged_userns=0`, `unshare -Urm true` succeeds. **Check
+before assuming it on the A40 or A5000 nodes** — this is a per-node fact, like
+everything else `scripts/whichnode.sh` exists for.
+
+Why the wrapper rather than the one-argument fix: passing `cwd=` to the `Popen` in
+`serving/__main__.py:548` also works (measured, 64/64 bare) and is the better
+long-term answer, because it cannot be forgotten. But it is a `serving/` edit, so
+it belongs to the next work order as a D15-style sanctioned change — opt-in,
+byte-identical by default, with `outputs/.hp-pd-slo/`'s completed candidate as the
+regression anchor. All four arguments the frontend passes are already absolute
+(`run_paths.py` uses `os.path.abspath`), so the child's cwd is used for nothing
+except `tmp__mem`; that is why one argument is enough.
+
+## And with the race gone, D23's symptom still does not appear
+
+This was the more interesting question: was the `tmp__mem` race *masking* the
+livelock? No. All 64 isolated runs completed, and each emitted **~102 progress
+ticks** — the same count as the solo N=300 run. Not one produced the pinned-prefill
+signature.
+
+So the original D23 observation remains unexplained, and the only untested
+difference from the sweep is still that it ran 64 **different** candidates.
+
 ## The mechanism
 
 `astra-sim/astra-sim/network_frontend/analytical/congestion_unaware/main.cc:27`:

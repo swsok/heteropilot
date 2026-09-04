@@ -647,7 +647,7 @@ drops, TTFT flat, `none`-mode control flat — all PASS) and `tests/test_sim_pd_
 | D20 | Phase 3 / Exp 4 | **Open** — ATOM layerwise profiling blocked: host I/O exceeds the kernels and the device tracer's schema is undocumented. Memory and power measured; no perf bundle, so ATOM stays out of candidate generation |
 | D21 | Phase 3 | **Decided 2026-09-02** — Tier 0/1 synthetic profiles: `datasheet:` fields are vendor spec, never measurements. Generated bundles carry `tier: analytical`/`calibrated` and a `-t0`/`-t1` hardware-label suffix so they can never shadow a measured bundle; `PlannerOutput.profile_tier` propagates the weakest tier with a mandatory caveat. `flops_efficiency`/`mem_efficiency` stay empty until fitted against a measured bundle |
 | D22 | Phase 4 | **Resolved** (retraction + measurement) — the c1–c32 curve's top point was a 24-request pool running at eff 21.2, not c32; envelope measured to eff 107.2. At eff 76 the simulator is 1.31× optimistic on throughput and 18 % on TPOT. The re-run is **done for the loose-TTFT regime**: with the measured 18 % margin every RNGD config is rejected on both fixtures and the winner becomes `agg[cuda:tp4]` at 2.595 tok/J — the committed winner is infeasible, not merely optimistic. Tight-TTFT rows still open — the 1800 s re-run kept them undetermined, and D23 explains why: those candidates livelock |
-| D23 | Phase 4 / Phase 5 | **Diagnosed 2026-09-04, root cause open upstream** — the candidates do **not** livelock: one completes alone in 343 s at N=300. ASTRA-Sim races on a fixed cwd-relative `tmp__mem/*.json` (13 of 64 bare processes fail), and the frontend spins forever on the dead child (`controller.py` `read_wait` on EOF) with its stderr captured and never read. Unfixed at both upstream heads. `docs/d23_spike.md` |
+| D23 | Phase 4 / Phase 5 | **Diagnosed 2026-09-04, root cause open upstream** — the candidates do **not** livelock: one completes alone in 343 s at N=300. ASTRA-Sim races on a fixed cwd-relative `tmp__mem/*.json` (13 of 64 bare processes fail), and the frontend spins forever on the dead child (`controller.py` `read_wait` on EOF) with its stderr captured and never read. Unfixed at both upstream heads; `experiments/scripts/astra_isolated.sh` works around it, 64/64. `docs/d23_spike.md` |
 | D24 | — | **Resolved** — the work order's layout lists `profiles/networks/`, but Level-1 interconnect-class values live inline in `planner/topology.py` and the YAMLs were an unread duplicate read only by ScenarioLab's cluster generator. Moved out with it (STEP 3.3); recoverable if Phase 5 ever wants them as data |
 
 ---
@@ -1257,18 +1257,37 @@ unaffected: zero RNGD candidates timed out on the card fixture.
 > touching either: give each candidate its own cwd, which needs the `../` path
 > convention in `llmservingsim.py` reworked.
 >
-> **How to adapt, today.** `--log-level WARNING` hides none of this — the symptom
-> is indistinguishable from slowness at any log level, which is why longer
-> timeouts kept confirming the wrong theory. Use
-> `experiments/scripts/livelock_watch.sh`: it ends a stuck run in seconds and
-> separates a tick-stall (exit 3) from a run that never reports or stops
-> reporting (exit 4), the latter being this bug's signature.
+> **How to adapt, today — there is a working isolation.**
+> `experiments/scripts/astra_isolated.sh` puts an unprivileged mount namespace and
+> a private tmpfs over `astra-sim/tmp__mem`, touching neither `serving/` nor
+> `astra-sim/`. Measured: the 64-way concurrent run that lost 4 instances twice
+> now completes **64 of 64** (503–566 s), and the bare binary goes from 13 failures
+> to none. It **refuses** (exit 2) where namespaces are unavailable rather than
+> falling back — a silent unisolated fallback would restore a race whose failure
+> mode is a four-hour timeout, not an error. Available on the NPU node; check
+> per node, it is not a property of the repository.
 >
-> **Still open.** D23's *original* symptom — 52,903 progress ticks with prefill
-> pinned at one running request and memory flat — was **not** reproduced. Alone the
-> candidate completes; concurrently it dies before emitting a tick. The untested
-> difference is that the sweep ran 64 *different* candidates, not 64 copies of one.
-> The tight-TTFT regime therefore stays undetermined.
+> Passing `cwd=<per-run dir>` to the `Popen` at `serving/__main__.py:548` works too
+> (64/64 measured) and is the better long-term fix because it cannot be forgotten;
+> it is a `serving/` edit and belongs to the next work order. All four arguments
+> the frontend passes are already absolute, so the child's cwd is used for nothing
+> but `tmp__mem` — one argument is enough.
+>
+> And wrap runs in `experiments/scripts/livelock_watch.sh` regardless.
+> `--log-level WARNING` hides none of this — the symptom is indistinguishable from
+> slowness at any log level, which is why longer timeouts kept confirming the wrong
+> theory. The watcher ends a stuck run in seconds and separates a tick-stall
+> (exit 3) from a run that never reports or stops reporting (exit 4).
+>
+> **Still open, and the isolation did not change it.** D23's *original* symptom —
+> 52,903 progress ticks with prefill pinned at one running request and memory flat
+> — was **not** reproduced. The obvious question was whether the `tmp__mem` race
+> had been masking it; it had not. With the race removed all 64 concurrent runs
+> completed, each emitting ~102 ticks, the same as a solo run. Alone the candidate
+> completes; concurrently it either completes or dies before emitting a tick, and
+> neither is what D23 recorded. The untested difference is that the sweep ran 64
+> *different* candidates, not 64 copies of one. The tight-TTFT regime therefore
+> stays undetermined.
 
 **What.** Every `pd_*` and `mix_*` candidate that the tight-TTFT sweeps need has
 stopped terminating. The 2026-09-03 re-run (`--timeout 1800`, both P/D fixtures,
