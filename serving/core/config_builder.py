@@ -180,6 +180,21 @@ def _resolve_dp_groups(all_instances):
     if len(network_dims) > 1:
         local_dim = [True] + [False] * (len(network_dims) - 1)
 
+    _mode = _topology_mode(all_instances)
+    if _mode in ("slab3d", "split2"):
+        # The other half of the constraint: today every instance gets the same
+        # local_dim. Under slab3d a full-slab instance spans dims 0 and 1.
+        _helper = _slab3d_dims_and_tp_dims if _mode == "slab3d" else _split2_dims_and_tp_dims
+        _, slab_tp_dims = _helper(all_instances)
+        for inst, tp_dim in zip(all_instances, slab_tp_dims):
+            if inst.get("dp_group") is None:
+                inst["dp_group_size"] = 1
+                inst["local_ep"] = inst["ep_size"]
+                inst["ep_total"] = inst["ep_size"]
+                inst["tp_dim"] = tp_dim
+                inst["ep_dim"] = tp_dim if inst["ep_size"] > 1 else None
+        return
+
     for inst in all_instances:
         if inst.get("dp_group") is None:
             inst["dp_group_size"] = 1
@@ -189,8 +204,122 @@ def _resolve_dp_groups(all_instances):
             inst["ep_dim"] = local_dim if inst["ep_size"] > 1 else None
 
 
+#: SPIKE ONLY -- WORK_ORDER_spikes.md STEP B.2, branch spike/d14-asym-tp.
+#: Prototype for D14/D16(b): asymmetric TP per phase (A40 tp4 prefill +
+#: RNGD tp8 decode). Not for main. The claim under test is that the simulator
+#: never forbade this -- only `_compute_network_dims` did, by folding every
+#: instance into [npus_per_group, num_instances] with one integer division and
+#: giving them all the same `local_dim`.
+#:
+#: `topology_mode` is read from the cluster config's top level and carried on the
+#: instances so the three `_compute_network_dims` call sites keep their signatures.
+#:   "auto"   (default, key absent) -- unchanged, byte-identical
+#:   "slab3d" -- [g, 2, n_slabs]; a tp=g instance takes half a slab, a tp=2g one
+#:               takes a whole slab, so tp_d = 2*tp_p costs no idle rank.
+#:   "split2" -- STEP B.2-3 only. One instance, dims [tp/2, 2], tp_dim [T, T]:
+#:               the same TP group flat vs. split across two dims, so the
+#:               allreduce latency term the slab layout costs can be measured
+#:               on its own. Not a deployment mode.
+TOPOLOGY_MODE_KEY = "topology_mode"
+VALID_TOPOLOGY_MODES = ("auto", "slab3d", "split2")
+
+
+def _slab3d_dims_and_tp_dims(instances):
+    """[g, 2, n_slabs] plus one tp_dim per instance, or raise.
+
+    Prefill instances occupy 2*tp ranks (compute + sender), which is why a
+    prefill tp=g fills a whole slab while a colocated/decode tp=g fills half.
+    """
+    def rank_width(inst):
+        return inst["num_npus"] * (2 if inst.get("pd_type") == "prefill" else 1)
+
+    if any(inst.get("ep_size", 1) > 1 for inst in instances):
+        raise ValueError("slab3d: MoE/EP instances are out of scope for this spike")
+
+    g = min(inst["tp_size"] for inst in instances)
+    widths = [rank_width(inst) for inst in instances]
+    for inst, w in zip(instances, widths):
+        if w not in (g, 2 * g):
+            raise ValueError(
+                f"slab3d: instance {inst.get('instance_id')} occupies {w} ranks; "
+                f"only {g} (half slab) or {2 * g} (full slab) fit the [g, 2, n] grid"
+            )
+    if sum(1 for w in widths if w == g) % 2 != 0:
+        raise ValueError(
+            "slab3d: an odd number of half-slab instances cannot pair into slabs; "
+            "reorder them or pad, which this spike does not do"
+        )
+
+    total_ranks = sum(widths)
+    if total_ranks % (2 * g) != 0:
+        raise ValueError(f"slab3d: {total_ranks} ranks do not divide into slabs of {2 * g}")
+    n_slabs = total_ranks // (2 * g)
+
+    # Half-slab instances must be adjacent in pairs, because ranks are handed out
+    # as consecutive blocks (config_builder.py:540-556). Rather than reorder them
+    # behind the caller's back, refuse and let the fixture say what it means.
+    cursor = 0
+    for w in widths:
+        if w == g and cursor % (2 * g) not in (0, g):
+            raise ValueError("slab3d: half-slab instances are not slab-aligned; reorder them")
+        cursor += w
+
+    dims = [g, 2, n_slabs]
+    while len(dims) > 1 and dims[-1] == 1:
+        dims.pop()
+    # A prefill instance occupies a full slab but its *TP group* is still only g
+    # wide -- the other g ranks are senders, not TP peers. So the span is keyed on
+    # the collective, not on the footprint: work order S1.2 gives [T,F,F] to
+    # "half-slab and prefill", [T,T,F] only to a full-slab decode/colocated.
+    # Keying it on width alone declares an 8-rank allreduce for a 4-rank TP group,
+    # and the prefill batch then waits forever for four ranks that never join.
+    full = [True, True, False][: len(dims)]
+    half = [True, False, False][: len(dims)]
+    tp_dims = [
+        full if (w == 2 * g and inst.get("pd_type") != "prefill") else half
+        for inst, w in zip(instances, widths)
+    ]
+    return dims, tp_dims
+
+
+def _split2_dims_and_tp_dims(instances):
+    """[tp/2, 2] and tp_dim [T, T] for a single instance, or raise.
+
+    Deliberately narrow: one instance only. Splitting several TP groups across
+    two dims raises rank-mapping questions that slab3d answers and this does
+    not, and B.2-3 needs exactly one.
+    """
+    if len(instances) != 1:
+        raise ValueError(
+            f"split2: measures one TP group flat vs split; got {len(instances)} instances"
+        )
+    inst = instances[0]
+    if inst.get("ep_size", 1) > 1:
+        raise ValueError("split2: MoE/EP instances are out of scope for this spike")
+    if inst.get("pd_type") is not None:
+        raise ValueError("split2: colocated instances only")
+    tp = inst["tp_size"]
+    if tp % 2 != 0:
+        raise ValueError(f"split2: tp_size {tp} is odd and cannot split into [tp/2, 2]")
+    return [tp // 2, 2], [[True, True]]
+
+
+def _topology_mode(instances):
+    for inst in instances:
+        mode = inst.get(TOPOLOGY_MODE_KEY)
+        if mode:
+            return mode
+    return "auto"
+
+
 def _compute_network_dims(instances):
     """Infer ASTRA-Sim topology dimensions from resolved instances."""
+    mode = _topology_mode(instances)
+    if mode == "slab3d":
+        return _slab3d_dims_and_tp_dims(instances)[0]
+    if mode == "split2":
+        return _split2_dims_and_tp_dims(instances)[0]
+
     dp_groups = {}
     for inst in instances:
         dg = inst.get("dp_group")
@@ -624,6 +753,18 @@ def build_cluster_config(astra_sim, cluster_config_path, enable_local_offloading
         else inst["num_npus"] * 2
         for inst in total_instances
     )
+
+    # SPIKE (STEP B.2): carry the cluster config's topology_mode onto every
+    # instance, so the three _compute_network_dims call sites need no signature
+    # change. Absent key => "auto" => the existing path, byte-identical.
+    _mode = cluster_config.get(TOPOLOGY_MODE_KEY, "auto")
+    if _mode not in VALID_TOPOLOGY_MODES:
+        raise ValueError(
+            f"{TOPOLOGY_MODE_KEY} must be one of {VALID_TOPOLOGY_MODES}, got {_mode!r}"
+        )
+    if _mode != "auto":
+        for _inst in total_instances:
+            _inst[TOPOLOGY_MODE_KEY] = _mode
 
     # Resolve DP groups across all instances.
     _resolve_dp_groups(total_instances)

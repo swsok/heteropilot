@@ -146,6 +146,13 @@ measurement.
 
 ### 2.2 D23 — diagnose the P/D livelock — **any node** (simulation only)
 
+**Spiked 2026-09-04** (`docs/d23_spike.md`): root-caused to a race on ASTRA-Sim's
+fixed `tmp__mem/` path plus a frontend that cannot notice its child died.
+`experiments/scripts/astra_isolated.sh` makes 64 concurrent runs survive where 13
+of 64 died. **D23's original 52,903-tick symptom is still unreproduced** — a stall
+during the D14 spike briefly looked like it and was the spike's own bug, so it is
+not evidence either way.
+
 Nothing about the tight-TTFT regime can be settled until this is understood, and
 it blocks the only claim P/D disaggregation had. D23 lists three probes, cheapest
 first: bisect `link_bw` between 35.0 and 35.2 on the one candidate (a cliff there
@@ -170,8 +177,30 @@ Unchanged.
 
 ### 2.5 D14 — asymmetric TP per phase — **any node**, largest change
 
-Unchanged. The simulator's topology inference requires uniform instance sizes, so
-P/D pairs with different TP degrees cannot be enumerated.
+**Spiked 2026-09-04** (`docs/d14_spike.md`, branch `spike/d14-asym-tp`, not merged).
+Verdict **go**: the constraint is ours, not ASTRA-Sim's, and lifting it is two sites
+in `serving/core/config_builder.py`. `A40 tp4 prefill + RNGD tp8 decode` ran to
+completion under the prototype (86 s, consistency check passed). Under `auto` the
+same fixture compiles to a **15-rank topology for 16 ranks** and hangs — worse than
+D14 recorded.
+
+What `WORK_ORDER_rps_aware.md` (or its successor) must carry over:
+
+1. **Two sites, not one.** `_compute_network_dims`'s integer division *and*
+   `_resolve_dp_groups`'s uniform `local_dim`.
+2. **`tp_dim` is keyed on the collective, not the footprint.** A prefill tp=g
+   instance occupies 2g ranks but its TP group is g wide. Getting this wrong
+   produces a stall that looks exactly like D23; it cost a run here.
+3. **Calibration is the gate, not the code.** Splitting a TP group across dims
+   moves TPOT by 24.4 %; a per-dim `link_latency` of 4× the scalar closes it to
+   0.008 %, but that 4× is fitted at one bandwidth and one split. No absolute
+   number may be quoted from a slab3d plan until it has a calibration domain the
+   way `docs/tier0_calibration.md` scopes Tier 0. Ranking claims are fine.
+4. **An upstream blocker ships with it**: a 3-D collective tag is exactly the width
+   of the trace row's `comm_type` column, and `generate_trace` re-parses its own
+   fixed-width file with whitespace splitting.
+   `docs/upstream_issues/llmservingsim-trace-column-overflow.md`; runtime
+   workaround in `experiments/scripts/b3_widecol_run.py`.
 
 ### 2.6 Smaller, any node
 

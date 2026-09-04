@@ -1,0 +1,20 @@
+  • Prefix caching             : DISABLED
+  • Chunked prefill            : ENABLED
+  • Prefix caching scheme      : xPU-Only
+  • Centralized prefix caching : DISABLED
+  • Offload attention to PIM   : DISABLED
+  • Sub-batch interleaving     : DISABLED
+  • Prioritize prefill         : DISABLED
+  • Network backend            : analytical
+  • Log interval (s)           : 1.0
+  • Log level                  : INFO
+────────────────────────────────────────────────────────────────────────────────
+▶ Starting simulation...
+[07:32:09.263] [MemoryModel] [node=0,inst=0] INFO     NPU: model weight 15318MB loaded
+[07:32:09.263] [MemoryModel] [node=1,inst=1] INFO     NPU: model weight 15320MB loaded
+[07:32:09.265] [Router] INFO     Loaded 20 requests into pending queue (0 agentic sessions deferred)
+[07:32:09.312] [Controller] INFO     NPU[7] iteration 0 finished, 133370242 cycles, exposed communication 0 cycles.
+livelock_watch: NO PROGRESS -- not one progress line in 300s.
+livelock_watch: the run never started reporting. Check whether the
+livelock_watch: ASTRA-Sim child died (a zombie child plus 100% CPU in
+livelock_watch: the parent is controller.read_wait spinning on EOF).
