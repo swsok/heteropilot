@@ -1,0 +1,14 @@
+# 64 bare AnalyticalAstra processes, same inputs, launched at once.
+# No frontend, no planner, no chakra. Exit codes:       5 1      51 124       8 134 
+# 124 = the 45 s cap I imposed, i.e. started fine and waited on stdin.
+
+## exit 1  (instance 9), stderr verbatim:
+    Unable to open file: tmp__mem/remote_mem.json
+
+## exit 134  (instance 4), stderr verbatim:
+    terminate called without an active exception
+    timeout: the monitored command dumped core
+
+## how many of each stderr message across all 64:
+      8 terminate called without an active exception
+      5 Unable to open file: tmp__mem/remote_mem.json

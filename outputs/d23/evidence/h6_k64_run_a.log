@@ -1,0 +1,71 @@
+H6 k64 START 2026-09-04T04:36:53Z  K=64
+  load at launch: load: 0.49, 0.43, 0.63
+  i=63  COMPLETED  elapsed=495s ticks=0
+  i=60  COMPLETED  elapsed=495s ticks=0
+  i=54  COMPLETED  elapsed=497s ticks=0
+  i=28  COMPLETED  elapsed=498s ticks=0
+  i=31  COMPLETED  elapsed=499s ticks=0
+  i=29  COMPLETED  elapsed=499s ticks=0
+  i=47  COMPLETED  elapsed=499s ticks=0
+  i=61  COMPLETED  elapsed=500s ticks=0
+  i=8   COMPLETED  elapsed=500s ticks=0
+  i=43  COMPLETED  elapsed=500s ticks=0
+  i=33  COMPLETED  elapsed=500s ticks=0
+  i=5   COMPLETED  elapsed=501s ticks=0
+  i=32  COMPLETED  elapsed=501s ticks=0
+  i=35  COMPLETED  elapsed=502s ticks=0
+  i=48  COMPLETED  elapsed=502s ticks=0
+  i=64  COMPLETED  elapsed=503s ticks=0
+  i=24  COMPLETED  elapsed=503s ticks=0
+  i=16  COMPLETED  elapsed=504s ticks=0
+  i=11  COMPLETED  elapsed=504s ticks=0
+  i=44  COMPLETED  elapsed=504s ticks=0
+  i=57  COMPLETED  elapsed=504s ticks=0
+  i=10  COMPLETED  elapsed=504s ticks=0
+  i=7   COMPLETED  elapsed=504s ticks=0
+  i=39  COMPLETED  elapsed=505s ticks=0
+  i=25  COMPLETED  elapsed=505s ticks=0
+  i=41  COMPLETED  elapsed=507s ticks=0
+  i=46  COMPLETED  elapsed=507s ticks=0
+  i=20  COMPLETED  elapsed=508s ticks=0
+  i=9   COMPLETED  elapsed=509s ticks=0
+  i=22  COMPLETED  elapsed=509s ticks=0
+  i=37  COMPLETED  elapsed=511s ticks=0
+  i=14  COMPLETED  elapsed=511s ticks=0
+  i=3   COMPLETED  elapsed=511s ticks=0
+  i=55  COMPLETED  elapsed=511s ticks=0
+  i=51  COMPLETED  elapsed=512s ticks=0
+  i=59  COMPLETED  elapsed=516s ticks=0
+  i=49  COMPLETED  elapsed=517s ticks=0
+  i=34  COMPLETED  elapsed=541s ticks=0
+  i=50  COMPLETED  elapsed=546s ticks=0
+  i=1   COMPLETED  elapsed=546s ticks=0
+  i=38  COMPLETED  elapsed=547s ticks=0
+  i=18  COMPLETED  elapsed=547s ticks=0
+  i=42  COMPLETED  elapsed=547s ticks=0
+  i=13  COMPLETED  elapsed=548s ticks=0
+  i=53  COMPLETED  elapsed=548s ticks=0
+  i=12  COMPLETED  elapsed=549s ticks=0
+  i=27  COMPLETED  elapsed=549s ticks=0
+  i=17  COMPLETED  elapsed=549s ticks=0
+  i=26  COMPLETED  elapsed=550s ticks=0
+  i=45  COMPLETED  elapsed=550s ticks=0
+  i=58  COMPLETED  elapsed=551s ticks=0
+  i=40  COMPLETED  elapsed=552s ticks=0
+  i=23  COMPLETED  elapsed=552s ticks=0
+  i=62  COMPLETED  elapsed=552s ticks=0
+  i=56  COMPLETED  elapsed=552s ticks=0
+  i=6   COMPLETED  elapsed=552s ticks=0
+  i=4   COMPLETED  elapsed=552s ticks=0
+  i=15  COMPLETED  elapsed=553s ticks=0
+  i=36  COMPLETED  elapsed=553s ticks=0
+  i=30  COMPLETED  elapsed=554s ticks=0
+  i=52  TIMEOUT    elapsed=1801s ticks=0
+  i=19  TIMEOUT    elapsed=1801s ticks=0
+  i=21  TIMEOUT    elapsed=1801s ticks=0
+  i=2   TIMEOUT    elapsed=1801s ticks=0
+  --- tally ---
+  COMPLETED  60
+  LIVELOCK   0
+  TIMEOUT    4
+H6 k64 DONE 2026-09-04T05:06:54Z
