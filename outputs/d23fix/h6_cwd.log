@@ -1,0 +1,16 @@
+=== H6 64-way, no isolation wrapper — 2026-09-07T07:42:26Z main=e111ba3 ===
+shared astra-sim/tmp__mem before: 0 entries
+--- mid-flight, with 64 children live ---
+shared astra-sim/tmp__mem  : 0 entries  (must be 0)
+per-run tmp__mem present   : 64 of 64
+example contents           : 
+--- after ---
+completed 301-row CSVs     : 64 of 64
+incomplete                 : 0
+distinct sha256 across runs : 1  (must be 1)
+that sha                    : fff63c22d69dd8c1
+committed reference         : fff63c22d69dd8c1
+shared astra-sim/tmp__mem   : 0 entries  (must be 0)
+leftover per-run tmp__mem   : 0  (cleanup should leave 0)
+leftover run dirs           : 0  (cleanup should leave 0)
+H6 DONE ok=64 bad=0
