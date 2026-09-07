@@ -1122,7 +1122,22 @@ own golden-update plan.
 
 ---
 
-## D22 — The RNGD scaling curve's top point was request-pool-limited, and the envelope beyond it is now measured · Resolved (retraction + measurement)
+## D22 — The RNGD scaling curve's top point was request-pool-limited, and the envelope beyond it is now measured · Resolved (retraction + measurement) · **basis re-validated 2026-09-07**
+
+> **Re-validated under D25 + D26** (`docs/d23_revalidation.md` §2). The
+> `pd_slo_sweep_margin18` rows this entry rests on were re-run on a harness with all
+> three faults fixed, 32 workers, no isolation wrapper: **0 timeouts** against the
+> original 71, 1 h 43 m against 4 h 37 m, and **every reported field identical to the
+> last decimal** — winner `agg[cuda:tp4]`, 2.5954323001631323 tok/J, p99 TTFT
+> 15070.10466225, p99 TPOT 35.58226791. The verdict is unchanged.
+>
+> It also holds in the **tight** regime, which was undetermined when this was
+> written. All four tight points are now FEASIBLE (§3), and filtering all 424 cached
+> per-candidate records against the SLO gives **0 of 45 RNGD-only and 0 of 18 mixed**
+> candidates passing on the tp4 fixture, 0 of 12 and 0 of 25 on the card fixture. So
+> "every RNGD candidate rejected" is now measured at the tight points rather than
+> left unevaluated there.
+
 
 **What was wrong.** `experiments/results/pd_slo_sweep.md`, `docs/PROJECT_REPORT.md`
 §4.8.7 and `docs/npu_concurrency_envelope_work_order.md` all rested on two figures
@@ -1290,10 +1305,23 @@ unaffected: zero RNGD candidates timed out on the card fixture.
 > its claims: the candidates do not livelock, and the failure is not a property of
 > the candidates.
 >
-> **Consequence for the results.** The tight-TTFT timeouts (71 of 222 and 126 of
-> 252) are suspect as an environment artifact and are being re-run under D26
-> (STEP 3.3). Completed past results stand: a run either reproduced the committed
-> answer exactly or produced nothing.
+> **The description below is also wrong about *which* candidates.** Classifying the
+> committed timeout lists: of 197 timeouts, **not one** was a single-instance
+> candidate — and there were 144 `dp1` work directories available — while **18 were
+> `aggregated dp2`**, which are not P/D at all. So "every `pd_*` and `mix_*`
+> candidate" is wrong in both directions: not all of them, and not only them. The
+> discriminator is **instance count**, which is D26's (a mis-converted `.et` graph
+> breaks where collectives span more than one rank group) and not D25's. Every
+> other measurement in this work order sorts on the same axis: the two
+> single-instance `bench/examples` runs are byte-identical across the fixes, while
+> the two-instance MoE example's hash flips with `PATH`.
+>
+> **Consequence for the results.** D22's verdict was re-run on the fixed harness and
+> **holds exactly** — winner `agg[cuda:tp4]`, 2.5954323001631323 tok/J, every
+> reported field equal to the last decimal, 0 timeouts against the original 4 h 37 m
+> and 71 (`docs/d23_revalidation.md` §2). Completed past results stand: a run either
+> reproduced the committed answer byte for byte or produced nothing. The tight-TTFT
+> points are being re-run in STEP 3.3.
 
 
 > ### Diagnosed 2026-09-04 — the heading below is wrong: they do not livelock

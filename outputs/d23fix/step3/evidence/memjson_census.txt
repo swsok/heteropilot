@@ -1,0 +1,14 @@
+candidates inspected : 474
+  single-form memory config (no tmp__mem at all): 0
+  failed to compile                              : 0
+
+=== remote_mem: 474 candidates, 2 distinct content(s) ===
+  bde510e23495  x366   {"mem-bw":256.0,"mem-latency":0.0,"memory-type":"PER_NODE_MEMORY_EXPANSION","num-devices":2}
+  017c465177c2  x108   {"mem-bw":256.0,"mem-latency":0.0,"memory-type":"PER_NODE_MEMORY_EXPANSION","num-devices":1}
+  fields that vary:
+    num-devices: 2 x366, 1 x108
+
+--- verdict ---
+Candidate memory JSONs DIFFER, so the D25 race had a silent half that
+could in principle change a result. Which fields differ is listed above;
+judge each against what AnalyticalMemory does with it.

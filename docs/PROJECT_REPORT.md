@@ -455,6 +455,24 @@ fixture that deviation D16 describes.
 
 ### 4.8.7 Does heterogeneous RNGD+GPU P/D ever pay?
 
+> **TIGHT REGIME DETERMINED 2026-09-07.** The caveat below says the tight-TTFT
+> regime "was not determined by that run". It is determined now, and it flipped:
+> all four tight points are **FEASIBLE**, not infeasible, and homogeneous **cuda P/D
+> wins three of the four**. The earlier verdicts rested on 197 candidates that never
+> produced a number — a harness fault (D26: the Chakra converter ran under whatever
+> interpreter `PATH` found) rather than anything about the candidates. Re-run with
+> it fixed: **0 timeouts**, where the committed run had 71 and 126.
+>
+> **The answer to this section's question does not change.** Filtering all 424
+> cached per-candidate records against the SLO, **0 of 45 RNGD-only and 0 of 18
+> mixed** candidates clear the tight points on the tp4 fixture (0 of 12 and 0 of 25
+> on the card fixture). Heterogeneous P/D still never pays here; what changed is that
+> a tight regime exists and that P/D disaggregation itself wins in it, between two
+> `cuda` halves. `docs/d23_revalidation.md` §3.
+>
+> The loose-TTFT numbers in the caveat below are **confirmed exactly** — every
+> reported field reproduces to the last decimal on the fixed harness.
+>
 > **SUPERSEDED IN PART 2026-09-02.** Re-run with the measured TPOT optimism as a
 > feasibility margin, **every RNGD configuration is rejected on both fixtures** and
 > the loose-TTFT winner becomes `agg[cuda:tp4]` at 2.595 tok/J against the RNGD

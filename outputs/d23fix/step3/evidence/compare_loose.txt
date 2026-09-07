@@ -1,0 +1,18 @@
+note: TTFT points [500.0, 8000.0] are committed only and are skipped
+
+--- ttft <= 64000 ms
+    feasible           True                       True                       same
+    generated          496                        496                        same
+    evaluated          492                        492                        same
+    plan_id            hp-00075                   hp-00075                   same
+    arch               aggregated                 aggregated                 same
+    backend_mix        agg[cuda:tp4]              agg[cuda:tp4]              same
+    accelerators       4                          4                          same
+    tokens_per_joule   2.5954323001631323         2.5954323001631323         same
+    slo_goodput_rps    5.279963373257342          5.279963373257342          same
+    p99_ttft_ms        15070.10466225             15070.10466225             same
+    p99_tpot_ms        35.58226791                35.58226791                same
+    average_power_w    1292.5101785714285         1292.5101785714285         same
+    slo_attainment     1.0                        1.0                        same
+
+--- 0 differing field(s) across 1 shared point(s) ---

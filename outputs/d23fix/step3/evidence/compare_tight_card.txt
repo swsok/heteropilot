@@ -1,0 +1,39 @@
+
+--- ttft <= 500 ms
+    feasible           False                      True                       ** DIFFERS **
+    generated          468                        468                        same
+    evaluated          468                        468                        same
+    ** the winner exists re-run only -- the verdict changed **
+    plan_id            hp-00213
+    arch               aggregated
+    backend_mix        agg[cuda:tp2]
+    accelerators       8
+    tokens_per_joule   1.4831041715217899
+    slo_goodput_rps    6.16675747601102
+    p99_ttft_ms        389.1905765699994
+    p99_tpot_ms        37.93286148
+    average_power_w    2658.8222916666664
+    slo_attainment     1.0
+
+--- ttft <= 8000 ms
+    feasible           False                      True                       ** DIFFERS **
+    generated          468                        468                        same
+    evaluated          468                        468                        same
+    ** the winner exists re-run only -- the verdict changed **
+    plan_id            hp-00357
+    arch               pd_split
+    backend_mix        P[cuda:tp2] D[cuda:tp2]
+    accelerators       8
+    tokens_per_joule   1.77253736886083
+    slo_goodput_rps    5.565321825829883
+    p99_ttft_ms        737.6540258271316
+    p99_tpot_ms        39.895410379999994
+    average_power_w    2011.8128301886795
+    slo_attainment     1.0
+
+--- 4 differing field(s) across 2 shared point(s) ---
+The simulator is deterministic. A difference in a point that was decided
+both times is evidence of silent contamination: diff the two CSVs for
+that candidate and escalate per the work order's risk table. A point
+that changed from infeasible to decided is a different thing -- it means
+candidates that had no number now have one.
