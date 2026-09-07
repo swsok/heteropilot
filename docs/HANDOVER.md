@@ -144,15 +144,29 @@ sprint made no new numbers). It belongs in this work order, together with the
 power crossover, which is a hypothesis in the design document and not a
 measurement.
 
-**The two spikes' conclusions, for this work order to carry** (`WORK_ORDER_spikes.md`,
-run 2026-09-04):
+**Three work orders' conclusions, for this one to carry** (`WORK_ORDER_spikes.md`
+2026-09-04, `WORK_ORDER_d23_fix_revalidation.md` 2026-09-07):
 
-- **D23 (`docs/d23_spike.md`)** — the tight-TTFT candidates do not livelock; ASTRA-Sim
-  races on a fixed `tmp__mem/` path and the frontend cannot see its child die.
-  `experiments/scripts/astra_isolated.sh` makes it 64/64. **D23's original symptom is
-  still unreproduced**, so the tight-TTFT regime stays undetermined — but the reason
-  has moved from "the candidates livelock" to "the harness cannot tell a dead
-  simulator from a slow one".
+- **D23 — closed 2026-09-07** (`docs/d23_spike.md` for the spike,
+  `docs/d23_revalidation.md` for the fix and re-validation). The root cause was
+  **D26**: `graph_generator.py` invoked the Chakra converter as bare `python`, so the
+  workload graph could be built by a `chakra` with protobuf below the required
+  version, and a multi-instance run then never finished its first prefill batch.
+  18 completions of 18 with the venv first on `PATH` against 6 hangs of 6 without.
+  Fixed with `sys.executable`; **D25** (per-run cwd) and **D25-b** (dead-child
+  detection) fix the two faults the spike had found, which are real but produce
+  crashes and hangs rather than this symptom.
+  **The tight-TTFT regime is determined and it flipped**: 0 timeouts where there
+  were 71 and 126, all four points FEASIBLE, and homogeneous `cuda` P/D wins three
+  of them. D22 survives — 0 of 45 RNGD-only and 0 of 18 mixed candidates pass.
+- **D23 fix / re-validation (`docs/d23_revalidation.md`)** — the three harness
+  fixes are on `main`, and everything the faults touched has been re-run. Two things
+  to carry: **(a)** past *completed* results are trustworthy — 18 of 18 reproduce the
+  committed CSV byte for byte — but a sweep with timeouts must be read as "the best
+  of what evaluated", which is exactly how four INFEASIBLE verdicts turned out to be
+  wrong; **(b)** the tight regime now has an evaluated answer and P/D wins it
+  homogeneously, so the RPS-aware work order has a real operating point to start
+  from rather than a hole.
 - **D14 (`docs/d14_spike.md`)** — asymmetric TP per phase is representable; the
   constraint is two sites in our `config_builder.py`, not ASTRA-Sim. Verdict **go**.
   Carry over: the 24.4 % accuracy cost and its 4× per-dim `link_latency` correction

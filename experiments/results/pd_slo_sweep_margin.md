@@ -80,6 +80,52 @@ completed simulations.
 > "Tight-TTFT regime" below. The paragraph is kept because it records what was
 > reasonable to believe from a 1080 s run.
 
+## Re-validated 2026-09-07 under D25 + D26 — and the tight regime is now determined
+
+*Artifacts: `outputs/.hp-reval-margin18-*`, `outputs/.hp-reval-tight-*`. Full
+record: `docs/d23_revalidation.md`. Both sweeps re-run on `main` = `5f97108` with
+all three harness fixes, `--workers 32`, **no isolation wrapper**.*
+
+**The loose-TTFT numbers below are confirmed exactly.** Every reported field —
+winner, `tokens_per_joule` 2.5954323001631323, `p99_ttft_ms` 15070.10466225,
+`p99_tpot_ms` 35.58226791, `slo_goodput_rps`, `average_power_w`, `plan_id` —
+reproduces to the last decimal, with **0 timeouts** against the original 71 and
+4 h 37 m (now 1 h 43 m). D22's verdict stands.
+
+**The tight-TTFT rows below are superseded.** They said the regime was undetermined
+because every `pd_*`/`mix_*` candidate livelocked. Both halves of that were wrong:
+
+- The cause was **D26** — the Chakra converter ran under whatever interpreter
+  `PATH` found, and a workload graph built by the wrong one never finishes its
+  first prefill batch. Not a livelock, and nothing to do with `--timeout`.
+- The affected set was **not** `pd_*`/`mix_*`. Of 197 timeouts, **none** was a
+  single-instance candidate (144 were available) and **18 were `aggregated dp2`**.
+  The discriminator is instance count.
+
+With that fixed, **0 timeouts** and all four points **FEASIBLE**:
+
+| fixture | TTFT SLO | then | now | winner | tok/J | p99 TPOT |
+| --- | --- | --- | --- | --- | ---: | ---: |
+| card | ≤ 500 | INFEASIBLE | **FEASIBLE** | `agg[cuda:tp2]` | 1.4831 | 37.93 |
+| card | ≤ 8000 | INFEASIBLE | **FEASIBLE** | **`P[cuda:tp2] D[cuda:tp2]`** | 1.7725 | 39.90 |
+| gpu | ≤ 500 | INFEASIBLE | **FEASIBLE** | **`P[cuda:tp4] D[cuda:tp4]`** | 2.2051 | 37.27 |
+| gpu | ≤ 8000 | INFEASIBLE | **FEASIBLE** | **`P[cuda:tp4] D[cuda:tp4]`** | 2.2051 | 37.27 |
+
+The candidate this document singled out below — `P[cuda:tp4] D[cuda:tp4]` at p99
+TPOT 37.27, "×1.18 = 43.98, would pass" — does pass, at
+`p99_tpot_ms` 37.271541989999996.
+
+**RNGD is unaffected by the flip.** Filtering all 424 cached per-candidate records
+against the SLO: **0 of 45 RNGD-only and 0 of 18 mixed** candidates clear the tight
+points on the tp4 fixture, and 0 of 12 / 0 of 25 on the card fixture. What changed
+is that a tight regime exists at all, and that homogeneous **cuda P/D wins three of
+the four points** — not that heterogeneity started paying.
+
+Everything below is kept unchanged, because it records what was reasonable to
+believe from a run whose 197 candidates had no numbers.
+
+---
+
 ## Tight-TTFT regime (re-run 2026-09-03, `--timeout 1800`)
 
 *Artifacts: `outputs/pd_slo_sweep_margin18/tight/`. Ran 06:10:10Z-10:47:08Z on the

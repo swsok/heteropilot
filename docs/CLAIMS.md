@@ -75,6 +75,16 @@ evidence that it does not matter (D18, and the directive in its commit).
 | Under the measured TPOT error, **every** RNGD configuration is rejected at loose TTFT | winner becomes `agg[cuda:tp4]` at **2.595 tok/J** | sim-on-measured | `experiments/results/pd_slo_sweep_margin.md` |
 | The result does not depend on the size of the margin | the committed winner cleared the 50 ms TPOT SLO by **1.59 ms**, so **any margin above 3.3 %** rejects it | sim-on-measured | same |
 | …nor on how an RNGD accelerator is modelled | both fixtures (card-as-device and 8-PE) converge on the same A40 plan | sim-on-measured | same |
+| Those three re-validate on a harness with D25 + D26 fixed | **every reported field identical to the last decimal**, 0 timeouts where there were 71 | sim-on-measured | `docs/d23_revalidation.md` §2 |
+| The **tight** TTFT regime is feasible, and P/D disaggregation wins it | all four points FEASIBLE; `P[cuda:tp4] D[cuda:tp4]` at **2.2051 tok/J**, p99 TPOT 37.27, and `agg[cuda:tp2]` at the tightest card point | sim-on-measured | `docs/d23_revalidation.md` §3 |
+| RNGD is rejected at tight TTFT too, now measured rather than unevaluated | **0 of 45** RNGD-only and **0 of 18** mixed candidates pass (tp4 fixture); 0 of 12 and 0 of 25 (card) | sim-on-measured | same |
+| Tightening TTFT costs energy efficiency | 2.60 tok/J at 4 accelerators (loose) → 1.48–2.21 at 8 (tight) | sim-on-measured | same |
+
+**What this does not license.** The tight winners are **homogeneous** — both P/D
+halves are `cuda`. This is the first evaluated statement this repository has about
+P/D disaggregation, and it is not a statement about heterogeneity; §2's first row
+stands. And every one of these numbers is simulator output calibrated on the
+measured TPOT error, not a hardware measurement.
 
 ---
 
@@ -83,7 +93,8 @@ evidence that it does not matter (D18, and the directive in its commit).
 Stated as plainly as §1, because these are the rows a reviewer will find anyway.
 
 **No heterogeneous configuration is shown to win.** The GPU wins wherever the
-sweeps can speak at all. Two separate reasons, and neither is "we did not look":
+sweeps can speak — which, since 2026-09-07, is everywhere they were asked. Two
+separate reasons, and neither is "we did not look":
 
 - The loose-TTFT RNGD energy win was **retracted** — §3.
 - The tight-TTFT regime, where P/D disaggregation was the whole argument, is
@@ -99,6 +110,25 @@ sweeps can speak at all. Two separate reasons, and neither is "we did not look":
   bugs are unfixed upstream. The regime is still undetermined, but the reason is
   now a harness fault, not a property of the candidates. D23,
   `docs/d23_spike.md`.
+
+  **Determined 2026-09-07, and it flipped.** The root cause was neither of those:
+  `graph_generator.py` invoked the Chakra converter as bare `python`, so the
+  workload graph could be built by a `chakra` with the wrong protobuf, and a
+  multi-instance run then never finished its first prefill batch (D26). Fixed, the
+  tight sweep runs with **0 timeouts** where it had 71 and 126, and **all four tight
+  points are FEASIBLE** — homogeneous `cuda` P/D wins three of them
+  (`P[cuda:tp4] D[cuda:tp4]`, 2.2051 tok/J, p99 TPOT 37.27). So this regime is no
+  longer undetermined, and the sentence this bullet supports needs its second reason
+  restated: **it is not that the tight regime cannot speak, but that when it speaks
+  it picks a homogeneous configuration.** Filtering all 424 cached candidates
+  against the SLO: **0 of 45 RNGD-only and 0 of 18 mixed** pass on the tp4 fixture,
+  0 of 12 and 0 of 25 on the card fixture. `docs/d23_revalidation.md` §3.
+
+  Two corrections travel with that. D23's "every `pd_*`/`mix_*` candidate" was wrong
+  in both directions — of 197 timeouts **none** was single-instance and **18 were
+  `aggregated dp2`**; the discriminator is instance count. And the "regression from
+  280.6 s" was not a regression: that run and 17 others reproduce the committed CSV
+  byte for byte whenever the converter runs under the right interpreter.
 
 **The shape the industry recommends is not enumerated — but it is no longer
 unsimulable.** `A40 tp4 prefill + RNGD tp8 decode` needs asymmetric TP per phase,
