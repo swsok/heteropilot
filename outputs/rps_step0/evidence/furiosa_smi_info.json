@@ -1,0 +1,41 @@
+[
+  {
+    "arch": "rngd",
+    "dev_name": "npu0",
+    "device_uuid": "<redacted device_uuid, stable across re-enumeration \u2014 see docs/rps_step0_retro.md>",
+    "device_sn": "<redacted device_sn, stable across re-enumeration \u2014 see docs/rps_step0_retro.md>",
+    "firmware": "2026.3.0, 2d3f72a",
+    "temperature": "40.13\u00b0C",
+    "power": "38.00 W",
+    "core_clock": "2000 MHz",
+    "governor": "Performance",
+    "pci_bdf": "0000:03:00.0",
+    "pci_dev": "510:0"
+  },
+  {
+    "arch": "rngd",
+    "dev_name": "npu1",
+    "device_uuid": "<redacted device_uuid, stable across re-enumeration \u2014 see docs/rps_step0_retro.md>",
+    "device_sn": "<redacted device_sn, stable across re-enumeration \u2014 see docs/rps_step0_retro.md>",
+    "firmware": "2026.3.0, 2d3f72a",
+    "temperature": "39.64\u00b0C",
+    "power": "38.00 W",
+    "core_clock": "2000 MHz",
+    "governor": "Performance",
+    "pci_bdf": "0000:04:00.0",
+    "pci_dev": "510:20"
+  },
+  {
+    "arch": "rngd",
+    "dev_name": "npu2",
+    "device_uuid": "<redacted device_uuid, stable across re-enumeration \u2014 see docs/rps_step0_retro.md>",
+    "device_sn": "<redacted device_sn, stable across re-enumeration \u2014 see docs/rps_step0_retro.md>",
+    "firmware": "2026.3.0, 2d3f72a",
+    "temperature": "40.17\u00b0C",
+    "power": "40.00 W",
+    "core_clock": "2000 MHz",
+    "governor": "Performance",
+    "pci_bdf": "0000:45:00.0",
+    "pci_dev": "510:40"
+  }
+]
