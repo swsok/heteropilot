@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 # Run a simulator command with ASTRA-Sim's shared temp directory made private.
 #
+# NOT REQUIRED SINCE D25. The frontend now passes cwd=run_paths.inputs_root to the
+# ASTRA-Sim child, so each run's tmp__mem lands in its own tree
+# (serving/__main__.py, deviations.md D25). Keep using this wrapper only when it is
+# not certain the frontend on this node carries D25, or to contain a stray
+# AnalyticalAstra started outside the frontend -- the one case cwd= cannot cover.
+# It is also worth knowing that this wrapper never addressed D23's actual symptom:
+# that was the Chakra converter's interpreter (D26).
+#
 # WORK_ORDER_spikes.md STEP A / deviations D23. ASTRA-Sim's analytical backend
 # writes, reads and removes `tmp__mem/<name>.json` at a fixed path relative to its
 # working directory, with no pid and no run id

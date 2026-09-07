@@ -62,8 +62,13 @@ Island id convention: `{backend}-{model_slug}-{node_id}` (e.g. `cuda-h100-node0`
 1. **Do not modify upstream code** (`serving/`, `profiler/`, `bench/`, `configs/`, `astra-sim/`,
    `AGENTS.md`) before Phase 5. Per-file exceptions unlock at specific phases — work order §7.
    An early fix to `serving/core/memory_model.py` / `scheduler.py` was authorized and attempted
-   for D12, but **both attempts were wrong and have been reverted** — `serving/` is pristine.
+   for D12, but **both attempts were wrong and have been reverted**.
    Read `docs/deviations.md` D12 before trying again; it records what was tried and why it failed.
+   **`serving/` is no longer pristine.** Three edits are sanctioned and each is recorded with a
+   byte-identical regression proof: **D15** (opt-in P/D KV-transfer cost, `router.py` +
+   `__main__.py`), **D25** (`cwd=run_paths.inputs_root` on the ASTRA-Sim `Popen`), and **D26**
+   (`sys.executable` for the Chakra converter — this one is what D23 actually was). Nothing else
+   in `serving/` may change without a work order that names the file.
 2. **Never mix backends in one TP group.** Candidate generation must exclude such configs automatically.
 3. **Never invent hardware numbers.** Values with no measurement get `source: placeholder` in the
    profile file. Never label unmeasured data as measured, and never claim results from hardware
@@ -91,9 +96,11 @@ node.** Any statement in a committed file about what hardware is present is true
 at most one of them. This section used to *be* such a statement, and it is why a
 session once opened on a box with eight A40s while reading "no NVIDIA GPU at all".
 
-**Hostname does not discriminate.** Every node reports `s8` on kernel
-5.4.0-216-generic. The only incidental difference in committed provenance is the
-CPU count (A40 64, NPU 96). Do not key off `hostname`.
+**Hostname does not discriminate.** It has read `s8` on kernel 5.4.0-216-generic
+and, as of 2026-09-07 on the NPU node, `etri-001` — so it changes *and* it does not
+identify the node. Do not key off `hostname` in either direction: recognising a
+familiar one is as misleading as recognising an unfamiliar one. The only incidental
+difference in committed provenance is the CPU count (A40 64, NPU 96).
 
 So the first command of a session on an unfamiliar checkout is:
 
@@ -215,11 +222,23 @@ python -m bench validate  # bench vs sim comparison (works offline against commi
 ```
 
 Use `--run-id` / `--inputs-root` for concurrent candidate evaluation — each run gets an isolated
-ASTRA-Sim input root. **That isolation is not sufficient:** ASTRA-Sim's analytical backend also
-writes a fixed, cwd-relative `tmp__mem/*.json`, which no flag reaches, so concurrent runs race and
-some die at startup (13 of 64 in measurement). The frontend then spins instead of reporting it.
-Read D23 before running anything in parallel, and wrap it in
-`experiments/scripts/livelock_watch.sh`.
+ASTRA-Sim input root. Since **D25** that isolation is sufficient again: the frontend gives the
+ASTRA-Sim child `cwd=run_paths.inputs_root`, so the cwd-relative `tmp__mem/*.json` that no flag
+reaches now lands inside the run's own tree. Before D25, concurrent runs raced on one shared copy
+and 13 of 64 died at startup while the frontend spun instead of reporting it.
+`experiments/scripts/astra_isolated.sh` is kept as a second line of defence, no longer required.
+
+**Run the simulator with `.venv/bin` first on `PATH`, or through `.venv/bin/python`.** Before
+**D26** `serving/core/graph_generator.py` invoked the Chakra converter as bare `python`, and this
+node has a second `chakra` beside protobuf 6.33.1 — below the `>=7.35.1` the *Environment* section
+requires. The same trace then converted to different `.et` bytes and P/D runs hung with D23's
+signature: 6 of 6 hung that way against 18 of 18 completing with the venv first. D26 fixes the
+frontend, but a mis-provisioned venv would reintroduce it, which is what
+`tests/test_chakra_interpreter.py` guards.
+
+Wrap long or parallel runs in `experiments/scripts/livelock_watch.sh` regardless — it ends a
+provably stuck run in seconds instead of at the timeout ceiling, and separates a tick stall
+(exit 3) from a child that never reported or went quiet (exit 4).
 
 Never write simulator output into `bench/examples/` or over `outputs/example_*` — those are
 upstream tracked files, and `bench/examples/run.sh` overwrites them in place. Redirect to

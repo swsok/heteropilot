@@ -545,7 +545,25 @@ def main():
         astra_args.append("--end-npu-ids="+end_npu_ids)
     if network_backend == 'ns3':
         astra_args.append("--logical-topology-configuration="+astra_sim+"/inputs/logical_topology/logical_8nodes_1D.json")
-    p = subprocess.Popen(astra_args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+    # cwd: ASTRA-Sim's analytical backend writes, reads and removes
+    # tmp__mem/<name>.json at a path relative to its working directory, with no pid
+    # and no run id (congestion_unaware/main.cc:28, three times per start). Without
+    # this argument every concurrent simulation shares one such directory and they
+    # delete each other's file (deviations.md D25). Every *path argument* is already
+    # absolute -- the binary via os.path.join(astra_sim, ...), the four
+    # configurations via run_paths.py's abspath -- so one argument is enough. The
+    # child's cwd is used for one other thing, harmlessly: spdlog's rotating
+    # log/log.log and log/err.log (common/Logging.cc:48-58) now land in the run's
+    # own tree and go away with --cleanup-inputs.
+    #
+    # stderr to a file, not a pipe (D25-b). Nothing ever read the pipe, so the one
+    # line that explained a failure died with it -- and a full 64 KB pipe buffer
+    # would block the child outright. Controller._stderr_hint quotes this file when
+    # it raises, and the path is carried on the Popen object for it.
+    astra_stderr_path = os.path.join(run_paths.inputs_root, "astra_stderr.log")
+    astra_stderr = open(astra_stderr_path, "w", encoding="utf-8")
+    p = subprocess.Popen(astra_args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=astra_stderr, universal_newlines=True, cwd=run_paths.inputs_root)
+    p.astra_stderr_path = astra_stderr_path
 
     # DP group synchronization: defer trace generation until all members have scheduled
     # dp_groups maps dp_group_name -> list of instance_ids
