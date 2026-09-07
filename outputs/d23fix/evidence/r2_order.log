@@ -1,0 +1,8 @@
+ORDER START 2026-09-07T01:24:00Z
+-- phase A: R2 alone, twice
+R2 aloneA         exit=0 elapsed=325s rows=301 tick1=4447.0
+R2 aloneB         exit=0 elapsed=334s rows=301 tick1=4447.0
+-- phase B: R1 then R2
+R1 pre_r1         exit=0 elapsed=156s rows=301
+R2 afterR1        exit=0 elapsed=333s rows=301 tick1=4447.0
+ORDER DONE 2026-09-07T01:43:08Z

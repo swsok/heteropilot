@@ -1,0 +1,8 @@
+PATHEXP START 2026-09-07T01:57:29Z
+-- venv chakra (protobuf 7.36.0)
+venv_a         exit=0   elapsed= 327s rows=301  tick1=4447.0
+venv_b         exit=0   elapsed= 327s rows=301  tick1=4447.0
+-- ~/.local chakra (protobuf 6.33.1)
+local_a        exit=3   elapsed=   5s rows=0    tick1=0.0
+local_b        exit=3   elapsed=   6s rows=0    tick1=0.0
+PATHEXP DONE 2026-09-07T02:08:34Z

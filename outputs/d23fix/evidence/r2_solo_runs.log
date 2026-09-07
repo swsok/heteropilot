@@ -1,0 +1,12 @@
+INC START 2026-09-04T11:28:34Z
+run1   exit=0    elapsed= 330s rows=301  ticks=51     tick1='Avg prompt throughput: 4447.0' sha=fff63c22d69dd8c1
+run2   exit=0    elapsed= 330s rows=301  ticks=51     tick1='Avg prompt throughput: 4447.0' sha=fff63c22d69dd8c1
+run3   exit=0    elapsed= 332s rows=301  ticks=51     tick1='Avg prompt throughput: 4447.0' sha=fff63c22d69dd8c1
+run4   exit=0    elapsed= 328s rows=301  ticks=51     tick1='Avg prompt throughput: 4447.0' sha=fff63c22d69dd8c1
+run5   exit=0    elapsed= 332s rows=301  ticks=51     tick1='Avg prompt throughput: 4447.0' sha=fff63c22d69dd8c1
+run6   exit=0    elapsed= 335s rows=301  ticks=51     tick1='Avg prompt throughput: 4447.0' sha=fff63c22d69dd8c1
+run7   exit=0    elapsed= 332s rows=301  ticks=51     tick1='Avg prompt throughput: 4447.0' sha=fff63c22d69dd8c1
+run8   exit=0    elapsed= 341s rows=301  ticks=51     tick1='Avg prompt throughput: 4447.0' sha=fff63c22d69dd8c1
+run9   exit=0    elapsed= 332s rows=301  ticks=51     tick1='Avg prompt throughput: 4447.0' sha=fff63c22d69dd8c1
+run10  exit=0    elapsed= 327s rows=301  ticks=51     tick1='Avg prompt throughput: 4447.0' sha=fff63c22d69dd8c1
+INC DONE 2026-09-04T12:23:53Z

@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sys
 from time import time
 from .request import *
 from .logger import get_logger
@@ -27,8 +28,16 @@ def generate_graph(batch, hardware, num_npus, node_id=0, instance_id=0, npu_offs
     workload_dir = os.path.dirname(output_path)
     os.makedirs(workload_dir, exist_ok=True)
 
+    # sys.executable, not 'python' (deviations.md D26). The bare name resolves
+    # through PATH, so which interpreter converts the workload depends on the
+    # caller's environment. On a node with a second chakra install this silently
+    # produces different .et bytes for the same trace -- measured -- and a P/D
+    # simulation then never finishes its first prefill batch: prefill pinned at one
+    # request, decode never fed, memory flat, the simulated clock racing. That is
+    # D23's symptom. The frontend is already running under the right interpreter,
+    # so sys.executable is the one that must do the conversion.
     cmd = [
-        'python', '-m', 'chakra.src.converter.converter', 'LLM',
+        sys.executable, '-m', 'chakra.src.converter.converter', 'LLM',
         '--input', trace_path,
         '--output', output_path,
         '--num-npus', str(num_npus),

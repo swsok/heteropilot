@@ -1265,7 +1265,36 @@ margin at 43.98. That regime needs a re-run at 1800 s. The loose-TTFT finding is
 unaffected: zero RNGD candidates timed out on the card fixture.
 ---
 
-## D23 — The P/D tight-TTFT candidates livelock: prefill pinned at one request, decode never fed · **Open (blocks the tight-TTFT regime)**
+## D23 — The P/D tight-TTFT candidates livelock: prefill pinned at one request, decode never fed · **Resolved 2026-09-07 (harness faults: D26 explains the symptom, D25 the crashes)**
+
+> ### Root-caused 2026-09-07 — it was the Chakra converter's interpreter (D26)
+>
+> `WORK_ORDER_d23_fix_revalidation.md`. The symptom recorded below — prefill
+> holding one request, decode never fed, memory flat, the simulated clock
+> advancing — is produced by `serving/core/graph_generator.py` invoking the
+> workload converter as bare **`python`**. Which interpreter builds the `.et`
+> graph then depends on `PATH`, and on this node the two candidates carry
+> different `chakra`/`protobuf` pairs (6.33.1 against the `>= 7.35.1` CLAUDE.md
+> requires). The same trace converts to **different `.et` bytes**, and a P/D
+> simulation built from the wrong ones never finishes its first prefill batch.
+>
+> Holding everything else constant and varying only `PATH`: **18 runs completed
+> with the venv first — every CSV `sha256`-equal to the committed `sim1.csv` — and
+> 6 hung with `~/.local` first.** No exceptions. Fixed by one token,
+> `sys.executable`; see **D26** for the full record and for the five hypotheses
+> refuted on the way, one of which was D25's own edit.
+>
+> **Two separate harness faults, not one.** D25's `tmp__mem` race is real and kills
+> 13 of 64 concurrent processes, but it produces *crashes*, and the spike showed it
+> was not masking this. D26 produces this. The heading below was wrong in both of
+> its claims: the candidates do not livelock, and the failure is not a property of
+> the candidates.
+>
+> **Consequence for the results.** The tight-TTFT timeouts (71 of 222 and 126 of
+> 252) are suspect as an environment artifact and are being re-run under D26
+> (STEP 3.3). Completed past results stand: a run either reproduced the committed
+> answer exactly or produced nothing.
+
 
 > ### Diagnosed 2026-09-04 — the heading below is wrong: they do not livelock
 >
@@ -1438,3 +1467,161 @@ the planner never grew a code path that reads the files.
 place to put them back is `profiles/networks/`, and the values are recoverable
 from `planner/topology.py` or from the split repo. Nothing about this removal
 forecloses that; it removes an unread duplicate, not a capability.
+
+---
+
+## D25 — ASTRA-Sim's cwd-relative temp file: the frontend gives each run its own working directory · Resolved (second sanctioned `serving/` edit)
+
+**Context.** `WORK_ORDER_d23_fix_revalidation.md` STEP 1. D23's spike measured that
+ASTRA-Sim's analytical backend writes, reads and removes `tmp__mem/<name>.json` at
+a path relative to its working directory, with no pid and no run id
+(`congestion_unaware/main.cc:28`, three times per start for `local_mem`,
+`remote_mem`, `cxl_mem`). The frontend chdirs into `astra-sim/`
+(`__main__.py:198-199`), so every concurrent simulation shared one such directory
+and they deleted each other's file: **13 of 64** bare `AnalyticalAstra` processes
+launched together died, five with `Unable to open file: tmp__mem/remote_mem.json`
+and eight with SIGABRT. `--run-id` / `--inputs-root` isolate the *input tree*;
+`tmp__mem/` is outside it and no flag reaches it.
+
+**The edit** is one argument at `serving/__main__.py`'s `Popen`:
+`cwd=run_paths.inputs_root`. `serving/core/controller.py` and everything else are
+untouched. The root cause is in `astra-sim/`, which absolute rule 1 forbids
+touching before Phase 5; it is reported upstream in
+`docs/upstream_issues/astra-sim-tmp-mem-race.md` (unfixed at head, and astra-sim
+has zero open issues).
+
+**Why one argument is enough — with a correction to the work order.** §1.2 of the
+work order says the child's cwd "is used for nothing except `tmp__mem`". That is
+not quite true. Every *path argument* is indeed already absolute, and
+`tests/test_astra_cwd.py` asserts it: the binary via `os.path.join(astra_sim, …)`,
+and the four configurations via `run_paths.py`'s `abspath` (`astra_sim` itself is
+computed at `__main__.py:198`, one line **before** the `chdir`, so it is absolute).
+But ASTRA-Sim's logger also writes **cwd-relative** `log/log.log` and `log/err.log`
+via spdlog rotating sinks, 10 MB × 10 files each (`common/Logging.cc:48-58`) —
+which is why `astra-sim/log/` had grown past 100 MB. After this edit those logs
+follow the run into its own tree and `--cleanup-inputs` removes them with it. So
+the accurate statement is not "the cwd is used for nothing else" but **"the only
+other use is the debug log, and moving it is harmless and in fact tidier"**.
+
+**Regression anchors.** R1 — the three `bench/examples/` runs — is byte-identical
+across the edit (`dd0eca3f…`, `a0563bc7…`, `0b548376…`). R2, the completed P/D
+candidate, is byte-identical too, but only once D26 below was also fixed; before
+that it could not be made to complete at all under an unlucky `PATH`.
+
+**`experiments/scripts/astra_isolated.sh` is no longer required** and says so at
+the top. It is kept as a belt-and-braces measure for a node where it is not certain
+the running frontend carries D25, and because it is the only mechanism that also
+covers a *stray* ASTRA-Sim process started outside the frontend.
+
+**One consequence worth knowing.** `_cleanup_inputs_root` (`__main__.py:86-96`)
+removes the tree only on the success path and only when `inputs_root` is under
+`astra-sim/inputs/runs/`. A timed-out or crashed run therefore leaves its inputs —
+and now its `tmp__mem/` and `log/` — behind. Measured on this node: **239 of 284**
+leftover run directories, 15 GB, all from the timed-out `pd_*`/`mix_*` sweep
+candidates. That is not new to D25, but D25 makes those directories slightly
+larger.
+
+## D26 — the Chakra converter ran under whatever `python` PATH found, and that is what D23 actually was · Resolved (third sanctioned `serving/` edit)
+
+**This is D23's root cause.** `docs/d23_spike.md` closed with D23's original
+symptom — 52,903 progress ticks, prefill pinned at one running request, decode
+never fed, memory flat — recorded as **not reproduced and unexplained**. It is
+explained here, and the explanation is not the `tmp__mem` race of D25.
+
+**The defect.** `serving/core/graph_generator.py` built the workload-conversion
+command as
+
+```python
+cmd = ['python', '-m', 'chakra.src.converter.converter', 'LLM', …]
+subprocess.run(cmd, cwd=chakra, text=True, check=True)
+```
+
+`'python'` is resolved through `PATH`, so **which interpreter converts the
+ASTRA-Sim workload graph depends on the environment of whoever launched the
+simulator** — not on the interpreter the frontend is running under.
+
+On this node the two candidates are not equivalent:
+
+| resolved `python` | `chakra` | `protobuf` | CLAUDE.md requires `>= 7.35.1` |
+| --- | --- | ---: | --- |
+| `.venv/bin/python` | `.venv/lib/…/chakra` | 7.36.0 | satisfied |
+| `~/.local/bin/python` | `~/.local/lib/…/chakra` | **6.33.1** | **not satisfied** |
+
+CLAUDE.md already carries `uv pip install "protobuf>=7.35.1"` with the reason
+"Chakra gencode 7.35.1 needs it". The second install silently violates it.
+
+**Measured, end to end.** The same trace converted by the two interpreters produces
+**different `.et` bytes** (`llm.0.et` … `llm.3.et` all differ). A P/D simulation
+built from the wrong ones never completes its first prefill batch — prompt
+throughput `0.0` at the very first tick, prefill holding one request, decode at
+zero, memory flat, the simulated clock racing. Holding the input, the cluster
+config, the binary and `serving/` constant and varying **only** `PATH`:
+
+| `PATH` order | runs | outcome |
+| --- | ---: | --- |
+| `.venv/bin` first | 18 | **18 completed**, every CSV `sha256` = the committed `sim1.csv` |
+| `~/.local/bin` first | 6 | **6 hung**, all with D23's signature |
+
+No exceptions in either direction. The two-each controlled pair is
+`outputs/d23fix/pathexp/`.
+
+**Why it looked intermittent for a month.** Nothing in the failure mentions the
+converter, the interpreter or protobuf. The frontend reports a slow simulation, and
+the only visible remedy is a longer timeout. Whether a given run hit it depended on
+the `PATH` of the shell, the script or the scheduler that launched it — so the same
+candidate completed in one sweep and timed out in the next, which reads exactly
+like a regression in the candidate. D23 recorded it as "a fall of at least 12.8×
+into non-termination".
+
+**The edit** is one token: `sys.executable` in place of `'python'`. The frontend is
+already running under the interpreter that has the correct `chakra`, so it is the
+one that must do the conversion. `tests/test_chakra_interpreter.py` asserts the
+command names `sys.executable` and, separately, that this interpreter's `chakra`
+and `protobuf` actually satisfy the requirement — because `sys.executable` is only
+the right answer if the venv is correctly provisioned, and otherwise the fix would
+move the failure rather than remove it.
+
+**Scope.** The work order's rule A3′ permitted only the two edits of D25. This
+third file was approved explicitly by the user on 2026-09-07 after the diagnosis,
+because the two permitted edits do not fix D23 and D25's own R2 anchor could not be
+established without it.
+
+**What this changes elsewhere.**
+
+- **D23's heading is wrong twice over.** The candidates do not livelock (the spike
+  established that) *and* the tight-TTFT timeouts are not a property of the
+  candidates at all.
+- **The tight-TTFT regime's 71/126 and 126/252 timeouts are suspect as an
+  environment artifact.** If those sweeps ran without the venv first on `PATH`,
+  re-running them under D26 should simply complete. That is
+  `WORK_ORDER_d23_fix_revalidation.md` STEP 3.3, and its character changes from
+  "settle an open question" to "re-run and read off the answer".
+- **Completed past results stay trustworthy.** Every one of the 18 completions
+  reproduced the committed `sim1.csv` byte for byte, which is the evidence STEP 3.1
+  was designed to obtain. A run either produced the right answer or produced none.
+- **Upstream should have this.** `graph_generator.py` is upstream code; the bug is
+  upstream's. Note upstream's own head has since replaced this subprocess with an
+  in-process call (`fa6fbde`, "Run the Chakra converter in-process instead of
+  per-batch subprocess"), which removes the defect as a side effect — so the fix
+  to report is "you already fixed this; it bites everyone still on 2c2042ce".
+
+**An independent confirmation, arrived at by way of a retraction.** STEP 0 of this
+work order reported that the committed `bench/examples/Qwen3-30B-A3B` baseline was
+stale, on the evidence that three reruns agreed with each other and disagreed with
+it — and even offered a cause (upstream `c4edd0a` landed after the baseline
+refresh, and the MoE example is the only one with two non-DP instances). **That was
+wrong.** Under D26 the same example reproduces the committed `7d0ff3ce…` four times
+out of four; the three agreeing runs agreed because none of them had `.venv/bin`
+first on `PATH`. The MoE example is the only single-node example that goes through
+the multi-instance path, so its hash flips with the interpreter exactly as the P/D
+anchor's does — which makes it the sharpest of the three anchors and, incidentally,
+the reason `docs/phase0_formats.md` §2.1 and CLAUDE.md's "safe regression anchor"
+were right all along. The reasoning error is worth keeping: *reruns agreeing with
+each other says nothing when they share an environment defect.*
+
+**Five hypotheses were refuted before this one**, and they are recorded because
+each cost a run: `link_bw` 35.0 vs 35.2 (both complete solo); `AnalyticalMemory`
+racing its own `std::remove` (the constructor reads eagerly); **D25-a's own
+`cwd=` edit** (reverting it changed nothing); orphaned ASTRA-Sim processes from a
+killed launch (a clean process table still hung); and dependence on which run
+preceded (`R1 → R2` completes).

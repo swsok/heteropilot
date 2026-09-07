@@ -1,0 +1,12 @@
+=== anchors 'after_d25_d26' — 2026-09-07T02:35:07Z — 60c6d22 ===
+r1_Llama-3.1-8B attempt=1 exit=0 elapsed=156s rows=301
+r1_Qwen3-32B attempt=1 exit=1 elapsed=46s rows=0 -- retrying
+r1_Qwen3-32B attempt=2 exit=0 elapsed=209s rows=301
+r1_Qwen3-30B-A3B-Instruct-2507 attempt=1 exit=0 elapsed=249s rows=301
+r2_pd_a40tp4 attempt=1 exit=0 elapsed=329s rows=301
+--- SHA256SUMS ---
+dd0eca3fda903e544c88f190ee80d68005727559971153566db40bed48e85fa4  r1_Llama-3.1-8B.csv
+7d0ff3cee6a973bafdc6d79f11575dbefe51c6f0766ff44838608ed3723b0dbd  r1_Qwen3-30B-A3B-Instruct-2507.csv
+a0563bc75d0b136f8231ee09c25439b17045b7e65ac19b3e829d1fb402311efd  r1_Qwen3-32B.csv
+fff63c22d69dd8c1491c9c6b40ebf4e9c51bdc7aff74718f220406eb69981e98  r2_pd_a40tp4.csv
+=== done 2026-09-07T02:51:36Z — FAILED=0 ===

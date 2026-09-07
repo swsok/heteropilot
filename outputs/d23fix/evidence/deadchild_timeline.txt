@@ -1,0 +1,18 @@
+machine idle at 02:51:57
+child pid=1745958 (selected by run id, not by name)
+killed at 02:52:08
+frontend exited rc=1 after 1s
+--- how it reported it ---
+    return _run_code(code, main_globals, None,
+  File "/usr/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/home/swsok/heteropilot/serving/__main__.py", line 1102, in <module>
+    main()
+  File "/home/swsok/heteropilot/serving/__main__.py", line 589, in main
+    out = controller.read_wait(p)
+  File "/home/swsok/heteropilot/serving/core/controller.py", line 81, in read_wait
+    self._check_child_alive(p, empty_reads, "read_wait")
+  File "/home/swsok/heteropilot/serving/core/controller.py", line 45, in _check_child_alive
+    raise AstraSimChildDied(
+serving.core.controller.AstraSimChildDied: ASTRA-Sim exited with code -9 while the frontend was waiting in read_wait(). The child's stderr at /home/swsok/heteropilot/astra-sim/inputs/runs/deadchild2/astra_stderr.log is empty.
+DEMO2 DONE rc=1

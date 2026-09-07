@@ -1,0 +1,5 @@
+=== anchors 'before' — 2026-09-04T08:44:35Z — 60c6d22 ===
+R1 Llama-3.1-8B exit=0 elapsed=175s rows=301
+R1 Qwen3-32B exit=0 elapsed=211s rows=301
+R1 Qwen3-30B-A3B-Instruct-2507 exit=0 elapsed=250s rows=301
+R2 pd_a40tp4 exit=143 elapsed=6836s rows=-
