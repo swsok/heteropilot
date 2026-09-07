@@ -219,6 +219,41 @@ Not RNGD's standing. **The existence of the tight regime.**
   costs efficiency, which is the shape `docs/rps_aware_planning_design.md` argues
   for and the first time it has been measured at these points.
 
+## §3.5 — The 64-way concurrency proof STEP 1 asked for
+
+3.2 and 3.3 ran 424 simulations at 32 workers with no failures, but that is
+circumstantial: different candidates start and finish at different moments, so they
+rarely touch `tmp__mem` at the same instant. STEP 1 asked for the spike's own H6
+harness instead — **64 concurrent runs on identical input**, one `--run-id` each,
+**no `astra_isolated.sh`** — which is the condition that lost 4 of 64 twice, and
+under which 13 of 64 bare `AnalyticalAstra` processes died outright.
+
+```
+=== H6 64-way, no isolation wrapper — 2026-09-07, main=e111ba3 ===
+mid-flight, with 64 children live
+  shared astra-sim/tmp__mem  : 0 entries        (must be 0)
+  per-run tmp__mem present   : 64 of 64
+after
+  completed 301-row CSVs     : 64 of 64
+  distinct sha256 across runs: 1                (must be 1)
+  that sha                   : fff63c22d69dd8c1
+  committed reference        : fff63c22d69dd8c1
+  shared astra-sim/tmp__mem  : 0 entries
+  leftover per-run tmp__mem  : 0                (cleanup removed them)
+```
+
+Three things are established rather than inferred. **64 of 64 complete** without the
+wrapper. **All 64 produce one hash**, equal to the committed `sim1.csv` — so
+concurrency changes the result as well as not killing it. And the mid-flight
+snapshot shows the mechanism directly: the shared directory stays empty while 64
+private copies exist, which is what D25-a's one argument does and the only check
+that observes it rather than deducing it.
+
+`experiments/scripts/astra_isolated.sh` is now formally redundant, as its header
+says. It is kept for a node where it is not certain the frontend carries D25, and
+for a stray `AnalyticalAstra` started outside the frontend — the one case `cwd=`
+cannot reach.
+
 ## §4 — Disposition of the §1.3 table
 
 | result | work order's disposition | outcome |
