@@ -131,12 +131,25 @@ not a gap to paper over.
 
 ## 2. Next work, in priority order
 
-### 2.1 `WORK_ORDER_rps_aware.md` — **not yet written**, any node to draft
+### 2.1 `WORK_ORDER_rps_aware.md` — **written, rev 2 (2026-09-08); STEP 0, 1, 1.5 done**
 
-The first priority is a work order, not a run. `docs/rps_aware_planning_design.md`
-is the design; it argues that performance is a curve over the operating point, not
-a scalar, and that the planner currently conflates requested with served
-concurrency — the conflation that produced D22.
+`docs/rps_aware_planning_design.md` is the design; it argues that performance is a
+curve over the operating point, not a scalar, and that the planner currently
+conflates requested with served concurrency — the conflation that produced D22.
+
+**rev 2 rewrote E6a's cost model and removed its main lever.** The original estimate
+was ~60 h from a 10 rps per-point figure; the RPS axis is not six equal points, and
+measured multipliers (3.3 rps **2.63×**, 1 rps **10.32×**, axis weight **21.4×**) put
+it at **218 h**. D27 cuts that to ~140 h, and `--top-k 20` — the planned reduction,
+citing §4.7's regret-0 curve — **is not usable**: it is false-infeasible on two of
+three P/D corpora (D30), and the obvious repair breaks the third, so no ranker change
+was made. rev 2's E6a therefore drops top-K and buys the time elsewhere: **64 workers,
+knob fixing per `(fixture, arch, backend_mix)` from the 10 rps results, and RPS
+{1, 3.3, 10, 20}** — about **10 h**, with the knob fixing labelled a heuristic and its
+regret measured at the 1 rps point. RNGD-bearing configurations keep all six knobs,
+because which knob survives at low load is the question E6 exists to answer. rev 2
+also starts **STEP 3 in parallel with STEP 2**, since the hardware measurement is
+independent of the code.
 
 **Deliberately not done in the consolidation sprint**: the low-load end of the
 RNGD envelope is unmeasured, and measuring it was explicitly out of scope (that

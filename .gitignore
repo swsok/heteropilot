@@ -95,6 +95,12 @@ outputs/perf/*.html
 outputs/perf/*.json
 outputs/perf/*.csv
 outputs/perf/*.jsonl
+# The top-k EnvelopeCache corpora ARE the evidence -- 180 vs 12 entries is what
+# makes "8.1x faster because it simulated 12 of 180" checkable, and they replay
+# through `exp_surrogate.py --cache-dir` (D30). The patterns above are one level
+# deep and so do not reach them; say so, rather than leave it to glob depth.
+!outputs/perf/topk/cache_full/*.json
+!outputs/perf/topk/cache_topk20/*.json
 
 # exp_surrogate replay runs regenerate from the corpora they name; keep the
 # summaries, not the per-run workload traces.

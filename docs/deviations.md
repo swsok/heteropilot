@@ -1755,3 +1755,63 @@ resolve, so the PATH hazard is gone by construction; what replaces it is an
 `ImportError` at first conversion if the venv lacks chakra. That is the strictly better
 failure — this venv has `ENABLE_USER_SITE = False` and no `~/.local` on `sys.path`, so
 there is no wrong-version fallback to silently succeed with.
+
+## D30 — the roofline surrogate's proxy is invariant to TP and DP, so top-K is not a cost lever on P/D or heterogeneous corpora · Open (measured, not fixed)
+
+*D28 and D29 are reserved for `WORK_ORDER_rps_aware.md` STEP 2 and STEP 4.*
+
+Full measurement in `docs/surrogate_topk_regret.md`; this entry records the
+divergence and what it forbids.
+
+**What the work order assumed.** §E6a planned to cut a 218 h sweep with
+`--top-k 20`, citing §4.7's *"regret 0 at every K down to K=1"*. STEP 1 found the
+same setting turning a FEASIBLE plan INFEASIBLE on `pd-rngd-gpu`.
+
+**The divergence.** `AnalyticalRooflineRanker` orders by `greedy.estimate`'s proxy
+tok/J, and that quantity cancels exactly across the parallelism axis:
+
+```
+throughput = Σ active/step_s × dp_replicas      step_s = (W/tp + a·K/tp) / BW
+power      = Σ active_power × tp × dp
+```
+
+Both scale with `tp · dp`. Measured across seven tp/dp configurations on one
+accelerator, the proxy tok/J spread is **0.000463** (s32) and **0.001848** (s128);
+`dp1` through `dp4` agree to six decimals. The ranker discriminates on accelerator
+and `max_num_seqs` and on nothing else — while on this fixture parallelism is what
+decides feasibility (`tp4-dp1` 49.40 ms against a 50 ms TPOT SLO, `tp2-dp2`
+53.47 ms).
+
+The one parallelism-sensitive term, `roofline_tpot_ms`, feeds only a binary
+`likely_infeasible` flag, and that flag fired for **0 of 324** candidates: the floor
+underestimates simulated p99 TPOT by a median **2.92×** (1.77–11.26×, n=180). So the
+ordering is decided by the fifth significant digit of a near-constant.
+
+**What it forbids.** `--top-k` is not used as a cost lever on P/D or heterogeneous
+sweeps. The shipped ranker is false-infeasible at K=20 on two of three corpora
+(N=324, 492, 468). K=30 is clean on all three, but three fixtures do not license a
+threshold and they were swept under different SLO margins.
+
+**Why nothing was changed.** Ordering by the roofline floor instead fixes those two
+corpora and **breaks the third**, where the shipped ranker is already perfect at
+K=10. Adopting it would repeat precisely the error being corrected here — a ranker
+justified on the fixtures where it happens to win. The alternative orderings live in
+`exp_surrogate.py --rankers` so the comparison is reproducible, and none is the
+default.
+
+**Two harness defects fixed while measuring this**, both in
+`experiments/scripts/exp_surrogate.py`:
+
+- `--cache-dir` replays an existing `EnvelopeCache` corpus, so a past sweep's
+  simulations can answer a regret question without re-running. A candidate absent
+  from the corpus stays in the ranking and yields no plan — the cache stores only
+  `result.ok`, so absent means simulated-and-failed, and it did consume a top-K slot.
+  Dropping such candidates instead (the first attempt) deleted exactly the high-ranked
+  ones that deliver nothing and reported the shipped ranker as fine at K=20,
+  contradicting the observed run.
+- **Regret was `None` for every minimisation objective.** `pareto.objective_value`
+  negates minimisation objectives so callers can always maximise; the regret formula
+  divided by the *signed* value behind an `oracle_value > 0` guard that was therefore
+  never true. The denominator is now `abs(oracle_value)`. The published curve is
+  unaffected — its oracle value is +1.660, which only
+  `maximize_slo_goodput_per_joule` can be.
