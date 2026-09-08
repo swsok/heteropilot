@@ -95,3 +95,8 @@ outputs/perf/*.html
 outputs/perf/*.json
 outputs/perf/*.csv
 outputs/perf/*.jsonl
+
+# exp_surrogate replay runs regenerate from the corpora they name; keep the
+# summaries, not the per-run workload traces.
+outputs/exp_surrogate/**/workload.jsonl
+outputs/exp_surrogate/**/sims/
