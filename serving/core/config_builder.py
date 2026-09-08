@@ -180,6 +180,20 @@ def _resolve_dp_groups(all_instances):
     if len(network_dims) > 1:
         local_dim = [True] + [False] * (len(network_dims) - 1)
 
+    # The other half of the D28 constraint: the `auto` path gives every instance
+    # the SAME local_dim, which is what makes a mixed half-slab / full-slab layout
+    # impossible. Under slab3d each instance gets its own.
+    if _topology_mode(all_instances) == "slab3d":
+        _, slab_tp_dims = _slab3d_dims_and_tp_dims(all_instances)
+        for inst, tp_dim in zip(all_instances, slab_tp_dims):
+            if inst.get("dp_group") is None:
+                inst["dp_group_size"] = 1
+                inst["local_ep"] = inst["ep_size"]
+                inst["ep_total"] = inst["ep_size"]
+                inst["tp_dim"] = tp_dim
+                inst["ep_dim"] = tp_dim if inst["ep_size"] > 1 else None
+        return
+
     for inst in all_instances:
         if inst.get("dp_group") is None:
             inst["dp_group_size"] = 1
@@ -189,8 +203,105 @@ def _resolve_dp_groups(all_instances):
             inst["ep_dim"] = local_dim if inst["ep_size"] > 1 else None
 
 
+
+#: Asymmetric TP per phase (deviations.md D28, formalising the D14 spike).
+#:
+#: The simulator never forbade `tp_d = 2 * tp_p`; `_compute_network_dims` did, by
+#: folding every instance into `[npus_per_group, num_instances]` with one integer
+#: division and then giving them all the same `local_dim`. `topology_mode` is read
+#: from the cluster config's top level and carried on the instances, so the three
+#: `_compute_network_dims` call sites keep their signatures.
+#:
+#:   "auto"   -- default, and what an absent key means. Unchanged, byte-identical.
+#:   "slab3d" -- `[g, 2, n_slabs]`. A tp=g instance takes half a slab and a tp=2g
+#:               one takes a whole slab, so `tp_d = 2 * tp_p` costs no idle rank.
+TOPOLOGY_MODE_KEY = "topology_mode"
+VALID_TOPOLOGY_MODES = ("auto", "slab3d")
+
+
+def _slab3d_dims_and_tp_dims(instances):
+    """`[g, 2, n_slabs]` plus one `tp_dim` per instance, or raise.
+
+    A prefill instance occupies `2 * tp` ranks (compute + sender), which is why a
+    prefill tp=g fills a whole slab while a colocated or decode tp=g fills half.
+    """
+    def rank_width(inst):
+        return inst["num_npus"] * (2 if inst.get("pd_type") == "prefill" else 1)
+
+    if any(inst.get("ep_size", 1) > 1 for inst in instances):
+        raise ValueError(
+            "slab3d: MoE/EP instances are out of scope -- an expert-parallel "
+            "ALLTOALL does not map onto the [g, 2, n] grid"
+        )
+
+    g = min(inst["tp_size"] for inst in instances)
+    widths = [rank_width(inst) for inst in instances]
+    for inst, w in zip(instances, widths):
+        if w not in (g, 2 * g):
+            raise ValueError(
+                f"slab3d: instance {inst.get('instance_id')} occupies {w} ranks; "
+                f"only {g} (half slab) or {2 * g} (full slab) fit the [g, 2, n] grid"
+            )
+    if sum(1 for w in widths if w == g) % 2 != 0:
+        raise ValueError(
+            "slab3d: an odd number of half-slab instances cannot pair into slabs"
+        )
+
+    total_ranks = sum(widths)
+    if total_ranks % (2 * g) != 0:
+        raise ValueError(
+            f"slab3d: {total_ranks} ranks do not divide into slabs of {2 * g}"
+        )
+    n_slabs = total_ranks // (2 * g)
+
+    # Ranks are handed out as consecutive blocks, so every instance must lie
+    # inside ONE slab. Since all widths are multiples of g the cursor always is
+    # too, which leaves exactly one way to straddle: a full-slab instance that
+    # starts half a slab in -- e.g. [half, full, half], where the full block
+    # covers ranks g..3g and crosses the boundary at 2g. Refuse rather than
+    # reorder behind the caller's back; the fixture should say what it means.
+    cursor = 0
+    for inst, w in zip(instances, widths):
+        if w == 2 * g and cursor % (2 * g) != 0:
+            raise ValueError(
+                f"slab3d: instance {inst.get('instance_id')} is a full slab "
+                f"starting at rank {cursor}, which is not slab-aligned; reorder "
+                f"the instances so half-slab pairs are adjacent"
+            )
+        cursor += w
+
+    dims = [g, 2, n_slabs]
+    while len(dims) > 1 and dims[-1] == 1:
+        dims.pop()
+
+    # Keyed on the COLLECTIVE, not on the footprint. A prefill instance occupies a
+    # full slab, but its TP group is still only g wide -- the other g ranks are
+    # senders, not TP peers. Keying on width alone declares an 8-rank allreduce for
+    # a 4-rank TP group, and the prefill batch then waits forever for four ranks
+    # that never join. That mistake was made once during the spike and presented
+    # exactly as D23's signature; `tests/test_slab3d_config.py` pins it.
+    full = [True, True, False][: len(dims)]
+    half = [True, False, False][: len(dims)]
+    tp_dims = [
+        full if (w == 2 * g and inst.get("pd_type") != "prefill") else half
+        for inst, w in zip(instances, widths)
+    ]
+    return dims, tp_dims
+
+
+def _topology_mode(instances):
+    for inst in instances:
+        mode = inst.get(TOPOLOGY_MODE_KEY)
+        if mode:
+            return mode
+    return "auto"
+
+
 def _compute_network_dims(instances):
     """Infer ASTRA-Sim topology dimensions from resolved instances."""
+    if _topology_mode(instances) == "slab3d":
+        return _slab3d_dims_and_tp_dims(instances)[0]
+
     dp_groups = {}
     for inst in instances:
         dg = inst.get("dp_group")
@@ -624,6 +735,18 @@ def build_cluster_config(astra_sim, cluster_config_path, enable_local_offloading
         else inst["num_npus"] * 2
         for inst in total_instances
     )
+
+    # Carry the cluster config's topology_mode onto every instance, so the three
+    # `_compute_network_dims` call sites need no signature change. An absent key
+    # means "auto", which is the pre-D28 path, byte for byte.
+    _mode = cluster_config.get(TOPOLOGY_MODE_KEY, "auto")
+    if _mode not in VALID_TOPOLOGY_MODES:
+        raise ValueError(
+            f"{TOPOLOGY_MODE_KEY} must be one of {VALID_TOPOLOGY_MODES}, got {_mode!r}"
+        )
+    if _mode != "auto":
+        for _inst in total_instances:
+            _inst[TOPOLOGY_MODE_KEY] = _mode
 
     # Resolve DP groups across all instances.
     _resolve_dp_groups(total_instances)
