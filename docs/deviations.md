@@ -1203,6 +1203,36 @@ these runs is **not** comparable to the sweep's p99 TTFT: the bench fires the wh
 pool at once (D19), a closed-loop saturation probe, while the sweep offers Poisson
 arrivals. Throughput and TPOT are the valid comparisons.
 
+### Reason 1 below was a D26 artifact — re-tested 2026-09-07
+
+> `WORK_ORDER_rps_aware.md` STEP 0.1, `docs/rps_step0_retro.md`. The distribution
+> recorded below — every RNGD-involving candidate stuck, most `cuda ↔ cuda` through
+> — is **D26's shape**, and D26 was not known until 2026-09-07. Re-tested on the
+> fixed harness, one RNGD P/D and one cross-vendor candidate at 3.3 rps, 20
+> requests, under `livelock_watch.sh`:
+>
+> | candidate | 3.3 rps | 10 rps |
+> | --- | ---: | ---: |
+> | RNGD P/D `rngd0 tp4 P + rngd1 tp4 D` | **74 s, completed** | 69 s |
+> | cross-vendor `a40 tp4 P + rngd0 tp4 D` | **82 s, completed** | 69 s |
+>
+> Both claims below fall, and separately. **"RNGD candidates never terminate"** is
+> refuted: these are the classes that went 0-for-36. **"The drain is unbounded at a
+> lower rate"** is not supported either — 3× the arrival span costs 7 % and 19 %
+> more wall time, and one extra tick of simulated time.
+>
+> **Caveat**: this used 20 requests where the abandoned run used 300, so a drain
+> effect that grows with request count is not excluded. What is excluded is
+> structural non-termination, which the mechanism below predicts at any count.
+>
+> **Reason 2 below still stands** — it is an argument about the objective
+> (lower load lets the planner satisfy the SLO with fewer accelerators, pushing
+> per-card concurrency back up), and nothing about D26 touches it. Lowering the
+> arrival rate is still not the way to control per-card concurrency; that is what
+> the envelope and `accuracy_domain` of `WORK_ORDER_rps_aware.md` are for.
+>
+> Consequence: E6's low-RPS axis is available.
+
 ### The re-run this entry calls for cannot be done by lowering the arrival rate — attempted 2026-09-01 and abandoned
 
 §4.4 asks for `pd_slo_sweep.py` at "a defensible load". The obvious reading is to

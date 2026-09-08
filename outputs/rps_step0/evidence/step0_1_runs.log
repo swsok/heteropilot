@@ -1,0 +1,6 @@
+S0.1 START 2026-09-07T08:39:06Z main=56b3866
+rngd_pd_3.3rps             exit=0    elapsed=   74s rows=21   ticks=32
+rngd_pd_10rps              exit=0    elapsed=   69s rows=21   ticks=31
+xvendor_3.3rps             exit=0    elapsed=   82s rows=21   ticks=30
+xvendor_10rps              exit=0    elapsed=   69s rows=21   ticks=29
+S0.1 DONE 2026-09-07T08:44:00Z
