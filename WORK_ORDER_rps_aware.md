@@ -5,6 +5,13 @@
 > 설계 근거: `docs/rps_aware_planning_design.md`(2026-09-01). 이 작업지시서는 그 설계를 구현 단위로 자르고, 이후 세 작업지시서(통합·스파이크·D23 수정)가 바꾼 사실을 반영한다.
 > 선행 완료: D22(envelope c16–c128), D23/D25/D26(harness), D14 스파이크(`slab3d`), 3-regime 표 확정(`docs/d23_revalidation.md`).
 > 예산: **약 3.5주** (STEP 0 0.5일 · 1 1일 · 2 3일 · 3 2일 · 4 5일 · 5 4일 · 6 2일). 11월 학회 마감 기준 10월 중순에 E5·E6 결과가 있어야 한다.
+>
+> **개정 rev 2 (2026-09-08, `main` = `a7b06eb`, `origin/feat/rps-step1-sim-cost` = `2578575`).** STEP 0·1 완료 결과를 반영해 다음을 바꿨다:
+> (a) STEP 0·1을 "완료"로 표기하고 결과 요약을 남김. STEP 1의 30 % 규칙은 CLI가 근거를 들어 넘었고 **그 판단을 승인**한다(§STEP 1).
+> (b) **STEP 1.5 신설** — `step1` 브랜치 머지 전 정리: §4.7 "regret 0 at every K" 부분 철회 표기, 브랜치 삭제.
+> (c) **E6a 재설계** — 실측 비용(1 rps = 10 rps의 10.3×, 축 합계 21.4×)으로 218 h → D27 후 ~140 h. `--top-k`는 **사용 불가**(surrogate 발견). 대신 64 워커 + 구조별 knob 고정 + RPS {1, 3.3, 10, 20}으로 **~9 h**.
+> (d) STEP 3에 STEP 0이 확인한 노드 사실(`furiosa-smi status`의 PE별 이용률, 1 W 양자화, 장치명 불안정)을 반영.
+> (e) STEP 3은 STEP 2와 **병행 시작** — 하드웨어 측정이 코드와 독립이라 먼저 끝내는 것이 일정상 유리.
 
 ---
 
@@ -90,7 +97,12 @@ pytest -q && ruff check . && mypy
 
 ---
 
-# STEP 0. D26 소급 점검 (0.5일, 시뮬레이션 5~6개)
+# STEP 0. D26 소급 점검 — ✅ 완료 (PR #60, `2c373b9`)
+
+> **결과.** (1) 3.3 rps "종료하지 않음"은 **D26 아티팩트** — 고친 harness에서 RNGD P/D 74 s, cross-vendor 82 s(20 req)에 완주. E6의 저RPS 축 사용 가능. D22 §4.4 reason 2(목적함수 논거)는 유지. (2) Exp 5 4-combo 5행 모두 소수점까지 재현 — D26 소급 오염 없음. (3) 2.206 vs 2.2051은 planner 쪽이 아니라 **fixture의 `link_bw` 35.0/35.2 차이**(이 문서 초판의 추정이 틀렸음). (4) STEP 3용 노드 사실: `furiosa-smi status --format json`에 PE별 `pe_utilizations`와 DRAM `used_ratio`가 있음(`info`에는 없음); 전력 1 W 양자화(idle ~38 W에서 1 quantum = 2.6 %); 장치명 `npuN`이 재열거로 바뀜 — **`device_sn`/`pci_bdf`로 식별**.
+>
+> 아래 원문은 기록용.
+
 
 1. **3.3 rps 재시험.** D22 §4.4의 3.3 rps 서비스 spec(`examples/` spec의 `arrival_rate_rps`만 3.3)으로, 그때 종료하지 않았던 RNGD P/D 후보 하나와 cross-vendor 후보 하나를 **20 요청**으로 `livelock_watch.sh` 아래에서 실행. 완주하면 D22 §4.4의 "종료하지 않는다"는 결론 위에 "D26 아티팩트였음, <날짜>" 표기를 얹고, E6의 저RPS 스윕이 가능함을 기록. 완주하지 않으면 exit code(3=틱 정지 / 4=자식 사망)와 로그로 새 결함인지 판정 — 새 D 번호.
 2. **Exp 5 대표 4개 재실행** (`experiments/results/pd_4combo_table.md`(`pd_4combo.json`)의 4 representatives, 같은 seed·요청 수·knobs, 20이 아니라 **원래 요청 수**). committed 값과 소수점 대조. 다르면 D26 소급 오염 → 해당 결과 파일 위에 superseded 표기 + `CLAIMS.md` 갱신; 같으면 "D26 소급 점검 통과" 한 줄.
@@ -100,7 +112,14 @@ pytest -q && ruff check . && mypy
 
 ---
 
-# STEP 1. 시뮬레이션 비용 — 측정 후 결정 (1일)
+# STEP 1. 시뮬레이션 비용 — ✅ 완료 (`2d9c8f4`, 브랜치 `feat/rps-step1-sim-cost`, **미머지**)
+
+> **결과.** 프로파일: `read_wait`(ASTRA-Sim 대기) 53.9 %, Chakra subprocess 28.9 % (10 rps; 3.3 rps에서 51.6/29.6 %). 규칙상 30 % 미만이지만 **D27 시행** — 이유: 저RPS 배수(300 req 기준 3.3 rps = 2.63×, 1 rps = **10.32×**)로 E6a가 60 h가 아니라 **218 h**였고, `--top-k 20`은 FEASIBLE plan을 INFEASIBLE로 바꾸는 것이 확인되어 비용 절감 수단으로 쓸 수 없었다. D27은 정확도 손실 없는 유일한 수단. **이 판단을 승인한다.** 구현: `LLMConverter` 직접 호출(`main()`의 `setup_logging` 부작용 회피), 모듈 전역 상태 없음 확인. 1.55–1.72× 빨라짐, R1×3·R2·3개 rate CSV **7건 byte-identical**. D26은 subsumed(해석할 인터프리터가 없어짐; venv에 chakra가 없으면 ImportError — 더 나은 실패). 테스트 483.
+>
+> **같은 브랜치에 surrogate 발견(PR #62 → step1 브랜치로 머지됨)이 포함되어 있다** — §STEP 1.5.
+>
+> 아래 원문은 기록용.
+
 
 ## 지시
 
@@ -115,7 +134,28 @@ pytest -q && ruff check . && mypy
 
 ---
 
-# STEP 2. 비대칭 TP P/D 정식화 — `slab3d` (3일)
+# STEP 1.5. 브랜치 정리와 §4.7 부분 철회 (0.5일) — **STEP 2 착수 전 필수**
+
+## 배경 — surrogate 발견 (`0659675`, `docs/surrogate_topk_regret.md`)
+
+`AnalyticalRooflineRanker`가 쓰는 proxy tok/J는 **TP·DP에 대해 대수적으로 불변**(throughput과 power가 모두 `tp·dp`에 비례해 비율이 소거) — 랭커는 가속기와 `max_num_seqs`만 보고 병렬성을 보지 못한다. 병렬성이 feasibility를 가르는 fixture(`tp4-dp1` 49.40 ms vs `tp2-dp2` 53.47 ms, SLO 50 ms)에서 `--top-k 20`은 두 fixture 중 둘에서 false-INFEASIBLE. 대안 랭커(roofline floor)는 그 둘을 고치고 **세 번째 fixture를 깨뜨린다**. 결론: **랭커를 바꾸지 않고, `--top-k`를 E6에서 쓰지 않는다.** K=30은 세 fixture에서 깨끗하지만 세 fixture로 임계값을 정하지 않는다. `PROJECT_REPORT.md` §4.7 "regret is 0 even at K=1"은 N=78·aggregated 위주 fixture 하나의 결과였다 → **부분 철회**. 부수 수정: `exp_surrogate.py`의 regret 공식(최소화 목적에서 `oracle_value > 0` 가드로 항상 `None`이던 것 → `abs()`), `--cache-dir` 재생 모드.
+
+## 지시
+
+1. **§4.7 superseded 표기** (A2): `docs/PROJECT_REPORT.md` §4.7 headline 위에 `> **SUPERSEDED IN PART 2026-09-08.** regret 0 at every K held on one aggregated-heavy fixture (N=78). On the three P/D + heterogeneous corpora of docs/surrogate_topk_regret.md the shipped ranker is false-infeasible at K=20 on two of three, because its proxy is TP/DP-invariant. top-K is not a cost lever for those sweeps.` 같은 블록. `docs/SLIDE_OUTLINE.md`의 같은 문장에도. `docs/CLAIMS.md` §3(Retracted)에 항목 추가, §1에는 넣지 않는다(surrogate는 기여 주장이 아님).
+2. `docs/deviations.md`: 브랜치는 **D27만** 추가했다(확인). surrogate 발견은 D 번호가 없으므로 **D30 — roofline surrogate의 proxy는 TP/DP에 불변; top-K는 P/D·이종 corpus에서 비용 절감 수단이 아니다** 절을 추가하고 `docs/surrogate_topk_regret.md`를 가리킨다. (D28·D29는 이 문서의 STEP 2·4가 쓴다.)
+3. `feat/rps-step1-sim-cost`를 `main`에 머지(PR #61 또는 새 PR). 머지 후 `feat/rps-step0-d26-retro`, `feat/rps-step1-sim-cost`, `feat/rps-step4-surrogate-regret` 원격 브랜치 삭제. `spike/d14-asym-tp`는 STEP 2.1 완료 시 삭제.
+4. `docs/HANDOVER.md` §2.1에 "rev 2" 반영: E6a 예산과 설계 변경 한 단락.
+5. 브랜치가 커밋한 `outputs/**/cache/*.json`(envelope cache 재생용 ~200개 소파일)은 유지 — 재생 근거. `.gitignore` 변경 14줄이 무엇을 풀었는지 PR에서 확인.
+
+## 완료 조건
+- [ ] `main`에 D27 + surrogate 발견, 게이트 통과(483)
+- [ ] §4.7·SLIDE_OUTLINE·CLAIMS §3 표기
+- [ ] 원격 브랜치가 `main` + `spike/d14-asym-tp`만
+
+---
+
+# STEP 2. 비대칭 TP P/D 정식화 — `slab3d` (3일) — STEP 3과 병행
 
 ## 2.1 `serving/` sanctioned edit — D28 (스파이크 프로토타입의 정리)
 
@@ -154,11 +194,14 @@ pytest -q && ruff check . && mypy
 
 ---
 
-# STEP 3. 측정 — RNGD 저부하 envelope + 전력 (2일, NPU 노드)
+# STEP 3. 측정 — RNGD 저부하 envelope + 전력 (2일, NPU 노드) — **STEP 1.5 직후 바로 시작, STEP 2와 병행**
+
+> rev 2 — STEP 0이 확인한 노드 사실을 반영: 이용률은 `furiosa-smi status --format json`(`pe_utilizations` PE별, DRAM `used_ratio`)에 있고 `info`에는 없다 → **샘플러는 두 서브커맨드를 같은 틱에서 호출**하고 두 타임스탬프 차를 기록한다. 전력은 **1 W 양자화** → 저부하 점의 반복 편차 판정 임계 5 %는 idle 근처에서 약 2 quanta; 벤치 구간이 60 s 이상이어야 평균이 의미를 갖는다. 장치는 **`device_sn`·`pci_bdf`로 식별**(dev_name은 재열거로 바뀜 — 9/4→9/7 사이 `npu0/1/3`→`npu0/1/2`). card-as-device 점은 PE별 이용률의 **평균과 분산**을 모두 기록 — 일부 PE만 바쁜 카드와 균일 부하 카드는 평균이 같아도 다른 운영점이다.
+
 
 ## 3.1 harness
 
-1. `experiments/scripts/power_sampler.sh` — upstream 스크립트의 개선판: `furiosa-smi info --format json`을 **정확한 1 Hz**(`sleep`이 아니라 다음 초 경계까지 대기, 드리프트 방지)로 폴링, 타임스탬프 `date +%s.%N`, 출력 CSV `ts, dev_name, power_w, util_pct, <원시 json 한 줄>`. **조사 필요**: json에 이용률 필드가 있는지(`furiosa-smi info`가 없으면 `furiosa-smi status --format json`을 같은 루프에서 함께 호출하고 두 타임스탬프 차를 기록). 시작 시 `furiosa-smi` 버전과 필드 목록을 헤더로.
+1. `experiments/scripts/power_sampler.sh` — upstream 스크립트의 개선판: 매 틱 `furiosa-smi info --format json`(전력)과 `furiosa-smi status --format json`(PE별 이용률, DRAM used_ratio)을 **정확한 1 Hz**(`sleep`이 아니라 다음 초 경계까지 대기, 드리프트 방지)로 폴링, 타임스탬프 `date +%s.%N`, 출력 CSV `ts_info, ts_status, device_sn, pci_bdf, dev_name, power_w, util_mean_pct, util_min_pct, util_max_pct, dram_used_ratio, <원시 json 두 줄>`. 시작 시 `furiosa-smi` 버전과 필드 목록을 헤더로. 시리얼·UUID는 산출물 커밋 시 **redact**(STEP 0의 관례).
 2. `experiments/scripts/measure_envelope.py` — 설계서 §7의 vendor-agnostic core. 입력: 엔드포인트, 동시성 목록, 풀 크기(기본 `4 × max(conc)`, 최소 300), 데이터셋(D22와 **같은** sharegpt 트레이스). 각 점마다: 샘플러 시작 → 45 s settle(idle 구간 기록) → 벤치 → 60 s 후행 idle → 샘플러 정지. 출력 JSON: served conc, requested, `served/requested`, tput, TTFT/TPOT p50/p95/p99, 벤치 구간의 **전력 평균·p5·p95와 util 평균**, idle 평균. `rebuild_rngd_bundle_from_edf.py collect`의 벤치 호출부를 재사용(조사 필요: 그 스크립트의 `bench_python=/usr/bin/python3` 의존 — FuriosaAI 런타임은 system python).
 3. 테스트(시뮬레이터·하드웨어 불필요): 가짜 벤치 결과+가짜 샘플러 CSV에서 served 동시성·전력 구간 평균이 맞게 계산되는지; `served/requested < 0.9`면 그 점을 `pool_binding: true`로 표시하는지.
 
@@ -167,7 +210,7 @@ pytest -q && ruff check . && mypy
 RNGD 카드 1장(card-as-device, TP=8 내부), Llama-3.1-8B, D22와 같은 아티팩트·데이터셋:
 
 - 동시성 **1, 2, 4, 8, 16**(16은 D22의 15.3점과의 이음새 확인용), 풀 ≥ 300.
-- 각 점 **2회 반복**(독립 프로세스), 편차 기록. 편차 5 % 초과면 3회.
+- 각 점 **2회 반복**(독립 프로세스), 편차 기록. 편차 5 % 초과면 3회. 전력 양자화(1 W)를 감안해 **벤치 구간 ≥ 60 s**가 되도록 풀 크기를 조정(c1은 요청 300개로 수 분이 걸리므로 자연히 충족; c16은 확인).
 - idle: 서버 기동 후 45 s settle → 60 s 평균. **standby**(모델 로드됨, 요청 없음)도 같은 방법 — 현 프로파일의 `standby_power 265 W`가 맞는지.
 - 결과: `outputs/rngd_envelope_lowload/{bench_c*.json, power_c*.csv, idle.csv}` 커밋.
 
@@ -223,7 +266,7 @@ RNGD 카드 1장(card-as-device, TP=8 내부), Llama-3.1-8B, D22와 같은 아�
 
 ---
 
-# STEP 5. 검증 실험 (4일, 시뮬레이션 대부분 백그라운드)
+# STEP 5. 검증 실험 (4일, 시뮬레이션 대부분 백그라운드 — E6a ~10–20 h, rev 2 설계)
 
 ## E5 — planner가 D22의 infeasible plan을 스스로 거부하는가
 
@@ -234,9 +277,11 @@ RNGD 카드 1장(card-as-device, TP=8 내부), Llama-3.1-8B, D22와 같은 아�
 
 ## E6 — RPS 축 스윕: crossover는 존재하는가
 
-- **E6a (시뮬레이션)**: fixture `pd-rngd-gpu-card`와 `pd-rngd-gpu` + STEP 2의 비대칭 fixture, `--rps 1,2,3,5,10,20`, TTFT SLO 두 점(8 s, 64 s — 3-regime의 중간·loose), 300 req, `--accuracy-domain`, `--enable-pd`, 32 워커. 시간 추정을 먼저: 재검증 기준 지점당 ~1.7 h × RPS 6 × TTFT 2 × fixture 3 ≈ 60 h → **캐시와 `--top-k`로 줄인다**(surrogate top-K 20, §4.7의 regret 0 근거). 줄인 뒤에도 24 h 넘으면 RPS를 {1,3,10,20}으로.
-  - 저RPS에서 시뮬레이션 시간이 길어지는 것(drain)은 STEP 0-1이 확인한 범위에서 허용; 타임아웃은 D25-b 이후 진짜 타임아웃만 남으므로 그 수를 기록.
-  - 산출: switchover 표 × 조건, crossover 목록(있으면), **RNGD가 어느 RPS에서 처음 SLO를 통과하는지**, 비대칭 P/D가 어느 조건에서 순위 몇 위인지.
+- **E6a (시뮬레이션) — rev 2 설계.** fixture `pd-rngd-gpu-card`, `pd-rngd-gpu`, STEP 2의 비대칭 fixture; **RPS {1, 3.3, 10, 20}**; TTFT SLO 두 점(8 s, 64 s); 300 req; `--accuracy-domain`, `--enable-pd`; **`--top-k` 사용 금지**(STEP 1.5); **64 워커**(96코어 노드, `read_wait` 54 %는 자식 프로세스의 CPU — 32→64에서 CPU load가 ~2배로 오르는지 첫 지점에서 확인하고 아니면 48로).
+  - **구조별 knob 고정(heuristic, 라벨 필수).** 후보 수를 1/6로 줄이는 유일한 정당한 수단. 규칙: `outputs/.hp-reval-*`(10 rps 전수 결과)에서 `(fixture, arch, backend_mix)`별로 **10 rps에서 feasible이었고 tok/J가 가장 높은 knob 조합** `(max_num_seqs, max_num_batched_tokens)` 하나를 고른다. **10 rps에서 feasible 후보가 없던 조합(모든 RNGD 관련 구성)은 knob 6개를 전부 유지** — 저RPS에서 어느 knob이 살아나는지가 바로 E6의 질문이므로 고정할 근거가 없다. 고정 규칙과 고정된 knob 표를 `experiments/results/e6_rps_sweep.md` §Method에 적고, 결과 표의 cuda 행에 `knob: fixed@10rps` 라벨을 단다. 구현: `pd_slo_sweep.py`(또는 `plan`)에 `--knob-policy fixed-from:<reval json>` 옵션 — `planner/`가 아니라 `experiments/scripts/`에.
+  - **시간 추정을 먼저 적고 실측과 병기.** STEP 1 실측: 10 rps 전수 지점 ≈ 65 min(D27 후, 32 워커). knob 고정으로 cuda 후보 1/6, RNGD 후보 유지 → 후보 ≈ 40 % → ~26 min; 64 워커 → ~14 min; RPS 가중 합 10.3 + 2.6 + 1 + ~0.7(20 rps, **첫 지점에서 실측해 채움**) ≈ 14.6 → ~3.4 h per (fixture, TTFT); × 3 fixture × 2 TTFT ≈ **~20 h → 캐시 공유로 TTFT 두 점이 같은 시뮬레이션을 재사용하면 ~10 h**(TTFT SLO는 feasibility 판정에만 쓰이고 시뮬레이션 입력이 아니다 — **확인됨**: `planner/envelope.py`의 키는 `placement, scheduler_config_hash, network_class, workload_bucket` + trace digest이고 SLO는 없다. RPS는 트레이스 도착 시각을 바꾸므로 digest가 달라져 RPS별로는 올바르게 분리된다). 하룻밤. 24 h를 넘기면 1 rps 지점의 RNGD knob를 STEP 3 envelope이 가리키는 운영점 근처 2개로 줄이고 그 사실을 적는다 — 1 rps 자체는 버리지 않는다(P1이 사는 곳).
+  - 저RPS에서 시뮬레이션 시간이 길어지는 것(drain)은 STEP 0-1이 확인한 범위에서 허용; 타임아웃은 D25-b 이후 진짜 타임아웃만 남으므로 그 수를 기록. `nohup`/`tmux`로 detach.
+  - 산출: switchover 표 × 조건, crossover 목록(있으면), **RNGD가 어느 RPS에서 처음 SLO를 통과하는지와 그때의 knob**, 비대칭 P/D가 어느 조건에서 순위 몇 위인지.
 - **E6b (측정 대조, 시뮬레이터 독립)**: STEP 3의 RNGD 측정 곡선에서 tokens/J(RPS)를 직접 계산하고, E6a의 RNGD 후보 예측치(같은 운영점)와 나란히. 차이가 `accuracy_domain`의 선언 범위 안인지. A40 측은 E6a의 시뮬레이션만 있으므로 crossover 문장은 "RNGD **측정** 대 A40 **시뮬레이션(±2 %)**"로 쓴다.
 - 결과 문서 `experiments/results/e6_rps_sweep.md` + 그림(tok/J vs RPS, 백엔드별, validity 음영). 세 결론 중 하나: (i) crossover 존재 — RPS 값과 양쪽 라벨, (ii) 측정 범위 안에 없음 — RNGD가 SLO를 통과하는 RPS 구간과 그때의 tok/J 격차, (iii) 비대칭 P/D가 어느 조건에서 이김/못 이김.
 
@@ -246,7 +291,7 @@ envelope에서 점을 하나씩 빼고(leave-one-out) E6b의 crossover RPS가 �
 
 ## 완료 조건
 - [ ] E5 회귀 테스트 + 결과 문서
-- [ ] E6a/E6b 결과 문서, 산출물 JSON 커밋, 시간 예측/실측 병기
+- [ ] E6a/E6b 결과 문서, 산출물 JSON 커밋, 시간 예측/실측 병기, **knob 고정 표와 `knob: fixed@10rps` 라벨**, 1 rps 지점의 knob-고정 regret
 - [ ] 결론이 (i)/(ii)/(iii) 중 무엇인지 첫 문단에
 
 ---
@@ -268,6 +313,7 @@ envelope에서 점을 하나씩 빼고(leave-one-out) E6b의 crossover RPS가 �
 - [ ] `plan --rps … --accuracy-domain --enable-pd`가 switchover 표와 crossover(또는 부재)를 낸다
 - [ ] E5 회귀 테스트가 CI에 있다
 - [ ] E6 결론이 CLAIMS.md 첫 페이지에 있다
+- [ ] §4.7 top-K regret 주장의 부분 철회가 PROJECT_REPORT·SLIDE_OUTLINE·CLAIMS §3에 있다 (STEP 1.5)
 - [ ] 게이트 통과, golden 불변, oracle-agreement·재현성 통과
 
 # 8. 리스크 대응 규칙
@@ -276,7 +322,7 @@ envelope에서 점을 하나씩 빼고(leave-one-out) E6b의 crossover RPS가 �
 | --- | --- |
 | STEP 0-1에서 3.3 rps RNGD P/D가 D26 이후에도 종료하지 않음 | 새 결함. `livelock_watch.sh` exit code로 분류, 새 D 번호. E6의 RPS 하한을 종료하는 값으로 올리고 그 사실을 결과에 적는다 — 조용히 축을 줄이지 않는다 |
 | STEP 0-2에서 Exp 5 값이 다름 | D26 소급 오염. 해당 문서 superseded 표기, CLAIMS.md §3에 항목, 나머지 8/25–31 다중 인스턴스 결과 목록화 후 재실행 여부 사용자 결정 |
-| STEP 1 프로파일에서 chakra subprocess가 30 % 미만 | D27 하지 않음. 병목이 (c) ASTRA-Sim이면 시뮬레이션 시간은 후보 수·요청 수로만 줄인다(`--top-k`, 캐시) |
+| ~~STEP 1 프로파일에서 chakra subprocess가 30 % 미만~~ | rev 2: 발생했고(28.9 %) 저RPS 배수를 근거로 D27을 시행 — 승인됨. 행은 기록용 |
 | 2.2에서 계수가 (split, bw)마다 크게 다름 | 표로 기록, validity를 측정 조합으로 한정. 법칙을 만들지 않는다 |
 | 2.2에서 어떤 계수로도 잔차가 3.1 % 이상 | `slab3d`는 "순위용"으로만 라벨, 비대칭 P/D의 절대 tok/J는 인용 금지. E6 결과 문서에 그 라벨을 전파 |
 | STEP 3에서 `furiosa-smi`에 이용률 필드가 없음 | 전력만 기록하되 `util_pct: null`로 두고, 대신 벤치의 served 동시성을 부하 지표로 병기. A5(c)의 "이용률 없는 전력은 측정이 아니다"는 **완화하지 않고** 결과 문서에 한계로 명시 |
@@ -285,7 +331,9 @@ envelope에서 점을 하나씩 빼고(leave-one-out) E6b의 crossover RPS가 �
 | E5에서 margin이 3.3 % 미만이라 winner가 통과 | 결과다. `accuracy_domain`의 보간이 D22 측정과 어떻게 다른지 적고, **domain 점을 옮기지 않는다** |
 | E6에서 crossover 없음 | 결과다 — (ii). RNGD가 SLO를 통과하는 RPS와 격차를 그대로 보고. 논문은 negative result + 방법론 |
 | E6에서 비대칭 P/D가 이김 | 2.2의 라벨을 확인하고 "순위 주장" 수준인지 "절대 수치" 수준인지 명시. 이기는 이유(decode KV 용량 tp8 246k vs tp4 62k, D16(c))가 결과에서 보이는지 확인 |
-| E6a 총 시간 > 24 h | RPS 축을 {1,3,10,20}으로, `--top-k 20`. 300 req는 유지 |
+| E6a 총 시간 > 24 h | `--top-k`는 쓰지 않는다(STEP 1.5). 1 rps 지점의 RNGD knob를 envelope 운영점 근처 2개로 줄이고 기록. RPS 축·300 req·1 rps 지점은 유지 |
+| 64 워커에서 CPU load가 32 워커의 ~2배로 오르지 않음 | 메모리·I/O 병목. 48로 내리고 `docs/sim_cost_profile.md`에 스케일링 표 추가 |
+| knob 고정이 cuda의 저RPS 최적을 놓쳤을 가능성 | 10 rps 승자 knob 외의 후보가 1 rps에서 이길 수 있다. E6 결과 문서에 heuristic임을 명시하고, **1 rps 지점 하나에서만** cuda 전 knob를 돌려 고정 규칙의 regret을 측정해 표로 (추가 ~1 h) |
 | oracle-agreement가 envelope 단계 on/off에서 갈림 | 잘린 후보가 오라클 최적해면 "최적해가 측정 범위 밖"이라는 결과. 테스트는 이를 실패가 아닌 **명시적 보고**로 분류하되, 그 외 이유의 불일치는 실패 |
 | A40 노드에 접근 가능해짐 | STEP 3b: A40 tp4 envelope + 전력(`nvidia-smi --query-gpu=power.draw,utilization.gpu`, 1 Hz) 같은 프로토콜로 측정하고 E6b의 A40 측을 측정으로 교체. 별도 PR, 사용자 승인 후 |
 | upstream 파일 수정이 필요해 보임 | 중단·보고 |
