@@ -249,6 +249,19 @@ What `WORK_ORDER_rps_aware.md` (or its successor) must carry over:
 
 Recorded because they are not discoverable from the code.
 
+**Planning a sweep's cost**
+
+- **A low-RPS point is not one point.** Wall time is strongly superlinear as the
+  arrival rate falls: at 300 requests on the R2 candidate, 3.3 rps costs **2.63×**
+  10 rps and 1 rps costs **10.32×**. A six-point RPS axis weighs 21.4×, not 6×, and
+  half of that is the bottom two rows (`docs/sim_cost_profile.md`). Budget the axis
+  by summing multipliers, never by multiplying a 10 rps figure by the point count.
+- **top-k pruning drops the optimum on P/D and heterogeneous fixtures.** 8.1× faster
+  and it turned a FEASIBLE plan (`hp-00077`, 2.963 tok/J) INFEASIBLE. The planner
+  warns when this may have happened — read that line. `SLIDE_OUTLINE.md`'s "regret
+  0.000 at every K" was measured on an aggregated-heavy fixture and does not
+  transfer. Fixing the surrogate is `WORK_ORDER_rps_aware.md` STEP 4.
+
 **Reading a sweep**
 
 - **A sweep's INFEASIBLE is not a result until you have counted the timeouts.**

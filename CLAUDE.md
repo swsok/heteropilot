@@ -64,11 +64,12 @@ Island id convention: `{backend}-{model_slug}-{node_id}` (e.g. `cuda-h100-node0`
    An early fix to `serving/core/memory_model.py` / `scheduler.py` was authorized and attempted
    for D12, but **both attempts were wrong and have been reverted**.
    Read `docs/deviations.md` D12 before trying again; it records what was tried and why it failed.
-   **`serving/` is no longer pristine.** Three edits are sanctioned and each is recorded with a
+   **`serving/` is no longer pristine.** Four edits are sanctioned and each is recorded with a
    byte-identical regression proof: **D15** (opt-in P/D KV-transfer cost, `router.py` +
-   `__main__.py`), **D25** (`cwd=run_paths.inputs_root` on the ASTRA-Sim `Popen`), and **D26**
-   (`sys.executable` for the Chakra converter — this one is what D23 actually was). Nothing else
-   in `serving/` may change without a work order that names the file.
+   `__main__.py`), **D25** (`cwd=run_paths.inputs_root` on the ASTRA-Sim `Popen`), **D26**
+   (`sys.executable` for the Chakra converter — this one is what D23 actually was), and **D27**
+   (that converter called in-process instead of spawned, 1.55–1.72× faster, D26 subsumed).
+   Nothing else in `serving/` may change without a work order that names the file.
 2. **Never mix backends in one TP group.** Candidate generation must exclude such configs automatically.
 3. **Never invent hardware numbers.** Values with no measurement get `source: placeholder` in the
    profile file. Never label unmeasured data as measured, and never claim results from hardware
@@ -228,13 +229,15 @@ reaches now lands inside the run's own tree. Before D25, concurrent runs raced o
 and 13 of 64 died at startup while the frontend spun instead of reporting it.
 `experiments/scripts/astra_isolated.sh` is kept as a second line of defence, no longer required.
 
-**Run the simulator with `.venv/bin` first on `PATH`, or through `.venv/bin/python`.** Before
-**D26** `serving/core/graph_generator.py` invoked the Chakra converter as bare `python`, and this
-node has a second `chakra` beside protobuf 6.33.1 — below the `>=7.35.1` the *Environment* section
-requires. The same trace then converted to different `.et` bytes and P/D runs hung with D23's
-signature: 6 of 6 hung that way against 18 of 18 completing with the venv first. D26 fixes the
-frontend, but a mis-provisioned venv would reintroduce it, which is what
-`tests/test_chakra_interpreter.py` guards.
+**Run the simulator through `.venv/bin/python`.** Before **D26** `graph_generator.py` invoked the
+Chakra converter as bare `python`, and this node has a second `chakra` beside protobuf 6.33.1 —
+below the `>=7.35.1` the *Environment* section requires. The same trace then converted to different
+`.et` bytes and P/D runs hung with D23's signature: 6 of 6 hung that way against 18 of 18 completing
+with the venv first. Since **D27** there is no second interpreter at all — the frontend converts
+in-process — so PATH no longer decides anything, but *which venv you launch* now decides everything:
+a venv without the right chakra raises at the first conversion instead of converting wrongly.
+`tests/test_chakra_interpreter.py` guards the provisioning; `tests/test_chakra_inprocess.py` guards
+the bytes and keeps the subprocess from coming back.
 
 Wrap long or parallel runs in `experiments/scripts/livelock_watch.sh` regardless — it ends a
 provably stuck run in seconds instead of at the timeout ceiling, and separates a tick stall

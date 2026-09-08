@@ -1,0 +1,51 @@
+warning: provenance fields could not be determined: backend_version, model_revision, vllm_version
+  [1/12] simulating cuda-a40-node_a40a-tp2-dp1-s256-t2048
+  [2/12] simulating cuda-a40-node_a40a-tp2-dp1-s256-t8192
+  [3/12] simulating cuda-a40-node_a40a-tp2-dp2-s256-t2048
+  [4/12] simulating cuda-a40-node_a40a-tp2-dp2-s256-t8192
+  [5/12] simulating furiosa-rngd-node_rngd0-tp8-dp1-s128-t8192
+  [6/12] simulating furiosa-rngd-node_rngd0-tp8-dp1-s128-t2048
+  [7/12] simulating mix(furiosa-rngd-node_rngd0-tp8-dp1+furiosa-rngd-node_rngd1-tp8-dp1)-s256-t8192
+  [8/12] simulating mix(furiosa-rngd-node_rngd0-tp8-dp1+furiosa-rngd-node_rngd1-tp8-dp1)-s256-t2048
+  [9/12] simulating furiosa-rngd-node_rngd0-tp8-dp1-s256-t2048
+  [10/12] simulating furiosa-rngd-node_rngd0-tp8-dp1-s256-t8192
+  [11/12] simulating mix(furiosa-rngd-node_rngd0-tp8-dp1+furiosa-rngd-node_rngd1-tp8-dp1)-s128-t8192
+  [12/12] simulating mix(furiosa-rngd-node_rngd0-tp8-dp1+furiosa-rngd-node_rngd1-tp8-dp1)-s128-t2048
+--- HeteroPilot plan ---------------------------------------------------------
+service : meta-llama/Llama-3.1-8B
+cluster : pd-rngd-gpu
+searched: 328 generated, 20 simulated (prune ratio 94%)
+
+--- Rejected candidates ------------------------------------------------------
+  memory_infeasible          4
+  slo_violated               20
+  surrogate_pruned           304
+
+--- INFEASIBLE ---------------------------------------------------------------
+  no currently available configuration satisfies all constraints
+
+  closest plan:
+    hp-00011 [cuda-a40-node_a40a-tp2-dp2-s256-t8192]
+    placement : cuda-a40-node_a40a x2 (tp=2, role=aggregated)
+    TTFT  p50/p95/p99 : 142.9 / 377.8 / 589.6 ms
+    TPOT  p50/p95/p99 : 46.7 / 52.1 / 53.5 ms
+    throughput        : 8,277.4 tok/s
+    SLO attainment    : 84.0%  (goodput 4.60 rps)
+    accelerators      : 4
+    energy            : 81,540.0 J  (avg 1,495.8 W, peak 1,587.8 W)
+    tokens/J          : 2.341
+
+  violated constraints:
+    p99_tpot_ms            target 50.00  predicted 53.47  (+7%)
+
+  suggestions:
+    - relax the TPOT SLO from 50ms to at least 53ms, or raise tensor parallelism to cut per-token latency
+    - lower the admitted request rate from 10.0 to about 4.6 rps
+    - add accelerators with more memory, or use a smaller dtype / fp8 KV cache
+    - surrogate top-K was active and dropped candidates heuristically - this 'infeasible' may be surrogate error; re-run with --oracle or a larger --top-k before trusting it
+
+--- Caveats ------------------------------------------------------------------
+  - Prefix caching is disabled for every candidate. With it enabled the simulator's prefix-cache memory grows monotonically and the run dies on any device small enough to saturate (docs/deviations.md D12). Consequence: ServiceSpec.traffic.prefix_share_ratio has no effect on these predictions, and TTFT is pessimistic for workloads with genuinely shared prefixes.
+  - Stage-6 surrogate top-K was active: only the K candidates the analytical roofline ranked best were fully simulated; the rest were HEURISTICALLY dropped (not a sound bound - this can drop the true optimum). Metrics come from full simulation of the survivors only. If this search is infeasible or the recommendation looks weak, re-run with --oracle or a larger --top-k to rule out surrogate error (measured by experiments/scripts/exp_surrogate.py).
+
+wrote outputs/perf/topk/topk20.yaml

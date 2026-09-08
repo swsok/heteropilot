@@ -1,6 +1,6 @@
-"""The Chakra converter must run under the frontend's own interpreter (D26).
+"""The Chakra converter must run under the frontend's own interpreter (D26, D27).
 
-`WORK_ORDER_d23_fix_revalidation.md`, scope extended 2026-09-07. Before this fix
+`WORK_ORDER_d23_fix_revalidation.md`, scope extended 2026-09-07. Before D26
 `serving/core/graph_generator.py` invoked the converter as bare `python`, so which
 interpreter built the ASTRA-Sim workload graph depended on the caller's PATH.
 
@@ -13,59 +13,26 @@ prefill pinned at one request, decode never fed, memory flat, the simulated cloc
 racing. That is D23's signature, and it reproduced 6/6 under the bare-`python`
 PATH against 18/18 completions with the venv first.
 
-So the property is: the converter command names `sys.executable`, never a
-PATH-resolved name.
+**D27 changed how this file guards that.** There is no longer a converter command
+to inspect -- the converter is called in-process, so the interpreter question is
+answered by construction and the two AST tests that lived here (the command names
+`sys.executable`; `sys` is imported) were deleted with the construct they described.
+`tests/test_chakra_inprocess.py::test_graph_generator_does_not_shell_out` is what
+now keeps a spawned interpreter from coming back.
+
+What survives is the environment check, and D27 makes it matter more rather than
+less: the frontend converts with whatever `chakra` *it* can import, so a
+mis-provisioned venv is now the only way to get the wrong bytes.
 """
 
 from __future__ import annotations
 
-import ast
 import subprocess
 import sys
-from pathlib import Path
-
-REPO = Path(__file__).resolve().parents[1]
-SOURCE = REPO / "serving" / "core" / "graph_generator.py"
-
-
-def test_converter_command_uses_sys_executable():
-    """Read the source rather than run a simulation: the defect is one token."""
-    tree = ast.parse(SOURCE.read_text())
-    found = []
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.List) or not node.elts:
-            continue
-        # the converter command list is the one naming the chakra module
-        literals = [e.value for e in node.elts if isinstance(e, ast.Constant)]
-        if "chakra.src.converter.converter" not in literals:
-            continue
-        first = node.elts[0]
-        found.append(first)
-        assert not isinstance(first, ast.Constant), (
-            f"the converter is invoked as the literal {first.value!r}; a PATH-resolved "
-            "name picks up whichever interpreter comes first, which is D26/D23"
-        )
-        assert ast.unparse(first) == "sys.executable", (
-            f"expected sys.executable, got {ast.unparse(first)}"
-        )
-    assert found, "no chakra converter command found in graph_generator.py"
-
-
-def test_sys_is_imported():
-    tree = ast.parse(SOURCE.read_text())
-    names = {
-        alias.name
-        for node in ast.walk(tree)
-        if isinstance(node, ast.Import)
-        for alias in node.names
-    }
-    assert "sys" in names, "graph_generator.py uses sys.executable but does not import sys"
 
 
 def test_this_interpreter_can_actually_convert():
-    """`sys.executable` is only the right answer if this interpreter has a working
-    chakra. If the venv were mis-provisioned the fix would move the failure rather
-    than remove it, so assert the import the converter needs."""
+    """The frontend converts in-process, so its own chakra is the one that counts."""
     proc = subprocess.run(
         [sys.executable, "-c",
          "import chakra, google.protobuf as pb;"
@@ -79,4 +46,26 @@ def test_this_interpreter_can_actually_convert():
         f"requirements: {proc.stderr.strip()}\n"
         "CLAUDE.md: uv pip install ./astra-sim/extern/graph_frontend/chakra "
         'and uv pip install "protobuf>=7.35.1"'
+    )
+
+
+def test_there_is_no_user_site_fallback():
+    """Why an ImportError here is the strictly better failure than D26's silence.
+
+    D26 was dangerous because a wrong chakra was reachable and succeeded quietly.
+    In-process, a venv without chakra raises -- but only if the wrong one is not on
+    `sys.path` to be found instead. That is a property of the venv, so assert it.
+    """
+    proc = subprocess.run(
+        [sys.executable, "-c",
+         "import site, sys;"
+         "print(site.ENABLE_USER_SITE, any('.local' in p for p in sys.path))"],
+        capture_output=True, text=True, timeout=60,
+    )
+    assert proc.returncode == 0, proc.stderr
+    enabled, local_on_path = proc.stdout.split()
+    assert enabled == "False" and local_on_path == "False", (
+        "the venv can see ~/.local/lib, so a chakra installed there could shadow or "
+        f"substitute for the venv's (D26): ENABLE_USER_SITE={enabled}, "
+        f"'.local' on sys.path={local_on_path}"
     )

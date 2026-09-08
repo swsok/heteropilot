@@ -1,0 +1,25 @@
+service:
+  model: meta-llama/Llama-3.1-8B
+  dtype: bfloat16
+  kv_cache_dtype: auto
+traffic:
+  arrival_rate_rps: 1.0
+  input_tokens:
+    p50: 731
+    p95: 2470
+    p99: 2884
+  output_tokens:
+    p50: 632
+    p95: 780
+  burstiness: 1.0
+  prefix_share_ratio: 0.07
+slo:
+  ttft:
+    percentile: 99
+    max_ms: 25000
+  tpot:
+    percentile: 99
+    max_ms: 50
+objective:
+  primary: minimize_energy
+  secondary: minimize_active_accelerators

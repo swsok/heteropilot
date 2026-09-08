@@ -86,3 +86,12 @@ outputs/rngd_envelope/edf/*.csv
 profiler/perf/*-t0/
 profiler/perf/*-t1/
 outputs/e1-*/
+
+# STEP 1 simulation-cost profiling (WORK_ORDER_rps_aware.md). The pyinstrument
+# sessions are 180-470 MB each and the CSVs 2 MB; outputs/perf/SHA256SUMS and the
+# rendered .txt reports carry everything docs/sim_cost_profile.md cites.
+outputs/perf/*.pyisession
+outputs/perf/*.html
+outputs/perf/*.json
+outputs/perf/*.csv
+outputs/perf/*.jsonl

@@ -1,0 +1,35 @@
+{
+  "candidate_id": "cuda-a40-node_a40a-tp1-dp3-s256-t2048",
+  "key": {
+    "dtype": "bfloat16",
+    "model": "meta-llama/Llama-3.1-8B",
+    "network_class": "lt25",
+    "placement": "A40|aggregated|1|1|1|3",
+    "scheduler_config_hash": "d1b573d6593edbeacc5f3ae0d6ac87a024f236547fc85e6001f8edc2dfe3c437",
+    "workload_bucket": "in_lt1024-out_ge512-rps_lt20"
+  },
+  "metrics": {
+    "average_power_w": 1360.0571830985914,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 68.6275035,
+    "p50_ttft_ms": 207.1769415,
+    "p95_tpot_ms": 74.06195790000001,
+    "p95_ttft_ms": 616.0880182500001,
+    "p99_tpot_ms": 76.53173425,
+    "p99_ttft_ms": 786.5326114299999,
+    "peak_power_w": 1526.13,
+    "sim_wall_seconds": 194.36,
+    "slo_attainment": 0.0,
+    "slo_goodput_rps": 0.0,
+    "throughput_tps": 6318.661525998203,
+    "tokens_per_joule": 1.9662203913491245,
+    "total_energy_j": 97100.0
+  },
+  "provenance": {
+    "git_commit": "2c373b9528d8c7ab4160836237898614226d3d5c",
+    "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
+    "timestamp": "2026-09-08T04:17:01.166262+00:00"
+  },
+  "trace_digest": "e9dd5a8476087bdbeb6cdcfb0cfa762092abea25b417e13cd158e0bded37d540"
+}

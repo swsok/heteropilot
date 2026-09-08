@@ -1683,3 +1683,75 @@ racing its own `std::remove` (the constructor reads eagerly); **D25-a's own
 `cwd=` edit** (reverting it changed nothing); orphaned ASTRA-Sim processes from a
 killed launch (a clean process table still hung); and dependence on which run
 preceded (`R1 → R2` completes).
+
+## D27 — the Chakra converter is called in-process, not spawned · Resolved (fourth sanctioned `serving/` edit)
+
+`WORK_ORDER_rps_aware.md` STEP 1 asked for a wall-time breakdown and gave a rule:
+convert the Chakra subprocess to an in-process call if it exceeds 30 % of wall time.
+It measured **28.9 %** at 10 rps and **29.6 %** at 3.3 rps — below the threshold — and
+the edit was made anyway, on the user's direction, because the cheaper lever the rule
+assumed was available turned out not to be. `docs/sim_cost_profile.md` carries the
+decision and the numbers; this entry records the code change.
+
+**The defect, such as it is.** `generate_graph()` spawned a fresh Python interpreter
+once per instance per iteration to convert a 295-row trace:
+
+```python
+subprocess.run([sys.executable, '-m', 'chakra.src.converter.converter', 'LLM', …],
+               cwd=chakra, text=True, check=True)
+```
+
+Timed on a real trace, 20 calls: **46–47 ms per call, of which 5–7 ms is the
+conversion.** The other 40 ms is fork, exec, interpreter start and imports — paid
+thousands of times per run to do 5 ms of work.
+
+**The fix.** `chakra.src.converter.llm_converter.LLMConverter`, imported once on first
+use and called directly:
+
+```python
+_llm_converter()(trace_path, output_path, num_npus, npu_offset,
+                 enable_local_offloading).convert()
+```
+
+**`LLMConverter` and not `converter.main()`**, which is what the work order's sketch
+suggested. `convert_llm()` is a three-line wrapper around this constructor, so nothing
+is skipped by going one level down — and `main()` would bring two side effects into
+the frontend's process:
+
+- `setup_logging()` calls `logging.basicConfig(level=DEBUG, …)`, which reconfigures the
+  **frontend's** root logger on every call;
+- that same call defaults to a **cwd-relative `debug.log`**. The subprocess absorbed it
+  because it ran with `cwd=` the chakra directory; in-process it would land in the repo
+  root, once per instance per iteration.
+
+`main()` also parses `sys.argv`, so a caller would have to swap argv and `chdir`.
+Bypassing it removes all of that. The import is deferred to first use so that importing
+`serving` stays cheap for the planner, which pulls in `serving.core.memory_model` for
+its own feasibility arithmetic and never builds a graph.
+
+**The work order's stated risk — module-level state surviving between calls — does not
+exist.** `converter.py` has no module-level mutable state, and repeated conversions
+produce identical bytes.
+
+**Verification.** Seven independent byte comparisons, all equal:
+
+| artifact | result |
+| --- | --- |
+| R1 ×3 (`Llama-3.1-8B`, `Qwen3-32B`, `Qwen3-30B-A3B`) | identical to `after_d25_d26` |
+| R2 (`P[cuda:tp4] D[cuda:tp4] -s256-t8192`) | identical (`fff63c22…`) |
+| the three STEP 1 rate runs (10 / 3.3 / 1 rps) | identical to their pre-D27 CSVs |
+
+plus `tests/test_chakra_inprocess.py`, which compares against the **live subprocess
+path** rather than a stored digest, so it stays true if the vendored chakra is updated,
+and asserts the two `main()` side effects above are absent.
+
+Measured saving: **1.55–1.72×** across the three rates. Of the 113 s saved at 10 rps,
+80 s is `generate_graph` — 23.7 % of wall, matching the 24 % the breakdown predicted —
+and 27 s is `read_wait` shrinking, which is observed but not attributed
+(`docs/sim_cost_profile.md`).
+
+**D26 is subsumed but stays in the ledger.** There is no longer an interpreter to
+resolve, so the PATH hazard is gone by construction; what replaces it is an
+`ImportError` at first conversion if the venv lacks chakra. That is the strictly better
+failure — this venv has `ENABLE_USER_SITE = False` and no `~/.local` on `sys.path`, so
+there is no wrong-version fallback to silently succeed with.
