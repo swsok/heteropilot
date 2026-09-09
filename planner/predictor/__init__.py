@@ -11,6 +11,7 @@ from __future__ import annotations
 import enum
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from typing import Any
 
 from planner.inventory import AcceleratorProfile, ClusterSpecV2, ExecutionIsland
 from planner.plan import CandidateConfig, PredictedMetrics
@@ -45,6 +46,11 @@ class SimResult:
     detail: str = ""
     warnings: list[str] = field(default_factory=list)
     artifacts: dict[str, str] = field(default_factory=dict)
+    #: Served concurrency per hardware over this run (planner/util/operating_point.py).
+    #: A property of the RUN, so it lives here and is cached with the metrics --
+    #: deriving it from `artifacts` instead meant it silently vanished on a cache
+    #: hit, and with it the accuracy-domain margin, with no warning at all.
+    operating_point: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     @property
     def ok(self) -> bool:

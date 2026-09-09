@@ -156,6 +156,14 @@ class RejectionStage(str, enum.Enum):
     #: it into a feasibility stage would report an unmeasured configuration as an
     #: infeasible one. STEP 4's envelope rejection joins this category.
     OUTSIDE_CALIBRATION_DOMAIN = "outside_calibration_domain"
+    #: The candidate's PREDICTED operating point falls outside the hardware's
+    #: measured performance envelope, and the envelope's policy is `refuse`
+    #: (STEP 4.4, A6). Like the stage above it is epistemic and, unlike stages
+    #: 4-5, NOT a relaxation of feasibility -- it can drop the true optimum, and
+    #: when it does that is a RESULT ("the optimum is outside what was measured"),
+    #: which the oracle-agreement test reports rather than treats as a bug.
+    #: Opt-in: hardware without an envelope is never touched by it.
+    OUTSIDE_MEASURED_ENVELOPE = "outside_measured_envelope"
     SLO_VIOLATED = "slo_violated"
     POWER_VIOLATED = "power_violated"
     EFFICIENCY_VIOLATED = "efficiency_violated"
@@ -208,6 +216,17 @@ class PredictedMetrics(_Strict):
         return self.total_energy_j is not None
 
 
+class OperatingPointRecord(_Strict):
+    """Where one hardware kind actually ran, and what margin that earned it."""
+
+    hardware: str
+    concurrency: float
+    phase: str
+    tpot_error_pct: float | None = None
+    ttft_error_pct: float | None = None
+    in_calibration_domain: bool | None = None
+
+
 class DeploymentPlan(_Strict):
     """Planner output, deployer input (§3.4)."""
 
@@ -218,6 +237,13 @@ class DeploymentPlan(_Strict):
     routing: RoutingPolicy = RoutingPolicy.LOAD
     robust_margin_ttft_percent: float = 0.0
     robust_margin_tpot_percent: float = 0.0
+    #: The served concurrency each hardware kind ran at, and the accuracy-domain
+    #: error read off it (STEP 4.3). Empty when no accuracy domain applied, which
+    #: is the default path and keeps the frozen output unchanged.
+    operating_point: list[OperatingPointRecord] = Field(default_factory=list)
+    #: "manual" | "accuracy_domain" | "" -- which of the two produced the margin
+    #: actually applied. Both are recorded in provenance; this says which bound.
+    margin_source: str = ""
 
     @property
     def active_accelerators(self) -> int:

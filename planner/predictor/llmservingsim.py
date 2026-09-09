@@ -30,6 +30,7 @@ from planner.predictor import Predictor, SimOutcome, SimResult
 from planner.spec import ServiceSpec
 from planner.topology import TopologyGraph, TopologyReduction
 from planner.util import memory as memutil
+from planner.util.operating_point import operating_points
 from planner.util.percentile import percentile
 from planner.util.power_parse import PowerParseError, parse_power
 from planner.util.workload import WorkloadTrace
@@ -413,12 +414,14 @@ class LLMServingSimPredictor(Predictor):
         # total would under-count energy and inflate tokens/J (deviations D14).
         power_complete = all("power" in node for node in config["nodes"])
 
-        result = self._run_once(candidate, spec, config_path, run_dir, power_complete)
+        result = self._run_once(candidate, spec, config_path, run_dir, power_complete,
+                                config=config)
         if result.outcome is SimOutcome.CRASHED and self.retry_once:
             # §5.5 asks for one retry. A deterministic simulator rarely benefits,
             # but a transient failure (disk, port, ASTRA-Sim startup) can.
             retry = self._run_once(
-                candidate, spec, config_path, run_dir, power_complete, attempt=2
+                candidate, spec, config_path, run_dir, power_complete, attempt=2,
+                config=config,
             )
             if retry.ok:
                 retry.warnings.append("succeeded on retry after a first-attempt failure")
@@ -439,6 +442,7 @@ class LLMServingSimPredictor(Predictor):
         run_dir: Path,
         power_complete: bool,
         attempt: int = 1,
+        config: dict | None = None,
     ) -> SimResult:
         csv_path = run_dir / f"sim{attempt}.csv"
         log_path = run_dir / f"sim{attempt}.log"
@@ -527,6 +531,13 @@ class LLMServingSimPredictor(Predictor):
             metrics=metrics,
             warnings=warnings,
             artifacts={"log": str(log_path), "csv": str(csv_path), "config": str(config_path)},
+            # Computed here, where the CSV and the compiled config are both in
+            # hand, so it survives into the cache with the metrics.
+            operating_point={
+                hw: {"concurrency": p.concurrency, "phase": p.phase,
+                     "requests": p.requests, "wall_s": p.wall_s}
+                for hw, p in operating_points(csv_path, config or {}).items()
+            },
         )
 
     def _parse(

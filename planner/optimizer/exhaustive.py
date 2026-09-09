@@ -20,9 +20,11 @@ from planner.envelope import EnvelopeCache
 from planner.inventory import AcceleratorProfile, ClusterSpecV2, ExecutionIsland
 from planner.optimizer import feasibility, pareto
 from planner.optimizer.surrogate import SurrogateRanker
+from planner.perf_envelope import PerfEnvelope, Saturated, solve_operating_point
 from planner.plan import (
     CandidateConfig,
     DeploymentPlan,
+    OperatingPointRecord,
     PlannerOutput,
     PredictedMetrics,
     Rejection,
@@ -34,6 +36,7 @@ from planner.plan import (
     summarize_rejections,
 )
 from planner.predictor import Predictor, SimOutcome, SimResult
+from planner.predictor.calibration import AccuracyDomain
 from planner.spec import ServiceSpec
 from planner.topology import TopologyError, TopologyGraph
 from planner.util import kv_transfer
@@ -232,6 +235,154 @@ def _routing_for(candidate: CandidateConfig) -> RoutingPolicy:
     return RoutingPolicy.LOAD
 
 
+def _envelope_prefilter(
+    candidates: list[CandidateConfig],
+    spec: ServiceSpec,
+    islands: dict[str, ExecutionIsland],
+    profiles: dict[str, AcceleratorProfile],
+    envelopes: dict[str, PerfEnvelope],
+) -> tuple[list[CandidateConfig], list[Rejection]]:
+    """Drop candidates whose predicted operating point was never measured.
+
+    STEP 4.4. This is NOT a sound pruning bound and must not be mistaken for one:
+    stages 4-5 in the generator may reject only what the most optimistic
+    arithmetic already rules out, whereas this rejects what nobody has measured.
+    It can therefore drop the true optimum, and when it does the honest report is
+    "the optimum lies outside the measured envelope" -- which is a finding about
+    the experiment, not a planner bug. It lives here beside the surrogate stage
+    rather than in the generator for exactly that reason.
+
+    Hardware with no envelope is untouched: absence of a curve is not permission
+    and not prohibition, it is simply no information.
+
+    `out_tokens` comes from the spec's output p50 because a ServiceSpec carries
+    percentiles and no mean. Little's law wants the mean; on the RNGD workload the
+    two differ by 3.2 %, which moves the solved concurrency by about as much. The
+    substitution is recorded in the rejection text so nobody mistakes it for exact.
+    """
+    kept: list[CandidateConfig] = []
+    rejections: list[Rejection] = []
+    out_tokens = float(spec.traffic.output_tokens.p50)
+    total_rps = spec.traffic.arrival_rate_rps
+
+    for cand in candidates:
+        verdict: str | None = None
+        for a in cand.assignments:
+            island = islands.get(a.island_id)
+            if island is None:
+                continue
+            profile = profiles.get(island.accelerator_model)
+            hardware = profile.sim_hardware if profile else None
+            env = envelopes.get(hardware) if hardware else None
+            if env is None or env.validity.extrapolation != "refuse":
+                continue
+            if a.role is Role.PREFILL:
+                # The envelope is a decode-throughput curve; a prefill engine runs
+                # no decode steps, so the curve says nothing about it.
+                continue
+            rps_per_instance = total_rps / max(1, a.dp_replicas)
+            got = solve_operating_point(env, rps_per_instance, out_tokens)
+            if got.ok:
+                continue
+            assert isinstance(got, Saturated)
+            verdict = (
+                f"{got.reason} (rps/instance = {rps_per_instance:.4g} from "
+                f"{total_rps} rps over {a.dp_replicas} replica(s); out_tokens = "
+                f"{out_tokens:.0f}, the spec's p50 standing in for a mean)"
+            )
+            break
+        if verdict is None:
+            kept.append(cand)
+        else:
+            rejections.append(Rejection(
+                candidate_id=cand.id,
+                stage=RejectionStage.OUTSIDE_MEASURED_ENVELOPE,
+                reason=verdict,
+            ))
+    return kept, rejections
+
+
+@dataclass
+class _AutoMargin:
+    """What the candidate's own operating point earns it.
+
+    Events are structured rather than pre-formatted because they are per
+    CANDIDATE and there can be hundreds; the caller aggregates them into one line
+    per hardware. An earlier version appended a sentence per candidate and buried
+    the plan under 300 near-identical caveats.
+    """
+
+    ttft_percent: float = 0.0
+    tpot_percent: float = 0.0
+    source: str = ""
+    operating_point: list[OperatingPointRecord] = field(default_factory=list)
+    #: hardware -> served concurrency, for candidates outside the domain
+    extrapolated: dict[str, float] = field(default_factory=dict)
+    #: hardware kinds with no accuracy domain at all
+    no_domain: tuple[str, ...] = ()
+    #: set when the run produced no readable operating point
+    unreadable: bool = False
+
+
+def _auto_margins(
+    candidate: CandidateConfig,
+    sim: SimResult,
+    domains: dict[str, AccuracyDomain] | None,
+) -> _AutoMargin:
+    """Read the run's operating point and price the simulator's error at it.
+
+    Hardware without an accuracy domain contributes nothing -- margin 0 and a
+    note, never a borrowed number from a different device (rule 3).
+
+    Which error applies to which metric follows the roles. In a P/D deployment the
+    PREFILL hardware determines TTFT and the DECODE hardware determines TPOT, so
+    each side is charged only for the metric it owns; charging the decode device's
+    TPOT error against a prefill engine that runs no decode steps would be the
+    same category error the role-aware pruning bounds already avoid.
+    """
+    out = _AutoMargin()
+    if not domains:
+        return out
+    # Read off the SimResult, which carries it whether the run just happened or
+    # came from the cache. Re-deriving it from `artifacts` here is what made the
+    # margin vanish on a cache hit, silently and with the plan still printing.
+    points = sim.operating_point
+    if not points:
+        out.unreadable = True
+        return out
+
+    missing = []
+    for hw, raw in sorted(points.items()):
+        conc = float(raw["concurrency"])
+        phase = str(raw["phase"])
+        domain = domains.get(hw)
+        if domain is None:
+            missing.append(hw)
+            out.operating_point.append(OperatingPointRecord(
+                hardware=hw, concurrency=conc, phase=phase))
+            continue
+        tpot_err = domain.tpot_error_at(conc)
+        ttft_err = domain.ttft_error_at(conc)
+        out.operating_point.append(OperatingPointRecord(
+            hardware=hw, concurrency=conc, phase=phase,
+            tpot_error_pct=tpot_err, ttft_error_pct=ttft_err,
+            in_calibration_domain=domain.in_domain(conc),
+        ))
+        # phase == "prefill" owns TTFT only; "decode" owns TPOT only; "total"
+        # (aggregated, or one device carrying both P/D roles) owns both.
+        if phase in ("decode", "total"):
+            out.tpot_percent = max(out.tpot_percent,
+                                   AccuracyDomain.margin_from_error(tpot_err))
+        if phase in ("prefill", "total"):
+            out.ttft_percent = max(out.ttft_percent,
+                                   AccuracyDomain.margin_from_error(ttft_err))
+        out.source = "accuracy_domain"
+        if not domain.in_domain(conc):
+            out.extrapolated[hw] = conc
+    out.no_domain = tuple(missing)
+    return out
+
+
 def evaluate_candidates(
     candidates: list[CandidateConfig],
     spec: ServiceSpec,
@@ -243,6 +394,7 @@ def evaluate_candidates(
     cache: EnvelopeCache | None = None,
     ttft_margin_percent: float = 0.0,
     tpot_margin_percent: float = 0.0,
+    accuracy_domains: dict[str, AccuracyDomain] | None = None,
     max_workers: int | None = None,
     progress: Callable[[int, int, CandidateConfig], None] | None = None,
 ) -> SearchResult:
@@ -310,6 +462,12 @@ def evaluate_candidates(
                     assert key is not None  # a twin is only formed when it has a key
                     sims[twin.id] = sims[rep_by_key[key].id]
 
+    # Accuracy-domain events, aggregated after the loop into one line per
+    # hardware. Per-candidate notes would be hundreds of near-identical sentences.
+    _extrapolated: dict[str, list[float]] = {}
+    _no_domain: dict[str, int] = {}
+    _unreadable = 0
+
     # Phase 2: assemble in candidate order (deterministic plan_ids and lists).
     for index, candidate in enumerate(candidates):
         sim = sims[candidate.id]
@@ -351,14 +509,32 @@ def evaluate_candidates(
             )
             result.pd_transfers.append(pd_info)
 
+        # The margin the candidate's OWN operating point earns. A hand-set
+        # --tpot-margin-percent cannot know whether a run sat at concurrency 1 or
+        # 76, where the simulator is 3.1 % and 18 % optimistic respectively; this
+        # reads it off the run. When both are given the LARGER wins, because a
+        # manual margin is an explicit instruction not to go below it.
+        auto = _auto_margins(candidate, sim, accuracy_domains)
+        ttft_used = max(ttft_margin_percent, auto.ttft_percent)
+        tpot_used = max(tpot_margin_percent, auto.tpot_percent)
+        for _hw, _conc in auto.extrapolated.items():
+            _extrapolated.setdefault(_hw, []).append(_conc)
+        for _hw in auto.no_domain:
+            _no_domain[_hw] = _no_domain.get(_hw, 0) + 1
+        if auto.unreadable:
+            _unreadable += 1
+
         plan = DeploymentPlan(
             plan_id=_plan_id(index),
             model=spec.model,
             candidate=candidate,
             predicted=metrics,
             routing=_routing_for(candidate),
-            robust_margin_ttft_percent=ttft_margin_percent,
-            robust_margin_tpot_percent=tpot_margin_percent,
+            robust_margin_ttft_percent=ttft_used,
+            robust_margin_tpot_percent=tpot_used,
+            operating_point=auto.operating_point,
+            margin_source=auto.source if auto.source and (
+                auto.tpot_percent >= tpot_margin_percent) else "manual",
         )
         if cached:
             result.cache_hits.append(candidate.id)
@@ -366,8 +542,8 @@ def evaluate_candidates(
         report = feasibility.evaluate(
             plan,
             spec,
-            ttft_margin_percent=ttft_margin_percent,
-            tpot_margin_percent=tpot_margin_percent,
+            ttft_margin_percent=ttft_used,
+            tpot_margin_percent=tpot_used,
         )
         result.notes.extend(report.notes)
 
@@ -385,6 +561,23 @@ def evaluate_candidates(
                     ),
                 )
             )
+    for _hw, _concs in sorted(_extrapolated.items()):
+        result.notes.append(
+            f"{len(_concs)} candidate(s) put {_hw} at served concurrency "
+            f"{min(_concs):.2f}-{max(_concs):.2f}, outside its measured accuracy "
+            f"domain; those margins are EXTRAPOLATED, not measured"
+        )
+    for _hw, _n in sorted(_no_domain.items()):
+        result.notes.append(
+            f"{_n} candidate(s) use {_hw}, which has no measured accuracy domain; "
+            f"they carry margin 0 (an unmeasured margin is not invented, rule 3)"
+        )
+    if _unreadable:
+        result.notes.append(
+            f"{_unreadable} candidate(s) produced no readable operating point, so "
+            f"no accuracy-domain margin was applied to them"
+        )
+
     return result
 
 
@@ -525,6 +718,8 @@ def search(
     tpot_margin_percent: float = 0.0,
     surrogate: SurrogateRanker | None = None,
     top_k: int | None = None,
+    envelopes: dict[str, PerfEnvelope] | None = None,
+    accuracy_domains: dict[str, AccuracyDomain] | None = None,
     max_workers: int | None = None,
     provenance: dict | None = None,
     progress: Callable[[int, int, CandidateConfig], None] | None = None,
@@ -553,6 +748,18 @@ def search(
     # order. When surrogate/top_k is unset this block is skipped entirely, so the
     # default path is byte-identical.
     candidates = generation.candidates
+
+    # Stage 5.5, opt-in and EPISTEMIC: drop candidates whose predicted operating
+    # point was never measured. Runs before the surrogate so a candidate outside
+    # the envelope is reported as unmeasured rather than as heuristically dropped
+    # -- the two mean different things and only one of them can be fixed by
+    # raising K.
+    envelope_rejections: list[Rejection] = []
+    if envelopes:
+        candidates, envelope_rejections = _envelope_prefilter(
+            candidates, spec, by_id, profiles, envelopes
+        )
+
     surrogate_rejections: list[Rejection] = []
     if surrogate is not None and top_k is not None and top_k < len(candidates):
         ordered = surrogate.order(
@@ -581,13 +788,15 @@ def search(
         cache=cache,
         ttft_margin_percent=ttft_margin_percent,
         tpot_margin_percent=tpot_margin_percent,
+        accuracy_domains=accuracy_domains,
         max_workers=max_workers,
         progress=progress,
     )
 
     island_tiers, island_hw, tier_warnings = _profile_tiers(spec, islands, profiles, perf_root)
 
-    all_rejections = generation.rejections + surrogate_rejections + evaluation.rejections
+    all_rejections = (generation.rejections + envelope_rejections
+                      + surrogate_rejections + evaluation.rejections)
     summary = summarize_rejections(all_rejections)
     caveats = [PHASE2_PREFIX_CACHE_CAVEAT]
     caveats.extend(tier_warnings)
@@ -599,6 +808,19 @@ def search(
 
     if surrogate_rejections:
         caveats.append(SURROGATE_TOPK_CAVEAT)
+
+    if envelope_rejections:
+        caveats.append(
+            f"{len(envelope_rejections)} candidate(s) were rejected BEFORE simulation "
+            f"because their predicted operating point falls outside the measured "
+            f"performance envelope of the hardware they use. This stage is not a "
+            f"sound bound -- it can drop a candidate that would have been the best, "
+            f"and if it did, the honest reading is 'the optimum is outside what has "
+            f"been measured', not 'the optimum is infeasible'. Re-run without "
+            f"--envelope-prefilter to see what the simulator predicts for them, and "
+            f"treat those predictions as extrapolations. "
+            f"(rejected_summary['outside_measured_envelope'])"
+        )
 
     if evaluation.pd_transfers:
         caveats.append(PD_TRANSFER_CAVEAT)

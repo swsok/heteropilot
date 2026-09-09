@@ -289,6 +289,25 @@ ruff check .
 mypy planner/              # planner/ only — upstream code is not type-clean
 ```
 
+### Never kill by pattern — `pkill -f` matches the shell that runs it
+
+`pkill -f <pattern>` and `pkill -f <script>.sh` match **the invoking bash command
+line itself**, because the pattern is in it. Every use so far has killed the
+session's own shell (exit 144) and, on 2026-09-09, also SIGTERM'd an unrelated
+long-running measurement that had to be restarted. It has additionally produced a
+false "STILL ALIVE" report, because the survivor `ps` found was the grep.
+
+Kill exact PIDs instead, and exclude self when listing:
+
+```bash
+ps -eo pid,cmd | grep -E "<pattern>" | grep -v grep | grep -v "^ *$$ "   # find
+kill <pid>                                                              # then kill
+```
+
+Prefer not killing at all: background work launched here is wrapped in
+`experiments/scripts/livelock_watch.sh`, which ends a stuck run on its own and
+distinguishes a tick stall (exit 3) from a dead child (exit 4).
+
 ## Testing requirements
 
 Beyond ordinary unit tests, three test classes are mandatory and easy to overlook:

@@ -2000,3 +2000,78 @@ cannot see it.
 
 **What is NOT claimed.** Power above conc 15.59 is unmeasured. D22's four points
 (conc 15.3 to 107.2) keep `power_w: null` and were not back-filled (A2).
+
+## D29 — the SLO margin comes from the candidate's own operating point, and the A40 domain is opt-in · Resolved
+
+`WORK_ORDER_rps_aware.md` rev 2 STEP 4.2–4.3, implementing
+`docs/rps_aware_planning_design.md` §5.
+
+**What was wrong with a constant.** `pd_slo_sweep.py --tpot-margin-percent` is one
+number applied to every candidate, and the simulator's error is not one number. On
+the RNGD card it is **+11.6 %** at served concurrency 3.9 and **−18 %** at 76 — not
+merely different in size but opposite in sign. A constant is therefore too loose
+somewhere or too tight everywhere, and D22 is what "too loose at the top" looks
+like: the winner passed a 50 ms TPOT SLO at a predicted 48.41 ms, and
+48.41 × 1.18 = 57.1 ms. The configuration was infeasible, not optimistic, and
+nothing in the pipeline could see it because the 18 % was a fact about the
+simulator that the simulator did not carry.
+
+**What replaces it.** `planner/util/operating_point.py` reads the served
+concurrency each hardware kind actually ran at, out of the simulation's own CSV by
+Little's law. `AccuracyDomain.tpot_error_at(conc)` prices the simulator's error
+there, and feasibility applies it.
+
+**Four decisions, each of which could have gone the other way.**
+
+1. **The margin is one-sided.** Where the simulator is *pessimistic* the prediction
+   is left alone rather than deflated. Deflating would make plans look better than
+   the hardware measured, which is the direction of the retraction.
+2. **Manual and automatic coexist; the larger wins.** A hand-set
+   `--tpot-margin-percent` is an explicit instruction not to go below a floor, so
+   it is a floor. Both values are recorded in provenance, so a plan says what it
+   was checked against and not only which check bound.
+3. **Hardware with no accuracy domain gets margin 0 and a note.** Never a margin
+   borrowed from a different device — that would be rule 3 with extra steps.
+4. **The A40 domain lives in its own file and is opt-in.** `profiles/calibration/a40.yaml`
+   is on the default planning path; a domain there would apply an automatic margin
+   to every A40 candidate and move the frozen output for both `examples/` specs.
+   So it is `profiles/calibration/a40.accuracy.yaml`, reached only by
+   `plan --accuracy-domain`, and the default path is byte-identical.
+
+**The A40 point had to be computed, not read.** Its `fitted_at_concurrency` is
+**170.56**, derived from `outputs/phase0_bench/A40/vllm/requests.jsonl` — whose
+mean latency, TTFT and TPOT reproduce the committed summary exactly, which is what
+licenses the derivation. It counts requests *in the system*, queued as well as
+running, and the engine's `max_num_seqs` was 128: that run offered ~10.3 rps to one
+A40 and the card could not keep up. The RNGD envelope uses the same definition but
+was measured closed-loop, where in-system and running nearly coincide. **Comparing
+the two domains' concurrency axes therefore needs care**, and the file says so.
+
+**A measurement that changed the answer.** The RNGD domain originally had two
+points, 16.6 and 76, and `widen_error_bars` extrapolated below 16.6 — producing a
+4.8 % optimistic-side margin at concurrency 10. Measuring the low end
+(`outputs/lowload_sim_error/`, STEP 4.2) found the simulator is **pessimistic**
+there, so the correct margin is **zero**. The extrapolation had the sign wrong, not
+just the magnitude. Four of six attempted points are in the domain; the two nearest
+16.6 are excluded because the simulator settled 40 % below the hardware's occupancy
+at the same offered rate, which makes its TPOT a different operating point's TPOT.
+
+## D29b — `power_model` is not wired into the planner's energy, on purpose
+
+STEP 4.6. `profiles/accelerators/furiosa_rngd_card.yaml` carries a measured
+`power_model` (D31) and `planner/inventory.py` parses it. The planner does **not**
+use it to compute energy, and that is a decision rather than an omission.
+
+Today's `total_energy_j` comes from the simulator's **node-level** power
+(`PROJECT_REPORT.md` §4.8.7: the ~558 W figure is node power, not card power).
+Swapping in a card-level curve would change what `tokens_per_joule` *means*, and
+every tok/J in `CLAIMS.md`, `PROJECT_REPORT.md` and the sweep results was computed
+under the old definition. The comparison across all of them would silently break —
+new numbers would look better or worse than old ones for a reason that is not a
+change in the hardware or the plan.
+
+So `power_model` is used **only** to compute the measured curve E6b compares
+against, where it is the right instrument because that side is a card measurement.
+If the planner's energy definition is ever changed, it must be a deliberate,
+documented migration that re-derives the historical numbers — not a side effect of
+this file appearing.

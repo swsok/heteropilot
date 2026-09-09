@@ -1,0 +1,49 @@
+# A40 accuracy domain — kept OUT of a40.yaml on purpose.
+#
+# WORK_ORDER_rps_aware.md rev 2 STEP 4.2/4.3. `profiles/calibration/a40.yaml` is
+# on the default planning path, and adding a domain there would start applying an
+# automatic margin to every A40 candidate — which changes the frozen plan output
+# for both `examples/` specs. So the domain lives here and is opt-in via
+# `plan --accuracy-domain`. The default path stays byte-identical.
+#
+# Sign: (sim - measured) / measured. Negative = the simulator is optimistic.
+#
+# ONE point, and it is at high load. The validation run offered ~10.3 rps to a
+# single A40 and the card could not keep up: mean TTFT 40.6 s, so requests spent
+# most of their life queued. Served concurrency by Little's law
+# (`sum(latency)/wall`) is 170.56 over a 179.6 s wall — computed here from
+# `outputs/phase0_bench/A40/vllm/requests.jsonl`, whose mean latency, TTFT and
+# TPOT reproduce `validation-nominal/summary.txt` exactly.
+#
+# That figure counts requests IN THE SYSTEM, queued as well as running, and the
+# engine's `max_num_seqs` was 128. It is the same definition the RNGD envelope
+# uses, but on that side the bench was closed-loop so in-system and running
+# nearly coincide. Comparing the two domains' concurrency axes therefore needs
+# care, and this note is the warning.
+#
+# Magnitudes are the p95 absolute errors from the fitted bucket, signed by the
+# direction of the mean difference (TTFT -1.9 %, TPOT -0.9 %): "up to this
+# optimistic at the 95th percentile" is the conservative reading of the pair.
+hardware:
+  A40:
+    hardware: A40
+    accuracy_domain:
+      fitted_at_concurrency: 170.56
+      outside_domain: widen_error_bars
+      source: measured
+      points:
+        - {conc: 170.56, tpot_err_pct: -1.42, ttft_err_pct: -1.97,
+           note: "p95 abs error, signed by the mean diff; 300-req sharegpt validation"}
+      note: >
+        A single point carries no slope, so widen_error_bars cannot widen: the
+        error is held flat everywhere and `in_domain` is what tells a caller the
+        value is being reused outside where it was fitted. A second A40 point at
+        a different load would fix that and none exists.
+provenance:
+  fitted_from:
+    A40:
+      - outputs/phase0_bench/A40/vllm/validation-nominal/summary.txt
+      - outputs/phase0_bench/A40/vllm/requests.jsonl
+  served_concurrency_note: >
+    170.56 = sum(latency)/wall over 300 requests, 179.6 s wall, computed
+    2026-09-09. Offered ~10.3 rps; completed 1.671 rps.
