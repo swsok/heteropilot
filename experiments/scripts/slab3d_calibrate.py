@@ -38,12 +38,25 @@ from planner.util.percentile import percentile  # noqa: E402
 
 BASE_LATENCY_NS = 20000.0
 FACTORS = (1, 2, 4, 8)
-BANDWIDTHS = (16.0, 35.2, 100.0)
+#: 16.0 reproduces the spike; 35.2 is the composed A40<->A40 value; 100.0 is an
+#: NVLink-class upper bound. 12.6 was added after STEP 2.3's first end-to-end run:
+#: it is the A40<->RNGD cross-vendor link in `pd-rngd-gpu.yaml`, i.e. the bandwidth
+#: the asymmetric candidates D28 exists to enable actually run at, and the work
+#: order's three did not cover it. The compiler refused every one of them, which
+#: is the refusal working -- and the reason to measure rather than widen the
+#: domain by fiat. 7.7 came from the same run: it is `fabric-rngd0-rngd1`, the
+#: RNGD<->RNGD link, i.e. the asymmetric NPU P/D case D14/D16(b) was written
+#: about.
+BANDWIDTHS = (7.7, 12.6, 16.0, 35.2, 100.0)
 
 #: (label, base fixture, tp) -- the two shapes the work order names.
+#: tp2 gives the `[1,2]` split, which `plan --enable-pd` produces for an A40 tp1
+#: prefill paired with a tp2 decode. Degenerate-looking but real, and refusing it
+#: left a fifth of the fixture's asymmetric candidates unevaluated.
 SHAPES = (
     ("tp8", "experiments/configs/clusters/rngd-llama31-8b-tp8.json", 8),
     ("tp4", "experiments/configs/clusters/colocated-tp4x2-auto.json", 4),
+    ("tp2", "experiments/configs/clusters/colocated-tp4x2-auto.json", 2),
 )
 
 
@@ -54,9 +67,17 @@ def _base_config(path: str, tp: int) -> dict:
     node = copy.deepcopy(cfg["nodes"][0])
     node["num_instances"] = 1
     node["instances"] = node["instances"][:1]
-    assert node["instances"][0]["tp_size"] == tp, (
-        f"{path} instance 0 is tp{node['instances'][0]['tp_size']}, expected tp{tp}"
-    )
+    # The base fixture supplies the hardware, model and power block; `tp` is the
+    # experimental variable, so it is set here rather than requiring one committed
+    # fixture per width.
+    if node["instances"][0]["tp_size"] != tp:
+        if tp > node["instances"][0]["tp_size"]:
+            raise ValueError(
+                f"{path} has tp{node['instances'][0]['tp_size']}; cannot widen to tp{tp} "
+                f"without more devices than the fixture declares"
+            )
+        node["instances"][0]["tp_size"] = tp
+        node["instances"][0]["num_npus"] = tp
     cfg["nodes"] = [node]
     cfg["num_nodes"] = 1
     return cfg

@@ -183,14 +183,48 @@ def test_split2_is_valid_but_not_deployable():
     assert "split2" not in cb.DEPLOYABLE_TOPOLOGY_MODES
 
 
-def test_the_planner_never_emits_split2():
-    """The instrument must not leak into a deployment path."""
-    planner = ROOT / "planner"
-    offenders = [
-        f for f in planner.rglob("*.py")
-        if "split2" in f.read_text()
-    ]
-    assert offenders == [], f"planner/ mentions split2: {offenders}"
+def test_the_planner_cannot_even_construct_a_split2_candidate():
+    """The instrument must not leak into a deployment path.
+
+    Asserted on behaviour rather than on the source text: `plan.py` mentions
+    `split2` precisely to say a plan must never name it, and a grep cannot tell
+    that comment apart from a use.
+    """
+    import pydantic
+
+    from planner.plan import CandidateConfig
+
+    ok = CandidateConfig(id="c", model="m", dtype="bfloat16",
+                         assignments=[{"island_id": "i", "tp_size": 4}],
+                         topology_mode="slab3d")
+    assert ok.topology_mode == "slab3d"
+    with pytest.raises(pydantic.ValidationError):
+        CandidateConfig(id="c", model="m", dtype="bfloat16",
+                        assignments=[{"island_id": "i", "tp_size": 4}],
+                        topology_mode="split2")
+
+
+def test_no_planner_module_writes_split2_into_a_config():
+    """The other half: nothing in planner/ puts the string into emitted output.
+
+    Comments are stripped, so an entry saying "never use split2" does not trip it.
+    """
+    import io
+    import tokenize
+
+    offenders = []
+    for f in sorted((ROOT / "planner").rglob("*.py")):
+        src = f.read_text()
+        if "split2" not in src:
+            continue
+        code = []
+        for tok in tokenize.generate_tokens(io.StringIO(src).readline):
+            if tok.type in (tokenize.COMMENT, tokenize.STRING):
+                continue
+            code.append(tok.string)
+        if "split2" in "".join(code):
+            offenders.append(f.name)
+    assert offenders == [], f"planner/ has split2 in code, not just prose: {offenders}"
 
 
 def test_split2_splits_one_group_and_spans_both_dims():

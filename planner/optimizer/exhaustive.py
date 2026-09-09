@@ -33,7 +33,7 @@ from planner.plan import (
     UnscoredPlan,
     summarize_rejections,
 )
-from planner.predictor import Predictor, SimResult
+from planner.predictor import Predictor, SimOutcome, SimResult
 from planner.spec import ServiceSpec
 from planner.topology import TopologyError, TopologyGraph
 from planner.util import kv_transfer
@@ -319,12 +319,22 @@ def evaluate_candidates(
         if not sim.ok:
             # A crash or a timeout is a broken run, not a verdict on the
             # configuration. It gets its own bucket so a search full of them
-            # cannot be mistaken for a search that found nothing feasible.
+            # cannot be mistaken for a search that found nothing feasible. A
+            # calibration refusal is a third thing again -- the candidate is
+            # representable and simply was never measured -- so it gets its own
+            # bucket for the same reason (D28/D31, A6).
+            stage = (
+                RejectionStage.OUTSIDE_CALIBRATION_DOMAIN
+                if sim.outcome is SimOutcome.OUTSIDE_CALIBRATION_DOMAIN
+                else RejectionStage.SIM_ERROR
+            )
             result.rejections.append(
                 Rejection(
                     candidate_id=candidate.id,
-                    stage=RejectionStage.SIM_ERROR,
-                    reason=f"{sim.outcome.value}: {sim.detail}",
+                    stage=stage,
+                    reason=(sim.detail if stage is
+                            RejectionStage.OUTSIDE_CALIBRATION_DOMAIN
+                            else f"{sim.outcome.value}: {sim.detail}"),
                 )
             )
             continue

@@ -10,7 +10,7 @@ failure.
 from __future__ import annotations
 
 import enum
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -103,6 +103,12 @@ class CandidateConfig(_Strict):
     assignments: list[IslandAssignment] = Field(min_length=1)
     serving_arch: ServingArch = ServingArch.AGGREGATED
     knobs: VllmKnobs = Field(default_factory=VllmKnobs)
+    #: Which ASTRA-Sim topology encoding this placement needs (deviations D28).
+    #: "auto" for everything the pre-D28 path could express; "slab3d" only for
+    #: asymmetric P/D (`tp_d == 2 * tp_p`), which `auto` cannot represent at all.
+    #: Deliberately NOT the simulator's third mode: `split2` is a calibration
+    #: instrument and a plan must never name it (tests/test_slab3d_config.py).
+    topology_mode: Literal["auto", "slab3d"] = "auto"
 
     @property
     def total_devices(self) -> int:
@@ -122,6 +128,7 @@ class CandidateConfig(_Strict):
                 for a in self.assignments
             )),
             self.serving_arch.value,
+            self.topology_mode,
             tuple(sorted(self.knobs.model_dump().items())),
         )
 
@@ -142,6 +149,13 @@ class RejectionStage(str, enum.Enum):
     #: this in - the "pruning must be a relaxation" rule is for the sound stages
     #: 4-5 only. Only appears when the caller opts in via top_k.
     SURROGATE_PRUNED = "surrogate_pruned"
+    #: The candidate is representable and was never simulated, because a value it
+    #: needs sits outside a measured calibration domain (D28/D31, A6). This is an
+    #: EPISTEMIC refusal, not a failure: "we do not know" rather than "it does not
+    #: work". It gets its own bucket for the same reason SIM_ERROR does -- folding
+    #: it into a feasibility stage would report an unmeasured configuration as an
+    #: infeasible one. STEP 4's envelope rejection joins this category.
+    OUTSIDE_CALIBRATION_DOMAIN = "outside_calibration_domain"
     SLO_VIOLATED = "slo_violated"
     POWER_VIOLATED = "power_violated"
     EFFICIENCY_VIOLATED = "efficiency_violated"

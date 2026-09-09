@@ -26,6 +26,11 @@ class SimOutcome(str, enum.Enum):
     TIMEOUT = "timeout"
     #: Output was produced but could not be parsed.
     UNPARSEABLE = "unparseable"
+    #: Never simulated: a value the candidate needs sits outside a measured
+    #: calibration domain (D28/D31, A6). An epistemic refusal, not a breakage --
+    #: `exhaustive` routes it to RejectionStage.OUTSIDE_CALIBRATION_DOMAIN so a
+    #: run of these cannot be read as a run that found nothing feasible.
+    OUTSIDE_CALIBRATION_DOMAIN = "outside_calibration_domain"
 
     @property
     def is_error(self) -> bool:

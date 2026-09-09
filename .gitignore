@@ -111,3 +111,7 @@ outputs/exp_surrogate/**/sims/
 # configs in seconds; runs.json and fits.json carry every number the table cites.
 outputs/slab3d_calib/*.csv
 outputs/slab3d_calib/*.log
+
+# STEP 2.3 end-to-end check: 612 simulation work dirs regenerate from the command
+# in the plan's provenance; the plan and its log are the record.
+outputs/asym_plan/work/

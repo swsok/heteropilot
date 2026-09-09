@@ -28,10 +28,24 @@ def table() -> dict:
     return yaml.safe_load(TABLE.read_text())
 
 
-def test_all_six_measured_points_are_present(table):
+MEASURED_BW = (7.7, 12.6, 16.0, 35.2, 100.0)
+MEASURED_SPLITS = ("[4,2]", "[2,2]", "[1,2]")
+
+
+def test_all_measured_points_are_present(table):
     got = {(p["split"], p["link_bw"]) for p in table["points"]}
-    want = {(s, bw) for s in ("[4,2]", "[2,2]") for bw in (16.0, 35.2, 100.0)}
+    want = {(s, bw) for s in MEASURED_SPLITS for bw in MEASURED_BW}
     assert got == want
+
+
+def test_the_fixture_link_bandwidths_are_covered(table):
+    """Every inter-island bandwidth in `pd-rngd-gpu.yaml` that an asymmetric
+    candidate can run over. Each was added because an end-to-end
+    `plan --enable-pd` refused candidates for want of it: 12.6 is A40<->RNGD,
+    7.7 is `fabric-rngd0-rngd1`, 35.2 is A40<->A40."""
+    got = {(p["split"], p["link_bw"]) for p in table["points"]}
+    for bw in (7.7, 12.6, 35.2):
+        assert ("[4,2]", bw) in got and ("[2,2]", bw) in got, bw
 
 
 def test_the_spike_regression_point_is_reproduced(table):
@@ -46,7 +60,7 @@ def test_the_factor_is_bandwidth_independent_but_split_dependent(table):
     by_split: dict[str, set[int]] = {}
     for p in table["points"]:
         by_split.setdefault(p["split"], set()).add(p["factor"])
-    assert by_split == {"[4,2]": {4}, "[2,2]": {2}}, (
+    assert by_split == {"[4,2]": {4}, "[2,2]": {2}, "[1,2]": {1}}, (
         "one factor per split across all bandwidths is what makes this a table "
         "indexed by split alone"
     )
@@ -54,6 +68,11 @@ def test_the_factor_is_bandwidth_independent_but_split_dependent(table):
 
 def test_correcting_is_worth_it_and_works(table):
     for p in table["points"]:
+        if p["factor"] == 1:
+            # [1,2]: flat tp2 is 2 hops and the split is 0 + 2, so there is
+            # nothing to correct and the uncorrected error is already zero.
+            assert abs(p["uncorrected_pct"]) < 0.01, p
+            continue
         assert abs(p["uncorrected_pct"]) > 10.0, (
             f"{p['split']} @ {p['link_bw']}: uncorrected error is only "
             f"{p['uncorrected_pct']} %, which would not justify a correction"
@@ -67,8 +86,8 @@ def test_correcting_is_worth_it_and_works(table):
 def test_validity_refuses_everything_not_measured(table):
     v = table["validity"]
     assert v["extrapolation"] == "refuse"
-    assert set(v["splits"]) == {"[4,2]", "[2,2]"}
-    assert set(v["link_bw_gbps"]) == {16.0, 35.2, 100.0}
+    assert set(v["splits"]) == set(MEASURED_SPLITS)
+    assert set(v["link_bw_gbps"]) == set(MEASURED_BW)
 
 
 def test_every_point_records_what_it_was_fitted_on(table):

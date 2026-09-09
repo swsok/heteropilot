@@ -22,6 +22,7 @@ from __future__ import annotations
 import itertools
 import logging
 from dataclasses import dataclass
+from typing import Literal
 
 from planner.inventory import (
     AcceleratorProfile,
@@ -364,12 +365,18 @@ class CandidateGenerator:
         - Same-island P/D is deferred: prefill and decode engines would then
           share one island's devices, which needs device-overlap accounting the
           MVP does not do. Enumerating it here would double-book hardware.
-        - Equal devices-per-replica across the two islands (`tp_p == tp_d`). Same
-          reason as `_mixed_candidates`: the simulator infers its network
-          topology as [npus_per_group, num_instances] by integer division over
-          the total device count, which silently mis-scopes collectives when
-          instance sizes differ (deviations D14). Unequal sizes are
-          unrepresentable, so they are not enumerated.
+        - `tp_d in {tp_p, 2 * tp_p}` since **D28**. The old restriction to
+          `tp_p == tp_d` was attributed to the simulator, and that was wrong: it
+          came from `_compute_network_dims` folding everything into
+          [npus_per_group, num_instances] by integer division and handing every
+          instance the same `local_dim`. `topology_mode: slab3d` encodes the 2x
+          case as [g, 2, n_slabs] with a per-instance `tp_dim`, so it costs no
+          idle rank and needs no workaround. Ratios other than 1x and 2x still
+          would -- they need idle-rank padding whose interaction with the
+          frontend's iteration barrier is unverified -- so they stay out.
+          A 2x candidate is marked `topology_mode="slab3d"` and the compiler
+          refuses it unless the (split, link_bw) sits inside the measured
+          calibration domain (planner/calibration.py).
 
         Bounds run per assignment via `_assignment_ok`, and that check is
         role-aware: the prefill assignment skips the decode-oriented TPOT floors
@@ -386,7 +393,14 @@ class CandidateGenerator:
             island_p, prof_p, opts_p = island_opts[p_id]
             island_d, prof_d, opts_d = island_opts[d_id]
             for (tp_p, rep_p), (tp_d, rep_d) in itertools.product(opts_p, opts_d):
-                if tp_p != tp_d:  # D14: uniform instance size required
+                # D28: 1x stays on `auto`, 2x needs the 3-D encoding, nothing else
+                # is representable without idle-rank padding.
+                topology_mode: Literal["auto", "slab3d"]
+                if tp_d == tp_p:
+                    topology_mode = "auto"
+                elif tp_d == 2 * tp_p:
+                    topology_mode = "slab3d"
+                else:
                     continue
                 # dp_p == dp_d for now. Asymmetric prefill/decode replica counts
                 # produce a prefill<->decode instance pairing that is not yet
@@ -399,7 +413,8 @@ class CandidateGenerator:
                     ):
                         self._generated += 1
                         cand = self._build_pd(
-                            (island_p, tp_p, dp), (island_d, tp_d, dp), seqs, tokens
+                            (island_p, tp_p, dp), (island_d, tp_d, dp), seqs, tokens,
+                            topology_mode=topology_mode,
                         )
                         ok = True
                         for i, (isl, prof, rep) in enumerate(
@@ -420,6 +435,8 @@ class CandidateGenerator:
         decode: tuple[ExecutionIsland, int, int],
         seqs: int,
         tokens: int,
+        *,
+        topology_mode: Literal["auto", "slab3d"] = "auto",
     ) -> CandidateConfig:
         knobs = VllmKnobs(
             max_num_seqs=seqs,
@@ -446,6 +463,7 @@ class CandidateGenerator:
             ],
             serving_arch=ServingArch.PD_SPLIT,
             knobs=knobs,
+            topology_mode=topology_mode,
         )
 
     def _build(

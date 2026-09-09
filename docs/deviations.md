@@ -530,10 +530,12 @@ A cold-cache run reporting a non-zero hit count is a bug, not a nicety — worth
 
 ## D14 — The simulator's topology inference requires uniform instance sizes · Resolved (constraint enumerated around)
 
-> **PARTLY LIFTED 2026-09-08 (D28).** The uniformity is not the simulator's; it
-> was `_compute_network_dims` plus a shared `local_dim`. `topology_mode: slab3d`
-> now expresses `tp_d = 2 * tp_p` with no idle rank. Other ratios still need
-> idle-rank padding and remain enumerated around. STEP 2.3 carries the planner side.
+> **LIFTED 2026-09-09 for the 2x case (D28).** The uniformity is not the
+> simulator's; it was `_compute_network_dims` plus a shared `local_dim`.
+> `topology_mode: slab3d` expresses `tp_d = 2 * tp_p` with no idle rank, the
+> generator enumerates it, and the compiler emits it with a measured dim-1 latency
+> correction. Other ratios still need idle-rank padding, whose interaction with the
+> frontend's iteration barrier is unverified, and remain enumerated around.
 
 
 ### Measured 2026-09-04 (`WORK_ORDER_spikes.md` STEP B) — the constraint is liftable, and worse than recorded
@@ -701,10 +703,13 @@ drops, TTFT flat, `none`-mode control flat — all PASS) and `tests/test_sim_pd_
 
 ## D16 — `LinkType` has no on-package fabric, and cross-vendor P/D needs a shared TP degree · Resolved (one added type) + Open (the TP constraint)
 
-> **(b) PARTLY LIFTED 2026-09-08 (D28).** "The simulator requires a shared TP
-> degree" is false for the 2x case: `slab3d` encodes `tp_d = 2 * tp_p` directly.
-> The size-4 island bridging workaround in the fixture still works and is kept,
-> but is no longer required. STEP 2.3 carries the planner side.
+> **(b) LIFTED 2026-09-09 for the 2x case (D28).** "The simulator requires a
+> shared TP degree" is false for it: `slab3d` encodes `tp_d = 2 * tp_p` directly,
+> and `plan --enable-pd` now enumerates, compiles and ranks such candidates. The
+> size-4 island bridging workaround in the fixture still works and is kept, but is
+> **no longer required**. (c) is unaffected: cross-vendor P/D before Phase 5
+> remains out of scope, and this changes only how a pair is *encoded*, not which
+> pairs are permitted.
 
 
 Two problems surfaced together while building the first heterogeneous
@@ -1905,8 +1910,38 @@ single-instance and colocated by construction, and a real P/D run also sends the
 prefill compute→sender COMM_SEND across dim 1, which this experiment excluded on
 purpose so the allreduce could be isolated.
 
-**Still open.** The planner side (STEP 2.3), including the
-`OUTSIDE_CALIBRATION_DOMAIN` rejection for candidates the table does not cover.
+**The planner side is done (STEP 2.3).** `_pd_candidates` enumerates
+`tp_d in {tp_p, 2 * tp_p}` and marks the 2x pairs `topology_mode: slab3d`; the
+compiler emits that mode plus a per-dim `link_latency` whose dim 1 carries the
+measured factor. A candidate whose `(split, link_bw)` is not in the table is
+**refused**, into its own bucket:
+`SimOutcome.OUTSIDE_CALIBRATION_DOMAIN` ->
+`RejectionStage.OUTSIDE_CALIBRATION_DOMAIN`. That is an epistemic category, kept
+distinct from both a feasibility verdict and a crash, because "never measured" is
+not "does not work" and a sweep full of refusals must not read as a sweep that
+found nothing feasible.
+
+**The refusal earned its keep immediately.** The first end-to-end
+`plan --enable-pd` on `pd-rngd-gpu.yaml` refused candidates for three points the
+work order's table did not cover: **12.6 Gbps** (the A40<->RNGD cross-vendor link;
+35.2 is the composed A40<->A40 value, not this one), **7.7** (`fabric-rngd0-rngd1`,
+which is the asymmetric NPU P/D case D14/D16(b) was actually written about), and the
+**`[1,2]`** split. Measuring all three brought the table to 15 points -- factors
+still 4 / 2 / 1, bandwidth-independent over a 13x range -- and every asymmetric
+candidate on the fixture now compiles. Had the compiler fallen back to a factor of
+1.0 instead, those runs would have produced 12.6-24.4 % optimistic TPOT on exactly
+the candidates D28 exists to enable, and reported them as ordinary results.
+
+**The end-to-end run also caught a defect fourteen unit tests missed.** The compiler
+sized its per-dim list from `_compute_network_dims` called on instance dicts it had
+not stamped with the mode, so it got `auto`'s dimension count while
+`build_cluster_config` -- which stamps first -- got slab3d's. Every asymmetric
+candidate died in `_normalize_network_dim_values` with *"'link_bw' must have exactly
+3 value(s) ... but got 2"*, and the first run's 84 `sim_error`s were that, not the
+pre-existing P/D failures they resembled. The tests checked the list's CONTENTS and
+never its LENGTH against the function the simulator would use. Fixed by stamping the
+mode before computing, and a test now runs the config through
+`_normalize_network_dim_values` itself.
 
 **`split2` came back as an instrument.** 2.1 was right to leave it out — it
 describes no placement — but 2.2's calibration is defined as *single instance,

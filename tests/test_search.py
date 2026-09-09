@@ -38,6 +38,62 @@ def test_pruning_does_not_remove_the_optimum(spec, cluster, islands, profiles) -
     assert pruned.recommended.value == oracle.recommended.value
 
 
+def test_pruning_does_not_remove_the_optimum_with_asymmetric_pd(
+    spec, cluster, islands, profiles
+) -> None:
+    """The same guarantee once D28's asymmetric candidates are in the space.
+
+    `enable_pd=True` adds `tp_d = 2 * tp_p` pairs marked `topology_mode: slab3d`.
+    They widen the search, and the bounds must still not drop the optimum --
+    `_assignment_ok` is role-aware and the prefill side skips the decode TPOT
+    floors, which is exactly the kind of asymmetry a careless bound gets wrong.
+    """
+    gen = CandidateGenerator(spec, cluster, islands, profiles, enable_pd=True).generate()
+    asym = [c for c in gen.candidates if c.topology_mode == "slab3d"]
+    assert asym, "this fixture should produce asymmetric P/D candidates"
+
+    pruned = exhaustive.search(
+        spec, cluster, islands, profiles, MockPredictor(),
+        enable_bound_pruning=True, enable_pd=True,
+    )
+    oracle = exhaustive.oracle(
+        spec, cluster, islands, profiles, MockPredictor(), enable_pd=True
+    )
+    assert pruned.feasible == oracle.feasible
+    assert pruned.recommended is not None and oracle.recommended is not None
+    assert pruned.recommended.plan.candidate.id == oracle.recommended.plan.candidate.id
+    assert pruned.recommended.value == oracle.recommended.value
+
+
+def test_asymmetric_pd_output_is_reproducible(spec, cluster, islands, profiles) -> None:
+    """§9 again, with the wider space: same inputs, byte-identical output."""
+    runs = [
+        exhaustive.search(
+            spec, cluster, islands, profiles, MockPredictor(), enable_pd=True
+        ).model_dump(mode="json", exclude={"provenance"})
+        for _ in range(3)
+    ]
+    assert runs[0] == runs[1] == runs[2]
+
+
+def test_enabling_pd_does_not_disturb_the_aggregated_optimum(
+    spec, cluster, islands, profiles
+) -> None:
+    """P/D is additive (tests/test_pd.py) and D28 must keep it that way: a wider
+    space may find something better, never something different among the
+    candidates that already existed."""
+    base = exhaustive.search(spec, cluster, islands, profiles, MockPredictor())
+    withpd = exhaustive.search(
+        spec, cluster, islands, profiles, MockPredictor(), enable_pd=True
+    )
+    base_ids = {p.plan.candidate.id: p.value for p in base.alternatives}
+    for p in withpd.alternatives:
+        if p.plan.candidate.id in base_ids:
+            assert p.value == base_ids[p.plan.candidate.id], (
+                f"{p.plan.candidate.id} scored differently once P/D was enabled"
+            )
+
+
 def test_oracle_evaluates_at_least_as_many_candidates(spec, cluster, islands, profiles) -> None:
     pruned_pred, oracle_pred = MockPredictor(), MockPredictor()
     exhaustive.search(spec, cluster, islands, profiles, pruned_pred, enable_bound_pruning=True)
