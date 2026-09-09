@@ -1,0 +1,35 @@
+{
+  "candidate_id": "furiosa-rngd-node_rngd0-tp8-dp1-s256-t2048",
+  "key": {
+    "dtype": "bfloat16",
+    "model": "meta-llama/Llama-3.1-8B",
+    "network_class": "lt25",
+    "placement": "RNGD|aggregated|8|1|1|1",
+    "scheduler_config_hash": "d1b573d6593edbeacc5f3ae0d6ac87a024f236547fc85e6001f8edc2dfe3c437",
+    "workload_bucket": "in_lt1024-out_ge512-rps_lt20"
+  },
+  "metrics": {
+    "average_power_w": 485.5364948453606,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 87.718313,
+    "p50_ttft_ms": 535.630394,
+    "p95_tpot_ms": 101.22766775000001,
+    "p95_ttft_ms": 40746.383244849996,
+    "p99_tpot_ms": 104.24451780999999,
+    "p99_ttft_ms": 41356.97201902,
+    "peak_power_w": 529.13,
+    "sim_wall_seconds": 251.52,
+    "slo_attainment": 0.0033333333333333335,
+    "slo_goodput_rps": 0.010301471198008992,
+    "throughput_tps": 4672.098342731404,
+    "tokens_per_joule": 4.049204665959703,
+    "total_energy_j": 47150.0
+  },
+  "provenance": {
+    "git_commit": "2c373b9528d8c7ab4160836237898614226d3d5c",
+    "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
+    "timestamp": "2026-09-08T04:16:43.222733+00:00"
+  },
+  "trace_digest": "e9dd5a8476087bdbeb6cdcfb0cfa762092abea25b417e13cd158e0bded37d540"
+}

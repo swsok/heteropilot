@@ -86,3 +86,23 @@ outputs/rngd_envelope/edf/*.csv
 profiler/perf/*-t0/
 profiler/perf/*-t1/
 outputs/e1-*/
+
+# STEP 1 simulation-cost profiling (WORK_ORDER_rps_aware.md). The pyinstrument
+# sessions are 180-470 MB each and the CSVs 2 MB; outputs/perf/SHA256SUMS and the
+# rendered .txt reports carry everything docs/sim_cost_profile.md cites.
+outputs/perf/*.pyisession
+outputs/perf/*.html
+outputs/perf/*.json
+outputs/perf/*.csv
+outputs/perf/*.jsonl
+# The top-k EnvelopeCache corpora ARE the evidence -- 180 vs 12 entries is what
+# makes "8.1x faster because it simulated 12 of 180" checkable, and they replay
+# through `exp_surrogate.py --cache-dir` (D30). The patterns above are one level
+# deep and so do not reach them; say so, rather than leave it to glob depth.
+!outputs/perf/topk/cache_full/*.json
+!outputs/perf/topk/cache_topk20/*.json
+
+# exp_surrogate replay runs regenerate from the corpora they name; keep the
+# summaries, not the per-run workload traces.
+outputs/exp_surrogate/**/workload.jsonl
+outputs/exp_surrogate/**/sims/

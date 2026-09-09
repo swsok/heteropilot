@@ -1,0 +1,923 @@
+feasible: true
+service_model: meta-llama/Llama-3.1-8B
+cluster_id: pd-rngd-gpu
+recommended:
+  plan:
+    plan_id: hp-00077
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: cuda-a40-node_a40a-tp4-dp1-s256-t8192
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-a40-node_a40a
+        role: aggregated
+        tp_size: 4
+        pp_size: 1
+        dp_replicas: 1
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 256
+        max_num_batched_tokens: 8192
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+        max_model_len: null
+    predicted:
+      p50_ttft_ms: 135.660029
+      p95_ttft_ms: 1808.8116490000004
+      p99_ttft_ms: 2972.06280743
+      p50_tpot_ms: 41.660385500000004
+      p95_tpot_ms: 47.84671595
+      p99_tpot_ms: 49.39561789999999
+      throughput_tps: 9038.783290925548
+      slo_goodput_rps: 5.919073057776737
+      slo_attainment: 0.99
+      completed_requests: 300
+      completed_tokens: 190920
+      total_energy_j: 64430.00000000001
+      average_power_w: 1282.5282
+      peak_power_w: 1367.43
+      tokens_per_joule: 2.963215893217445
+      sim_wall_seconds: 127.3
+    routing: single
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: minimize_energy
+  value: -64430.00000000001
+  note: ''
+  equivalent_candidates:
+  - cuda-a40-node_a40b-tp4-dp1-s256-t8192
+alternatives:
+- plan:
+    plan_id: hp-00075
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: cuda-a40-node_a40a-tp4-dp1-s128-t8192
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-a40-node_a40a
+        role: aggregated
+        tp_size: 4
+        pp_size: 1
+        dp_replicas: 1
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 128
+        max_num_batched_tokens: 8192
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+        max_model_len: null
+    predicted:
+      p50_ttft_ms: 5382.407556
+      p95_ttft_ms: 14490.084847150001
+      p99_ttft_ms: 15070.10466225
+      p50_tpot_ms: 30.6726345
+      p95_tpot_ms: 35.0936752
+      p99_tpot_ms: 35.58226791
+      throughput_tps: 7982.195828056716
+      slo_goodput_rps: 5.279963373257342
+      slo_attainment: 1.0
+      completed_requests: 300
+      completed_tokens: 190920
+      total_energy_j: 73560.0
+      average_power_w: 1292.5101785714285
+      peak_power_w: 1365.39
+      tokens_per_joule: 2.5954323001631323
+      sim_wall_seconds: 174.02
+    routing: single
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: minimize_energy
+  value: -73560.0
+  note: higher p99_ttft_ms (worse), lower p99_tpot_ms, lower peak_power_w, lower tokens_per_joule
+    (worse)
+  equivalent_candidates:
+  - cuda-a40-node_a40b-tp4-dp1-s128-t8192
+- plan:
+    plan_id: hp-00243
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: mix(cuda-a40-node_a40a-tp4-dp1+cuda-a40-node_a40b-tp4-dp1)-s128-t8192
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-a40-node_a40a
+        role: aggregated
+        tp_size: 4
+        pp_size: 1
+        dp_replicas: 1
+      - island_id: cuda-a40-node_a40b
+        role: aggregated
+        tp_size: 4
+        pp_size: 1
+        dp_replicas: 1
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 128
+        max_num_batched_tokens: 8192
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+        max_model_len: null
+    predicted:
+      p50_ttft_ms: 99.50594050000001
+      p95_ttft_ms: 222.32254195000002
+      p99_ttft_ms: 287.21268222999987
+      p50_tpot_ms: 32.706241
+      p95_tpot_ms: 36.883092500000004
+      p99_tpot_ms: 37.63641061
+      throughput_tps: 9489.743880277209
+      slo_goodput_rps: 6.277157462529326
+      slo_attainment: 1.0
+      completed_requests: 300
+      completed_tokens: 190920
+      total_energy_j: 96230.0
+      average_power_w: 2016.0538297872338
+      peak_power_w: 2183.3999999999996
+      tokens_per_joule: 1.9839966746336901
+      sim_wall_seconds: 276.96
+    routing: load
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: minimize_energy
+  value: -96230.0
+  note: lower p99_ttft_ms, lower p99_tpot_ms, higher peak_power_w (worse), lower tokens_per_joule
+    (worse), higher active_accelerators (worse)
+  equivalent_candidates:
+  - mix(cuda-a40-node_a40a-tp4-dp1+cuda-a40-node_a40b-tp4-dp1)-s256-t8192
+- plan:
+    plan_id: hp-00242
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: mix(cuda-a40-node_a40a-tp4-dp1+cuda-a40-node_a40b-tp4-dp1)-s128-t2048
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-a40-node_a40a
+        role: aggregated
+        tp_size: 4
+        pp_size: 1
+        dp_replicas: 1
+      - island_id: cuda-a40-node_a40b
+        role: aggregated
+        tp_size: 4
+        pp_size: 1
+        dp_replicas: 1
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 128
+        max_num_batched_tokens: 2048
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+        max_model_len: null
+    predicted:
+      p50_ttft_ms: 99.834888
+      p95_ttft_ms: 284.03187645
+      p99_ttft_ms: 358.0358852999994
+      p50_tpot_ms: 33.248374999999996
+      p95_tpot_ms: 37.458156249999995
+      p99_tpot_ms: 38.6691795
+      throughput_tps: 9423.913404214043
+      slo_goodput_rps: 6.233612740006246
+      slo_attainment: 1.0
+      completed_requests: 300
+      completed_tokens: 190920
+      total_energy_j: 96950.0
+      average_power_w: 2015.2487499999995
+      peak_power_w: 2173.41
+      tokens_per_joule: 1.969262506446622
+      sim_wall_seconds: 277.05
+    routing: load
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: minimize_energy
+  value: -96950.0
+  note: lower p99_ttft_ms, lower p99_tpot_ms, higher peak_power_w (worse), lower tokens_per_joule
+    (worse), higher active_accelerators (worse)
+  equivalent_candidates:
+  - mix(cuda-a40-node_a40a-tp4-dp1+cuda-a40-node_a40b-tp4-dp1)-s256-t2048
+- plan:
+    plan_id: hp-00225
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s128-t8192
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-a40-node_a40a
+        role: aggregated
+        tp_size: 2
+        pp_size: 1
+        dp_replicas: 1
+      - island_id: cuda-a40-node_a40b
+        role: aggregated
+        tp_size: 2
+        pp_size: 1
+        dp_replicas: 2
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 128
+        max_num_batched_tokens: 8192
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+        max_model_len: null
+    predicted:
+      p50_ttft_ms: 116.779518
+      p95_ttft_ms: 287.18835160000003
+      p99_ttft_ms: 384.4629270799995
+      p50_tpot_ms: 37.37323
+      p95_tpot_ms: 41.29240715
+      p99_tpot_ms: 43.06358949
+      throughput_tps: 8872.640583677752
+      slo_goodput_rps: 5.868963668021188
+      slo_attainment: 1.0
+      completed_requests: 300
+      completed_tokens: 190920
+      total_energy_j: 110230.0
+      average_power_w: 2157.9788235294122
+      peak_power_w: 2307.69
+      tokens_per_joule: 1.7320148779824005
+      sim_wall_seconds: 314.94
+    routing: load
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: minimize_energy
+  value: -110230.0
+  note: lower p99_ttft_ms, lower p99_tpot_ms, higher peak_power_w (worse), lower tokens_per_joule
+    (worse), higher active_accelerators (worse)
+  equivalent_candidates:
+  - mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s256-t8192
+  - mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s128-t8192
+  - mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s256-t8192
+- plan:
+    plan_id: hp-00224
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s128-t2048
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-a40-node_a40a
+        role: aggregated
+        tp_size: 2
+        pp_size: 1
+        dp_replicas: 1
+      - island_id: cuda-a40-node_a40b
+        role: aggregated
+        tp_size: 2
+        pp_size: 1
+        dp_replicas: 2
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 128
+        max_num_batched_tokens: 2048
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+        max_model_len: null
+    predicted:
+      p50_ttft_ms: 120.403099
+      p95_ttft_ms: 345.8871702000001
+      p99_ttft_ms: 433.91656536999994
+      p50_tpot_ms: 37.3454735
+      p95_tpot_ms: 42.11067545
+      p99_tpot_ms: 44.46640341999999
+      throughput_tps: 8767.10733101842
+      slo_goodput_rps: 5.799156847854808
+      slo_attainment: 1.0
+      completed_requests: 300
+      completed_tokens: 190920
+      total_energy_j: 111260.0
+      average_power_w: 2165.140980392157
+      peak_power_w: 2252.69
+      tokens_per_joule: 1.7159805860147404
+      sim_wall_seconds: 318.49
+    routing: load
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: minimize_energy
+  value: -111260.0
+  note: lower p99_ttft_ms, lower p99_tpot_ms, higher peak_power_w (worse), lower tokens_per_joule
+    (worse), higher active_accelerators (worse)
+  equivalent_candidates:
+  - mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s256-t2048
+  - mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s128-t2048
+  - mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s256-t2048
+- plan:
+    plan_id: hp-00236
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp2)-s128-t2048
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-a40-node_a40a
+        role: aggregated
+        tp_size: 2
+        pp_size: 1
+        dp_replicas: 2
+      - island_id: cuda-a40-node_a40b
+        role: aggregated
+        tp_size: 2
+        pp_size: 1
+        dp_replicas: 2
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 128
+        max_num_batched_tokens: 2048
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+        max_model_len: null
+    predicted:
+      p50_ttft_ms: 104.9426015
+      p95_ttft_ms: 299.90359240000004
+      p99_ttft_ms: 360.35598760999983
+      p50_tpot_ms: 29.891526499999998
+      p95_tpot_ms: 33.58041715
+      p99_tpot_ms: 34.22188569
+      throughput_tps: 9498.69459769817
+      slo_goodput_rps: 6.2830780714902
+      slo_attainment: 1.0
+      completed_requests: 300
+      completed_tokens: 190920
+      total_energy_j: 130729.99999999999
+      average_power_w: 2754.4300000000003
+      peak_power_w: 2903.3199999999997
+      tokens_per_joule: 1.4604145949667255
+      sim_wall_seconds: 461.59
+    routing: load
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: minimize_energy
+  value: -130729.99999999999
+  note: lower p99_ttft_ms, lower p99_tpot_ms, higher peak_power_w (worse), lower tokens_per_joule
+    (worse), higher active_accelerators (worse)
+  equivalent_candidates:
+  - mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp2)-s256-t2048
+- plan:
+    plan_id: hp-00237
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp2)-s128-t8192
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-a40-node_a40a
+        role: aggregated
+        tp_size: 2
+        pp_size: 1
+        dp_replicas: 2
+      - island_id: cuda-a40-node_a40b
+        role: aggregated
+        tp_size: 2
+        pp_size: 1
+        dp_replicas: 2
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 128
+        max_num_batched_tokens: 8192
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+        max_model_len: null
+    predicted:
+      p50_ttft_ms: 103.325117
+      p95_ttft_ms: 251.3799456
+      p99_ttft_ms: 282.65507765
+      p50_tpot_ms: 29.805827
+      p95_tpot_ms: 33.3813605
+      p99_tpot_ms: 33.92946627
+      throughput_tps: 9458.578748624988
+      slo_goodput_rps: 6.256542739815046
+      slo_attainment: 1.0
+      completed_requests: 300
+      completed_tokens: 190920
+      total_energy_j: 130740.00000000001
+      average_power_w: 2749.0038297872347
+      peak_power_w: 2926.04
+      tokens_per_joule: 1.460302891234511
+      sim_wall_seconds: 458.72
+    routing: load
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: minimize_energy
+  value: -130740.00000000001
+  note: lower p99_ttft_ms, lower p99_tpot_ms, higher peak_power_w (worse), lower tokens_per_joule
+    (worse), higher active_accelerators (worse)
+  equivalent_candidates:
+  - mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp2)-s256-t8192
+- plan:
+    plan_id: hp-00223
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s32-t8192
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-a40-node_a40a
+        role: aggregated
+        tp_size: 2
+        pp_size: 1
+        dp_replicas: 1
+      - island_id: cuda-a40-node_a40b
+        role: aggregated
+        tp_size: 2
+        pp_size: 1
+        dp_replicas: 2
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 32
+        max_num_batched_tokens: 8192
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+        max_model_len: null
+    predicted:
+      p50_ttft_ms: 7941.141262499999
+      p95_ttft_ms: 18174.044739250003
+      p99_ttft_ms: 21521.6636171
+      p50_tpot_ms: 26.7684455
+      p95_tpot_ms: 28.18118175
+      p99_tpot_ms: 28.505848219999997
+      throughput_tps: 6962.997675066365
+      slo_goodput_rps: 4.6057968865162255
+      slo_attainment: 1.0
+      completed_requests: 300
+      completed_tokens: 190920
+      total_energy_j: 140770.0
+      average_power_w: 2162.3487692307685
+      peak_power_w: 2295.62
+      tokens_per_joule: 1.3562548838530937
+      sim_wall_seconds: 495.88
+    routing: load
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: minimize_energy
+  value: -140770.0
+  note: higher p99_ttft_ms (worse), lower p99_tpot_ms, higher peak_power_w (worse),
+    lower tokens_per_joule (worse), higher active_accelerators (worse)
+  equivalent_candidates:
+  - mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s32-t8192
+- plan:
+    plan_id: hp-00222
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s32-t2048
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-a40-node_a40a
+        role: aggregated
+        tp_size: 2
+        pp_size: 1
+        dp_replicas: 1
+      - island_id: cuda-a40-node_a40b
+        role: aggregated
+        tp_size: 2
+        pp_size: 1
+        dp_replicas: 2
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 32
+        max_num_batched_tokens: 2048
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+        max_model_len: null
+    predicted:
+      p50_ttft_ms: 7943.037280500001
+      p95_ttft_ms: 18124.399077050002
+      p99_ttft_ms: 21452.478509629997
+      p50_tpot_ms: 26.811505500000003
+      p95_tpot_ms: 28.3085604
+      p99_tpot_ms: 28.54938539
+      throughput_tps: 6956.19581649232
+      slo_goodput_rps: 4.601297677913149
+      slo_attainment: 1.0
+      completed_requests: 300
+      completed_tokens: 190920
+      total_energy_j: 140940.0
+      average_power_w: 2164.212307692308
+      peak_power_w: 2249.89
+      tokens_per_joule: 1.3546189868028948
+      sim_wall_seconds: 492.62
+    routing: load
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: minimize_energy
+  value: -140940.0
+  note: higher p99_ttft_ms (worse), lower p99_tpot_ms, higher peak_power_w (worse),
+    lower tokens_per_joule (worse), higher active_accelerators (worse)
+  equivalent_candidates:
+  - mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s32-t2048
+- plan:
+    plan_id: hp-00234
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp2)-s32-t2048
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-a40-node_a40a
+        role: aggregated
+        tp_size: 2
+        pp_size: 1
+        dp_replicas: 2
+      - island_id: cuda-a40-node_a40b
+        role: aggregated
+        tp_size: 2
+        pp_size: 1
+        dp_replicas: 2
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 32
+        max_num_batched_tokens: 2048
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+        max_model_len: null
+    predicted:
+      p50_ttft_ms: 3422.3846919999996
+      p95_ttft_ms: 8242.742600200001
+      p99_ttft_ms: 8761.303992829999
+      p50_tpot_ms: 26.228019
+      p95_tpot_ms: 28.4731591
+      p99_tpot_ms: 29.412888
+      throughput_tps: 8272.320525085248
+      slo_goodput_rps: 5.471871440534233
+      slo_attainment: 1.0
+      completed_requests: 300
+      completed_tokens: 190920
+      total_energy_j: 149140.0
+      average_power_w: 2743.3459259259257
+      peak_power_w: 2842.51
+      tokens_per_joule: 1.2801394662733003
+      sim_wall_seconds: 578.76
+    routing: load
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: minimize_energy
+  value: -149140.0
+  note: higher p99_ttft_ms (worse), lower p99_tpot_ms, higher peak_power_w (worse),
+    lower tokens_per_joule (worse), higher active_accelerators (worse)
+  equivalent_candidates: []
+- plan:
+    plan_id: hp-00139
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp4)-s32-t8192
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-a40-node_a40a
+        role: aggregated
+        tp_size: 1
+        pp_size: 1
+        dp_replicas: 1
+      - island_id: cuda-a40-node_a40b
+        role: aggregated
+        tp_size: 1
+        pp_size: 1
+        dp_replicas: 4
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 32
+        max_num_batched_tokens: 8192
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+        max_model_len: null
+    predicted:
+      p50_ttft_ms: 276.08512199999996
+      p95_ttft_ms: 13447.785343149999
+      p99_ttft_ms: 14512.018714979999
+      p50_tpot_ms: 43.3376135
+      p95_tpot_ms: 46.9783184
+      p99_tpot_ms: 48.72806491
+      throughput_tps: 6263.59327458782
+      slo_goodput_rps: 4.1431635839553245
+      slo_attainment: 1.0
+      completed_requests: 300
+      completed_tokens: 190920
+      total_energy_j: 165450.0
+      average_power_w: 2292.024027777778
+      peak_power_w: 2411.31
+      tokens_per_joule: 1.1539437896645512
+      sim_wall_seconds: 459.39
+    routing: load
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: minimize_energy
+  value: -165450.0
+  note: higher p99_ttft_ms (worse), lower p99_tpot_ms, higher peak_power_w (worse),
+    lower tokens_per_joule (worse), higher active_accelerators (worse)
+  equivalent_candidates:
+  - mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp1)-s32-t8192
+- plan:
+    plan_id: hp-00157
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp3)-s32-t8192
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-a40-node_a40a
+        role: aggregated
+        tp_size: 1
+        pp_size: 1
+        dp_replicas: 2
+      - island_id: cuda-a40-node_a40b
+        role: aggregated
+        tp_size: 1
+        pp_size: 1
+        dp_replicas: 3
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 32
+        max_num_batched_tokens: 8192
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+        max_model_len: null
+    predicted:
+      p50_ttft_ms: 275.64021549999995
+      p95_ttft_ms: 13449.214566400002
+      p99_ttft_ms: 14551.79491545
+      p50_tpot_ms: 43.334886
+      p95_tpot_ms: 46.9777398
+      p99_tpot_ms: 48.72832965
+      throughput_tps: 6264.162026406169
+      slo_goodput_rps: 4.143539794816853
+      slo_attainment: 1.0
+      completed_requests: 300
+      completed_tokens: 190920
+      total_energy_j: 165460.0
+      average_power_w: 2292.0919444444453
+      peak_power_w: 2399.95
+      tokens_per_joule: 1.153874048108304
+      sim_wall_seconds: 462.79
+    routing: load
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: minimize_energy
+  value: -165460.0
+  note: higher p99_ttft_ms (worse), lower p99_tpot_ms, higher peak_power_w (worse),
+    lower tokens_per_joule (worse), higher active_accelerators (worse)
+  equivalent_candidates:
+  - mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp2)-s32-t8192
+unscored: []
+rejected_summary:
+  memory_infeasible: 4
+  slo_violated: 264
+evaluated_candidates: 324
+generated_candidates: 328
+reason: ''
+closest_plan: null
+violated_constraints: []
+suggestions: []
+provenance:
+  git_commit: 2c373b9528d8c7ab4160836237898614226d3d5c
+  git_dirty: true
+  llmservingsim_commit: 2c2042ce4bf1b0283ebeed1db95db6f25e3e7511
+  vllm_version: null
+  backend_version: null
+  model_revision: null
+  hardware_profile_hash: 9d36209c520047e6729f42e721dd71f2a5abfd61b9f235409ae5ad23218f2f0a
+  cluster_spec_hash: 1db71189086838c4ef6e2e4e7bf45269790b58b83de693bb377986fddb4f4a1b
+  service_spec_hash: 860c8a567b759ac948d4ae16951a5c878e7654201d9e89b08bf21e6e38f4880c
+  dataset_hash: e9dd5a8476087bdbeb6cdcfb0cfa762092abea25b417e13cd158e0bded37d540
+  random_seed: 42
+  command: __main__.py plan --service examples/service_specs/llama31-8b.yaml --cluster
+    experiments/configs/clusters/pd-rngd-gpu.yaml --num-requests 300 --seed 42 --workers
+    32 --cache-dir outputs/perf/topk/cache_full --output outputs/perf/topk/full.yaml
+  timestamp: '2026-09-08T03:36:27.139647+00:00'
+  python_version: 3.10.12
+  platform: Linux-6.8.0-40-generic-x86_64-with-glibc2.35
+  hostname: etri-001
+  cpu_count: 96
+  accelerators:
+    cuda: null
+    rngd_cards: 3
+    atom_devices: 4
+  workload:
+    path: /tmp/hp-9unev2n2/workload.jsonl
+    num_requests: 300
+    random_seed: 42
+    total_input_tokens: 262617
+    total_output_tokens: 190920
+    horizon_s: 30.301
+  gpu_memory_utilization: 0.9
+  activation_reserve_gb: 0.0
+  enable_prefix_caching: false
+  bound_pruning: true
+  enable_pd: false
+  surrogate: null
+  top_k: null
+  topology:
+    link_bw_gbps: 7.7
+    link_latency_ns: 20000.0
+    basis: 'Level-1 bottleneck over 4 island(s): min bandwidth, max latency. The simulator
+      has no link graph, so contention_group and per-link energy are dropped here
+      (deviations D3).'
+    assumptions: []
+    model_level: 1
+    path_aware: false
+  envelope_cache_hits: 144
+  envelope_cache_hit_ids:
+  - cuda-a40-node_a40b-tp1-dp1-s128-t2048
+  - cuda-a40-node_a40b-tp1-dp1-s128-t8192
+  - cuda-a40-node_a40b-tp1-dp1-s256-t2048
+  - cuda-a40-node_a40b-tp1-dp1-s256-t8192
+  - cuda-a40-node_a40b-tp1-dp1-s32-t2048
+  - cuda-a40-node_a40b-tp1-dp1-s32-t8192
+  - cuda-a40-node_a40b-tp1-dp2-s128-t2048
+  - cuda-a40-node_a40b-tp1-dp2-s128-t8192
+  - cuda-a40-node_a40b-tp1-dp2-s256-t2048
+  - cuda-a40-node_a40b-tp1-dp2-s256-t8192
+  - cuda-a40-node_a40b-tp1-dp2-s32-t2048
+  - cuda-a40-node_a40b-tp1-dp2-s32-t8192
+  - cuda-a40-node_a40b-tp1-dp3-s128-t2048
+  - cuda-a40-node_a40b-tp1-dp3-s128-t8192
+  - cuda-a40-node_a40b-tp1-dp3-s256-t2048
+  - cuda-a40-node_a40b-tp1-dp3-s256-t8192
+  - cuda-a40-node_a40b-tp1-dp3-s32-t2048
+  - cuda-a40-node_a40b-tp1-dp3-s32-t8192
+  - cuda-a40-node_a40b-tp1-dp4-s128-t2048
+  - cuda-a40-node_a40b-tp1-dp4-s128-t8192
+  - cuda-a40-node_a40b-tp1-dp4-s256-t2048
+  - cuda-a40-node_a40b-tp1-dp4-s256-t8192
+  - cuda-a40-node_a40b-tp1-dp4-s32-t2048
+  - cuda-a40-node_a40b-tp1-dp4-s32-t8192
+  - cuda-a40-node_a40b-tp2-dp1-s128-t2048
+  - cuda-a40-node_a40b-tp2-dp1-s128-t8192
+  - cuda-a40-node_a40b-tp2-dp1-s256-t2048
+  - cuda-a40-node_a40b-tp2-dp1-s256-t8192
+  - cuda-a40-node_a40b-tp2-dp1-s32-t2048
+  - cuda-a40-node_a40b-tp2-dp1-s32-t8192
+  - cuda-a40-node_a40b-tp2-dp2-s128-t2048
+  - cuda-a40-node_a40b-tp2-dp2-s128-t8192
+  - cuda-a40-node_a40b-tp2-dp2-s256-t2048
+  - cuda-a40-node_a40b-tp2-dp2-s256-t8192
+  - cuda-a40-node_a40b-tp2-dp2-s32-t2048
+  - cuda-a40-node_a40b-tp2-dp2-s32-t8192
+  - cuda-a40-node_a40b-tp4-dp1-s128-t2048
+  - cuda-a40-node_a40b-tp4-dp1-s128-t8192
+  - cuda-a40-node_a40b-tp4-dp1-s256-t2048
+  - cuda-a40-node_a40b-tp4-dp1-s256-t8192
+  - cuda-a40-node_a40b-tp4-dp1-s32-t2048
+  - cuda-a40-node_a40b-tp4-dp1-s32-t8192
+  - furiosa-rngd-node_rngd1-tp4-dp1-s128-t2048
+  - furiosa-rngd-node_rngd1-tp4-dp1-s128-t8192
+  - furiosa-rngd-node_rngd1-tp4-dp1-s256-t2048
+  - furiosa-rngd-node_rngd1-tp4-dp1-s256-t8192
+  - furiosa-rngd-node_rngd1-tp4-dp1-s32-t2048
+  - furiosa-rngd-node_rngd1-tp4-dp1-s32-t8192
+  - furiosa-rngd-node_rngd1-tp4-dp2-s128-t2048
+  - furiosa-rngd-node_rngd1-tp4-dp2-s128-t8192
+  - furiosa-rngd-node_rngd1-tp4-dp2-s256-t2048
+  - furiosa-rngd-node_rngd1-tp4-dp2-s256-t8192
+  - furiosa-rngd-node_rngd1-tp4-dp2-s32-t2048
+  - furiosa-rngd-node_rngd1-tp4-dp2-s32-t8192
+  - furiosa-rngd-node_rngd1-tp8-dp1-s128-t2048
+  - furiosa-rngd-node_rngd1-tp8-dp1-s128-t8192
+  - furiosa-rngd-node_rngd1-tp8-dp1-s256-t2048
+  - furiosa-rngd-node_rngd1-tp8-dp1-s256-t8192
+  - furiosa-rngd-node_rngd1-tp8-dp1-s32-t2048
+  - furiosa-rngd-node_rngd1-tp8-dp1-s32-t8192
+  - mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp1)-s128-t2048
+  - mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp1)-s128-t8192
+  - mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp1)-s256-t2048
+  - mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp1)-s256-t8192
+  - mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp1)-s32-t2048
+  - mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp1)-s32-t8192
+  - mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp1)-s128-t2048
+  - mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp1)-s128-t8192
+  - mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp1)-s256-t2048
+  - mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp1)-s256-t8192
+  - mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp1)-s32-t2048
+  - mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp1)-s32-t8192
+  - mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp2)-s128-t2048
+  - mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp2)-s128-t8192
+  - mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp2)-s256-t2048
+  - mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp2)-s256-t8192
+  - mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp2)-s32-t2048
+  - mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp2)-s32-t8192
+  - mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp1)-s128-t2048
+  - mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp1)-s128-t8192
+  - mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp1)-s256-t2048
+  - mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp1)-s256-t8192
+  - mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp1)-s32-t2048
+  - mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp1)-s32-t8192
+  - mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp2)-s128-t2048
+  - mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp2)-s128-t8192
+  - mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp2)-s256-t2048
+  - mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp2)-s256-t8192
+  - mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp2)-s32-t2048
+  - mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp2)-s32-t8192
+  - mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp3)-s128-t2048
+  - mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp3)-s128-t8192
+  - mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp3)-s256-t2048
+  - mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp3)-s256-t8192
+  - mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp3)-s32-t2048
+  - mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp3)-s32-t8192
+  - mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s128-t2048
+  - mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s128-t8192
+  - mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s256-t2048
+  - mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s256-t8192
+  - mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s32-t2048
+  - mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s32-t8192
+  - mix(cuda-a40-node_a40a-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp1)-s128-t2048
+  - mix(cuda-a40-node_a40a-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp1)-s128-t8192
+  - mix(cuda-a40-node_a40a-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp1)-s256-t2048
+  - mix(cuda-a40-node_a40a-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp1)-s256-t8192
+  - mix(cuda-a40-node_a40a-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp1)-s32-t2048
+  - mix(cuda-a40-node_a40a-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp1)-s32-t8192
+  - mix(cuda-a40-node_a40a-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp2)-s128-t2048
+  - mix(cuda-a40-node_a40a-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp2)-s128-t8192
+  - mix(cuda-a40-node_a40a-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp2)-s256-t2048
+  - mix(cuda-a40-node_a40a-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp2)-s256-t8192
+  - mix(cuda-a40-node_a40a-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp2)-s32-t2048
+  - mix(cuda-a40-node_a40a-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp2)-s32-t8192
+  - mix(cuda-a40-node_a40b-tp4-dp1+furiosa-rngd-node_rngd0-tp4-dp1)-s128-t2048
+  - mix(cuda-a40-node_a40b-tp4-dp1+furiosa-rngd-node_rngd0-tp4-dp1)-s128-t8192
+  - mix(cuda-a40-node_a40b-tp4-dp1+furiosa-rngd-node_rngd0-tp4-dp1)-s256-t2048
+  - mix(cuda-a40-node_a40b-tp4-dp1+furiosa-rngd-node_rngd0-tp4-dp1)-s256-t8192
+  - mix(cuda-a40-node_a40b-tp4-dp1+furiosa-rngd-node_rngd0-tp4-dp1)-s32-t2048
+  - mix(cuda-a40-node_a40b-tp4-dp1+furiosa-rngd-node_rngd0-tp4-dp1)-s32-t8192
+  - mix(cuda-a40-node_a40b-tp4-dp1+furiosa-rngd-node_rngd0-tp4-dp2)-s128-t2048
+  - mix(cuda-a40-node_a40b-tp4-dp1+furiosa-rngd-node_rngd0-tp4-dp2)-s128-t8192
+  - mix(cuda-a40-node_a40b-tp4-dp1+furiosa-rngd-node_rngd0-tp4-dp2)-s256-t2048
+  - mix(cuda-a40-node_a40b-tp4-dp1+furiosa-rngd-node_rngd0-tp4-dp2)-s256-t8192
+  - mix(cuda-a40-node_a40b-tp4-dp1+furiosa-rngd-node_rngd0-tp4-dp2)-s32-t2048
+  - mix(cuda-a40-node_a40b-tp4-dp1+furiosa-rngd-node_rngd0-tp4-dp2)-s32-t8192
+  - mix(cuda-a40-node_a40b-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp1)-s128-t2048
+  - mix(cuda-a40-node_a40b-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp1)-s128-t8192
+  - mix(cuda-a40-node_a40b-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp1)-s256-t2048
+  - mix(cuda-a40-node_a40b-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp1)-s256-t8192
+  - mix(cuda-a40-node_a40b-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp1)-s32-t2048
+  - mix(cuda-a40-node_a40b-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp1)-s32-t8192
+  - mix(cuda-a40-node_a40b-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp2)-s128-t2048
+  - mix(cuda-a40-node_a40b-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp2)-s128-t8192
+  - mix(cuda-a40-node_a40b-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp2)-s256-t2048
+  - mix(cuda-a40-node_a40b-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp2)-s256-t8192
+  - mix(cuda-a40-node_a40b-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp2)-s32-t2048
+  - mix(cuda-a40-node_a40b-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp2)-s32-t8192
+  - mix(furiosa-rngd-node_rngd0-tp4-dp2+furiosa-rngd-node_rngd1-tp4-dp1)-s128-t2048
+  - mix(furiosa-rngd-node_rngd0-tp4-dp2+furiosa-rngd-node_rngd1-tp4-dp1)-s128-t8192
+  - mix(furiosa-rngd-node_rngd0-tp4-dp2+furiosa-rngd-node_rngd1-tp4-dp1)-s256-t2048
+  - mix(furiosa-rngd-node_rngd0-tp4-dp2+furiosa-rngd-node_rngd1-tp4-dp1)-s256-t8192
+  - mix(furiosa-rngd-node_rngd0-tp4-dp2+furiosa-rngd-node_rngd1-tp4-dp1)-s32-t2048
+  - mix(furiosa-rngd-node_rngd0-tp4-dp2+furiosa-rngd-node_rngd1-tp4-dp1)-s32-t8192
+  profile_tier: measured
+  profile_tiers:
+    cuda-a40-node_a40a: measured
+    cuda-a40-node_a40b: measured
+    furiosa-rngd-node_rngd0: measured
+    furiosa-rngd-node_rngd1: measured
+  envelope_cache:
+    hits: 144
+    misses: 324
+caveats:
+- 'Prefix caching is disabled for every candidate. With it enabled the simulator''s
+  prefix-cache memory grows monotonically and the run dies on any device small enough
+  to saturate (docs/deviations.md D12). Consequence: ServiceSpec.traffic.prefix_share_ratio
+  has no effect on these predictions, and TTFT is pessimistic for workloads with genuinely
+  shared prefixes.'
+profile_tier: measured
+profile_tiers:
+  cuda-a40-node_a40a: measured
+  cuda-a40-node_a40b: measured
+  furiosa-rngd-node_rngd0: measured
+  furiosa-rngd-node_rngd1: measured

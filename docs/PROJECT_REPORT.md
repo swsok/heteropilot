@@ -234,6 +234,15 @@ efficiency.
 ### 4.7 Surrogate top-K + parallel simulation (scaling)
 `experiments/figures/surrogate.png` · `exp_surrogate_summary.md`
 
+> **SUPERSEDED IN PART 2026-09-08.** regret 0 at every K held on **one
+> aggregated-heavy fixture** (N=78). On the three P/D + heterogeneous corpora of
+> `docs/surrogate_topk_regret.md` the shipped ranker is **false-infeasible at K=20 on
+> two of three** — its proxy tok/J is algebraically TP/DP-invariant, so it cannot rank
+> the axis that decides feasibility there. **top-K is not a cost lever for those
+> sweeps.** The table below is unchanged and still true of its own fixture
+> (`deviations.md` D30).
+
+
 **Stage-6 surrogate top-K** — a roofline ranker scores all candidates, only the
 top-K are simulated. Measured recall/regret vs the oracle (N=78 candidates):
 

@@ -1,0 +1,274 @@
+warning: provenance fields could not be determined: backend_version, model_revision, surrogate, top_k, vllm_version
+  [1/180] simulating cuda-a40-node_a40a-tp1-dp1-s128-t8192
+  [2/180] simulating cuda-a40-node_a40a-tp1-dp1-s128-t2048
+  [3/180] simulating cuda-a40-node_a40a-tp1-dp2-s256-t2048
+  [4/180] simulating cuda-a40-node_a40a-tp1-dp2-s256-t8192
+  [5/180] simulating cuda-a40-node_a40a-tp1-dp1-s256-t8192
+  [6/180] simulating cuda-a40-node_a40a-tp1-dp1-s256-t2048
+  [7/180] simulating cuda-a40-node_a40a-tp1-dp2-s128-t8192
+  [8/180] simulating cuda-a40-node_a40a-tp1-dp2-s128-t2048
+  [9/180] simulating furiosa-rngd-node_rngd0-tp8-dp1-s128-t8192
+  [10/180] simulating furiosa-rngd-node_rngd0-tp8-dp1-s128-t2048
+  [11/180] simulating furiosa-rngd-node_rngd0-tp8-dp1-s256-t2048
+  [12/180] simulating furiosa-rngd-node_rngd0-tp8-dp1-s256-t8192
+  [13/180] simulating cuda-a40-node_a40a-tp1-dp3-s128-t8192
+  [14/180] simulating cuda-a40-node_a40a-tp1-dp3-s128-t2048
+  [15/180] simulating cuda-a40-node_a40a-tp1-dp3-s256-t2048
+  [16/180] simulating cuda-a40-node_a40a-tp1-dp3-s256-t8192
+  [17/180] simulating cuda-a40-node_a40a-tp1-dp1-s32-t8192
+  [18/180] simulating cuda-a40-node_a40a-tp1-dp1-s32-t2048
+  [19/180] simulating furiosa-rngd-node_rngd0-tp4-dp1-s256-t2048
+  [20/180] simulating cuda-a40-node_a40a-tp1-dp2-s32-t8192
+  [21/180] simulating furiosa-rngd-node_rngd0-tp4-dp1-s128-t2048
+  [22/180] simulating cuda-a40-node_a40a-tp1-dp2-s32-t2048
+  [23/180] simulating furiosa-rngd-node_rngd0-tp4-dp1-s128-t8192
+  [24/180] simulating furiosa-rngd-node_rngd0-tp4-dp1-s256-t8192
+  [25/180] simulating furiosa-rngd-node_rngd0-tp4-dp2-s128-t8192
+  [26/180] simulating cuda-a40-node_a40a-tp2-dp1-s256-t2048
+  [27/180] simulating cuda-a40-node_a40a-tp2-dp1-s256-t8192
+  [28/180] simulating cuda-a40-node_a40a-tp1-dp3-s32-t2048
+  [29/180] simulating furiosa-rngd-node_rngd0-tp4-dp2-s256-t8192
+  [30/180] simulating cuda-a40-node_a40a-tp1-dp3-s32-t8192
+  [31/180] simulating furiosa-rngd-node_rngd0-tp4-dp2-s256-t2048
+  [32/180] simulating furiosa-rngd-node_rngd0-tp4-dp2-s128-t2048
+  [33/180] simulating cuda-a40-node_a40a-tp1-dp4-s128-t8192
+  [34/180] simulating cuda-a40-node_a40a-tp2-dp1-s128-t2048
+  [35/180] simulating cuda-a40-node_a40a-tp2-dp1-s128-t8192
+  [36/180] simulating furiosa-rngd-node_rngd0-tp4-dp1-s32-t8192
+  [37/180] simulating furiosa-rngd-node_rngd0-tp4-dp1-s32-t2048
+  [38/180] simulating cuda-a40-node_a40a-tp1-dp4-s128-t2048
+  [39/180] simulating cuda-a40-node_a40a-tp1-dp4-s256-t8192
+  [40/180] simulating cuda-a40-node_a40a-tp1-dp4-s256-t2048
+  [41/180] simulating furiosa-rngd-node_rngd0-tp4-dp2-s32-t2048
+  [42/180] simulating furiosa-rngd-node_rngd0-tp4-dp2-s32-t8192
+  [43/180] simulating cuda-a40-node_a40a-tp4-dp1-s256-t2048
+  [44/180] simulating cuda-a40-node_a40a-tp4-dp1-s256-t8192
+  [45/180] simulating mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp1)-s256-t2048
+  [46/180] simulating mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp1)-s256-t8192
+  [47/180] simulating cuda-a40-node_a40a-tp2-dp2-s256-t8192
+  [48/180] simulating cuda-a40-node_a40a-tp2-dp2-s256-t2048
+  [49/180] simulating furiosa-rngd-node_rngd0-tp8-dp1-s32-t2048
+  [50/180] simulating mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp1)-s128-t8192
+  [51/180] simulating cuda-a40-node_a40a-tp2-dp2-s128-t2048
+  [52/180] simulating mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp1)-s128-t2048
+  [53/180] simulating cuda-a40-node_a40a-tp2-dp2-s128-t8192
+  [54/180] simulating cuda-a40-node_a40a-tp4-dp1-s128-t2048
+  [55/180] simulating cuda-a40-node_a40a-tp4-dp1-s128-t8192
+  [56/180] simulating furiosa-rngd-node_rngd0-tp8-dp1-s32-t8192
+  [57/180] simulating cuda-a40-node_a40a-tp1-dp4-s32-t2048
+  [58/180] simulating cuda-a40-node_a40a-tp1-dp4-s32-t8192
+  [59/180] simulating cuda-a40-node_a40a-tp2-dp1-s32-t2048
+  [60/180] simulating mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp2)-s128-t8192
+  [61/180] simulating mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp2)-s128-t2048
+  [62/180] simulating cuda-a40-node_a40a-tp2-dp1-s32-t8192
+  [63/180] simulating mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp2)-s256-t2048
+  [64/180] simulating mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp2)-s256-t8192
+  [65/180] simulating mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp1)-s32-t8192
+  [66/180] simulating cuda-a40-node_a40a-tp2-dp2-s32-t2048
+  [67/180] simulating mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp1)-s32-t2048
+  [68/180] simulating cuda-a40-node_a40a-tp2-dp2-s32-t8192
+  [69/180] simulating mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp3)-s128-t2048
+  [70/180] simulating mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp3)-s128-t8192
+  [71/180] simulating mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp3)-s256-t2048
+  [72/180] simulating cuda-a40-node_a40a-tp4-dp1-s32-t2048
+  [73/180] simulating mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp3)-s256-t8192
+  [74/180] simulating cuda-a40-node_a40a-tp4-dp1-s32-t8192
+  [75/180] simulating mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp2)-s32-t2048
+  [76/180] simulating mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp2)-s32-t8192
+  [77/180] simulating mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp2)-s128-t8192
+  [78/180] simulating mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp2)-s128-t2048
+  [79/180] simulating mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp2)-s256-t2048
+  [80/180] simulating mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp2)-s256-t8192
+  [81/180] simulating mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp4)-s128-t8192
+  [82/180] simulating mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp4)-s128-t2048
+  [83/180] simulating mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp4)-s256-t8192
+  [84/180] simulating mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp4)-s256-t2048
+  [85/180] simulating mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp3)-s32-t2048
+  [86/180] simulating mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp3)-s32-t8192
+  [87/180] simulating mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp3)-s128-t8192
+  [88/180] simulating mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp3)-s128-t2048
+  [89/180] simulating mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp4)-s32-t2048
+  [90/180] simulating mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp4)-s32-t8192
+  [91/180] simulating mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp2)-s32-t2048
+  [92/180] simulating mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp2)-s32-t8192
+  [93/180] simulating mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp3)-s256-t8192
+  [94/180] simulating mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp3)-s256-t2048
+  [95/180] simulating mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp3)-s32-t2048
+  [96/180] simulating mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp3)-s32-t8192
+  [97/180] simulating mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp1)-s256-t2048
+  [98/180] simulating mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp1)-s128-t8192
+  [99/180] simulating mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp4)-s128-t8192
+  [100/180] simulating mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp1)-s128-t2048
+  [101/180] simulating mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp1)-s256-t8192
+  [102/180] simulating mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp4)-s128-t2048
+  [103/180] simulating mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp4)-s256-t8192
+  [104/180] simulating mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp4)-s256-t2048
+  [105/180] simulating mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp3)-s128-t8192
+  [106/180] simulating mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp3)-s128-t2048
+  [107/180] simulating mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp3)-s256-t8192
+  [108/180] simulating mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp3)-s256-t2048
+  [109/180] simulating mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp4)-s32-t2048
+  [110/180] simulating mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp4)-s32-t8192
+  [111/180] simulating mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp3)-s32-t2048
+  [112/180] simulating mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp3)-s32-t8192
+  [113/180] simulating mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp4)-s128-t2048
+  [114/180] simulating mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp4)-s128-t8192
+  [115/180] simulating mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp4)-s32-t2048
+  [116/180] simulating mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp4)-s32-t8192
+  [117/180] simulating mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp1)-s32-t2048
+  [118/180] simulating mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp1)-s32-t8192
+  [119/180] simulating mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp4)-s256-t8192
+  [120/180] simulating mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp4)-s256-t2048
+  [121/180] simulating mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s128-t8192
+  [122/180] simulating mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s256-t8192
+  [123/180] simulating mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s128-t2048
+  [124/180] simulating mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s256-t2048
+  [125/180] simulating mix(cuda-a40-node_a40a-tp4-dp1+cuda-a40-node_a40b-tp4-dp1)-s128-t2048
+  [126/180] simulating mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp4)-s32-t8192
+  [127/180] simulating mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s32-t2048
+  [128/180] simulating mix(cuda-a40-node_a40a-tp4-dp1+cuda-a40-node_a40b-tp4-dp1)-s128-t8192
+  [129/180] simulating mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp4)-s32-t2048
+  [130/180] simulating mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp4)-s128-t2048
+  [131/180] simulating mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s32-t8192
+  [132/180] simulating mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp4)-s128-t8192
+  [133/180] simulating mix(cuda-a40-node_a40a-tp4-dp1+cuda-a40-node_a40b-tp4-dp1)-s256-t2048
+  [134/180] simulating mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp4)-s256-t2048
+  [135/180] simulating mix(cuda-a40-node_a40a-tp4-dp1+cuda-a40-node_a40b-tp4-dp1)-s256-t8192
+  [136/180] simulating mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp4)-s256-t8192
+  [137/180] simulating mix(cuda-a40-node_a40a-tp4-dp1+furiosa-rngd-node_rngd0-tp4-dp1)-s256-t8192
+  [138/180] simulating mix(cuda-a40-node_a40a-tp4-dp1+furiosa-rngd-node_rngd0-tp4-dp1)-s256-t2048
+  [139/180] simulating mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp2)-s128-t2048
+  [140/180] simulating mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp2)-s128-t8192
+  [141/180] simulating mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp2)-s256-t2048
+  [142/180] simulating mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp2)-s256-t8192
+  [143/180] simulating mix(cuda-a40-node_a40a-tp4-dp1+furiosa-rngd-node_rngd0-tp4-dp1)-s128-t2048
+  [144/180] simulating mix(cuda-a40-node_a40a-tp4-dp1+furiosa-rngd-node_rngd0-tp4-dp1)-s128-t8192
+  [145/180] simulating mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp2)-s32-t2048
+  [146/180] simulating mix(cuda-a40-node_a40a-tp4-dp1+cuda-a40-node_a40b-tp4-dp1)-s32-t8192
+  [147/180] simulating mix(cuda-a40-node_a40a-tp4-dp1+cuda-a40-node_a40b-tp4-dp1)-s32-t2048
+  [148/180] simulating mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp2)-s32-t8192
+  [149/180] simulating mix(cuda-a40-node_a40a-tp4-dp1+furiosa-rngd-node_rngd0-tp4-dp2)-s128-t2048
+  [150/180] simulating mix(cuda-a40-node_a40a-tp4-dp1+furiosa-rngd-node_rngd0-tp4-dp2)-s256-t2048
+  [151/180] simulating mix(cuda-a40-node_a40a-tp4-dp1+furiosa-rngd-node_rngd0-tp4-dp2)-s128-t8192
+  [152/180] simulating mix(cuda-a40-node_a40a-tp4-dp1+furiosa-rngd-node_rngd0-tp4-dp1)-s32-t2048
+  [153/180] simulating mix(cuda-a40-node_a40a-tp4-dp1+furiosa-rngd-node_rngd0-tp4-dp2)-s256-t8192
+  [154/180] simulating mix(cuda-a40-node_a40a-tp4-dp1+furiosa-rngd-node_rngd0-tp4-dp1)-s32-t8192
+  [155/180] simulating mix(furiosa-rngd-node_rngd0-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp1)-s128-t8192
+  [156/180] simulating mix(furiosa-rngd-node_rngd0-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp1)-s128-t2048
+  [157/180] simulating mix(furiosa-rngd-node_rngd0-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp1)-s256-t8192
+  [158/180] simulating mix(furiosa-rngd-node_rngd0-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp1)-s256-t2048
+  [159/180] simulating mix(cuda-a40-node_a40a-tp4-dp1+furiosa-rngd-node_rngd0-tp4-dp2)-s32-t2048
+  [160/180] simulating mix(cuda-a40-node_a40a-tp4-dp1+furiosa-rngd-node_rngd0-tp4-dp2)-s32-t8192
+  [161/180] simulating mix(furiosa-rngd-node_rngd0-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp2)-s256-t8192
+  [162/180] simulating mix(furiosa-rngd-node_rngd0-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp2)-s128-t8192
+  [163/180] simulating mix(furiosa-rngd-node_rngd0-tp8-dp1+furiosa-rngd-node_rngd1-tp8-dp1)-s256-t2048
+  [164/180] simulating mix(furiosa-rngd-node_rngd0-tp8-dp1+furiosa-rngd-node_rngd1-tp8-dp1)-s256-t8192
+  [165/180] simulating mix(furiosa-rngd-node_rngd0-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp2)-s128-t2048
+  [166/180] simulating mix(furiosa-rngd-node_rngd0-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp2)-s256-t2048
+  [167/180] simulating mix(furiosa-rngd-node_rngd0-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp1)-s32-t2048
+  [168/180] simulating mix(furiosa-rngd-node_rngd0-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp1)-s32-t8192
+  [169/180] simulating mix(furiosa-rngd-node_rngd0-tp8-dp1+furiosa-rngd-node_rngd1-tp8-dp1)-s128-t2048
+  [170/180] simulating mix(furiosa-rngd-node_rngd0-tp8-dp1+furiosa-rngd-node_rngd1-tp8-dp1)-s128-t8192
+  [171/180] simulating mix(furiosa-rngd-node_rngd0-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp2)-s32-t2048
+  [172/180] simulating mix(furiosa-rngd-node_rngd0-tp4-dp1+furiosa-rngd-node_rngd1-tp4-dp2)-s32-t8192
+  [173/180] simulating mix(furiosa-rngd-node_rngd0-tp4-dp2+furiosa-rngd-node_rngd1-tp4-dp2)-s128-t2048
+  [174/180] simulating mix(furiosa-rngd-node_rngd0-tp4-dp2+furiosa-rngd-node_rngd1-tp4-dp2)-s128-t8192
+  [175/180] simulating mix(furiosa-rngd-node_rngd0-tp4-dp2+furiosa-rngd-node_rngd1-tp4-dp2)-s256-t2048
+  [176/180] simulating mix(furiosa-rngd-node_rngd0-tp4-dp2+furiosa-rngd-node_rngd1-tp4-dp2)-s256-t8192
+  [177/180] simulating mix(furiosa-rngd-node_rngd0-tp4-dp2+furiosa-rngd-node_rngd1-tp4-dp2)-s32-t2048
+  [178/180] simulating mix(furiosa-rngd-node_rngd0-tp4-dp2+furiosa-rngd-node_rngd1-tp4-dp2)-s32-t8192
+  [179/180] simulating mix(furiosa-rngd-node_rngd0-tp8-dp1+furiosa-rngd-node_rngd1-tp8-dp1)-s32-t2048
+  [180/180] simulating mix(furiosa-rngd-node_rngd0-tp8-dp1+furiosa-rngd-node_rngd1-tp8-dp1)-s32-t8192
+--- HeteroPilot plan ---------------------------------------------------------
+service : meta-llama/Llama-3.1-8B
+cluster : pd-rngd-gpu
+searched: 328 generated, 324 simulated (prune ratio 1%)
+
+--- Rejected candidates ------------------------------------------------------
+  memory_infeasible          4
+  slo_violated               264
+
+--- Feasible candidates ------------------------------------------------------
+  13 on the Pareto frontier
+
+--- Recommended plan ---------------------------------------------------------
+recommended: hp-00077  [cuda-a40-node_a40a-tp4-dp1-s256-t8192]
+  placement         : cuda-a40-node_a40a x1 (tp=4, role=aggregated)
+  knobs             : max_num_seqs=256, max_num_batched_tokens=8192, prefix_caching=False
+  routing           : single
+  score             : minimize_energy = -64,430.0000
+  TTFT  p50/p95/p99 : 135.7 / 1,808.8 / 2,972.1 ms
+  TPOT  p50/p95/p99 : 41.7 / 47.8 / 49.4 ms
+  throughput        : 9,038.8 tok/s
+  SLO attainment    : 99.0%  (goodput 5.92 rps)
+  accelerators      : 4
+  energy            : 64,430.0 J  (avg 1,282.5 W, peak 1,367.4 W)
+  tokens/J          : 2.963
+
+--- Pareto alternatives ------------------------------------------------------
+  hp-00075  [cuda-a40-node_a40a-tp4-dp1-s128-t8192]
+    trade-off : higher p99_ttft_ms (worse), lower p99_tpot_ms, lower peak_power_w, lower tokens_per_joule (worse)
+    score     : -73,560.0000
+    identical : 1 other candidate(s) predict exactly this outcome (cuda-a40-node_a40b-tp4-dp1-s128-t8192)
+    TTFT  p50/p95/p99 : 5,382.4 / 14,490.1 / 15,070.1 ms
+    TPOT  p50/p95/p99 : 30.7 / 35.1 / 35.6 ms
+    throughput        : 7,982.2 tok/s
+    SLO attainment    : 100.0%  (goodput 5.28 rps)
+    accelerators      : 4
+    energy            : 73,560.0 J  (avg 1,292.5 W, peak 1,365.4 W)
+    tokens/J          : 2.595
+
+  hp-00243  [mix(cuda-a40-node_a40a-tp4-dp1+cuda-a40-node_a40b-tp4-dp1)-s128-t8192]
+    trade-off : lower p99_ttft_ms, lower p99_tpot_ms, higher peak_power_w (worse), lower tokens_per_joule (worse), higher active_accelerators (worse)
+    score     : -96,230.0000
+    identical : 1 other candidate(s) predict exactly this outcome (mix(cuda-a40-node_a40a-tp4-dp1+cuda-a40-node_a40b-tp4-dp1)-s256-t8192)
+    TTFT  p50/p95/p99 : 99.5 / 222.3 / 287.2 ms
+    TPOT  p50/p95/p99 : 32.7 / 36.9 / 37.6 ms
+    throughput        : 9,489.7 tok/s
+    SLO attainment    : 100.0%  (goodput 6.28 rps)
+    accelerators      : 8
+    energy            : 96,230.0 J  (avg 2,016.1 W, peak 2,183.4 W)
+    tokens/J          : 1.984
+
+  hp-00242  [mix(cuda-a40-node_a40a-tp4-dp1+cuda-a40-node_a40b-tp4-dp1)-s128-t2048]
+    trade-off : lower p99_ttft_ms, lower p99_tpot_ms, higher peak_power_w (worse), lower tokens_per_joule (worse), higher active_accelerators (worse)
+    score     : -96,950.0000
+    identical : 1 other candidate(s) predict exactly this outcome (mix(cuda-a40-node_a40a-tp4-dp1+cuda-a40-node_a40b-tp4-dp1)-s256-t2048)
+    TTFT  p50/p95/p99 : 99.8 / 284.0 / 358.0 ms
+    TPOT  p50/p95/p99 : 33.2 / 37.5 / 38.7 ms
+    throughput        : 9,423.9 tok/s
+    SLO attainment    : 100.0%  (goodput 6.23 rps)
+    accelerators      : 8
+    energy            : 96,950.0 J  (avg 2,015.2 W, peak 2,173.4 W)
+    tokens/J          : 1.969
+
+  hp-00225  [mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s128-t8192]
+    trade-off : lower p99_ttft_ms, lower p99_tpot_ms, higher peak_power_w (worse), lower tokens_per_joule (worse), higher active_accelerators (worse)
+    score     : -110,230.0000
+    identical : 3 other candidate(s) predict exactly this outcome (mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s256-t8192, mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s128-t8192, mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s256-t8192)
+    TTFT  p50/p95/p99 : 116.8 / 287.2 / 384.5 ms
+    TPOT  p50/p95/p99 : 37.4 / 41.3 / 43.1 ms
+    throughput        : 8,872.6 tok/s
+    SLO attainment    : 100.0%  (goodput 5.87 rps)
+    accelerators      : 6
+    energy            : 110,230.0 J  (avg 2,158.0 W, peak 2,307.7 W)
+    tokens/J          : 1.732
+
+  hp-00224  [mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s128-t2048]
+    trade-off : lower p99_ttft_ms, lower p99_tpot_ms, higher peak_power_w (worse), lower tokens_per_joule (worse), higher active_accelerators (worse)
+    score     : -111,260.0000
+    identical : 3 other candidate(s) predict exactly this outcome (mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s256-t2048, mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s128-t2048, mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s256-t2048)
+    TTFT  p50/p95/p99 : 120.4 / 345.9 / 433.9 ms
+    TPOT  p50/p95/p99 : 37.3 / 42.1 / 44.5 ms
+    throughput        : 8,767.1 tok/s
+    SLO attainment    : 100.0%  (goodput 5.80 rps)
+    accelerators      : 6
+    energy            : 111,260.0 J  (avg 2,165.1 W, peak 2,252.7 W)
+    tokens/J          : 1.716
+
+  ... 7 more
+
+--- Caveats ------------------------------------------------------------------
+  - Prefix caching is disabled for every candidate. With it enabled the simulator's prefix-cache memory grows monotonically and the run dies on any device small enough to saturate (docs/deviations.md D12). Consequence: ServiceSpec.traffic.prefix_share_ratio has no effect on these predictions, and TTFT is pessimistic for workloads with genuinely shared prefixes.
+
+wrote outputs/perf/topk/full.yaml

@@ -208,9 +208,27 @@ margin, **every RNGD configuration is rejected on both fixtures**. The committed
 winner is **infeasible, not merely optimistic**, and the loose-TTFT half of the
 three-regime answer does not survive.
 
-**The pattern is worth stating in the paper.** All three were caught by internal
-discipline — provenance labels, sustained-vs-peak hygiene, and applying a measured
-model error as a feasibility margin — not by an external reviewer. The retracted
+**D30 — "regret 0 at every K down to K=1".** *Claimed:* the stage-6 surrogate
+top-K costs no optimality — regret 0.000 at every K, 78× fewer simulations — offered
+as a general scaling property of the planner. *Measured:* that curve came from a
+single fixture (N=78) whose candidates are aggregated-heavy. On three P/D and
+heterogeneous corpora (N=324/492/468) the shipped ranker is **false-infeasible at
+K=20 on two of three** — it reports no plan where the oracle has one. The cause is
+structural, not statistical: the proxy tok/J is **algebraically invariant to TP and
+DP** (throughput and power both scale with `tp·dp`, so the ratio cancels), leaving
+the ranker blind to the axis that decides feasibility, while its one
+parallelism-sensitive term fires for 0 of 324 candidates because the roofline floor
+underestimates simulated TPOT by a median 2.92×. *Changed:* **the K=1 claim is
+withdrawn as a general property** and holds only of its own fixture; `--top-k` is not
+used as a cost lever for P/D or heterogeneous sweeps. **No ranker change was made** —
+the obvious repair (order by the roofline floor) fixes two corpora and breaks the
+third, which is the same one-fixture error again. `docs/surrogate_topk_regret.md`,
+`deviations.md` D30.
+
+**The pattern is worth stating in the paper.** All four were caught by internal
+discipline — provenance labels, sustained-vs-peak hygiene, applying a measured
+model error as a feasibility margin, and re-measuring an accuracy claim on fixtures
+it had not been measured on — not by an external reviewer. The retracted
 text is kept in place and marked, never overwritten, because it records what was
 reasonable to believe at the time.
 

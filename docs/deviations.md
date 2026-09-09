@@ -1683,3 +1683,135 @@ racing its own `std::remove` (the constructor reads eagerly); **D25-a's own
 `cwd=` edit** (reverting it changed nothing); orphaned ASTRA-Sim processes from a
 killed launch (a clean process table still hung); and dependence on which run
 preceded (`R1 → R2` completes).
+
+## D27 — the Chakra converter is called in-process, not spawned · Resolved (fourth sanctioned `serving/` edit)
+
+`WORK_ORDER_rps_aware.md` STEP 1 asked for a wall-time breakdown and gave a rule:
+convert the Chakra subprocess to an in-process call if it exceeds 30 % of wall time.
+It measured **28.9 %** at 10 rps and **29.6 %** at 3.3 rps — below the threshold — and
+the edit was made anyway, on the user's direction, because the cheaper lever the rule
+assumed was available turned out not to be. `docs/sim_cost_profile.md` carries the
+decision and the numbers; this entry records the code change.
+
+**The defect, such as it is.** `generate_graph()` spawned a fresh Python interpreter
+once per instance per iteration to convert a 295-row trace:
+
+```python
+subprocess.run([sys.executable, '-m', 'chakra.src.converter.converter', 'LLM', …],
+               cwd=chakra, text=True, check=True)
+```
+
+Timed on a real trace, 20 calls: **46–47 ms per call, of which 5–7 ms is the
+conversion.** The other 40 ms is fork, exec, interpreter start and imports — paid
+thousands of times per run to do 5 ms of work.
+
+**The fix.** `chakra.src.converter.llm_converter.LLMConverter`, imported once on first
+use and called directly:
+
+```python
+_llm_converter()(trace_path, output_path, num_npus, npu_offset,
+                 enable_local_offloading).convert()
+```
+
+**`LLMConverter` and not `converter.main()`**, which is what the work order's sketch
+suggested. `convert_llm()` is a three-line wrapper around this constructor, so nothing
+is skipped by going one level down — and `main()` would bring two side effects into
+the frontend's process:
+
+- `setup_logging()` calls `logging.basicConfig(level=DEBUG, …)`, which reconfigures the
+  **frontend's** root logger on every call;
+- that same call defaults to a **cwd-relative `debug.log`**. The subprocess absorbed it
+  because it ran with `cwd=` the chakra directory; in-process it would land in the repo
+  root, once per instance per iteration.
+
+`main()` also parses `sys.argv`, so a caller would have to swap argv and `chdir`.
+Bypassing it removes all of that. The import is deferred to first use so that importing
+`serving` stays cheap for the planner, which pulls in `serving.core.memory_model` for
+its own feasibility arithmetic and never builds a graph.
+
+**The work order's stated risk — module-level state surviving between calls — does not
+exist.** `converter.py` has no module-level mutable state, and repeated conversions
+produce identical bytes.
+
+**Verification.** Seven independent byte comparisons, all equal:
+
+| artifact | result |
+| --- | --- |
+| R1 ×3 (`Llama-3.1-8B`, `Qwen3-32B`, `Qwen3-30B-A3B`) | identical to `after_d25_d26` |
+| R2 (`P[cuda:tp4] D[cuda:tp4] -s256-t8192`) | identical (`fff63c22…`) |
+| the three STEP 1 rate runs (10 / 3.3 / 1 rps) | identical to their pre-D27 CSVs |
+
+plus `tests/test_chakra_inprocess.py`, which compares against the **live subprocess
+path** rather than a stored digest, so it stays true if the vendored chakra is updated,
+and asserts the two `main()` side effects above are absent.
+
+Measured saving: **1.55–1.72×** across the three rates. Of the 113 s saved at 10 rps,
+80 s is `generate_graph` — 23.7 % of wall, matching the 24 % the breakdown predicted —
+and 27 s is `read_wait` shrinking, which is observed but not attributed
+(`docs/sim_cost_profile.md`).
+
+**D26 is subsumed but stays in the ledger.** There is no longer an interpreter to
+resolve, so the PATH hazard is gone by construction; what replaces it is an
+`ImportError` at first conversion if the venv lacks chakra. That is the strictly better
+failure — this venv has `ENABLE_USER_SITE = False` and no `~/.local` on `sys.path`, so
+there is no wrong-version fallback to silently succeed with.
+
+## D30 — the roofline surrogate's proxy is invariant to TP and DP, so top-K is not a cost lever on P/D or heterogeneous corpora · Open (measured, not fixed)
+
+*D28 and D29 are reserved for `WORK_ORDER_rps_aware.md` STEP 2 and STEP 4.*
+
+Full measurement in `docs/surrogate_topk_regret.md`; this entry records the
+divergence and what it forbids.
+
+**What the work order assumed.** §E6a planned to cut a 218 h sweep with
+`--top-k 20`, citing §4.7's *"regret 0 at every K down to K=1"*. STEP 1 found the
+same setting turning a FEASIBLE plan INFEASIBLE on `pd-rngd-gpu`.
+
+**The divergence.** `AnalyticalRooflineRanker` orders by `greedy.estimate`'s proxy
+tok/J, and that quantity cancels exactly across the parallelism axis:
+
+```
+throughput = Σ active/step_s × dp_replicas      step_s = (W/tp + a·K/tp) / BW
+power      = Σ active_power × tp × dp
+```
+
+Both scale with `tp · dp`. Measured across seven tp/dp configurations on one
+accelerator, the proxy tok/J spread is **0.000463** (s32) and **0.001848** (s128);
+`dp1` through `dp4` agree to six decimals. The ranker discriminates on accelerator
+and `max_num_seqs` and on nothing else — while on this fixture parallelism is what
+decides feasibility (`tp4-dp1` 49.40 ms against a 50 ms TPOT SLO, `tp2-dp2`
+53.47 ms).
+
+The one parallelism-sensitive term, `roofline_tpot_ms`, feeds only a binary
+`likely_infeasible` flag, and that flag fired for **0 of 324** candidates: the floor
+underestimates simulated p99 TPOT by a median **2.92×** (1.77–11.26×, n=180). So the
+ordering is decided by the fifth significant digit of a near-constant.
+
+**What it forbids.** `--top-k` is not used as a cost lever on P/D or heterogeneous
+sweeps. The shipped ranker is false-infeasible at K=20 on two of three corpora
+(N=324, 492, 468). K=30 is clean on all three, but three fixtures do not license a
+threshold and they were swept under different SLO margins.
+
+**Why nothing was changed.** Ordering by the roofline floor instead fixes those two
+corpora and **breaks the third**, where the shipped ranker is already perfect at
+K=10. Adopting it would repeat precisely the error being corrected here — a ranker
+justified on the fixtures where it happens to win. The alternative orderings live in
+`exp_surrogate.py --rankers` so the comparison is reproducible, and none is the
+default.
+
+**Two harness defects fixed while measuring this**, both in
+`experiments/scripts/exp_surrogate.py`:
+
+- `--cache-dir` replays an existing `EnvelopeCache` corpus, so a past sweep's
+  simulations can answer a regret question without re-running. A candidate absent
+  from the corpus stays in the ranking and yields no plan — the cache stores only
+  `result.ok`, so absent means simulated-and-failed, and it did consume a top-K slot.
+  Dropping such candidates instead (the first attempt) deleted exactly the high-ranked
+  ones that deliver nothing and reported the shipped ranker as fine at K=20,
+  contradicting the observed run.
+- **Regret was `None` for every minimisation objective.** `pareto.objective_value`
+  negates minimisation objectives so callers can always maximise; the regret formula
+  divided by the *signed* value behind an `oracle_value > 0` guard that was therefore
+  never true. The denominator is now `abs(oracle_value)`. The published curve is
+  unaffected — its oracle value is +1.660, which only
+  `maximize_slo_goodput_per_joule` can be.

@@ -113,6 +113,15 @@ approach → method/trust → results → scaling → status/limits → contribu
   mixed hardware.
 
 ## Slide 12 — Scaling 1: surrogate top-K
+
+> **SUPERSEDED IN PART 2026-09-08.** regret 0 at every K held on **one
+> aggregated-heavy fixture** (N=78). On the three P/D + heterogeneous corpora of
+> `docs/surrogate_topk_regret.md` the shipped ranker is **false-infeasible at K=20 on
+> two of three** — its proxy tok/J is algebraically TP/DP-invariant, so it cannot rank
+> the axis that decides feasibility there. **top-K is not a cost lever for those
+> sweeps.** The table below is unchanged and still true of its own fixture
+> (`deviations.md` D30).
+
 - A cheap roofline ranker scores all candidates; only the top-K are simulated.
 - Measured (N=78): **regret 0.000 at every K down to K=1 (78× fewer sims)**; recall
   reaches 1 only at K=20 — the objective has ties, so an equal-value candidate is
