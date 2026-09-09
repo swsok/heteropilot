@@ -11,6 +11,10 @@ the RNGD card at 1 rps.*
 Conclusion (iii) also lands: **asymmetric P/D wins wherever TTFT is tight**, which
 is D28 appearing in an answer rather than in a test.
 
+**Knob fixing cost nothing at 1 rps** — regret 0.0000 %, same plan — but for a
+reason that limits the reassurance: the winner there is an RNGD-only shape, and
+the policy leaves those open by rule. It never restricted the candidate that won.
+
 *`WORK_ORDER_rps_aware.md` rev 2 STEP 5. Run 2026-09-09 on the NPU node. 300
 requests, seed 42, 64 workers, `--accuracy-domain`, `--enable-pd`, **no
 `--top-k`** (D30), knob fixing from the 10 rps results. Artifacts:
@@ -171,7 +175,41 @@ wrong there either; what was missing was the correction as a whole.
 
 `outputs/e6/e7_domain_sensitivity.json`.
 
-## Knob-fixing regret at 1 rps
+## Knob-fixing regret at 1 rps: zero, and the rule is why
 
-*(pending — the 1 rps point is being re-run on the card fixture with every knob,
-reusing the sweep's cache so only the dropped combinations simulate.)*
+The 1 rps point re-run on the card fixture with **every** knob — 528 candidates
+against the fixed set's 318:
+
+| TTFT | | evaluated | winner | tok/J | margin |
+| --- | --- | ---: | --- | ---: | ---: |
+| 64 s | fixed | 318 | `agg[furiosa:tp1]` | 1.0739 | 3.05 % |
+| 64 s | **all knobs** | **528** | `agg[furiosa:tp1]` | **1.0739** | 3.05 % |
+| 8 s | fixed | 318 | `agg[furiosa:tp1]` | 1.0739 | 3.05 % |
+| 8 s | **all knobs** | **528** | `agg[furiosa:tp1]` | **1.0739** | 3.05 % |
+
+**Regret 0.0000 %** — the same plan, the same tok/J to four decimals, the same
+margin.
+
+That is not luck, and it is not evidence that knob fixing is generally safe. The
+1 rps winner is `agg[furiosa:...]`, an **RNGD-only shape**, and RNGD-only shapes
+are exactly the ones the policy leaves open because none was feasible at 10 rps.
+Knob fixing never restricted the candidate that won. The rule protected the
+answer, and the measurement confirms the rule rather than the heuristic:
+
+> Shapes with no feasible candidate at 10 rps keep all six knobs, because which
+> knob revives them at low load is what E6 asks.
+
+**What this does not license.** Zero regret on one fixture at one rate for a shape
+the policy never touched says nothing about the cuda shapes it did fix. Those
+remain a labelled heuristic — every cuda row in the tables above carries
+`knob: fixed@10rps` — and measuring their regret would mean re-running a rate where
+a cuda plan wins with all six knobs restored.
+
+## Reading the cache-hit counts
+
+A row's `cache_hits` can exceed what was written at that rate, and that is
+correct: `planner/envelope.py:key_for` keys on **placement**, not candidate id, so
+two candidates that compile to the same placement and knobs share one simulation.
+At 1 rps, 318 candidates resolved to 121 distinct keys and 197 hits. It is the same
+mechanism behind the renderer's "N other candidate(s) predict exactly this
+outcome".
