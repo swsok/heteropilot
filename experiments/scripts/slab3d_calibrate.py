@@ -46,8 +46,13 @@ FACTORS = (1, 2, 4, 8)
 #: is the refusal working -- and the reason to measure rather than widen the
 #: domain by fiat. 7.7 came from the same run: it is `fabric-rngd0-rngd1`, the
 #: RNGD<->RNGD link, i.e. the asymmetric NPU P/D case D14/D16(b) was written
-#: about.
-BANDWIDTHS = (7.7, 12.6, 16.0, 35.2, 100.0)
+#: about. 12.9, 13.0 and 13.1 are the three inter-island links of
+#: `pd-rngd-gpu-card.yaml`, added when E6a's first probe refused all 60 of that
+#: fixture's asymmetric candidates for want of them. They sit within 4 % of 12.6
+#: and the factor has been bandwidth-independent over a 13x range, so it is
+#: tempting to reuse it -- which is exactly the inference the domain exists to
+#: refuse. They are measured.
+BANDWIDTHS = (7.7, 12.6, 12.9, 13.0, 13.1, 16.0, 35.2, 100.0)
 
 #: (label, base fixture, tp) -- the two shapes the work order names.
 #: tp2 gives the `[1,2]` split, which `plan --enable-pd` produces for an A40 tp1

@@ -18,6 +18,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
+from typing import ClassVar
 
 import pytest
 
@@ -45,6 +46,11 @@ class _StubOutput:
     evaluated_candidates = 0
     reason = "stubbed: search was intercepted"
     recommended = None
+    # The driver persists these so a row can be read as "the best of what
+    # evaluated" rather than "the best that exists" -- the trap HANDOVER §3
+    # records, where 71 of 222 timeouts hid the committed winner.
+    rejected_summary: ClassVar[dict] = {}
+    provenance: ClassVar[dict] = {}
 
 
 def _run_sweep(monkeypatch, tmp_path: Path, extra_argv: list[str]) -> list[dict]:

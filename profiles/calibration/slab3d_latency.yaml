@@ -16,12 +16,17 @@
 # refused candidates for want of them. 12.6 is the A40<->RNGD cross-vendor link in
 # `pd-rngd-gpu.yaml`, 7.7 is `fabric-rngd0-rngd1` (the asymmetric NPU P/D case
 # D14/D16(b) was written about), and [1,2] is an A40 tp1 prefill with a tp2 decode.
+# 12.9, 13.0 and 13.1 are the three inter-island links of `pd-rngd-gpu-card.yaml`,
+# added when E6a's first probe refused all 60 of that fixture's asymmetric
+# candidates. They are within 4 % of 12.6 and the factor has been
+# bandwidth-independent across a 13x range, which is precisely why reusing it
+# would have been the inference this table exists to refuse.
 # The work order's original three bandwidths and two splits covered none of them.
 # That is the refusal working: the fix is to measure the point, never to widen the
 # domain by fiat.
 #
 # THIS IS A TABLE, NOT A LAW, as the work order requires. The factor does not vary
-# with bandwidth -- 4 at all five bandwidths for [4,2], 2 for [2,2], 1 for [1,2],
+# with bandwidth -- 4 at all eight bandwidths for [4,2], 2 for [2,2], 1 for [1,2],
 # over a 13x bandwidth range -- but it DOES vary with the split. Both measured values happen to equal tp/2 and
 # that is derivable from hop counting (see the doc), but a derivation is not a
 # measurement: `validity` refuses every combination not listed.
@@ -37,26 +42,35 @@ factors_swept: [1, 2, 4, 8]
 source: measured
 
 points:
-  - {split: "[4,2]", tp: 8, link_bw: 7.7, factor: 4, residual_pct: 0.0071, uncorrected_pct: -21.86, fitted_on: 801c7bf}
-  - {split: "[4,2]", tp: 8, link_bw: 12.6, factor: 4, residual_pct: 0.0064, uncorrected_pct: -22.55, fitted_on: 801c7bf}
-  - {split: "[4,2]", tp: 8, link_bw: 16.0, factor: 4, residual_pct: 0.0075, uncorrected_pct: -24.43, fitted_on: 801c7bf}
-  - {split: "[4,2]", tp: 8, link_bw: 35.2, factor: 4, residual_pct: 0.0067, uncorrected_pct: -22.84, fitted_on: 801c7bf}
-  - {split: "[4,2]", tp: 8, link_bw: 100.0, factor: 4, residual_pct: 0.0067, uncorrected_pct: -23.68, fitted_on: 801c7bf}
-  - {split: "[2,2]", tp: 4, link_bw: 7.7, factor: 2, residual_pct: 0.0008, uncorrected_pct: -12.28, fitted_on: 801c7bf}
-  - {split: "[2,2]", tp: 4, link_bw: 12.6, factor: 2, residual_pct: 0.0015, uncorrected_pct: -12.6, fitted_on: 801c7bf}
-  - {split: "[2,2]", tp: 4, link_bw: 16.0, factor: 2, residual_pct: 0.0009, uncorrected_pct: -12.95, fitted_on: 801c7bf}
-  - {split: "[2,2]", tp: 4, link_bw: 35.2, factor: 2, residual_pct: 0.0016, uncorrected_pct: -13.57, fitted_on: 801c7bf}
-  - {split: "[2,2]", tp: 4, link_bw: 100.0, factor: 2, residual_pct: 0.001, uncorrected_pct: -13.79, fitted_on: 801c7bf}
-  - {split: "[1,2]", tp: 2, link_bw: 7.7, factor: 1, residual_pct: 0.0, uncorrected_pct: 0.0, fitted_on: 801c7bf}
-  - {split: "[1,2]", tp: 2, link_bw: 12.6, factor: 1, residual_pct: 0.0, uncorrected_pct: 0.0, fitted_on: 801c7bf}
-  - {split: "[1,2]", tp: 2, link_bw: 16.0, factor: 1, residual_pct: 0.0, uncorrected_pct: 0.0, fitted_on: 801c7bf}
-  - {split: "[1,2]", tp: 2, link_bw: 35.2, factor: 1, residual_pct: 0.0, uncorrected_pct: 0.0, fitted_on: 801c7bf}
-  - {split: "[1,2]", tp: 2, link_bw: 100.0, factor: 1, residual_pct: 0.0, uncorrected_pct: 0.0, fitted_on: 801c7bf}
+  - {split: "[4,2]", tp: 8, link_bw: 7.7, factor: 4, residual_pct: 0.0071, uncorrected_pct: -21.86, fitted_on: e340534}
+  - {split: "[4,2]", tp: 8, link_bw: 12.6, factor: 4, residual_pct: 0.0064, uncorrected_pct: -22.55, fitted_on: e340534}
+  - {split: "[4,2]", tp: 8, link_bw: 12.9, factor: 4, residual_pct: 0.0064, uncorrected_pct: -22.58, fitted_on: e340534}
+  - {split: "[4,2]", tp: 8, link_bw: 13.0, factor: 4, residual_pct: 0.0074, uncorrected_pct: -22.59, fitted_on: e340534}
+  - {split: "[4,2]", tp: 8, link_bw: 13.1, factor: 4, residual_pct: 0.0064, uncorrected_pct: -22.6, fitted_on: e340534}
+  - {split: "[4,2]", tp: 8, link_bw: 16.0, factor: 4, residual_pct: 0.0075, uncorrected_pct: -24.43, fitted_on: e340534}
+  - {split: "[4,2]", tp: 8, link_bw: 35.2, factor: 4, residual_pct: 0.0067, uncorrected_pct: -22.84, fitted_on: e340534}
+  - {split: "[4,2]", tp: 8, link_bw: 100.0, factor: 4, residual_pct: 0.0067, uncorrected_pct: -23.68, fitted_on: e340534}
+  - {split: "[2,2]", tp: 4, link_bw: 7.7, factor: 2, residual_pct: 0.0008, uncorrected_pct: -12.28, fitted_on: e340534}
+  - {split: "[2,2]", tp: 4, link_bw: 12.6, factor: 2, residual_pct: 0.0015, uncorrected_pct: -12.6, fitted_on: e340534}
+  - {split: "[2,2]", tp: 4, link_bw: 12.9, factor: 2, residual_pct: 0.0009, uncorrected_pct: -12.8, fitted_on: e340534}
+  - {split: "[2,2]", tp: 4, link_bw: 13.0, factor: 2, residual_pct: 0.0009, uncorrected_pct: -12.81, fitted_on: e340534}
+  - {split: "[2,2]", tp: 4, link_bw: 13.1, factor: 2, residual_pct: 0.0015, uncorrected_pct: -12.82, fitted_on: e340534}
+  - {split: "[2,2]", tp: 4, link_bw: 16.0, factor: 2, residual_pct: 0.0009, uncorrected_pct: -12.95, fitted_on: e340534}
+  - {split: "[2,2]", tp: 4, link_bw: 35.2, factor: 2, residual_pct: 0.0016, uncorrected_pct: -13.57, fitted_on: e340534}
+  - {split: "[2,2]", tp: 4, link_bw: 100.0, factor: 2, residual_pct: 0.001, uncorrected_pct: -13.79, fitted_on: e340534}
+  - {split: "[1,2]", tp: 2, link_bw: 7.7, factor: 1, residual_pct: 0.0, uncorrected_pct: 0.0, fitted_on: e340534}
+  - {split: "[1,2]", tp: 2, link_bw: 12.6, factor: 1, residual_pct: 0.0, uncorrected_pct: 0.0, fitted_on: e340534}
+  - {split: "[1,2]", tp: 2, link_bw: 12.9, factor: 1, residual_pct: 0.0, uncorrected_pct: 0.0, fitted_on: e340534}
+  - {split: "[1,2]", tp: 2, link_bw: 13.0, factor: 1, residual_pct: 0.0, uncorrected_pct: 0.0, fitted_on: e340534}
+  - {split: "[1,2]", tp: 2, link_bw: 13.1, factor: 1, residual_pct: 0.0, uncorrected_pct: 0.0, fitted_on: e340534}
+  - {split: "[1,2]", tp: 2, link_bw: 16.0, factor: 1, residual_pct: 0.0, uncorrected_pct: 0.0, fitted_on: e340534}
+  - {split: "[1,2]", tp: 2, link_bw: 35.2, factor: 1, residual_pct: 0.0, uncorrected_pct: 0.0, fitted_on: e340534}
+  - {split: "[1,2]", tp: 2, link_bw: 100.0, factor: 1, residual_pct: 0.0, uncorrected_pct: 0.0, fitted_on: e340534}
 
 validity:
   # Only the (split, link_bw) combinations actually measured. A6.
   splits: ["[4,2]", "[2,2]", "[1,2]"]
-  link_bw_gbps: [7.7, 12.6, 16.0, 35.2, 100.0]
+  link_bw_gbps: [7.7, 12.6, 12.9, 13.0, 13.1, 16.0, 35.2, 100.0]
   extrapolation: refuse
   note: >
     A slab3d candidate whose (split, link_bw) is not in this table must be

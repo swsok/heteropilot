@@ -115,3 +115,10 @@ outputs/slab3d_calib/*.log
 # STEP 2.3 end-to-end check: 612 simulation work dirs regenerate from the command
 # in the plan's provenance; the plan and its log are the record.
 outputs/asym_plan/work/
+
+# E6a: two fixtures x 4 rates of 300-request simulations. The per-run work dirs
+# and caches regenerate from the committed command; the sweep JSON, the knob
+# policies and the result document are the record.
+outputs/e6/*/work/
+outputs/e6/*/cache/
+outputs/e6/probe/

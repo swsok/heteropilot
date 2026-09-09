@@ -28,7 +28,7 @@ def table() -> dict:
     return yaml.safe_load(TABLE.read_text())
 
 
-MEASURED_BW = (7.7, 12.6, 16.0, 35.2, 100.0)
+MEASURED_BW = (7.7, 12.6, 12.9, 13.0, 13.1, 16.0, 35.2, 100.0)
 MEASURED_SPLITS = ("[4,2]", "[2,2]", "[1,2]")
 
 

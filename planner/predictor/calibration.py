@@ -36,7 +36,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from planner.envelope import workload_bucket
 from planner.plan import DeploymentPlan
@@ -476,3 +476,25 @@ def load_calibration(path: str | Path) -> CalibrationModel:
     if not raw:
         return CalibrationModel.identity()
     return CalibrationModel.model_validate(raw)
+
+
+def load_accuracy_domains(root: Path | str = ".") -> dict[str, AccuracyDomain]:
+    """Every measured accuracy domain under `<root>/profiles/calibration/`.
+
+    That directory holds two kinds of file: hardware calibrations (this schema)
+    and standalone tables such as `slab3d_latency.yaml`, which is a lookup for a
+    topology correction and has nothing to do with a `hardware:` block. A file
+    that does not parse as a calibration is skipped rather than fatal -- a
+    sibling artifact must not be able to stop a planning run -- but the skip is
+    narrow: only a validation failure, never an unreadable disk.
+    """
+    out: dict[str, AccuracyDomain] = {}
+    for path in sorted((Path(root) / "profiles/calibration").glob("*.yaml")):
+        try:
+            model = load_calibration(path)
+        except (ValidationError, KeyError, TypeError):
+            continue                      # not a hardware calibration file
+        for hardware, cal in model.hardware.items():
+            if cal.accuracy_domain is not None:
+                out[hardware] = cal.accuracy_domain
+    return out

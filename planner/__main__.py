@@ -28,7 +28,7 @@ from planner.inventory import (
 from planner.optimizer import exhaustive
 from planner.perf_envelope import PerfEnvelope, find_envelope
 from planner.plan import DeploymentPlan, PlannerOutput
-from planner.predictor.calibration import AccuracyDomain, load_calibration
+from planner.predictor.calibration import load_accuracy_domains
 from planner.predictor.llmservingsim import LLMServingSimPredictor
 from planner.render import render, render_deployment_handle, render_deployment_metrics
 from planner.spec import ServiceSpec, SpecError, load_service_spec
@@ -154,26 +154,6 @@ def cmd_inspect_cluster(args: argparse.Namespace) -> int:
 def _write_output(output: PlannerOutput, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(yaml.safe_dump(output.model_dump(mode="json"), sort_keys=False))
-
-
-def _load_accuracy_domains(root: Path) -> dict[str, AccuracyDomain]:
-    """Every measured accuracy domain under `profiles/calibration/`.
-
-    `a40.accuracy.yaml` is a separate file from `a40.yaml` on purpose: the latter
-    is on the default planning path, and a domain there would start applying an
-    automatic margin to every A40 candidate and change the frozen output. Opting
-    in is what `--accuracy-domain` means (STEP 4.3 decision, deviations D29).
-    """
-    out: dict[str, AccuracyDomain] = {}
-    for f in sorted((root / "profiles/calibration").glob("*.yaml")):
-        try:
-            model = load_calibration(f)
-        except Exception:      # a malformed sibling must not break the run
-            continue
-        for hw, cal in model.hardware.items():
-            if cal.accuracy_domain is not None:
-                out[hw] = cal.accuracy_domain
-    return out
 
 
 def _load_envelopes(
@@ -379,7 +359,7 @@ def _plan_once(args: argparse.Namespace, return_output: bool = False):
         from planner.optimizer.surrogate import AnalyticalRooflineRanker
         surrogate = AnalyticalRooflineRanker()
 
-    accuracy_domains = _load_accuracy_domains(Path(args.root)) if args.accuracy_domain else None
+    accuracy_domains = load_accuracy_domains(args.root) if args.accuracy_domain else None
     envelopes = (_load_envelopes(cluster, profiles, spec)
                  if args.envelope_prefilter else None)
     provenance["accuracy_domain"] = sorted(accuracy_domains) if accuracy_domains else None

@@ -720,6 +720,7 @@ def search(
     top_k: int | None = None,
     envelopes: dict[str, PerfEnvelope] | None = None,
     accuracy_domains: dict[str, AccuracyDomain] | None = None,
+    candidate_filter: Callable[[CandidateConfig], bool] | None = None,
     max_workers: int | None = None,
     provenance: dict | None = None,
     progress: Callable[[int, int, CandidateConfig], None] | None = None,
@@ -748,6 +749,16 @@ def search(
     # order. When surrogate/top_k is unset this block is skipped entirely, so the
     # default path is byte-identical.
     candidates = generation.candidates
+
+    # A caller-supplied scope reduction. NOT a rejection stage: the candidates are
+    # not judged, they are simply not asked about, so they are counted in
+    # provenance and announced in a caveat rather than filed under a reason. The
+    # policy lives in experiments/ (E6a's knob fixing); only the hook is here.
+    filtered_out = 0
+    if candidate_filter is not None:
+        before = len(candidates)
+        candidates = [c for c in candidates if candidate_filter(c)]
+        filtered_out = before - len(candidates)
 
     # Stage 5.5, opt-in and EPISTEMIC: drop candidates whose predicted operating
     # point was never measured. Runs before the surrogate so a candidate outside
@@ -809,6 +820,15 @@ def search(
     if surrogate_rejections:
         caveats.append(SURROGATE_TOPK_CAVEAT)
 
+    if filtered_out:
+        caveats.append(
+            f"A caller-supplied candidate filter removed {filtered_out} of "
+            f"{generation.survivors} generated candidates before simulation. "
+            f"They were not judged infeasible -- they were not evaluated. Any "
+            f"claim that the reported plan is best is a claim about the filtered "
+            f"set only."
+        )
+
     if envelope_rejections:
         caveats.append(
             f"{len(envelope_rejections)} candidate(s) were rejected BEFORE simulation "
@@ -826,6 +846,8 @@ def search(
         caveats.append(PD_TRANSFER_CAVEAT)
 
     prov = dict(provenance or {})
+    if filtered_out:
+        prov["candidate_filter_removed"] = filtered_out
     if evaluation.cache_hits:
         prov["envelope_cache_hits"] = len(evaluation.cache_hits)
         prov["envelope_cache_hit_ids"] = sorted(evaluation.cache_hits)

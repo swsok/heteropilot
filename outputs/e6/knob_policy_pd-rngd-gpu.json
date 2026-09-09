@@ -1,0 +1,172 @@
+{
+  "_note": "Fix one knob combination per deployment shape, from the 10 rps results.",
+  "cache": "outputs/.hp-reval-margin18-pd-rngd-gpu/cache",
+  "cluster": "experiments/configs/clusters/pd-rngd-gpu.yaml",
+  "label": "knob: fixed@10rps",
+  "policy": {
+    "aggregated[cuda:tp1+cuda:tp1]": {
+      "dropped": 5,
+      "fixed": true,
+      "knob": [
+        32,
+        8192
+      ],
+      "tok_per_j_at_10rps": 1.1609607783520828
+    },
+    "aggregated[cuda:tp1]": {
+      "dropped": 5,
+      "fixed": true,
+      "knob": [
+        32,
+        8192
+      ],
+      "tok_per_j_at_10rps": 1.301520212693435
+    },
+    "aggregated[cuda:tp2+cuda:tp2]": {
+      "dropped": 5,
+      "fixed": true,
+      "knob": [
+        128,
+        8192
+      ],
+      "tok_per_j_at_10rps": 1.7320148779824005
+    },
+    "aggregated[cuda:tp2]": {
+      "dropped": 5,
+      "fixed": true,
+      "knob": [
+        32,
+        8192
+      ],
+      "tok_per_j_at_10rps": 1.527482198575886
+    },
+    "aggregated[cuda:tp4+cuda:tp4]": {
+      "dropped": 5,
+      "fixed": true,
+      "knob": [
+        128,
+        8192
+      ],
+      "tok_per_j_at_10rps": 1.9839966746336901
+    },
+    "aggregated[cuda:tp4+furiosa:tp4]": {
+      "fixed": false,
+      "kept": 6,
+      "knob": null,
+      "reason": "no feasible candidate at 10 rps; which knob revives it at low load is what E6 asks, so all are kept"
+    },
+    "aggregated[cuda:tp4]": {
+      "dropped": 5,
+      "fixed": true,
+      "knob": [
+        128,
+        8192
+      ],
+      "tok_per_j_at_10rps": 2.5954323001631323
+    },
+    "aggregated[furiosa:tp4+furiosa:tp4]": {
+      "fixed": false,
+      "kept": 6,
+      "knob": null,
+      "reason": "no feasible candidate at 10 rps; which knob revives it at low load is what E6 asks, so all are kept"
+    },
+    "aggregated[furiosa:tp4]": {
+      "fixed": false,
+      "kept": 6,
+      "knob": null,
+      "reason": "no feasible candidate at 10 rps; which knob revives it at low load is what E6 asks, so all are kept"
+    },
+    "aggregated[furiosa:tp8+furiosa:tp8]": {
+      "fixed": false,
+      "kept": 6,
+      "knob": null,
+      "reason": "no feasible candidate at 10 rps; which knob revives it at low load is what E6 asks, so all are kept"
+    },
+    "aggregated[furiosa:tp8]": {
+      "dropped": 5,
+      "fixed": true,
+      "knob": [
+        128,
+        2048
+      ],
+      "tok_per_j_at_10rps": 4.956386292834891
+    },
+    "pd_split[cuda:tp1+cuda:tp1]": {
+      "fixed": false,
+      "kept": 6,
+      "knob": null,
+      "reason": "no feasible candidate at 10 rps; which knob revives it at low load is what E6 asks, so all are kept"
+    },
+    "pd_split[cuda:tp1+cuda:tp2]": {
+      "fixed": false,
+      "kept": 6,
+      "knob": null,
+      "reason": "no feasible candidate at 10 rps; which knob revives it at low load is what E6 asks, so all are kept"
+    },
+    "pd_split[cuda:tp2+cuda:tp2]": {
+      "dropped": 5,
+      "fixed": true,
+      "knob": [
+        128,
+        8192
+      ],
+      "tok_per_j_at_10rps": 1.7408589404577368
+    },
+    "pd_split[cuda:tp2+cuda:tp4]": {
+      "fixed": false,
+      "kept": 6,
+      "knob": null,
+      "reason": "no feasible candidate at 10 rps; which knob revives it at low load is what E6 asks, so all are kept"
+    },
+    "pd_split[cuda:tp2+furiosa:tp4]": {
+      "fixed": false,
+      "kept": 6,
+      "knob": null,
+      "reason": "no feasible candidate at 10 rps; which knob revives it at low load is what E6 asks, so all are kept"
+    },
+    "pd_split[cuda:tp4+cuda:tp4]": {
+      "dropped": 5,
+      "fixed": true,
+      "knob": [
+        256,
+        8192
+      ],
+      "tok_per_j_at_10rps": 2.2051282051282053
+    },
+    "pd_split[cuda:tp4+furiosa:tp4]": {
+      "dropped": 5,
+      "fixed": true,
+      "knob": [
+        128,
+        8192
+      ],
+      "tok_per_j_at_10rps": 2.068472372697725
+    },
+    "pd_split[cuda:tp4+furiosa:tp8]": {
+      "fixed": false,
+      "kept": 6,
+      "knob": null,
+      "reason": "no feasible candidate at 10 rps; which knob revives it at low load is what E6 asks, so all are kept"
+    },
+    "pd_split[furiosa:tp4+furiosa:tp4]": {
+      "fixed": false,
+      "kept": 6,
+      "knob": null,
+      "reason": "no feasible candidate at 10 rps; which knob revives it at low load is what E6 asks, so all are kept"
+    },
+    "pd_split[furiosa:tp4+furiosa:tp8]": {
+      "fixed": false,
+      "kept": 6,
+      "knob": null,
+      "reason": "no feasible candidate at 10 rps; which knob revives it at low load is what E6 asks, so all are kept"
+    },
+    "pd_split[furiosa:tp8+furiosa:tp8]": {
+      "fixed": false,
+      "kept": 6,
+      "knob": null,
+      "reason": "no feasible candidate at 10 rps; which knob revives it at low load is what E6 asks, so all are kept"
+    }
+  },
+  "service": "examples/service_specs/llama31-8b.yaml",
+  "ttft_ms": 64000.0
+}
