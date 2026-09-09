@@ -297,12 +297,21 @@ session's own shell (exit 144) and, on 2026-09-09, also SIGTERM'd an unrelated
 long-running measurement that had to be restarted. It has additionally produced a
 false "STILL ALIVE" report, because the survivor `ps` found was the grep.
 
-Kill exact PIDs instead, and exclude self when listing:
+**`ps | grep | kill` has the same hole.** The pattern text appears in the
+pipeline's own command line, so `ps` lists the invoking shell and the loop kills
+it — hit on 2026-09-09 with `ps -eo pid,cmd | awk '/[s]erving/ {print $1}' | kill`,
+where the bracket trick does not help because the shell's command line contains
+the literal `[s]erving`. Exclude the shell and its children by PID, not by pattern:
 
 ```bash
-ps -eo pid,cmd | grep -E "<pattern>" | grep -v grep | grep -v "^ *$$ "   # find
-kill <pid>                                                              # then kill
+SELF=$$
+PIDS=$(ps -eo pid,ppid,cmd | awk -v s="$SELF" '$1!=s && $2!=s' \
+       | grep "<a distinctive prefix of the target command>" | awk '{print $1}')
+for p in $PIDS; do kill "$p"; done
 ```
+
+Verify with a second `ps` afterwards; a count that includes the checking pipeline
+is not a count of survivors.
 
 Prefer not killing at all: background work launched here is wrapped in
 `experiments/scripts/livelock_watch.sh`, which ends a stuck run on its own and

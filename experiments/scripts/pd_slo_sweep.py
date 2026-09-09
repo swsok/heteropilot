@@ -237,6 +237,16 @@ def main() -> int:
         best = output.recommended
         if best is not None:
             plan = best.plan
+            flags = [r.in_calibration_domain for r in plan.operating_point]
+            row["validity"] = (
+                "unknown" if (not flags or any(f is None for f in flags))
+                else "measured" if all(flags) else "extrapolated"
+            )
+            row["applied_tpot_margin_pct"] = plan.robust_margin_tpot_percent
+            row["margin_source"] = plan.margin_source
+            row["operating_point"] = [r.model_dump() for r in plan.operating_point]
+        if best is not None:
+            plan = best.plan
             cand = plan.candidate
             row["recommended"] = {
                 "plan_id": plan.plan_id,
