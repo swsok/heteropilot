@@ -179,6 +179,40 @@ power:
   standby_duration: 2000000000   # ns (2 s), the D7 window
   source: measured
 
+# Power as a function of the operating point (rps_aware_planning_design.md §3),
+# measured 2026-09-08, two repeats per point, agreeing to within 0.72 %.
+# Raw: outputs/rngd_envelope_lowload/; curve:
+# profiles/envelopes/RNGD-CARD/meta-llama/Llama-3.1-8B/bf16/tp1.yaml
+#
+# NOT `piecewise_linear_in_util`, which is what §3's schema proposes, because on
+# this device in this range utilisation does not explain power (deviations D31):
+# over c1..c16 utilisation FALLS 92.1 -> 84.7 % while power falls to 139.9 W and
+# rises again to 151.8 -- U-shaped, r = +0.24, so no monotone function of util
+# fits. §3's ATOM example spanned 36-95 % utilisation; this card sits at 85-92 %
+# throughout. The model is therefore keyed on served concurrency, with the
+# measured utilisation kept beside each point because A5(c) requires a power
+# figure to carry the load it was taken at.
+#
+# The headline for RPS-aware planning: across a 9.5x throughput range the card's
+# power moves 1.085x. Energy per token is set almost entirely by throughput.
+power_model:
+  kind: piecewise_linear_in_served_conc
+  idle_w: 40.0                    # model resident, 45 s settle then 60 s mean, n=10
+  points:
+    - {served_conc:  1.00, power_w: 151.1, util_pct: 92.1, tput_tok_s:  63.1}
+    - {served_conc:  1.99, power_w: 140.6, util_pct: 88.0, tput_tok_s: 110.1}
+    - {served_conc:  3.98, power_w: 139.9, util_pct: 86.5, tput_tok_s: 200.9}
+    - {served_conc:  7.88, power_w: 143.2, util_pct: 85.3, tput_tok_s: 356.8}
+    - {served_conc: 15.59, power_w: 151.8, util_pct: 84.7, tput_tok_s: 598.2}
+  saturation_knee: null           # the 8th PE adds only +17.4 W
+  additive_across_units: false    # one card, ~38 W board cost shared by 8 PEs
+  quantisation_w: 1.0             # furiosa-smi reports whole watts
+  validity:
+    served_conc_min: 1.00
+    served_conc_max: 15.59        # above this, power was never measured
+    extrapolation: refuse
+  source: measured
+
 # The strongest model evidence in the repo for any NPU: this exact model was BUILT
 # AND SERVED end to end on this card - the vendor's prebuilt
 # furiosa-ai/Llama-3.1-8B-Instruct artifact, `furiosa-llm serve` - across seven

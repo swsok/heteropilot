@@ -1,0 +1,83 @@
+# RNGD card-as-device performance envelope, Llama-3.1-8B bf16.
+# Schema: docs/rps_aware_planning_design.md §2. Nine points on one curve: the four
+# from D22 (2026-08-31) and five measured at low load on 2026-09-08.
+#
+# The D22 points keep `power_w: null` and `util_pct: null`. They were not
+# re-measured, and filling an unmeasured field from a neighbouring run is exactly
+# what A2 forbids. Their concurrency IS comparable: both halves report SERVED
+# concurrency by Little's law on the same dataset and the same artifact.
+envelope_id: RNGD-CARD/meta-llama/Llama-3.1-8B/bf16/tp1
+unit: card
+source: measured
+concurrency_metric: served
+closed_loop: true
+
+measured_on_workload:
+  dataset: workloads/sharegpt-llama-3.1-8b-300-sps10.jsonl
+  input_tokens_p50: 732
+  output_tokens_p50: 632
+
+provenance:
+  - measured_at: 2026-08-31
+    points: [15.3, 29.3, 59.2, 107.2]
+    harness: experiments/scripts/rebuild_rngd_bundle_from_edf.py collect
+    raw: outputs/rngd_envelope/edf/real_c{16,32,64,128}.json
+    note: >
+      No power or utilisation instrumentation existed at the time; those columns
+      stay null rather than being back-filled.
+  - measured_at: 2026-09-08
+    points: [1.00, 1.99, 3.98, 7.88, 15.59]
+    harness: experiments/scripts/measure_envelope.py
+    raw: outputs/rngd_envelope_lowload/
+    device_sn: RNGD-A            # redacted; npu0, pci_bdf 0000:03:00.0
+    repeats: 2
+    note: >
+      Two independent processes per point. Power agreed to within 0.72 % and
+      served concurrency to two decimals at every point, so the 5 % rule never
+      triggered a third repeat. Pool 300 at every point (>= 19x the concurrency
+      even at c16); no point is pool-bound.
+
+# tput/tpot/ttft are per card. power_w is the sustained mean over the bench
+# window; util_pct is the mean of the card's eight per-PE utilisations from the
+# SAME samples (A5(c)). rps is served_conc / mean request latency, i.e. the
+# open-loop arrival rate this closed-loop point corresponds to.
+points:
+  - {conc:   1.00, tput_tok_s:   63.1, tpot_p50: 15.71, tpot_p99: 16.00, ttft_p99:   343, util_pct: 92.1, power_w: 151.1, tok_per_j: 0.418, rps: 0.097}
+  - {conc:   1.99, tput_tok_s:  110.1, tpot_p50: 18.01, tpot_p99: 19.92, ttft_p99:   399, util_pct: 88.0, power_w: 140.6, tok_per_j: 0.783, rps: 0.169}
+  - {conc:   3.98, tput_tok_s:  200.9, tpot_p50: 19.48, tpot_p99: 21.72, ttft_p99:   503, util_pct: 86.5, power_w: 139.9, tok_per_j: 1.436, rps: 0.308}
+  - {conc:   7.88, tput_tok_s:  356.8, tpot_p50: 21.86, tpot_p99: 24.34, ttft_p99:   721, util_pct: 85.3, power_w: 143.2, tok_per_j: 2.492, rps: 0.547}
+  - {conc:  15.59, tput_tok_s:  598.2, tpot_p50: 26.05, tpot_p99: 28.47, ttft_p99:  1515, util_pct: 84.7, power_w: 151.8, tok_per_j: 3.941, rps: 0.917}
+  - {conc:  15.3,  tput_tok_s:  585.8, tpot_p50: 25.71, tpot_p99: 29.46, ttft_p99:  1925, util_pct: null, power_w: null, tok_per_j: null, rps: null}
+  - {conc:  29.3,  tput_tok_s:  908.6, tpot_p50: 31.18, tpot_p99: 35.52, ttft_p99:  3849, util_pct: null, power_w: null, tok_per_j: null, rps: null}
+  - {conc:  59.2,  tput_tok_s: 1277.0, tpot_p50: 44.54, tpot_p99: 47.99, ttft_p99:  6901, util_pct: null, power_w: null, tok_per_j: null, rps: null}
+  - {conc: 107.2,  tput_tok_s: 1473.3, tpot_p50: 67.88, tpot_p99: 78.22, ttft_p99: 14010, util_pct: null, power_w: null, tok_per_j: null, rps: null}
+
+# The two 2026-09-08 c16 repeats and the 2026-08-31 c16 point are three
+# independent measurements of nearly the same operating point: served 15.59 twice
+# and 15.3 once, throughput 598.2 against 585.8 (+2.1 %). That agreement across
+# eight days, two harnesses and two pool sizes is the seam between the halves.
+
+validity:
+  conc_min: 1.00
+  conc_max: 107.2
+  extrapolation: refuse
+  pool_binding_above: 107.2
+  power_valid_range: [1.00, 15.59]   # power/util measured only on the 09-08 half
+
+idle:
+  # Model resident, no requests: 45 s settle then a 60 s mean, ten times.
+  standby_measured_w: 40.0
+  standby_util_pct: 0.0
+  dram_used_ratio: 0.895
+  note: >
+    A loaded-but-idle card draws what an empty one draws. The profile's
+    `idle_power: 39.35` was measured with 0 PEs loaded; this is 40.0 W with the
+    model resident, so the same figure covers both. The profile's
+    `standby_power: 265.0` is NOT contradicted -- it is a 2 s post-load transient
+    (`standby_duration: 2000000000`) charged as an excess over idle, and every
+    window here begins 45 s after the server is up.
+
+notes: >
+  ttft_* is closed-loop -- the whole request pool is fired at once (deviations
+  D19) -- and must not be compared with an open-loop Poisson p99. Throughput,
+  TPOT and power are the transferable axes; TTFT is not.

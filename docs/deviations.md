@@ -1892,3 +1892,54 @@ of the way. `experiments/scripts/slab3d_anchors.sh`.
 planner side (STEP 2.3). Until the calibration lands, a `slab3d` run's absolute
 tok/J is not quotable — the spike measured a 24.4 % accuracy cost from the flat
 ring becoming hierarchical, and `docs/d14_spike.md` carries that caveat.
+
+## D31 — utilisation does not explain RNGD card power; the §3 power model is keyed on served concurrency instead · Resolved (schema adapted, measurement kept)
+
+`docs/rps_aware_planning_design.md` §3 proposes
+`power_model: {kind: piecewise_linear_in_util, ...}` and argues the case well: *"a
+power figure without the utilisation it was taken at is not a measurement"*. That
+principle stands and A5(c) keeps it. What does not transfer is the **functional
+form**, and the design's own example says why.
+
+**The measurement** (`WORK_ORDER_rps_aware.md` STEP 3.2, two repeats per point,
+agreeing to within 0.72 %):
+
+| served conc | util % | power W | tput tok/s |
+| ---: | ---: | ---: | ---: |
+| 1.00 | 92.1 | 151.1 | 63.1 |
+| 1.99 | 88.0 | 140.6 | 110.1 |
+| 3.98 | 86.5 | 139.9 | 200.9 |
+| 7.88 | 85.3 | 143.2 | 356.8 |
+| 15.59 | 84.7 | 151.8 | 598.2 |
+
+**Utilisation falls monotonically while power falls and then rises.** No monotone
+function of utilisation fits, piecewise-linear or otherwise; the correlation is
+r = +0.24. The card sits between 84.7 % and 92.1 % across the whole range — a
+7.4 pp span — so utilisation has almost no dynamic range to explain an 8.2 %
+movement in power that reverses direction.
+
+§3's example is an **ATOM** card at 36.2 / 64.4 / 95.1 % utilisation reading
+44.3 / 54.9 / 68.7 W. There utilisation spans 59 pp and is monotone in power, and
+the schema is the right one. The divergence is device- and range-specific, not a
+flaw in the design.
+
+**What was done.** `profiles/accelerators/furiosa_rngd_card.yaml` gains a
+`power_model` with `kind: piecewise_linear_in_served_conc`, its five measured
+points, and `validity.extrapolation: refuse` above conc 15.59 where power was
+never measured. Each point still carries the utilisation it was taken at, because
+A5(c) is about provenance rather than about the fit. The pre-existing scalar
+`power:` block is untouched for back-compatibility.
+
+**Why the shape is worth keeping in view.** The U is physical: at concurrency 1
+every decode step streams the whole model for a single token, so the card is
+memory-bandwidth-bound and draws 151 W to produce 63 tok/s; batching amortises
+that traffic, and the minimum near c4 is where the memory-bound and compute-bound
+terms cross. **Across a 9.5x throughput range the power moves 1.085x**, so energy
+per token is set almost entirely by throughput — 0.418 tok/J at c1 against
+3.941 at c15.59, a **9.4x** span. That is the quantitative form of the premise
+behind this whole work order: at low load an accelerator is not merely slower, it
+is dramatically less efficient, and a planner that treats performance as a scalar
+cannot see it.
+
+**What is NOT claimed.** Power above conc 15.59 is unmeasured. D22's four points
+(conc 15.3 to 107.2) keep `power_w: null` and were not back-filled (A2).

@@ -1,0 +1,524 @@
+WARNING[XFORMERS]: xFormers can't load C++/CUDA extensions. xFormers was built for:
+    PyTorch 2.8.0+cu128 with CUDA 1208 (you have 2.10.0+cu128)
+    Python  3.9.23 (you have 3.10.12)
+  Please reinstall xformers (see https://github.com/facebookresearch/xformers#installing-xformers)
+  Memory-efficient attention, SwiGLU, sparse and more won't be available.
+  Set XFORMERS_MORE_DETAILS=1 for more details
+optimum.exporters.tasks.get_diffusers_tasks_to_model_mapping method failed to import diffusers with the error below.Please make sure you have diffusers installed and compatible with your transformers version.
+
+Failed to import diffusers.loaders.peft because of the following error (look up to see its traceback):
+/usr/local/lib/python3.10/dist-packages/xformers/flash_attn_3/_C.so: undefined symbol: _ZN3c104cuda29c10_cuda_check_implementationEiPKcS2_ib
+/home/swsok/.local/lib/python3.10/site-packages/furiosa/models/core/attention/attention.py:6: UserWarning: LTW Backend is provided temporarily for compatibility purposes only. This feature may be removed without notice in future versions. (Default behavior, set USE_WTL_BACKEND=1 to use WTL backend)
+  from furiosa.models.core.attention.backends import LLMAttentionBackend
+INFO:furiosa_llm.server.models:Loading LLM from artifact: /home/swsok/.cache/huggingface/hub/models--furiosa-ai--Llama-3.1-8B-Instruct/snapshots/231d94fbc03cdd66aaeb2411697064a45f008ec7
+INFO:furiosa_llm.tokenizer.tokenizer:For some LLaMA V1 models, initializing the fast tokenizer may take a long time. To reduce the initialization time, consider using 'hf-internal-testing/llama-tokenizer' instead of the original tokenizer.
+[2m2026-09-08T10:08:36.33802166Z[0m [32m INFO[0m [2mfuriosa_llm_common::artifact::types::next_gen[0m[2m:[0m Loading artifact from path: /home/swsok/.cache/huggingface/hub/models--furiosa-ai--Llama-3.1-8B-Instruct/snapshots/231d94fbc03cdd66aaeb2411697064a45f008ec7
+[2m2026-09-08T10:08:51.682581289Z[0m [32m INFO[0m [2mfuriosa_llm_common::artifact::types::commons[0m[2m:[0m Loading artifact with schema version: 3.0
+[2m2026-09-08T10:08:53.010810606Z[0m [32m INFO[0m [2mfuriosa::llm::engine[0m[2m:[0m Loaded target artifact: SchemaVersion { major: 3, minor: 0 }
+[2m2026-09-08T10:08:53.010889987Z[0m [32m INFO[0m [2mfuriosa::llm::engine[0m[2m:[0m Parallelism Config: tp=8, pp=1, dp=1
+[2m2026-09-08T10:08:53.124884728Z[0m [32m INFO[0m [2mfuriosa_generator::next_gen::hf_compat_next_gen[0m[2m:[0m Loading the target model ...
+[2m2026-09-08T10:08:53.125460423Z[0m [32m INFO[0m [2mdevice_runtime::context[0m[2m:[0m Memory dump thread for Device([npu:0:0-3, npu:0:4-7]) started
+[2m2026-09-08T10:08:53.438111403Z[0m [32m INFO[0m [2mfuriosa_generator::next_gen::pipeline::resolve[0m[2m:[0m PP device#0 allocation plan: Binary=283.8 MiB, Model weights=15.0 GiB, Reserved IO memory=5.0 GiB
+[2m2026-09-08T10:08:53.985002786Z[0m [32m INFO[0m [2mfuriosa_generator::next_gen::pipeline::resolve[0m[2m:[0m Resolve 47 pipeline for 1 DP groups (DP=1, PP=1) in 859.99ms
+[2m2026-09-08T10:08:53.985060897Z[0m [32m INFO[0m [2mfuriosa_generator::backing_file[0m[2m:[0m Total size of parameters loaded: 15.0 GiB in 0.54690427 s
+[2m2026-09-08T10:08:54.643236843Z[0m [32m INFO[0m [2mfuriosa_generator::next_gen::hf_compat_next_gen[0m[2m:[0m Loading the target model took 1.518315835s
+[2m2026-09-08T10:08:54.64993797Z[0m [32m INFO[0m [2mfuriosa_generator::next_gen::pipeline::resolve[0m[2m:[0m PP device#0 KV cache=27.2 GiB
+[2m2026-09-08T10:08:54.715085871Z[0m [32m INFO[0m [2mfuriosa_generator::next_gen::hf_compat_next_gen[0m[2m:[0m Computed bucket limits: max_executable_len=131072
+[2m2026-09-08T10:08:54.715255193Z[0m [32m INFO[0m [2mfuriosa_generator::structured_output::manager[0m[2m:[0m Initializing structured output manager for backend: Auto
+[2m2026-09-08T10:08:55.301260126Z[0m [32m INFO[0m [2mfuriosa_generator::structured_output::manager[0m[2m:[0m XGrammar backend is initialized.
+[2m2026-09-08T10:08:56.170732264Z[0m [32m INFO[0m [2mfuriosa_generator::structured_output::manager[0m[2m:[0m LLGuidance backend is initialized.
+[2m2026-09-08T10:08:56.170790345Z[0m [32m INFO[0m [2mfuriosa_generator::next_gen::generator[0m[2m:[0m DP entry DpId(0) → device [npu0pe0-3, npu0pe4-7]
+[2m2026-09-08T10:08:56.189641364Z[0m [32m INFO[0m [2mfuriosa_generator::next_gen::scheduler::request_management::task_selector[0m[2m:[0m Initializing TaskSelector([[npu:0:0-3, npu:0:4-7]]) with config: TaskSelectorConfig { enable_jit_compilation: false }, 46 AOT wired pipelines
+[2m2026-09-08T10:08:56.191474912Z[0m [32m INFO[0m [2mfuriosa_generator::next_gen::scheduler::memory_manager[0m[2m:[0m Initialize KVCacheManager with config: KVCacheConfig(kv_cache_memory: {[npu:0:0-3, npu:0:4-7]: Buffer { addr: 0x140000000, size: 0x6ccfb8c00, device: Npu([npu:0:0-3, npu:0:4-7], Dram) }}, KVCachePlan(global_attention_config: LayerConfig(attention_type: Global, unit_block_size: 2048, block_size: 2048, num_chips: 1), global_kv_cache_tensors: 64, aux_attention_config: None, aux_kv_cache_tensors: 0)), is_prefix_cache_enabled: true
+[2m2026-09-08T10:08:56.191542433Z[0m [32m INFO[0m [2mfuriosa_generator::next_gen::scheduler::memory_manager[0m[2m:[0m Configured KV cache blocks, global_num_blocks: 222845, aux_num_blocks: None
+[2m2026-09-08T10:08:56.197773375Z[0m [32m INFO[0m [2mfuriosa_generator::next_gen::generator[0m[2m:[0m Eager scheduler has started with: SchedulerConfig { scheduler_kind: None, npu_queue_limit: 1, max_processing_samples: 65536, spare_blocks_ratio: 0.0, estimation_time_limit_ms: None, prefix_cache_config: PrefixCacheConfig { enabled: true, lookahead_requests: 2 }, experimental_scheduling_loop_type: Eager, experimental_aggressive_batching: false, max_concurrency: None, max_num_batched_tokens: None, data_parallel_routing_policy: PrefixAware }
+[2m2026-09-08T10:08:56.197789415Z[0m [32m INFO[0m [2mfuriosa_generator::next_gen::generator[0m[2m:[0m max_kv_len=222844 (from KV cache blocks across 1 DP device(s))
+INFO:furiosa_llm.server.chat_utils:Detected the chat template content format to be 'string'. You can set `--chat-template-content-format` to override this.
+INFO:     Started server process [3648939]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8021 (Press CTRL+C to quit)
+INFO:     127.0.0.1:58504 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55128 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55132 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 338.9 tokens/s, Avg generation throughput: 30.9 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 1.7%, Prefix cache hit rate: 0.0%, Wire pipeline hit rate: 0.0%
+INFO:     127.0.0.1:46406 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 131.9 tokens/s, Avg generation throughput: 108.4 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 2.7%, Prefix cache hit rate: 0.0%, Wire pipeline hit rate: 23.6%
+INFO:     127.0.0.1:46422 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 68.4 tokens/s, Avg generation throughput: 112.1 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 3.6%, Prefix cache hit rate: 0.0%, Wire pipeline hit rate: 30.6%
+INFO:     127.0.0.1:58166 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58168 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54832 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 69.6 tokens/s, Avg generation throughput: 114.0 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 4.8%, Prefix cache hit rate: 0.0%, Wire pipeline hit rate: 37.1%
+INFO:     127.0.0.1:54848 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 268.3 tokens/s, Avg generation throughput: 114.4 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 6.1%, Prefix cache hit rate: 0.0%, Wire pipeline hit rate: 42.7%
+INFO:     127.0.0.1:47742 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47752 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 129.6 tokens/s, Avg generation throughput: 110.3 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 7.2%, Prefix cache hit rate: 0.0%, Wire pipeline hit rate: 41.1%
+INFO:     127.0.0.1:55278 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35058 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 205.3 tokens/s, Avg generation throughput: 104.9 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 8.6%, Prefix cache hit rate: 0.0%, Wire pipeline hit rate: 35.9%
+INFO:     127.0.0.1:38632 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38638 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 265.9 tokens/s, Avg generation throughput: 108.6 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 10.2%, Prefix cache hit rate: 0.0%, Wire pipeline hit rate: 35.6%
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 105.1 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 10.7%, Prefix cache hit rate: 0.0%, Wire pipeline hit rate: 31.5%
+INFO:     127.0.0.1:34632 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34646 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 428.3 tokens/s, Avg generation throughput: 100.3 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 13.1%, Prefix cache hit rate: 0.0%, Wire pipeline hit rate: 28.5%
+INFO:     127.0.0.1:48968 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59192 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 221.9 tokens/s, Avg generation throughput: 101.7 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 14.5%, Prefix cache hit rate: 0.0%, Wire pipeline hit rate: 26.0%
+INFO:     127.0.0.1:45192 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 288.1 tokens/s, Avg generation throughput: 109.7 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 16.3%, Prefix cache hit rate: 0.0%, Wire pipeline hit rate: 27.5%
+INFO:     127.0.0.1:45196 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 53.8 tokens/s, Avg generation throughput: 104.3 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 17.0%, Prefix cache hit rate: 0.0%, Wire pipeline hit rate: 25.3%
+INFO:     127.0.0.1:34384 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56316 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 359.6 tokens/s, Avg generation throughput: 108.3 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 19.1%, Prefix cache hit rate: 0.0%, Wire pipeline hit rate: 26.8%
+INFO:     127.0.0.1:54028 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54042 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 94.4 tokens/s, Avg generation throughput: 112.9 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 20.1%, Prefix cache hit rate: 0.0%, Wire pipeline hit rate: 28.6%
+INFO:     127.0.0.1:51754 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51770 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 70.4 tokens/s, Avg generation throughput: 118.3 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 20.9%, Prefix cache hit rate: 0.0%, Wire pipeline hit rate: 31.4%
+INFO:     127.0.0.1:52158 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52168 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 67.4 tokens/s, Avg generation throughput: 125.9 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 21.8%, Prefix cache hit rate: 0.0%, Wire pipeline hit rate: 36.2%
+INFO:     127.0.0.1:52654 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 36.3 tokens/s, Avg generation throughput: 124.4 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 22.5%, Prefix cache hit rate: 0.0%, Wire pipeline hit rate: 39.8%
+INFO:     127.0.0.1:52666 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47556 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 114.2 tokens/s, Avg generation throughput: 117.5 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 23.5%, Prefix cache hit rate: 0.0%, Wire pipeline hit rate: 41.4%
+INFO:     127.0.0.1:47564 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 31.9 tokens/s, Avg generation throughput: 112.0 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 24.2%, Prefix cache hit rate: 0.0%, Wire pipeline hit rate: 40.9%
+INFO:     127.0.0.1:42134 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40688 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 153.9 tokens/s, Avg generation throughput: 114.0 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 25.4%, Prefix cache hit rate: 0.0%, Wire pipeline hit rate: 41.4%
+INFO:     127.0.0.1:40698 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53356 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 103.5 tokens/s, Avg generation throughput: 110.2 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 26.3%, Prefix cache hit rate: 0.0%, Wire pipeline hit rate: 40.9%
+INFO:     127.0.0.1:53362 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 81.3 tokens/s, Avg generation throughput: 114.9 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 27.2%, Prefix cache hit rate: 0.0%, Wire pipeline hit rate: 41.3%
+INFO:     127.0.0.1:42438 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39416 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 241.0 tokens/s, Avg generation throughput: 121.1 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 28.9%, Prefix cache hit rate: 0.0%, Wire pipeline hit rate: 44.0%
+INFO:     127.0.0.1:39430 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43246 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 193.7 tokens/s, Avg generation throughput: 121.1 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 30.3%, Prefix cache hit rate: 0.0%, Wire pipeline hit rate: 46.3%
+INFO:     127.0.0.1:43248 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 46.8 tokens/s, Avg generation throughput: 123.6 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 31.0%, Prefix cache hit rate: 0.0%, Wire pipeline hit rate: 48.4%
+INFO:     127.0.0.1:50596 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50608 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 100.3 tokens/s, Avg generation throughput: 120.0 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 32.0%, Prefix cache hit rate: 0.0%, Wire pipeline hit rate: 49.9%
+INFO:     127.0.0.1:52796 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52804 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 142.2 tokens/s, Avg generation throughput: 103.9 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 33.1%, Prefix cache hit rate: 0.0%, Wire pipeline hit rate: 48.4%
+INFO:     127.0.0.1:57672 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57686 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 238.8 tokens/s, Avg generation throughput: 117.8 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 34.5%, Prefix cache hit rate: 1.3%, Wire pipeline hit rate: 49.5%
+INFO:     127.0.0.1:34660 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34670 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 145.5 tokens/s, Avg generation throughput: 112.9 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 35.7%, Prefix cache hit rate: 1.3%, Wire pipeline hit rate: 49.6%
+INFO:     127.0.0.1:50350 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60084 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 93.9 tokens/s, Avg generation throughput: 111.0 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 36.6%, Prefix cache hit rate: 1.3%, Wire pipeline hit rate: 49.3%
+INFO:     127.0.0.1:36268 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 131.2 tokens/s, Avg generation throughput: 108.3 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 37.7%, Prefix cache hit rate: 1.2%, Wire pipeline hit rate: 48.6%
+INFO:     127.0.0.1:36276 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 90.7 tokens/s, Avg generation throughput: 117.2 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 38.6%, Prefix cache hit rate: 1.2%, Wire pipeline hit rate: 49.2%
+INFO:     127.0.0.1:38980 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38988 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 211.9 tokens/s, Avg generation throughput: 115.1 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 40.1%, Prefix cache hit rate: 1.1%, Wire pipeline hit rate: 49.9%
+INFO:     127.0.0.1:57874 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54112 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 191.4 tokens/s, Avg generation throughput: 115.0 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 41.4%, Prefix cache hit rate: 1.1%, Wire pipeline hit rate: 50.4%
+INFO:     127.0.0.1:40032 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40040 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 116.7 tokens/s, Avg generation throughput: 121.7 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 42.9%, Prefix cache hit rate: 1.1%, Wire pipeline hit rate: 51.9%
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 114.0 tokens/s, Avg generation throughput: 123.2 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 43.6%, Prefix cache hit rate: 1.1%, Wire pipeline hit rate: 53.3%
+INFO:     127.0.0.1:40312 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40320 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 112.8 tokens/s, Avg generation throughput: 111.5 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 44.6%, Prefix cache hit rate: 1.0%, Wire pipeline hit rate: 53.1%
+INFO:     127.0.0.1:55318 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52978 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 145.2 tokens/s, Avg generation throughput: 109.3 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 45.7%, Prefix cache hit rate: 1.0%, Wire pipeline hit rate: 52.6%
+INFO:     127.0.0.1:52994 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 168.4 tokens/s, Avg generation throughput: 118.0 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 47.0%, Prefix cache hit rate: 1.0%, Wire pipeline hit rate: 53.4%
+INFO:     127.0.0.1:55076 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33198 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 175.9 tokens/s, Avg generation throughput: 104.0 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 48.0%, Prefix cache hit rate: 2.2%, Wire pipeline hit rate: 52.2%
+INFO:     127.0.0.1:33204 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 36.8 tokens/s, Avg generation throughput: 108.2 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 48.6%, Prefix cache hit rate: 2.2%, Wire pipeline hit rate: 51.5%
+INFO:     127.0.0.1:52362 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53040 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 224.2 tokens/s, Avg generation throughput: 107.7 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 50.0%, Prefix cache hit rate: 2.8%, Wire pipeline hit rate: 50.9%
+INFO:     127.0.0.1:53052 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 72.8 tokens/s, Avg generation throughput: 108.4 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 50.8%, Prefix cache hit rate: 2.8%, Wire pipeline hit rate: 50.8%
+INFO:     127.0.0.1:33990 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60748 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 89.2 tokens/s, Avg generation throughput: 107.2 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 51.7%, Prefix cache hit rate: 2.7%, Wire pipeline hit rate: 50.2%
+INFO:     127.0.0.1:60754 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60118 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 138.8 tokens/s, Avg generation throughput: 118.1 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 52.8%, Prefix cache hit rate: 2.7%, Wire pipeline hit rate: 50.9%
+INFO:     127.0.0.1:60132 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32808 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 57.3 tokens/s, Avg generation throughput: 104.2 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 53.7%, Prefix cache hit rate: 2.6%, Wire pipeline hit rate: 50.0%
+INFO:     127.0.0.1:32816 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 82.6 tokens/s, Avg generation throughput: 112.7 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 54.4%, Prefix cache hit rate: 2.6%, Wire pipeline hit rate: 49.9%
+INFO:     127.0.0.1:43312 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43328 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 128.9 tokens/s, Avg generation throughput: 112.5 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 55.1%, Prefix cache hit rate: 4.0%, Wire pipeline hit rate: 49.8%
+INFO:     127.0.0.1:59682 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33620 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 140.1 tokens/s, Avg generation throughput: 104.4 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 56.2%, Prefix cache hit rate: 3.9%, Wire pipeline hit rate: 49.0%
+INFO:     127.0.0.1:43502 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 62.8 tokens/s, Avg generation throughput: 111.7 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 57.0%, Prefix cache hit rate: 3.9%, Wire pipeline hit rate: 48.9%
+INFO:     127.0.0.1:43516 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34874 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 118.0 tokens/s, Avg generation throughput: 107.7 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 58.0%, Prefix cache hit rate: 3.8%, Wire pipeline hit rate: 48.4%
+INFO:     127.0.0.1:32814 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32826 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 126.7 tokens/s, Avg generation throughput: 121.0 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 59.1%, Prefix cache hit rate: 3.7%, Wire pipeline hit rate: 49.3%
+INFO:     127.0.0.1:40070 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 118.0 tokens/s, Avg generation throughput: 114.9 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 60.1%, Prefix cache hit rate: 3.7%, Wire pipeline hit rate: 49.6%
+INFO:     127.0.0.1:40078 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58282 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 221.1 tokens/s, Avg generation throughput: 121.1 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 61.5%, Prefix cache hit rate: 4.1%, Wire pipeline hit rate: 50.6%
+INFO:     127.0.0.1:58294 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 35.6 tokens/s, Avg generation throughput: 109.6 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 62.2%, Prefix cache hit rate: 4.0%, Wire pipeline hit rate: 50.4%
+INFO:     127.0.0.1:41548 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45674 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 163.4 tokens/s, Avg generation throughput: 107.0 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 63.4%, Prefix cache hit rate: 4.0%, Wire pipeline hit rate: 50.2%
+INFO:     127.0.0.1:43406 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43410 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 221.5 tokens/s, Avg generation throughput: 104.5 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 64.6%, Prefix cache hit rate: 4.7%, Wire pipeline hit rate: 49.7%
+INFO:     127.0.0.1:51466 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 85.5 tokens/s, Avg generation throughput: 116.7 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 65.5%, Prefix cache hit rate: 4.7%, Wire pipeline hit rate: 50.0%
+INFO:     127.0.0.1:51472 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39618 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 140.7 tokens/s, Avg generation throughput: 115.3 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 66.6%, Prefix cache hit rate: 4.6%, Wire pipeline hit rate: 50.4%
+INFO:     127.0.0.1:39628 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 263.8 tokens/s, Avg generation throughput: 101.2 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 68.3%, Prefix cache hit rate: 4.4%, Wire pipeline hit rate: 49.6%
+INFO:     127.0.0.1:33864 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33870 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 74.3 tokens/s, Avg generation throughput: 119.2 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 69.1%, Prefix cache hit rate: 4.4%, Wire pipeline hit rate: 50.2%
+INFO:     127.0.0.1:53436 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53442 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 142.8 tokens/s, Avg generation throughput: 114.7 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 70.3%, Prefix cache hit rate: 4.3%, Wire pipeline hit rate: 50.6%
+INFO:     127.0.0.1:37736 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37750 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 167.3 tokens/s, Avg generation throughput: 111.0 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 71.5%, Prefix cache hit rate: 4.2%, Wire pipeline hit rate: 50.5%
+INFO:     127.0.0.1:43752 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34626 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 131.7 tokens/s, Avg generation throughput: 114.3 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 72.6%, Prefix cache hit rate: 4.2%, Wire pipeline hit rate: 50.7%
+INFO:     127.0.0.1:34636 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 61.5 tokens/s, Avg generation throughput: 106.5 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 73.4%, Prefix cache hit rate: 4.1%, Wire pipeline hit rate: 50.2%
+INFO:     127.0.0.1:35712 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45346 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 103.4 tokens/s, Avg generation throughput: 105.7 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 74.3%, Prefix cache hit rate: 4.1%, Wire pipeline hit rate: 49.6%
+INFO:     127.0.0.1:57852 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57864 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 84.7 tokens/s, Avg generation throughput: 111.4 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 75.2%, Prefix cache hit rate: 4.1%, Wire pipeline hit rate: 49.5%
+INFO:     127.0.0.1:57880 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57888 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 161.9 tokens/s, Avg generation throughput: 114.2 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 76.4%, Prefix cache hit rate: 4.0%, Wire pipeline hit rate: 49.7%
+INFO:     127.0.0.1:46520 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42970 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 65.8 tokens/s, Avg generation throughput: 109.7 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 77.2%, Prefix cache hit rate: 4.0%, Wire pipeline hit rate: 49.4%
+INFO:     127.0.0.1:42980 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37628 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 134.8 tokens/s, Avg generation throughput: 117.4 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 78.2%, Prefix cache hit rate: 4.3%, Wire pipeline hit rate: 49.8%
+INFO:     127.0.0.1:37636 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58918 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 170.9 tokens/s, Avg generation throughput: 105.2 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 79.4%, Prefix cache hit rate: 4.3%, Wire pipeline hit rate: 49.3%
+INFO:     127.0.0.1:51924 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 26.6 tokens/s, Avg generation throughput: 109.5 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 80.0%, Prefix cache hit rate: 4.3%, Wire pipeline hit rate: 49.1%
+INFO:     127.0.0.1:51934 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35648 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 101.4 tokens/s, Avg generation throughput: 118.2 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 81.0%, Prefix cache hit rate: 4.2%, Wire pipeline hit rate: 49.5%
+INFO:     127.0.0.1:35652 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36658 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 100.3 tokens/s, Avg generation throughput: 111.9 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 82.0%, Prefix cache hit rate: 4.2%, Wire pipeline hit rate: 49.5%
+INFO:     127.0.0.1:36672 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 26.4 tokens/s, Avg generation throughput: 113.0 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 82.6%, Prefix cache hit rate: 4.2%, Wire pipeline hit rate: 49.6%
+INFO:     127.0.0.1:51098 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51104 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59754 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 286.1 tokens/s, Avg generation throughput: 120.6 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 84.0%, Prefix cache hit rate: 4.9%, Wire pipeline hit rate: 50.2%
+INFO:     127.0.0.1:59762 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 134.2 tokens/s, Avg generation throughput: 112.0 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 85.1%, Prefix cache hit rate: 4.9%, Wire pipeline hit rate: 50.4%
+INFO:     127.0.0.1:58096 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58108 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 85.6 tokens/s, Avg generation throughput: 112.2 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 86.0%, Prefix cache hit rate: 4.8%, Wire pipeline hit rate: 50.6%
+INFO:     127.0.0.1:38220 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38232 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 174.8 tokens/s, Avg generation throughput: 113.2 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 87.3%, Prefix cache hit rate: 4.8%, Wire pipeline hit rate: 50.8%
+INFO:     127.0.0.1:57382 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41200 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 108.4 tokens/s, Avg generation throughput: 115.8 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 88.3%, Prefix cache hit rate: 4.7%, Wire pipeline hit rate: 51.1%
+INFO:     127.0.0.1:41206 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39136 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 116.2 tokens/s, Avg generation throughput: 111.2 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 89.3%, Prefix cache hit rate: 4.7%, Wire pipeline hit rate: 51.0%
+INFO:     127.0.0.1:39142 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60690 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 72.0 tokens/s, Avg generation throughput: 111.9 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 90.5%, Prefix cache hit rate: 5.5%, Wire pipeline hit rate: 51.0%
+INFO:     127.0.0.1:60692 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 305.3 tokens/s, Avg generation throughput: 107.4 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 91.4%, Prefix cache hit rate: 5.8%, Wire pipeline hit rate: 51.0%
+INFO:     127.0.0.1:37512 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43724 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 135.7 tokens/s, Avg generation throughput: 100.8 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 92.5%, Prefix cache hit rate: 5.8%, Wire pipeline hit rate: 50.5%
+INFO:     127.0.0.1:43726 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40410 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 127.6 tokens/s, Avg generation throughput: 108.2 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 93.5%, Prefix cache hit rate: 5.7%, Wire pipeline hit rate: 50.4%
+INFO:     127.0.0.1:40424 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 143.6 tokens/s, Avg generation throughput: 104.1 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 94.6%, Prefix cache hit rate: 5.6%, Wire pipeline hit rate: 50.0%
+INFO:     127.0.0.1:37932 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37496 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 135.2 tokens/s, Avg generation throughput: 111.8 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 95.7%, Prefix cache hit rate: 5.6%, Wire pipeline hit rate: 50.0%
+INFO:     127.0.0.1:37502 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 65.3 tokens/s, Avg generation throughput: 107.2 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 96.5%, Prefix cache hit rate: 5.5%, Wire pipeline hit rate: 49.7%
+INFO:     127.0.0.1:37164 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37172 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 110.7 tokens/s, Avg generation throughput: 115.8 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 97.5%, Prefix cache hit rate: 5.5%, Wire pipeline hit rate: 50.0%
+INFO:     127.0.0.1:50852 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50858 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 104.3 tokens/s, Avg generation throughput: 113.5 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 98.5%, Prefix cache hit rate: 5.5%, Wire pipeline hit rate: 50.1%
+INFO:     127.0.0.1:43658 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59542 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 84.9 tokens/s, Avg generation throughput: 105.8 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.3%, Prefix cache hit rate: 5.4%, Wire pipeline hit rate: 49.8%
+INFO:     127.0.0.1:59550 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44814 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 318.6 tokens/s, Avg generation throughput: 108.0 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.4%, Prefix cache hit rate: 5.3%, Wire pipeline hit rate: 49.8%
+INFO:     127.0.0.1:49812 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 37.7 tokens/s, Avg generation throughput: 103.0 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.4%, Prefix cache hit rate: 5.3%, Wire pipeline hit rate: 49.3%
+INFO:     127.0.0.1:49824 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38612 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 207.9 tokens/s, Avg generation throughput: 102.5 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.6%, Prefix cache hit rate: 5.7%, Wire pipeline hit rate: 48.8%
+INFO:     127.0.0.1:38622 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 96.2 tokens/s, Avg generation throughput: 116.5 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.9%, Prefix cache hit rate: 5.7%, Wire pipeline hit rate: 49.1%
+INFO:     127.0.0.1:58748 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58750 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 194.9 tokens/s, Avg generation throughput: 108.3 tokens/s, Running: 1 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.7%, Prefix cache hit rate: 5.6%, Wire pipeline hit rate: 49.0%
+INFO:     127.0.0.1:51062 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50616 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 88.8 tokens/s, Avg generation throughput: 115.3 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.7%, Prefix cache hit rate: 5.5%, Wire pipeline hit rate: 49.1%
+INFO:     127.0.0.1:50630 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44250 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 111.4 tokens/s, Avg generation throughput: 112.4 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.4%, Prefix cache hit rate: 5.5%, Wire pipeline hit rate: 49.1%
+INFO:     127.0.0.1:34992 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34998 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 143.2 tokens/s, Avg generation throughput: 107.8 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.3%, Prefix cache hit rate: 5.4%, Wire pipeline hit rate: 49.0%
+INFO:     127.0.0.1:46646 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 60.2 tokens/s, Avg generation throughput: 108.4 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.8%, Prefix cache hit rate: 5.4%, Wire pipeline hit rate: 48.8%
+INFO:     127.0.0.1:46654 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59264 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 138.0 tokens/s, Avg generation throughput: 109.8 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.3%, Prefix cache hit rate: 5.4%, Wire pipeline hit rate: 48.7%
+INFO:     127.0.0.1:59274 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39282 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 225.7 tokens/s, Avg generation throughput: 109.5 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.4%, Prefix cache hit rate: 5.6%, Wire pipeline hit rate: 48.6%
+INFO:     127.0.0.1:39298 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41772 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 340.0 tokens/s, Avg generation throughput: 117.7 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.3%, Prefix cache hit rate: 6.6%, Wire pipeline hit rate: 49.1%
+INFO:     127.0.0.1:58744 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 62.6 tokens/s, Avg generation throughput: 103.3 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.7%, Prefix cache hit rate: 6.5%, Wire pipeline hit rate: 48.7%
+INFO:     127.0.0.1:58758 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44600 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 304.4 tokens/s, Avg generation throughput: 107.4 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.5%, Prefix cache hit rate: 6.8%, Wire pipeline hit rate: 48.6%
+INFO:     127.0.0.1:54210 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54214 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 321.7 tokens/s, Avg generation throughput: 103.2 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 98.7%, Prefix cache hit rate: 7.2%, Wire pipeline hit rate: 48.3%
+INFO:     127.0.0.1:55782 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 33.8 tokens/s, Avg generation throughput: 114.8 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.4%, Prefix cache hit rate: 7.2%, Wire pipeline hit rate: 48.6%
+INFO:     127.0.0.1:55792 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45808 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 204.8 tokens/s, Avg generation throughput: 103.9 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.4%, Prefix cache hit rate: 7.4%, Wire pipeline hit rate: 48.3%
+INFO:     127.0.0.1:45810 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 136.0 tokens/s, Avg generation throughput: 120.8 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.4%, Prefix cache hit rate: 7.7%, Wire pipeline hit rate: 48.8%
+INFO:     127.0.0.1:46524 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46536 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 357.7 tokens/s, Avg generation throughput: 102.5 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.6%, Prefix cache hit rate: 7.5%, Wire pipeline hit rate: 48.6%
+INFO:     127.0.0.1:43446 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43454 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 111.1 tokens/s, Avg generation throughput: 112.9 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.4%, Prefix cache hit rate: 7.9%, Wire pipeline hit rate: 48.7%
+INFO:     127.0.0.1:54542 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44970 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 217.1 tokens/s, Avg generation throughput: 103.5 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.6%, Prefix cache hit rate: 7.9%, Wire pipeline hit rate: 48.4%
+INFO:     127.0.0.1:47248 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47262 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 112.5 tokens/s, Avg generation throughput: 119.7 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.5%, Prefix cache hit rate: 7.8%, Wire pipeline hit rate: 48.8%
+INFO:     127.0.0.1:59046 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59048 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 271.8 tokens/s, Avg generation throughput: 110.7 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.2%, Prefix cache hit rate: 7.7%, Wire pipeline hit rate: 48.9%
+INFO:     127.0.0.1:44362 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 108.9 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.5%, Prefix cache hit rate: 7.7%, Wire pipeline hit rate: 48.8%
+INFO:     127.0.0.1:44376 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 127.2 tokens/s, Avg generation throughput: 114.7 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.5%, Prefix cache hit rate: 7.6%, Wire pipeline hit rate: 48.9%
+INFO:     127.0.0.1:46564 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44788 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 96.2 tokens/s, Avg generation throughput: 115.9 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.7%, Prefix cache hit rate: 7.6%, Wire pipeline hit rate: 49.2%
+INFO:     127.0.0.1:44804 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52344 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 202.4 tokens/s, Avg generation throughput: 105.2 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.6%, Prefix cache hit rate: 7.7%, Wire pipeline hit rate: 49.1%
+INFO:     127.0.0.1:52356 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55468 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 114.2 tokens/s, Avg generation throughput: 113.4 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.5%, Prefix cache hit rate: 7.6%, Wire pipeline hit rate: 49.2%
+INFO:     127.0.0.1:55472 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49458 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 122.9 tokens/s, Avg generation throughput: 110.8 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.6%, Prefix cache hit rate: 7.6%, Wire pipeline hit rate: 49.3%
+INFO:     127.0.0.1:48080 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48084 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 163.3 tokens/s, Avg generation throughput: 105.0 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.3%, Prefix cache hit rate: 7.5%, Wire pipeline hit rate: 49.0%
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 110.7 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.8%, Prefix cache hit rate: 7.5%, Wire pipeline hit rate: 48.9%
+INFO:     127.0.0.1:49094 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49110 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 176.8 tokens/s, Avg generation throughput: 105.2 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.7%, Prefix cache hit rate: 7.4%, Wire pipeline hit rate: 48.6%
+INFO:     127.0.0.1:47558 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47572 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 280.9 tokens/s, Avg generation throughput: 117.4 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.7%, Prefix cache hit rate: 7.7%, Wire pipeline hit rate: 49.0%
+INFO:     127.0.0.1:59144 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59158 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 274.3 tokens/s, Avg generation throughput: 100.3 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.8%, Prefix cache hit rate: 7.5%, Wire pipeline hit rate: 48.7%
+INFO:     127.0.0.1:54256 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54272 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 159.2 tokens/s, Avg generation throughput: 108.7 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.5%, Prefix cache hit rate: 7.5%, Wire pipeline hit rate: 48.6%
+INFO:     127.0.0.1:33100 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33106 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 115.7 tokens/s, Avg generation throughput: 119.6 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.6%, Prefix cache hit rate: 7.4%, Wire pipeline hit rate: 49.0%
+INFO:     127.0.0.1:37210 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37216 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 295.5 tokens/s, Avg generation throughput: 105.0 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.3%, Prefix cache hit rate: 7.3%, Wire pipeline hit rate: 48.8%
+INFO:     127.0.0.1:41618 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 54.5 tokens/s, Avg generation throughput: 103.6 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.6%, Prefix cache hit rate: 7.3%, Wire pipeline hit rate: 48.5%
+INFO:     127.0.0.1:41620 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 107.6 tokens/s, Avg generation throughput: 106.3 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.6%, Prefix cache hit rate: 7.5%, Wire pipeline hit rate: 48.2%
+INFO:     127.0.0.1:43700 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43706 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 89.3 tokens/s, Avg generation throughput: 121.8 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.7%, Prefix cache hit rate: 7.5%, Wire pipeline hit rate: 48.6%
+INFO:     127.0.0.1:60710 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60712 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 227.7 tokens/s, Avg generation throughput: 105.1 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.8%, Prefix cache hit rate: 7.4%, Wire pipeline hit rate: 48.5%
+INFO:     127.0.0.1:48614 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42248 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 164.8 tokens/s, Avg generation throughput: 100.2 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.7%, Prefix cache hit rate: 7.3%, Wire pipeline hit rate: 48.2%
+INFO:     127.0.0.1:42262 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54660 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 208.3 tokens/s, Avg generation throughput: 110.6 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.5%, Prefix cache hit rate: 7.5%, Wire pipeline hit rate: 48.2%
+INFO:     127.0.0.1:54662 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57998 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 63.3 tokens/s, Avg generation throughput: 104.9 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.3%, Prefix cache hit rate: 7.4%, Wire pipeline hit rate: 47.9%
+INFO:     127.0.0.1:58002 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 152.9 tokens/s, Avg generation throughput: 108.1 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.7%, Prefix cache hit rate: 7.4%, Wire pipeline hit rate: 47.8%
+INFO:     127.0.0.1:36552 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36558 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 113.0 tokens/s, Avg generation throughput: 119.5 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.9%, Prefix cache hit rate: 7.4%, Wire pipeline hit rate: 48.2%
+INFO:     127.0.0.1:57888 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57894 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 342.6 tokens/s, Avg generation throughput: 106.4 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.6%, Prefix cache hit rate: 7.3%, Wire pipeline hit rate: 48.2%
+INFO:     127.0.0.1:53640 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52588 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 233.5 tokens/s, Avg generation throughput: 103.2 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 98.8%, Prefix cache hit rate: 7.9%, Wire pipeline hit rate: 47.9%
+INFO:     127.0.0.1:41030 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41042 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 270.8 tokens/s, Avg generation throughput: 103.0 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.6%, Prefix cache hit rate: 7.8%, Wire pipeline hit rate: 47.7%
+INFO:     127.0.0.1:59598 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59608 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 121.7 tokens/s, Avg generation throughput: 116.2 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.5%, Prefix cache hit rate: 7.8%, Wire pipeline hit rate: 47.9%
+INFO:     127.0.0.1:46986 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46992 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 133.1 tokens/s, Avg generation throughput: 109.9 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.4%, Prefix cache hit rate: 7.7%, Wire pipeline hit rate: 47.8%
+INFO:     127.0.0.1:44124 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 105.3 tokens/s, Avg generation throughput: 119.6 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.6%, Prefix cache hit rate: 7.7%, Wire pipeline hit rate: 48.1%
+INFO:     127.0.0.1:44138 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37750 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 151.8 tokens/s, Avg generation throughput: 106.7 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.6%, Prefix cache hit rate: 7.6%, Wire pipeline hit rate: 48.0%
+INFO:     127.0.0.1:37760 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36240 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 480.3 tokens/s, Avg generation throughput: 97.2 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.3%, Prefix cache hit rate: 7.6%, Wire pipeline hit rate: 47.8%
+INFO:     127.0.0.1:44356 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 90.3 tokens/s, Avg generation throughput: 102.8 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.6%, Prefix cache hit rate: 7.5%, Wire pipeline hit rate: 47.5%
+INFO:     127.0.0.1:44366 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 55.3 tokens/s, Avg generation throughput: 108.6 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.5%, Prefix cache hit rate: 7.5%, Wire pipeline hit rate: 47.4%
+INFO:     127.0.0.1:40562 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39776 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 73.9 tokens/s, Avg generation throughput: 109.8 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.7%, Prefix cache hit rate: 7.5%, Wire pipeline hit rate: 47.3%
+INFO:     127.0.0.1:39786 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54368 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 124.0 tokens/s, Avg generation throughput: 119.5 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.7%, Prefix cache hit rate: 7.4%, Wire pipeline hit rate: 47.7%
+INFO:     127.0.0.1:54376 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41074 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 117.9 tokens/s, Avg generation throughput: 105.5 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.5%, Prefix cache hit rate: 7.4%, Wire pipeline hit rate: 47.5%
+INFO:     127.0.0.1:41078 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47424 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 140.0 tokens/s, Avg generation throughput: 113.5 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.6%, Prefix cache hit rate: 7.3%, Wire pipeline hit rate: 47.6%
+INFO:     127.0.0.1:47438 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 38.7 tokens/s, Avg generation throughput: 113.2 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.8%, Prefix cache hit rate: 7.3%, Wire pipeline hit rate: 47.6%
+INFO:     127.0.0.1:41062 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41066 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 126.7 tokens/s, Avg generation throughput: 108.2 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.7%, Prefix cache hit rate: 7.3%, Wire pipeline hit rate: 47.4%
+INFO:     127.0.0.1:39596 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60982 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 129.9 tokens/s, Avg generation throughput: 109.5 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.5%, Prefix cache hit rate: 7.2%, Wire pipeline hit rate: 47.4%
+INFO:     127.0.0.1:60986 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 30.8 tokens/s, Avg generation throughput: 105.2 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.7%, Prefix cache hit rate: 7.2%, Wire pipeline hit rate: 47.1%
+INFO:     127.0.0.1:55934 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48566 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 205.7 tokens/s, Avg generation throughput: 104.8 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.7%, Prefix cache hit rate: 7.5%, Wire pipeline hit rate: 46.9%
+INFO:     127.0.0.1:48572 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53770 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 86.6 tokens/s, Avg generation throughput: 117.3 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.6%, Prefix cache hit rate: 7.4%, Wire pipeline hit rate: 47.1%
+INFO:     127.0.0.1:53780 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49978 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 103.8 tokens/s, Avg generation throughput: 120.2 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.6%, Prefix cache hit rate: 7.4%, Wire pipeline hit rate: 47.4%
+INFO:     127.0.0.1:49992 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37568 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 80.9 tokens/s, Avg generation throughput: 115.2 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.8%, Prefix cache hit rate: 7.4%, Wire pipeline hit rate: 47.5%
+INFO:     127.0.0.1:37578 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36026 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 77.6 tokens/s, Avg generation throughput: 121.4 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.7%, Prefix cache hit rate: 7.3%, Wire pipeline hit rate: 47.9%
+INFO:     127.0.0.1:36028 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36036 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 147.1 tokens/s, Avg generation throughput: 104.4 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.5%, Prefix cache hit rate: 7.3%, Wire pipeline hit rate: 47.7%
+INFO:     127.0.0.1:46684 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46686 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 190.0 tokens/s, Avg generation throughput: 103.3 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.2%, Prefix cache hit rate: 7.2%, Wire pipeline hit rate: 47.5%
+INFO:     127.0.0.1:33600 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 92.0 tokens/s, Avg generation throughput: 104.6 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.5%, Prefix cache hit rate: 7.2%, Wire pipeline hit rate: 47.2%
+INFO:     127.0.0.1:48928 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48942 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 303.1 tokens/s, Avg generation throughput: 120.8 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.1%, Prefix cache hit rate: 7.9%, Wire pipeline hit rate: 47.6%
+INFO:     127.0.0.1:56390 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 81.2 tokens/s, Avg generation throughput: 108.6 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.5%, Prefix cache hit rate: 7.8%, Wire pipeline hit rate: 47.6%
+INFO:     127.0.0.1:56396 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47562 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 120.0 tokens/s, Avg generation throughput: 104.3 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.6%, Prefix cache hit rate: 7.8%, Wire pipeline hit rate: 47.4%
+INFO:     127.0.0.1:47574 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58526 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 253.1 tokens/s, Avg generation throughput: 102.1 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.3%, Prefix cache hit rate: 8.0%, Wire pipeline hit rate: 47.2%
+INFO:     127.0.0.1:46828 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 101.8 tokens/s, Avg generation throughput: 110.2 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.5%, Prefix cache hit rate: 8.0%, Wire pipeline hit rate: 47.3%
+INFO:     127.0.0.1:46836 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 116.5 tokens/s, Avg generation throughput: 118.7 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.8%, Prefix cache hit rate: 8.0%, Wire pipeline hit rate: 47.6%
+INFO:     127.0.0.1:43346 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43348 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 160.7 tokens/s, Avg generation throughput: 103.9 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.7%, Prefix cache hit rate: 7.9%, Wire pipeline hit rate: 47.4%
+INFO:     127.0.0.1:48640 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36002 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 198.9 tokens/s, Avg generation throughput: 110.3 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.4%, Prefix cache hit rate: 7.8%, Wire pipeline hit rate: 47.4%
+INFO:     127.0.0.1:40756 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 102.8 tokens/s, Avg generation throughput: 104.9 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.4%, Prefix cache hit rate: 7.9%, Wire pipeline hit rate: 47.2%
+INFO:     127.0.0.1:40760 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57776 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 233.8 tokens/s, Avg generation throughput: 119.9 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.5%, Prefix cache hit rate: 7.9%, Wire pipeline hit rate: 47.6%
+INFO:     127.0.0.1:57778 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 50.5 tokens/s, Avg generation throughput: 102.0 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.8%, Prefix cache hit rate: 7.8%, Wire pipeline hit rate: 47.3%
+INFO:     127.0.0.1:49102 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49104 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 247.6 tokens/s, Avg generation throughput: 106.9 tokens/s, Running: 2 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.8%, Prefix cache hit rate: 7.8%, Wire pipeline hit rate: 47.2%
+INFO:     127.0.0.1:58272 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 58.1 tokens/s, Avg generation throughput: 87.1 tokens/s, Running: 1 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.5%, Prefix cache hit rate: 7.8%, Wire pipeline hit rate: 47.2%
+INFO:furiosa_llm.server.metrics:[Engine 0] Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 41.7 tokens/s, Running: 0 reqs, Waiting: 0 reqs, RNGD KV cache usage: 99.7%, Prefix cache hit rate: 7.8%, Wire pipeline hit rate: 47.5%
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+[2m2026-09-08T10:41:17.234294609Z[0m [32m INFO[0m [2mfuriosa_generator::next_gen::generator[0m[2m:[0m Scheduler exits normally
+INFO:     Application shutdown complete.
+INFO:     Finished server process [3648939]

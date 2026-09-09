@@ -55,6 +55,12 @@ performance prediction for that hardware. Every plan built on one carries
 | Rebuilt from the vendor's own profiler, decode prediction is accurate at the fitted concurrency | TPOT **−3.1 %** (was +25.7 %) | measured vs sim-on-measured | `docs/PROJECT_REPORT.md` §4.8.4 |
 | TTFT agrees once the arrival patterns match | **−5.1 %** on the mean (was −71.3 %) | measured vs sim-on-measured | §4.8.4, D19 |
 | The on-package all-reduce is measured, not inferred | **115 µs** per decoder layer at TP=8 | **measured** | §4.8.5 |
+| The envelope now starts at concurrency 1, with power | served **1.00 → 15.59**, 63.1 → 598.2 tok/s, 3000 requests, **zero failures** | **measured** | `experiments/results/rngd_lowload_envelope.md`, `outputs/rngd_envelope_lowload/` |
+| Energy per token collapses at low load | **0.418 → 3.941 tok/J**, a **9.4×** span | **measured** | same |
+| …and it is throughput, not power, that moves | power spans **1.085×** across a **9.5×** throughput range (139.9–151.8 W) | **measured** | same |
+| Utilisation does not explain this card's power | falls 92.1 → 84.7 % while power falls then rises; **r = +0.24** | **measured** | same, `deviations.md` D31 |
+| A loaded-but-idle card draws what an empty one draws | **40.0 W** with the model resident, against `idle_power` 39.35 measured at 0 PEs | **measured** | same |
+| The two halves of the envelope meet | c16 served **15.3** (2026-08-31) vs **15.59** (2026-09-08), throughput +2.1 % | **measured** | both files above |
 
 ### 1.3 The cross-vendor KV path
 
@@ -89,6 +95,19 @@ measured TPOT error, not a hardware measurement.
 ---
 
 ## 2. Not established — and why
+
+**"tokens/J is unimodal in concurrency" — not observed, and the low-end mechanism
+is wrong.** `docs/rps_aware_planning_design.md` §1 derives it: idle power dominates
+at low load, throughput roll-off starves the numerator at high load, so there is an
+interior optimum. On the RNGD card, tokens/J is **monotonically increasing across
+the whole measured range [1, 107.2]** — and that survives the most pessimistic power
+assumption the hardware permits, since even at the 293 W maximum ever observed the
+top point yields 5.03 tok/J against 3.94 at c15.59. The low-end penalty is real and
+larger than predicted, but not for the stated reason: the card is not mostly idle at
+concurrency 1, it draws **151 W**, within 0.5 % of its draw at c15.59. The design's
+deliverable is unaffected — a crossover needs two curves to cross, not a peak on
+either — but "each device has a sweet spot" does not hold here.
+`experiments/results/rngd_lowload_envelope.md`.
 
 Stated as plainly as §1, because these are the rows a reviewer will find anyway.
 
