@@ -64,12 +64,14 @@ Island id convention: `{backend}-{model_slug}-{node_id}` (e.g. `cuda-h100-node0`
    An early fix to `serving/core/memory_model.py` / `scheduler.py` was authorized and attempted
    for D12, but **both attempts were wrong and have been reverted**.
    Read `docs/deviations.md` D12 before trying again; it records what was tried and why it failed.
-   **`serving/` is no longer pristine.** Four edits are sanctioned and each is recorded with a
+   **`serving/` is no longer pristine.** Five edits are sanctioned and each is recorded with a
    byte-identical regression proof: **D15** (opt-in P/D KV-transfer cost, `router.py` +
    `__main__.py`), **D25** (`cwd=run_paths.inputs_root` on the ASTRA-Sim `Popen`), **D26**
-   (`sys.executable` for the Chakra converter — this one is what D23 actually was), and **D27**
-   (that converter called in-process instead of spawned, 1.55–1.72× faster, D26 subsumed).
-   Nothing else in `serving/` may change without a work order that names the file.
+   (`sys.executable` for the Chakra converter — this one is what D23 actually was), **D27**
+   (that converter called in-process instead of spawned, 1.55–1.72× faster, D26 subsumed), and
+   **D28** (`topology_mode: slab3d` in `config_builder.py` + the `_FMT` comm_type column in
+   `utils.py`, for asymmetric TP per phase). Nothing else in `serving/` may change without a
+   work order that names the file.
 2. **Never mix backends in one TP group.** Candidate generation must exclude such configs automatically.
 3. **Never invent hardware numbers.** Values with no measurement get `source: placeholder` in the
    profile file. Never label unmeasured data as measured, and never claim results from hardware

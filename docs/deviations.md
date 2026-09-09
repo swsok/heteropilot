@@ -530,6 +530,12 @@ A cold-cache run reporting a non-zero hit count is a bug, not a nicety — worth
 
 ## D14 — The simulator's topology inference requires uniform instance sizes · Resolved (constraint enumerated around)
 
+> **PARTLY LIFTED 2026-09-08 (D28).** The uniformity is not the simulator's; it
+> was `_compute_network_dims` plus a shared `local_dim`. `topology_mode: slab3d`
+> now expresses `tp_d = 2 * tp_p` with no idle rank. Other ratios still need
+> idle-rank padding and remain enumerated around. STEP 2.3 carries the planner side.
+
+
 ### Measured 2026-09-04 (`WORK_ORDER_spikes.md` STEP B) — the constraint is liftable, and worse than recorded
 
 `docs/d14_spike.md`. Two corrections to what follows, both measured on
@@ -694,6 +700,12 @@ drops, TTFT flat, `none`-mode control flat — all PASS) and `tests/test_sim_pd_
 ---
 
 ## D16 — `LinkType` has no on-package fabric, and cross-vendor P/D needs a shared TP degree · Resolved (one added type) + Open (the TP constraint)
+
+> **(b) PARTLY LIFTED 2026-09-08 (D28).** "The simulator requires a shared TP
+> degree" is false for the 2x case: `slab3d` encodes `tp_d = 2 * tp_p` directly.
+> The size-4 island bridging workaround in the fixture still works and is kept,
+> but is no longer required. STEP 2.3 carries the planner side.
+
 
 Two problems surfaced together while building the first heterogeneous
 RNGD + GPU P/D fixture (`experiments/configs/clusters/pd-rngd-gpu.yaml`).
@@ -1815,3 +1827,68 @@ default.
   never true. The denominator is now `abs(oracle_value)`. The published curve is
   unaffected — its oracle value is +1.660, which only
   `maximize_slo_goodput_per_joule` can be.
+
+## D28 — asymmetric TP per phase: `topology_mode: slab3d` · Resolved (fifth sanctioned `serving/` edit)
+
+*D29 is reserved for `WORK_ORDER_rps_aware.md` STEP 4.*
+
+**What D14 and D16(b) said, and why it was wrong.** Both record that the
+simulator "requires uniform instance sizes", so `tp_d = 2 · tp_p` was out of
+reach and heterogeneous P/D had to be worked around. The `spike/d14-asym-tp`
+investigation (`docs/d14_spike.md`) established that the simulator never required
+it:
+
+- ASTRA-Sim reads a per-collective `involved_dim` (`Workload.cc:275-296`) and
+  supports up to five dimensions;
+- the vendored Chakra converter writes an arbitrary-length `involved_dim`
+  through to the ET (`llm_converter.py:226-233`);
+- `tp_dim` is **already** a per-instance field, and the EP path already uses
+  two-dimensional involvement.
+
+The uniformity came from one function. `_compute_network_dims` folded every
+instance into `[npus_per_group, num_instances]` with an integer division, and
+`_resolve_dp_groups` then gave all of them the same `local_dim`.
+
+**The edit.** A cluster config may set a top-level `topology_mode`. Absent, or
+`"auto"`, is the pre-D28 path byte for byte. `"slab3d"` computes `[g, 2, n_slabs]`,
+where `g` is the smallest compute TP: a tp=g instance occupies half a slab and a
+tp=2g one a whole slab, so `tp_d = 2 · tp_p` costs no idle rank.
+`A40 tp4 prefill + RNGD tp8 decode` is `[4, 2, 2]` — 16 ranks, none idle.
+
+**`tp_dim` is keyed on the collective, not the footprint.** A prefill instance
+occupies `2 · tp` ranks (compute + sender) but its TP group is still only `g`
+wide, so it gets `[T, F, F]` while a full-slab decode gets `[T, T, F]`. Keying on
+the footprint gives both `[T, T, F]`, which declares a 2g-rank allreduce for a
+g-rank group; the prefill batch then waits for ranks that never join. That was
+done once during the spike, presented **exactly as D23's signature**, and was
+reported as "D23 reproduced" before it was found to be self-inflicted.
+`tests/test_slab3d_config.py` pins it with a case where prefill and decode occupy
+equal rank counts and must still differ.
+
+**What is refused rather than reshaped**: odd half-slab counts, MoE/EP instances,
+widths that are neither `g` nor `2g` (4× ratios would need idle-rank padding,
+whose interaction with the frontend's iteration barrier is unverified), and a
+full-slab instance that starts half a slab in — `[half, full, half]` straddles a
+boundary because ranks are handed out as consecutive blocks.
+
+**`_FMT` comm_type widened 15 → 24** (`serving/core/utils.py`). The row format
+pads but does not truncate, so a three-dimensional tag runs into the next column
+and the whitespace-splitting reader silently mis-assigns every field after it. At
+width 15, `ALLREDUCE:1,1,0` and a comm_size of `4` merge into `ALLREDUCE:1,1,04`:
+ten fields where there should be eleven. Eliminating the reparse is
+`docs/upstream_issues/llmservingsim-trace-column-overflow.md`; this widens the
+column only.
+
+**Byte-identity.** Every trace row goes through `formatter`, so the widening moved
+the *text* of every row from column 9 on. The parsed CSVs did not move: R1 ×3 and
+R2 reproduce `after_d25_d26` exactly, and **R3** — colocated tp4×2 under `auto`
+against the same under `slab3d` — is byte-identical between the two modes. R3 is
+the strongest of the three, because two colocated tp4 instances are two half slabs
+and therefore yield `[4, 2]` with `[T, F]`, exactly what `auto` computes: it says
+the new path agrees with the old where they overlap, not merely that it stays out
+of the way. `experiments/scripts/slab3d_anchors.sh`.
+
+**Still open.** The dim-1 `link_latency` calibration domain (STEP 2.2) and the
+planner side (STEP 2.3). Until the calibration lands, a `slab3d` run's absolute
+tok/J is not quotable — the spike measured a 24.4 % accuracy cost from the flat
+ring becoming hierarchical, and `docs/d14_spike.md` carries that caveat.
