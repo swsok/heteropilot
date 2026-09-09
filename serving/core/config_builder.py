@@ -183,8 +183,11 @@ def _resolve_dp_groups(all_instances):
     # The other half of the D28 constraint: the `auto` path gives every instance
     # the SAME local_dim, which is what makes a mixed half-slab / full-slab layout
     # impossible. Under slab3d each instance gets its own.
-    if _topology_mode(all_instances) == "slab3d":
-        _, slab_tp_dims = _slab3d_dims_and_tp_dims(all_instances)
+    _mode = _topology_mode(all_instances)
+    if _mode in ("slab3d", "split2"):
+        _helper = (_slab3d_dims_and_tp_dims if _mode == "slab3d"
+                   else _split2_dims_and_tp_dims)
+        _, slab_tp_dims = _helper(all_instances)
         for inst, tp_dim in zip(all_instances, slab_tp_dims):
             if inst.get("dp_group") is None:
                 inst["dp_group_size"] = 1
@@ -215,8 +218,19 @@ def _resolve_dp_groups(all_instances):
 #:   "auto"   -- default, and what an absent key means. Unchanged, byte-identical.
 #:   "slab3d" -- `[g, 2, n_slabs]`. A tp=g instance takes half a slab and a tp=2g
 #:               one takes a whole slab, so `tp_d = 2 * tp_p` costs no idle rank.
+#:   "split2" -- CALIBRATION INSTRUMENT, NOT A DEPLOYMENT MODE. `[tp/2, 2]` with
+#:               `tp_dim [T, T]`: one TP group flat against the same group split
+#:               across two dims, which is the only way to isolate the allreduce
+#:               latency term that slab3d changes. STEP 2.1 deliberately left it
+#:               out because it describes no real placement; STEP 2.2 needs it
+#:               because its calibration is defined as "single instance, flat vs
+#:               split". It refuses anything but ONE colocated non-MoE instance,
+#:               and `planner/` never emits it (asserted in
+#:               tests/test_slab3d_config.py).
 TOPOLOGY_MODE_KEY = "topology_mode"
-VALID_TOPOLOGY_MODES = ("auto", "slab3d")
+VALID_TOPOLOGY_MODES = ("auto", "slab3d", "split2")
+#: Modes a deployment plan may use. `split2` is measurement-only.
+DEPLOYABLE_TOPOLOGY_MODES = ("auto", "slab3d")
 
 
 def _slab3d_dims_and_tp_dims(instances):
@@ -289,6 +303,36 @@ def _slab3d_dims_and_tp_dims(instances):
     return dims, tp_dims
 
 
+def _split2_dims_and_tp_dims(instances):
+    """`[tp/2, 2]` and `tp_dim [T, T]` for a single instance, or raise.
+
+    Deliberately narrow. Splitting several TP groups across two dims raises
+    rank-mapping questions that `slab3d` answers and this does not, and the
+    calibration needs exactly one group: the whole point is to hold everything
+    constant except whether the allreduce is a flat ring of `tp` or a hierarchical
+    `tp/2 x 2`, so that the difference in TPOT is attributable to the latency term
+    alone (7 steps against 4 at tp=8).
+    """
+    if len(instances) != 1:
+        raise ValueError(
+            f"split2 measures ONE TP group flat against split; got "
+            f"{len(instances)} instances. It is a calibration instrument, not a "
+            f"placement -- use slab3d for a real asymmetric deployment"
+        )
+    inst = instances[0]
+    if inst.get("ep_size", 1) > 1:
+        raise ValueError("split2: MoE/EP instances are out of scope")
+    if inst.get("pd_type") is not None:
+        raise ValueError(
+            "split2: colocated instances only -- a prefill instance's sender ranks "
+            "would make the two sides differ by more than the split"
+        )
+    tp = inst["tp_size"]
+    if tp % 2 != 0:
+        raise ValueError(f"split2: tp_size {tp} is odd and cannot split into [tp/2, 2]")
+    return [tp // 2, 2], [[True, True]]
+
+
 def _topology_mode(instances):
     for inst in instances:
         mode = inst.get(TOPOLOGY_MODE_KEY)
@@ -299,8 +343,11 @@ def _topology_mode(instances):
 
 def _compute_network_dims(instances):
     """Infer ASTRA-Sim topology dimensions from resolved instances."""
-    if _topology_mode(instances) == "slab3d":
+    mode = _topology_mode(instances)
+    if mode == "slab3d":
         return _slab3d_dims_and_tp_dims(instances)[0]
+    if mode == "split2":
+        return _split2_dims_and_tp_dims(instances)[0]
 
     dp_groups = {}
     for inst in instances:

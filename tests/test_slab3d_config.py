@@ -169,11 +169,47 @@ def test_unaligned_half_slabs_are_refused_rather_than_reordered():
         cb._slab3d_dims_and_tp_dims(bad)
 
 
-def test_an_unknown_topology_mode_is_rejected():
-    assert "slab3d" in cb.VALID_TOPOLOGY_MODES
-    assert "auto" in cb.VALID_TOPOLOGY_MODES
-    # split2 was a spike-only measurement mode and must not have survived into main
-    assert "split2" not in cb.VALID_TOPOLOGY_MODES
+def test_split2_is_valid_but_not_deployable():
+    """`split2` came back in STEP 2.2 as a calibration instrument.
+
+    2.1 was right to leave it out: it describes no real placement. 2.2's
+    calibration is defined as "single instance, flat vs split", and splitting one
+    TP group across two dims is the only way to isolate the allreduce latency term
+    that slab3d changes. So it is valid for the simulator and excluded from what a
+    plan may use.
+    """
+    assert set(cb.VALID_TOPOLOGY_MODES) == {"auto", "slab3d", "split2"}
+    assert set(cb.DEPLOYABLE_TOPOLOGY_MODES) == {"auto", "slab3d"}
+    assert "split2" not in cb.DEPLOYABLE_TOPOLOGY_MODES
+
+
+def test_the_planner_never_emits_split2():
+    """The instrument must not leak into a deployment path."""
+    planner = ROOT / "planner"
+    offenders = [
+        f for f in planner.rglob("*.py")
+        if "split2" in f.read_text()
+    ]
+    assert offenders == [], f"planner/ mentions split2: {offenders}"
+
+
+def test_split2_splits_one_group_and_spans_both_dims():
+    dims, tp_dims = cb._split2_dims_and_tp_dims([inst(8, mode="split2")])
+    assert dims == [4, 2]
+    assert tp_dims == [[T, T]], "the allreduce must span both dims, or it is not a split"
+    dims4, tp4 = cb._split2_dims_and_tp_dims([inst(4, mode="split2")])
+    assert dims4 == [2, 2] and tp4 == [[T, T]]
+
+
+def test_split2_refuses_anything_but_one_colocated_instance():
+    with pytest.raises(ValueError, match="ONE TP group"):
+        cb._split2_dims_and_tp_dims([inst(8, mode="split2"), inst(8, iid=1, mode="split2")])
+    with pytest.raises(ValueError, match="colocated instances only"):
+        cb._split2_dims_and_tp_dims([inst(8, pd_type="prefill", mode="split2")])
+    with pytest.raises(ValueError, match="MoE/EP"):
+        cb._split2_dims_and_tp_dims([inst(8, ep=2, mode="split2")])
+    with pytest.raises(ValueError, match="odd"):
+        cb._split2_dims_and_tp_dims([inst(3, mode="split2")])
 
 
 # --- 4. _resolve_dp_groups gives each instance its own local_dim -------------

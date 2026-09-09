@@ -1,0 +1,47 @@
+# dim-1 `link_latency` correction for `topology_mode: slab3d`.
+#
+# WORK_ORDER_rps_aware.md rev 2 STEP 2.2. Measured 2026-09-09 on the NPU node,
+# simulation only. Raw: outputs/slab3d_calib/. Method and the full factor sweep:
+# docs/slab3d_calibration.md.
+#
+# WHY THIS EXISTS. slab3d turns a flat ring allreduce of `tp` ranks into a
+# hierarchical `tp/2 x 2`. The bandwidth term is identical in both, so only the
+# LATENCY term moves: 2(tp-1) hops become 2(tp/2-1) in dim 0 plus 2 in dim 1. A
+# profile whose `link_latency` was calibrated against a flat ring therefore sees
+# decode as FASTER than it is under slab3d -- by 24.4 pct at tp8 and 13.4 pct at
+# tp4, measured (`uncorrected_pct`). Multiplying dim 1's latency by `factor`
+# restores it to within 0.008 pct.
+#
+# THIS IS A TABLE, NOT A LAW, as the work order requires. The factor does not vary
+# with bandwidth -- 4 at all three bandwidths for [4,2], 2 at all three for [2,2] --
+# but it DOES vary with the split. Both measured values happen to equal tp/2 and
+# that is derivable from hop counting (see the doc), but a derivation is not a
+# measurement: `validity` refuses every combination not listed.
+
+calibration_id: slab3d_dim1_link_latency
+applies_to: topology_mode=slab3d
+base_link_latency_ns: 20000.0
+fit_metric: TPOT p50, split against flat, same instance and same workload
+fit_workload:
+  dataset: outputs/d23/trace20.jsonl
+  num_requests: 20
+factors_swept: [1, 2, 4, 8]
+source: measured
+
+points:
+  - {split: "[4,2]", tp: 8, link_bw: 16.0, factor: 4, residual_pct: 0.0075, uncorrected_pct: -24.43, fitted_on: 2b60932}
+  - {split: "[4,2]", tp: 8, link_bw: 35.2, factor: 4, residual_pct: 0.0067, uncorrected_pct: -22.84, fitted_on: 2b60932}
+  - {split: "[4,2]", tp: 8, link_bw: 100.0, factor: 4, residual_pct: 0.0067, uncorrected_pct: -23.68, fitted_on: 2b60932}
+  - {split: "[2,2]", tp: 4, link_bw: 16.0, factor: 2, residual_pct: 0.0009, uncorrected_pct: -12.95, fitted_on: 2b60932}
+  - {split: "[2,2]", tp: 4, link_bw: 35.2, factor: 2, residual_pct: 0.0016, uncorrected_pct: -13.57, fitted_on: 2b60932}
+  - {split: "[2,2]", tp: 4, link_bw: 100.0, factor: 2, residual_pct: 0.001, uncorrected_pct: -13.79, fitted_on: 2b60932}
+
+validity:
+  # Only the (split, link_bw) combinations actually measured. A6.
+  splits: ["[4,2]", "[2,2]"]
+  link_bw_gbps: [16.0, 35.2, 100.0]
+  extrapolation: refuse
+  note: >
+    A slab3d candidate whose (split, link_bw) is not in this table must be
+    rejected as OUTSIDE_CALIBRATION_DOMAIN rather than simulated with a guessed
+    factor. STEP 2.3 wires that rejection.

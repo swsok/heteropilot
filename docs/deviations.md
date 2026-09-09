@@ -1888,10 +1888,32 @@ and therefore yield `[4, 2]` with `[T, F]`, exactly what `auto` computes: it say
 the new path agrees with the old where they overlap, not merely that it stays out
 of the way. `experiments/scripts/slab3d_anchors.sh`.
 
-**Still open.** The dim-1 `link_latency` calibration domain (STEP 2.2) and the
-planner side (STEP 2.3). Until the calibration lands, a `slab3d` run's absolute
-tok/J is not quotable — the spike measured a 24.4 % accuracy cost from the flat
-ring becoming hierarchical, and `docs/d14_spike.md` carries that caveat.
+**The calibration is done (STEP 2.2, 2026-09-09).** The flat ring becoming
+hierarchical makes decode look **24.4 %** faster at tp8 and **13.4 %** at tp4;
+multiplying dim 1's `link_latency` by **4** for `[4,2]` and **2** for `[2,2]`
+removes it to within **0.008 %**, at all three bandwidths measured. The factor is
+bandwidth-independent, split-dependent, and recorded as a table rather than a law
+in `profiles/calibration/slab3d_latency.yaml` with
+`validity.extrapolation: refuse`. Both values equal `tp/2`, which hop counting
+derives — `2(tp-1)` flat against `2(tp/2-1) + 2` split — but a derivation is not a
+measurement and unmeasured splits stay refused. `docs/slab3d_calibration.md`.
+
+So a `slab3d` plan at a **measured** `(split, link_bw)` may now quote absolute
+TPOT. Three things it still may not: any other split or bandwidth, TTFT and
+throughput (only TPOT p50 was fitted), and **P/D configurations** — the fit is
+single-instance and colocated by construction, and a real P/D run also sends the
+prefill compute→sender COMM_SEND across dim 1, which this experiment excluded on
+purpose so the allreduce could be isolated.
+
+**Still open.** The planner side (STEP 2.3), including the
+`OUTSIDE_CALIBRATION_DOMAIN` rejection for candidates the table does not cover.
+
+**`split2` came back as an instrument.** 2.1 was right to leave it out — it
+describes no placement — but 2.2's calibration is defined as *single instance,
+flat vs split*, and splitting one TP group is the only way to attribute the
+difference to the allreduce rather than to a changed instance mix. It refuses
+anything but one colocated non-MoE instance, is excluded from
+`DEPLOYABLE_TOPOLOGY_MODES`, and a test asserts `planner/` never emits it.
 
 ## D31 — utilisation does not explain RNGD card power; the §3 power model is keyed on served concurrency instead · Resolved (schema adapted, measurement kept)
 

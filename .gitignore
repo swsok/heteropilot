@@ -106,3 +106,8 @@ outputs/perf/*.jsonl
 # summaries, not the per-run workload traces.
 outputs/exp_surrogate/**/workload.jsonl
 outputs/exp_surrogate/**/sims/
+
+# slab3d calibration: the per-run CSVs and logs regenerate from the committed
+# configs in seconds; runs.json and fits.json carry every number the table cites.
+outputs/slab3d_calib/*.csv
+outputs/slab3d_calib/*.log
