@@ -62,6 +62,15 @@ performance prediction for that hardware. Every plan built on one carries
 | A loaded-but-idle card draws what an empty one draws | **40.0 W** with the model resident, against `idle_power` 39.35 measured at 0 PEs | **measured** | same |
 | The two halves of the envelope meet | c16 served **15.3** (2026-08-31) vs **15.59** (2026-09-08), throughput +2.1 % | **measured** | both files above |
 
+### 1.2b The planner prices its own predictor
+
+| claim | number | label | artifact |
+| --- | --- | --- | --- |
+| The planner rejects D22's committed winner **unaided**, with no manual margin | operating point **74.75** → domain **−17.69 %** → robust TPOT **56.97 ms** > 50 → SLO_VIOLATED | measured domain over a simulated run | `experiments/results/e5_self_rejection.md`, `tests/test_e5_self_rejection.py` |
+| …and the recommendation it falls back to | `agg[cuda:tp4]`, **2.595 tok/J** | sim-on-measured | same |
+| The margin is read from the run, not set by hand | 0.00 % at 1 rps, 3.05 % at the RNGD card's own operating point, 12.52 % for the cross-vendor P/D plan | measured domain | `experiments/results/e6_rps_sweep.md` |
+| Held in CI without a simulator | 199 committed records replayed through a mock predictor | — | `tests/data/e5_sim_records.json` |
+
 ### 1.3 The cross-vendor KV path
 
 | claim | number | label | artifact |
@@ -95,6 +104,18 @@ measured TPOT error, not a hardware measurement.
 ---
 
 ## 2. Not established — and why
+
+**E6's crossover is real in simulation and almost entirely unmeasured.** On
+`pd-rngd-gpu-card` the recommended backend goes RNGD → cross-vendor P/D → A40 as
+the rate rises from 1 to 10 rps, at both TTFT points. **One of sixteen switchover
+cells is labelled `measured`** — the RNGD card at 1 rps — because the A40 accuracy
+domain has a single point at served concurrency 170.56 and every plan in the sweep
+runs far below it, so its margin is reused outside where it was fitted. A second
+A40 measurement at a different load would fix that and this node has no NVIDIA GPU.
+On the per-PE `pd-rngd-gpu` fixture the RNGD rows carry margin **0.00 %** and
+validity **unknown** for want of any domain at all — including a 4.956 tok/J at
+10 rps, which is D22's retracted headline reproduced exactly and is **not**
+rehabilitated by appearing here. `experiments/results/e6_rps_sweep.md`.
 
 **"tokens/J is unimodal in concurrency" — not observed, and the low-end mechanism
 is wrong.** `docs/rps_aware_planning_design.md` §1 derives it: idle power dominates

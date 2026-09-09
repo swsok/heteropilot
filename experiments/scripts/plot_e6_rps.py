@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 import matplotlib
@@ -22,11 +23,17 @@ BACKEND_COLOUR = {"furiosa": "#d62728", "cuda": "#1f77b4"}
 
 
 def backend_of(mix: str | None) -> str:
+    """Every backend named in a mix string.
+
+    Regex rather than splitting on brackets: a P/D label is
+    `P[cuda:tp1] D[furiosa:tp1]`, two bracketed groups, and splitting on the first
+    `[` silently keeps only the second one -- which produced a legend entry reading
+    `D[furiosa+cuda` and, worse, would have called a cross-vendor plan
+    single-vendor.
+    """
     if not mix:
         return "?"
-    inner = mix.split("[", 1)[-1].rstrip("]")
-    kinds = sorted({p.split(":", 1)[0] for p in inner.replace("] ", "+").split("+") if p})
-    return "+".join(k for k in kinds if k)
+    return "+".join(sorted(set(re.findall(r"([a-z0-9]+):tp\d+", mix)))) or "?"
 
 
 def main() -> int:

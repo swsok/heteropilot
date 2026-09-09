@@ -1,0 +1,340 @@
+{
+  "_note": "E7: how much does the crossover move if the accuracy domain had fewer points?",
+  "fixture": "pd-rngd-gpu-card",
+  "hardware": "RNGD-CARD",
+  "ttft_ms": 64000.0,
+  "rows": [
+    {
+      "rps": 1.0,
+      "variant": "full",
+      "winner": {
+        "candidate": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t2048",
+        "backends": "furiosa",
+        "tok_per_j": 1.0739115761052986,
+        "margin": 3.048764018748316
+      }
+    },
+    {
+      "rps": 1.0,
+      "variant": "without conc=1.09",
+      "winner": {
+        "candidate": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t2048",
+        "backends": "furiosa",
+        "tok_per_j": 1.0739115761052986,
+        "margin": 3.048764018748316
+      }
+    },
+    {
+      "rps": 1.0,
+      "variant": "without conc=2.19",
+      "winner": {
+        "candidate": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t2048",
+        "backends": "furiosa",
+        "tok_per_j": 1.0739115761052986,
+        "margin": 3.048764018748316
+      }
+    },
+    {
+      "rps": 1.0,
+      "variant": "without conc=3.92",
+      "winner": {
+        "candidate": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t2048",
+        "backends": "furiosa",
+        "tok_per_j": 1.0739115761052986,
+        "margin": 3.048764018748316
+      }
+    },
+    {
+      "rps": 1.0,
+      "variant": "without conc=6.41",
+      "winner": {
+        "candidate": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t2048",
+        "backends": "furiosa",
+        "tok_per_j": 1.0739115761052986,
+        "margin": 3.0362597181063613
+      }
+    },
+    {
+      "rps": 1.0,
+      "variant": "without conc=16.6",
+      "winner": {
+        "candidate": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t2048",
+        "backends": "furiosa",
+        "tok_per_j": 1.0739115761052986,
+        "margin": 0.0
+      }
+    },
+    {
+      "rps": 1.0,
+      "variant": "without conc=76.0",
+      "winner": {
+        "candidate": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t2048",
+        "backends": "furiosa",
+        "tok_per_j": 1.0739115761052986,
+        "margin": 3.048764018748316
+      }
+    },
+    {
+      "rps": 1.0,
+      "variant": "no domain at all",
+      "winner": {
+        "candidate": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t2048",
+        "backends": "furiosa",
+        "tok_per_j": 1.0739115761052986,
+        "margin": 0.0
+      }
+    },
+    {
+      "rps": 3.3,
+      "variant": "full",
+      "winner": {
+        "candidate": "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s128-t8192",
+        "backends": "cuda+furiosa",
+        "tok_per_j": 1.8329493087557605,
+        "margin": 12.522705388002636
+      }
+    },
+    {
+      "rps": 3.3,
+      "variant": "without conc=1.09",
+      "winner": {
+        "candidate": "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s128-t8192",
+        "backends": "cuda+furiosa",
+        "tok_per_j": 1.8329493087557605,
+        "margin": 12.522705388002636
+      }
+    },
+    {
+      "rps": 3.3,
+      "variant": "without conc=2.19",
+      "winner": {
+        "candidate": "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s128-t8192",
+        "backends": "cuda+furiosa",
+        "tok_per_j": 1.8329493087557605,
+        "margin": 12.522705388002636
+      }
+    },
+    {
+      "rps": 3.3,
+      "variant": "without conc=3.92",
+      "winner": {
+        "candidate": "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s128-t8192",
+        "backends": "cuda+furiosa",
+        "tok_per_j": 1.8329493087557605,
+        "margin": 12.522705388002636
+      }
+    },
+    {
+      "rps": 3.3,
+      "variant": "without conc=6.41",
+      "winner": {
+        "candidate": "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s128-t8192",
+        "backends": "cuda+furiosa",
+        "tok_per_j": 1.8329493087557605,
+        "margin": 12.522705388002636
+      }
+    },
+    {
+      "rps": 3.3,
+      "variant": "without conc=16.6",
+      "winner": {
+        "candidate": "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s128-t8192",
+        "backends": "cuda+furiosa",
+        "tok_per_j": 1.8329493087557605,
+        "margin": 10.353283826510289
+      }
+    },
+    {
+      "rps": 3.3,
+      "variant": "without conc=76.0",
+      "winner": {
+        "candidate": "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s128-t8192",
+        "backends": "cuda+furiosa",
+        "tok_per_j": 1.8329493087557605,
+        "margin": 38.01013949357158
+      }
+    },
+    {
+      "rps": 3.3,
+      "variant": "no domain at all",
+      "winner": {
+        "candidate": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t8192",
+        "backends": "furiosa",
+        "tok_per_j": 3.037225580655425,
+        "margin": 0.0
+      }
+    },
+    {
+      "rps": 10.0,
+      "variant": "full",
+      "winner": {
+        "candidate": "cuda-a40-node_a40a-tp4-dp1-s128-t8192",
+        "backends": "cuda",
+        "tok_per_j": 2.5954323001631323,
+        "margin": 1.42
+      }
+    },
+    {
+      "rps": 10.0,
+      "variant": "without conc=1.09",
+      "winner": {
+        "candidate": "cuda-a40-node_a40a-tp4-dp1-s128-t8192",
+        "backends": "cuda",
+        "tok_per_j": 2.5954323001631323,
+        "margin": 1.42
+      }
+    },
+    {
+      "rps": 10.0,
+      "variant": "without conc=2.19",
+      "winner": {
+        "candidate": "cuda-a40-node_a40a-tp4-dp1-s128-t8192",
+        "backends": "cuda",
+        "tok_per_j": 2.5954323001631323,
+        "margin": 1.42
+      }
+    },
+    {
+      "rps": 10.0,
+      "variant": "without conc=3.92",
+      "winner": {
+        "candidate": "cuda-a40-node_a40a-tp4-dp1-s128-t8192",
+        "backends": "cuda",
+        "tok_per_j": 2.5954323001631323,
+        "margin": 1.42
+      }
+    },
+    {
+      "rps": 10.0,
+      "variant": "without conc=6.41",
+      "winner": {
+        "candidate": "cuda-a40-node_a40a-tp4-dp1-s128-t8192",
+        "backends": "cuda",
+        "tok_per_j": 2.5954323001631323,
+        "margin": 1.42
+      }
+    },
+    {
+      "rps": 10.0,
+      "variant": "without conc=16.6",
+      "winner": {
+        "candidate": "cuda-a40-node_a40a-tp4-dp1-s128-t8192",
+        "backends": "cuda",
+        "tok_per_j": 2.5954323001631323,
+        "margin": 1.42
+      }
+    },
+    {
+      "rps": 10.0,
+      "variant": "without conc=76.0",
+      "winner": {
+        "candidate": "cuda-a40-node_a40a-tp4-dp1-s128-t8192",
+        "backends": "cuda",
+        "tok_per_j": 2.5954323001631323,
+        "margin": 1.42
+      }
+    },
+    {
+      "rps": 10.0,
+      "variant": "no domain at all",
+      "winner": {
+        "candidate": "cuda-a40-node_a40a-tp4-dp1-s128-t8192",
+        "backends": "cuda",
+        "tok_per_j": 2.5954323001631323,
+        "margin": 1.42
+      }
+    },
+    {
+      "rps": 20.0,
+      "variant": "full",
+      "winner": {
+        "candidate": "cuda-a40-node_a40a-tp4-dp1-s128-t8192",
+        "backends": "cuda",
+        "tok_per_j": 2.761753218573702,
+        "margin": 1.42
+      }
+    },
+    {
+      "rps": 20.0,
+      "variant": "without conc=1.09",
+      "winner": {
+        "candidate": "cuda-a40-node_a40a-tp4-dp1-s128-t8192",
+        "backends": "cuda",
+        "tok_per_j": 2.761753218573702,
+        "margin": 1.42
+      }
+    },
+    {
+      "rps": 20.0,
+      "variant": "without conc=2.19",
+      "winner": {
+        "candidate": "cuda-a40-node_a40a-tp4-dp1-s128-t8192",
+        "backends": "cuda",
+        "tok_per_j": 2.761753218573702,
+        "margin": 1.42
+      }
+    },
+    {
+      "rps": 20.0,
+      "variant": "without conc=3.92",
+      "winner": {
+        "candidate": "cuda-a40-node_a40a-tp4-dp1-s128-t8192",
+        "backends": "cuda",
+        "tok_per_j": 2.761753218573702,
+        "margin": 1.42
+      }
+    },
+    {
+      "rps": 20.0,
+      "variant": "without conc=6.41",
+      "winner": {
+        "candidate": "cuda-a40-node_a40a-tp4-dp1-s128-t8192",
+        "backends": "cuda",
+        "tok_per_j": 2.761753218573702,
+        "margin": 1.42
+      }
+    },
+    {
+      "rps": 20.0,
+      "variant": "without conc=16.6",
+      "winner": {
+        "candidate": "cuda-a40-node_a40a-tp4-dp1-s128-t8192",
+        "backends": "cuda",
+        "tok_per_j": 2.761753218573702,
+        "margin": 1.42
+      }
+    },
+    {
+      "rps": 20.0,
+      "variant": "without conc=76.0",
+      "winner": {
+        "candidate": "cuda-a40-node_a40a-tp4-dp1-s128-t8192",
+        "backends": "cuda",
+        "tok_per_j": 2.761753218573702,
+        "margin": 1.42
+      }
+    },
+    {
+      "rps": 20.0,
+      "variant": "no domain at all",
+      "winner": {
+        "candidate": "cuda-a40-node_a40a-tp4-dp1-s128-t8192",
+        "backends": "cuda",
+        "tok_per_j": 2.761753218573702,
+        "margin": 1.42
+      }
+    }
+  ],
+  "flips": [
+    {
+      "rps": 3.3,
+      "variant": "no domain at all",
+      "winner": {
+        "candidate": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t8192",
+        "backends": "furiosa",
+        "tok_per_j": 3.037225580655425,
+        "margin": 0.0
+      }
+    }
+  ]
+}
