@@ -1,0 +1,356 @@
+{
+  "service": "examples/service_specs/llama31-8b.yaml",
+  "cluster": "experiments/configs/clusters/pd-rngd-gpu.yaml",
+  "num_requests": 300,
+  "seed": 42,
+  "islands": [
+    {
+      "id": "furiosa-rngd-node_rngd0",
+      "backend": "furiosa",
+      "size": 8
+    },
+    {
+      "id": "furiosa-rngd-node_rngd1",
+      "backend": "furiosa",
+      "size": 8
+    },
+    {
+      "id": "cuda-a40-node_a40a",
+      "backend": "cuda",
+      "size": 4
+    },
+    {
+      "id": "cuda-a40-node_a40b",
+      "backend": "cuda",
+      "size": 4
+    }
+  ],
+  "sweep": [
+    {
+      "rps": 1.0,
+      "wall_seconds": 9006.4,
+      "knob_policy": "fixed@10rps",
+      "ttft_slo_max_ms": 64000.0,
+      "feasible": true,
+      "generated": 616,
+      "evaluated": 357,
+      "rejected_summary": {
+        "memory_infeasible": 4,
+        "sim_error": 291
+      },
+      "cache_hits": 31,
+      "recommended": {
+        "plan_id": "hp-00000",
+        "arch": "aggregated",
+        "backend_mix": "agg[furiosa:tp4]",
+        "accelerators": 4,
+        "tokens_per_joule": 1.6019466353415002,
+        "slo_goodput_rps": 0.9419985219663,
+        "p99_ttft_ms": 664.2273201399997,
+        "p99_tpot_ms": 38.830097099999996,
+        "average_power_w": 373.68801886792465,
+        "slo_attainment": 1.0
+      },
+      "reason": "",
+      "validity": "unknown",
+      "applied_tpot_margin_pct": 0.0,
+      "margin_source": "manual",
+      "operating_point": [
+        {
+          "hardware": "RNGD",
+          "concurrency": 19.633850282087344,
+          "phase": "total",
+          "tpot_error_pct": null,
+          "ttft_error_pct": null,
+          "in_calibration_domain": null
+        }
+      ]
+    },
+    {
+      "rps": 1.0,
+      "wall_seconds": 7205.1,
+      "knob_policy": "fixed@10rps",
+      "ttft_slo_max_ms": 8000.0,
+      "feasible": true,
+      "generated": 616,
+      "evaluated": 357,
+      "rejected_summary": {
+        "memory_infeasible": 4,
+        "sim_error": 291
+      },
+      "cache_hits": 66,
+      "recommended": {
+        "plan_id": "hp-00000",
+        "arch": "aggregated",
+        "backend_mix": "agg[furiosa:tp4]",
+        "accelerators": 4,
+        "tokens_per_joule": 1.6019466353415002,
+        "slo_goodput_rps": 0.9419985219663,
+        "p99_ttft_ms": 664.2273201399997,
+        "p99_tpot_ms": 38.830097099999996,
+        "average_power_w": 373.68801886792465,
+        "slo_attainment": 1.0
+      },
+      "reason": "",
+      "validity": "unknown",
+      "applied_tpot_margin_pct": 0.0,
+      "margin_source": "manual",
+      "operating_point": [
+        {
+          "hardware": "RNGD",
+          "concurrency": 19.633850282087344,
+          "phase": "total",
+          "tpot_error_pct": null,
+          "ttft_error_pct": null,
+          "in_calibration_domain": null
+        }
+      ]
+    },
+    {
+      "rps": 3.3,
+      "wall_seconds": 7045.8,
+      "knob_policy": "fixed@10rps",
+      "ttft_slo_max_ms": 64000.0,
+      "feasible": true,
+      "generated": 616,
+      "evaluated": 357,
+      "rejected_summary": {
+        "memory_infeasible": 4,
+        "sim_error": 161,
+        "slo_violated": 116
+      },
+      "cache_hits": 98,
+      "recommended": {
+        "plan_id": "hp-00012",
+        "arch": "aggregated",
+        "backend_mix": "agg[furiosa:tp8]",
+        "accelerators": 8,
+        "tokens_per_joule": 3.4769623019486433,
+        "slo_goodput_rps": 2.6661990468742425,
+        "p99_ttft_ms": 495.3145984499999,
+        "p99_tpot_ms": 48.50970346,
+        "average_power_w": 487.3460714285715,
+        "slo_attainment": 1.0
+      },
+      "reason": "",
+      "validity": "unknown",
+      "applied_tpot_margin_pct": 0.0,
+      "margin_source": "manual",
+      "operating_point": [
+        {
+          "hardware": "RNGD",
+          "concurrency": 73.67902926842729,
+          "phase": "total",
+          "tpot_error_pct": null,
+          "ttft_error_pct": null,
+          "in_calibration_domain": null
+        }
+      ]
+    },
+    {
+      "rps": 3.3,
+      "wall_seconds": 3507.3,
+      "knob_policy": "fixed@10rps",
+      "ttft_slo_max_ms": 8000.0,
+      "feasible": true,
+      "generated": 616,
+      "evaluated": 357,
+      "rejected_summary": {
+        "memory_infeasible": 4,
+        "sim_error": 119,
+        "slo_violated": 147
+      },
+      "cache_hits": 223,
+      "recommended": {
+        "plan_id": "hp-00012",
+        "arch": "aggregated",
+        "backend_mix": "agg[furiosa:tp8]",
+        "accelerators": 8,
+        "tokens_per_joule": 3.4769623019486433,
+        "slo_goodput_rps": 2.6661990468742425,
+        "p99_ttft_ms": 495.3145984499999,
+        "p99_tpot_ms": 48.50970346,
+        "average_power_w": 487.3460714285715,
+        "slo_attainment": 1.0
+      },
+      "reason": "",
+      "validity": "unknown",
+      "applied_tpot_margin_pct": 0.0,
+      "margin_source": "manual",
+      "operating_point": [
+        {
+          "hardware": "RNGD",
+          "concurrency": 73.67902926842729,
+          "phase": "total",
+          "tpot_error_pct": null,
+          "ttft_error_pct": null,
+          "in_calibration_domain": null
+        }
+      ]
+    },
+    {
+      "rps": 10.0,
+      "wall_seconds": 3424.1,
+      "knob_policy": "fixed@10rps",
+      "ttft_slo_max_ms": 64000.0,
+      "feasible": true,
+      "generated": 616,
+      "evaluated": 357,
+      "rejected_summary": {
+        "memory_infeasible": 4,
+        "sim_error": 114,
+        "slo_violated": 190
+      },
+      "cache_hits": 124,
+      "recommended": {
+        "plan_id": "hp-00012",
+        "arch": "aggregated",
+        "backend_mix": "agg[furiosa:tp8]",
+        "accelerators": 8,
+        "tokens_per_joule": 4.956386292834891,
+        "slo_goodput_rps": 3.7482529015121044,
+        "p99_ttft_ms": 29547.534431580003,
+        "p99_tpot_ms": 48.354984349999995,
+        "average_power_w": 480.95199999999994,
+        "slo_attainment": 1.0
+      },
+      "reason": "",
+      "validity": "unknown",
+      "applied_tpot_margin_pct": 0.0,
+      "margin_source": "manual",
+      "operating_point": [
+        {
+          "hardware": "RNGD",
+          "concurrency": 139.36651516744573,
+          "phase": "total",
+          "tpot_error_pct": null,
+          "ttft_error_pct": null,
+          "in_calibration_domain": null
+        }
+      ]
+    },
+    {
+      "rps": 10.0,
+      "wall_seconds": 369.4,
+      "knob_policy": "fixed@10rps",
+      "ttft_slo_max_ms": 8000.0,
+      "feasible": true,
+      "generated": 616,
+      "evaluated": 357,
+      "rejected_summary": {
+        "memory_infeasible": 4,
+        "sim_error": 114,
+        "slo_violated": 216
+      },
+      "cache_hits": 243,
+      "recommended": {
+        "plan_id": "hp-00182",
+        "arch": "pd_split",
+        "backend_mix": "P[cuda:tp2] D[cuda:tp4]",
+        "accelerators": 6,
+        "tokens_per_joule": 2.39819118201231,
+        "slo_goodput_rps": 5.757684848151415,
+        "p99_ttft_ms": 892.0448649527272,
+        "p99_tpot_ms": 37.26421391,
+        "average_power_w": 1527.424423076923,
+        "slo_attainment": 1.0
+      },
+      "reason": "",
+      "validity": "measured",
+      "applied_tpot_margin_pct": 1.084324637566869,
+      "margin_source": "accuracy_domain",
+      "operating_point": [
+        {
+          "hardware": "A40",
+          "concurrency": 121.8077309978936,
+          "phase": "total",
+          "tpot_error_pct": -1.084324637566869,
+          "ttft_error_pct": -6.602320001577208,
+          "in_calibration_domain": true
+        }
+      ]
+    },
+    {
+      "rps": 20.0,
+      "wall_seconds": 3001.0,
+      "knob_policy": "fixed@10rps",
+      "ttft_slo_max_ms": 64000.0,
+      "feasible": true,
+      "generated": 616,
+      "evaluated": 357,
+      "rejected_summary": {
+        "memory_infeasible": 4,
+        "sim_error": 118,
+        "slo_violated": 198
+      },
+      "cache_hits": 121,
+      "recommended": {
+        "plan_id": "hp-00032",
+        "arch": "aggregated",
+        "backend_mix": "agg[cuda:tp4]",
+        "accelerators": 4,
+        "tokens_per_joule": 2.761753218573702,
+        "slo_goodput_rps": 5.590081623894347,
+        "p99_ttft_ms": 27203.21472709,
+        "p99_tpot_ms": 35.99757466,
+        "average_power_w": 1286.9035849056606,
+        "slo_attainment": 1.0
+      },
+      "reason": "",
+      "validity": "measured",
+      "applied_tpot_margin_pct": 1.3275825405717725,
+      "margin_source": "accuracy_domain",
+      "operating_point": [
+        {
+          "hardware": "A40",
+          "concurrency": 157.13762425613308,
+          "phase": "total",
+          "tpot_error_pct": -1.3275825405717725,
+          "ttft_error_pct": -3.2453609401095402,
+          "in_calibration_domain": true
+        }
+      ]
+    },
+    {
+      "rps": 20.0,
+      "wall_seconds": 258.2,
+      "knob_policy": "fixed@10rps",
+      "ttft_slo_max_ms": 8000.0,
+      "feasible": true,
+      "generated": 616,
+      "evaluated": 357,
+      "rejected_summary": {
+        "memory_infeasible": 4,
+        "sim_error": 118,
+        "slo_violated": 224
+      },
+      "cache_hits": 239,
+      "recommended": {
+        "plan_id": "hp-00182",
+        "arch": "pd_split",
+        "backend_mix": "P[cuda:tp2] D[cuda:tp4]",
+        "accelerators": 6,
+        "tokens_per_joule": 2.656832730308934,
+        "slo_goodput_rps": 6.267418854029574,
+        "p99_ttft_ms": 5969.139330112726,
+        "p99_tpot_ms": 42.844402419999994,
+        "average_power_w": 1506.9136170212764,
+        "slo_attainment": 1.0
+      },
+      "reason": "",
+      "validity": "measured",
+      "applied_tpot_margin_pct": 1.4152040255798568,
+      "margin_source": "accuracy_domain",
+      "operating_point": [
+        {
+          "hardware": "A40",
+          "concurrency": 169.86345011512537,
+          "phase": "total",
+          "tpot_error_pct": -1.4152040255798568,
+          "ttft_error_pct": -2.036184446997977,
+          "in_calibration_domain": true
+        }
+      ]
+    }
+  ]
+}

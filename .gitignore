@@ -122,3 +122,20 @@ outputs/asym_plan/work/
 outputs/e6/*/work/
 outputs/e6/*/cache/
 outputs/e6/probe/
+
+# A40 low-load campaign, 2026-09-10/11 (docs/HANDOVER.md §2.2). Same split as
+# outputs/e6/ and outputs/lowload_sim_error/ above: what was MEASURED is
+# committed, what a committed input plus a seed regenerates is not.
+#
+# The E6 re-run's work and cache dirs are 1.6 GB of deterministic simulation --
+# the same exclusion outputs/.hp-* gets. Only the sweep summaries are kept.
+outputs/e6_rerun/*/work/
+outputs/e6_rerun/*/cache/
+# Re-spaced arrival traces: `respace_trace`/`write_trace` regenerate them
+# byte-for-byte from the committed dataset and the rate recorded in the point.
+outputs/a40_envelope_openloop/trace_*.jsonl
+outputs/a40_lowload_sim_error/trace_*.jsonl
+# The smoke run that validated the harness. Its meta.json and requests.jsonl are
+# kept as outputs/a40_envelope_openloop/lowload_reference/ because a test reads
+# them; the rest of the directory is scratch.
+outputs/a40_envelope_openloop/_smoke/

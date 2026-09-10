@@ -231,8 +231,13 @@ def test_the_backend_table_covers_exactly_the_three_vendor_specific_places():
     """Server launch, sampler, bench interpreter. Nothing else branched."""
     assert set(me.BACKENDS) == {"furiosa", "cuda"}
     for backend, entry in me.BACKENDS.items():
-        assert set(entry) == {"sampler", "bench_python"}, backend
+        assert set(entry) == {"server_bin", "sampler", "bench_python"}, backend
         assert (ROOT / entry["sampler"]).exists(), entry["sampler"]
+        # A repo-relative server binary must actually be there. `vllm` is NOT on
+        # PATH -- it lives in .venv-vllm -- and a bare name meant the server
+        # never started and the whole closed-loop run died at the first point.
+        if entry["server_bin"].startswith("."):
+            assert (ROOT / entry["server_bin"]).exists(), entry["server_bin"]
 
 
 def test_the_furiosa_defaults_are_byte_for_byte_what_they_were():
@@ -241,7 +246,7 @@ def test_the_furiosa_defaults_are_byte_for_byte_what_they_were():
     assert me.BACKENDS["furiosa"]["bench_python"] == "/usr/bin/python3"
     assert me.BACKENDS["furiosa"]["sampler"] == "experiments/scripts/power_sampler.sh"
     cmd, env = me.server_command("furiosa", "/path/to/artifact", 8000, card=2, tp=1)
-    assert cmd[:2] == ["furiosa-llm", "serve"]
+    assert cmd[:2] == ["furiosa-llm", "serve"]   # on PATH, passed verbatim
     assert "--devices" in cmd and cmd[cmd.index("--devices") + 1] == "npu:2:*"
     # FuriosaAI pins by flag, so it needs no environment at all -- an overlay here
     # would leak into the server and change what a re-run measures.
@@ -251,7 +256,8 @@ def test_the_furiosa_defaults_are_byte_for_byte_what_they_were():
 def test_cuda_pins_the_card_by_environment_because_there_is_no_flag():
     cmd, env = me.server_command("cuda", "meta-llama/Llama-3.1-8B", 8001,
                                  card=5, tp=1)
-    assert cmd[:2] == ["vllm", "serve"]
+    assert cmd[0] == str(ROOT / ".venv-vllm/bin/vllm"), cmd[0]
+    assert cmd[1] == "serve"
     assert cmd[2] == "meta-llama/Llama-3.1-8B"
     assert env == {"CUDA_VISIBLE_DEVICES": "5"}
     # The server must NOT also be told the physical index: inside the process the

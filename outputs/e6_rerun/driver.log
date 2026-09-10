@@ -1,0 +1,33 @@
+=== pd-rngd-gpu-card  2026-09-10T05:54:30Z ===
+accuracy domains: ['A40', 'RNGD-CARD']
+4 island(s): furiosa-rngd-card-node_rngd0(furiosa,1), furiosa-rngd-card-node_rngd1(furiosa,1), cuda-a40-node_a40a(cuda,4), cuda-a40-node_a40b(cuda,4)
+sweeping slo.ttft.max_ms (p99) over [64000.0, 8000.0] ms
+
+  TTFT <=    64000 ms : agg[furiosa:tp1]           aggregated   n=1  tok/J=   1.074 goodput=  0.95 rps p99_ttft=    386.9
+  TTFT <=     8000 ms : agg[furiosa:tp1]           aggregated   n=1  tok/J=   1.074 goodput=  0.95 rps p99_ttft=    386.9
+  TTFT <=    64000 ms : P[cuda:tp1] D[furiosa:tp1] pd_split     n=2  tok/J=   1.833 goodput=  2.70 rps p99_ttft=    620.3
+  TTFT <=     8000 ms : P[cuda:tp1] D[furiosa:tp1] pd_split     n=2  tok/J=   1.833 goodput=  2.70 rps p99_ttft=    620.3
+  TTFT <=    64000 ms : agg[cuda:tp4]              aggregated   n=4  tok/J=   2.595 goodput=  5.28 rps p99_ttft=  15070.1
+  TTFT <=     8000 ms : P[cuda:tp2] D[cuda:tp4]    pd_split     n=6  tok/J=   2.400 goodput=  5.21 rps p99_ttft=   1772.2
+  TTFT <=    64000 ms : agg[cuda:tp4]              aggregated   n=4  tok/J=   2.762 goodput=  5.59 rps p99_ttft=  27203.2
+  TTFT <=     8000 ms : P[cuda:tp1] D[cuda:tp2]    pd_split     n=6  tok/J=   2.320 goodput=  6.70 rps p99_ttft=    883.2
+
+wrote outputs/e6_rerun/pd-rngd-gpu-card/pd_slo_sweep.json
+=== pd-rngd-gpu-card exit 0  2026-09-10T10:05:20Z ===
+=== pd-rngd-gpu  2026-09-10T10:05:20Z ===
+accuracy domains: ['A40', 'RNGD-CARD']
+4 island(s): furiosa-rngd-node_rngd0(furiosa,8), furiosa-rngd-node_rngd1(furiosa,8), cuda-a40-node_a40a(cuda,4), cuda-a40-node_a40b(cuda,4)
+sweeping slo.ttft.max_ms (p99) over [64000.0, 8000.0] ms
+
+  TTFT <=    64000 ms : agg[furiosa:tp4]           aggregated   n=4  tok/J=   1.602 goodput=  0.94 rps p99_ttft=    664.2
+  TTFT <=     8000 ms : agg[furiosa:tp4]           aggregated   n=4  tok/J=   1.602 goodput=  0.94 rps p99_ttft=    664.2
+  TTFT <=    64000 ms : agg[furiosa:tp8]           aggregated   n=8  tok/J=   3.477 goodput=  2.67 rps p99_ttft=    495.3
+  TTFT <=     8000 ms : agg[furiosa:tp8]           aggregated   n=8  tok/J=   3.477 goodput=  2.67 rps p99_ttft=    495.3
+  TTFT <=    64000 ms : agg[furiosa:tp8]           aggregated   n=8  tok/J=   4.956 goodput=  3.75 rps p99_ttft=  29547.5
+  TTFT <=     8000 ms : P[cuda:tp2] D[cuda:tp4]    pd_split     n=6  tok/J=   2.398 goodput=  5.76 rps p99_ttft=    892.0
+  TTFT <=    64000 ms : agg[cuda:tp4]              aggregated   n=4  tok/J=   2.762 goodput=  5.59 rps p99_ttft=  27203.2
+  TTFT <=     8000 ms : P[cuda:tp2] D[cuda:tp4]    pd_split     n=6  tok/J=   2.657 goodput=  6.27 rps p99_ttft=   5969.1
+
+wrote outputs/e6_rerun/pd-rngd-gpu/pd_slo_sweep.json
+=== pd-rngd-gpu exit 0  2026-09-10T19:28:58Z ===
+ALL DONE 2026-09-10T19:28:58Z

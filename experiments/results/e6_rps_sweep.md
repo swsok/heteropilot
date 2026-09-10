@@ -213,3 +213,103 @@ two candidates that compile to the same placement and knobs share one simulation
 At 1 rps, 318 candidates resolved to 121 distinct keys and 197 hits. It is the same
 mechanism behind the renderer's "N other candidate(s) predict exactly this
 outcome".
+
+---
+
+# Re-run 2026-09-10/11 — the crossover survives the domain gaining a slope
+
+*Everything above is the 2026-09-09 run on the NPU node and is left unchanged.
+This section is the same sweep re-run on the **A40 node** after
+`profiles/calibration/a40.accuracy.yaml` went from one point to three
+(`docs/HANDOVER.md` §2.2). Same service spec, same two cluster fixtures, same
+four rates, same two TTFT points, same knob policy files, same seed, same 300
+requests. **The only input that changed is the A40 accuracy domain.** Artifacts:
+`outputs/e6_rerun/`.*
+
+## The answer, in one line
+
+**Seven of sixteen switchover cells move from `extrapolated` to `measured`. Every
+winner and every tok/J is unchanged to full precision.** The crossover was right;
+it is now standing on a measured accuracy domain over most of its range instead
+of on one point reused outside where it was fitted.
+
+| validity | before | after |
+| --- | ---: | ---: |
+| `measured` | 2 | **9** |
+| `extrapolated` | 9 | **2** |
+| `unknown` | 5 | 5 |
+
+Seven was also the **ceiling**, computed from the committed operating points
+before the measurement was taken, and the run hit it exactly. The two cells that
+stay `extrapolated` and the five that stay `unknown` cannot be fixed by measuring
+the A40 harder, for reasons given below.
+
+## What did not move, and why that is the interesting part
+
+Not one winner changed. Both mechanisms that could have moved one were checked:
+
+**TTFT margins rose sharply and still do not bind.** The new domain says the
+simulator is ~18 % optimistic on TTFT at low load rather than 1.97 % everywhere,
+so the TTFT margin at these operating points went from a flat 1.97 % to 2.0–9.6 %.
+It changes nothing because **no recommended plan is anywhere near its TTFT SLO** —
+the worst headroom in the table is 74.6 % of the SLO and most cells sit under
+25 %. TTFT is simply not the binding constraint in this regime; TPOT is.
+
+**TPOT margins got slightly SMALLER, not larger.** Interpolating between the
+low-load points (where the simulator is pessimistic, +0.59 %) and 170.56
+(−1.42 %) gives magnitudes below the flat 1.42 % the single point imposed:
+
+| fixture | rps / TTFT | TPOT margin before | after | winner's TPOT vs 50 ms SLO |
+| --- | --- | ---: | ---: | ---: |
+| card | 10 / 64 s | 1.42 % | **1.11 %** | 71.2 % |
+| card | 10 / 8 s | 1.42 % | **1.20 %** | **93.7 %** |
+| card | 20 / 64 s | 1.42 % | **1.33 %** | 72.0 % |
+| card | 20 / 8 s | 1.42 % | **0.87 %** | **92.9 %** |
+| per-PE | 10 / 8 s | 1.42 % | **1.08 %** | 74.5 % |
+| per-PE | 20 / 64 s | 1.42 % | **1.33 %** | 72.0 % |
+| per-PE | 20 / 8 s | 1.42 % | **1.42 %** | 85.7 % |
+
+So the domain became marginally more permissive exactly where it became measured,
+and the plans that already passed still pass. **The tight-TTFT cells are the ones
+to watch**: their winners run at 92.9 % and 93.7 % of the TPOT SLO, so a TPOT
+margin above about **6.7 %** would reject them. The measured domain gives ~1 %.
+That is a much stronger statement than the same conclusion drawn from an
+extrapolated 1.42 %, and it is the difference this work bought.
+
+## The two cells that stay `extrapolated`, permanently
+
+Both are the card fixture at 3.3 rps, and both are held there by the same thing:
+the winner is `P[cuda:tp1] D[furiosa:tp1]`, whose A40 leg is a **prefill role at
+served concurrency 0.499**. The domain now starts at 4.043. Closing that gap
+would mean measuring a server that is idle 99 % of the time, which is not an
+operating point a bench can hold — so this cell is not "not yet measured", it is
+**not measurable by this method**, and the label is doing exactly its job. Its
+12.52 % margin comes from the RNGD-CARD decode leg, which is in-domain, so the
+cell is better founded than the label alone suggests.
+
+## The five `unknown` cells are untouched, as expected
+
+Every one is a per-PE fixture cell whose winner is RNGD-only. The per-PE RNGD
+profile has **no accuracy domain at all**, so those plans carry margin 0.00 % and
+validity `unknown` — including the `agg[furiosa:tp8]` at 4.956 tok/J, which is
+D22's retracted headline reproduced exactly. Nothing here rehabilitates it.
+`docs/CLAIMS.md` §3 still stands. An A40 measurement cannot reach these cells;
+only a per-PE RNGD domain could, and that needs the NPU node.
+
+## Cross-node reproduction
+
+The simulation half reproduced on different hardware: **`generated` and
+`evaluated` are identical at all sixteen cells** (528/318 on the card fixture,
+616/357 on the other) and the recommended plan's tok/J is identical to full
+precision everywhere. Two differences, neither substantive:
+
+- **`rejected_summary` is richer here.** The committed run recorded nothing at
+  the 1 and 3.3 rps cells — the persistence gap `docs/HANDOVER.md` §3 describes —
+  while this run records `sim_error` counts there. Where both recorded, at 10 and
+  20 rps, the counts are **identical**: 68/68 on the card fixture, 114/114 and
+  118/118 on the other. That agreement is the evidence that the simulator itself
+  behaves the same on both nodes; the 1 and 3.3 rps figures were simply missing
+  before.
+- **Wall time is 2.5–2.8× longer**: 4.18 h and 9.39 h against 1.70 h and 3.31 h.
+  Partly 64 cores against 96, and partly that failing candidates are not cached,
+  so the second TTFT point re-attempts them instead of running nearly free.

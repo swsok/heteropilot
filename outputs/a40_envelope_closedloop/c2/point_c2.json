@@ -1,0 +1,57 @@
+{
+  "requested_concurrency": 2,
+  "served_concurrency": 1.9920064312149217,
+  "served_ratio": 0.9960032156074609,
+  "pool_binding": false,
+  "pool_size": 120,
+  "requests_ok": 120,
+  "requests_failed": 0,
+  "wall_s": 1238.837,
+  "throughput_tok_s": 64.97303519349197,
+  "ttft_ms": {
+    "p50": 183.419604,
+    "p95": 427.29517919999995,
+    "p99": 646.8872148200003
+  },
+  "tpot_ms": {
+    "p50": 30.219363175864043,
+    "p95": 31.49377515098845,
+    "p99": 32.725682327350036
+  },
+  "bench_window": {
+    "samples": 1239,
+    "dropped_samples": 0,
+    "duration_s": 1239.651,
+    "power_w": {
+      "mean": 284.7982082324455,
+      "p5": 266.812,
+      "p95": 289.36,
+      "min": 87.28,
+      "max": 296.82
+    },
+    "util_pct": {
+      "mean": 99.91928974979822,
+      "max_of_per_pe_max": 100.0
+    },
+    "dram_used_ratio_mean": 0.908504396287331
+  },
+  "idle_window": {
+    "samples": 60,
+    "dropped_samples": 0,
+    "duration_s": 60.06,
+    "power_w": {
+      "mean": 81.47333333333333,
+      "p5": 81.02,
+      "p95": 82.0015,
+      "min": 80.98,
+      "max": 82.09
+    },
+    "util_pct": {
+      "mean": 0.0,
+      "max_of_per_pe_max": 0.0
+    },
+    "dram_used_ratio_mean": 0.9060300000000008
+  },
+  "notes": [],
+  "repeat": 0
+}

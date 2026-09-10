@@ -263,18 +263,32 @@ def summarise_point(bench: dict, rows: list[SamplerRow], bench_window: Window,
 #: rather than a branch in the orchestration.
 BACKENDS = {
     "furiosa": {
+        # On PATH: the FuriosaAI stack is a system install.
+        "server_bin": "furiosa-llm",
         "sampler": "experiments/scripts/power_sampler.sh",
         # The vendor stack lives in the system interpreter; .venv has no `openai`
         # (verified 2026-09-08).
         "bench_python": "/usr/bin/python3",
     },
     "cuda": {
+        # NOT on PATH, and that is the "one venv per vendor" rule showing up in
+        # the launch line: vLLM is installed only in .venv-vllm, so a bare
+        # `vllm` resolves to nothing and the server never starts. Same venv as
+        # `bench_python` below, deliberately -- server and client must agree on
+        # the vLLM version they are speaking about.
+        "server_bin": ".venv-vllm/bin/vllm",
         "sampler": "experiments/scripts/power_sampler_nvidia.sh",
         # .venv-vllm is the CUDA venv and the only one here with vLLM + openai.
         # HANDOVER "One venv per vendor": never install vLLM into .venv.
         "bench_python": ".venv-vllm/bin/python",
     },
 }
+
+
+def _server_bin(backend: str) -> str:
+    """Absolute path for a repo-relative binary, verbatim for one on PATH."""
+    binary = BACKENDS[backend]["server_bin"]
+    return str(REPO_ROOT / binary) if binary.startswith(".") else binary
 
 
 def server_command(backend: str, artifact: str, port: int,
@@ -296,13 +310,13 @@ def server_command(backend: str, artifact: str, port: int,
     """
     if backend == "furiosa":
         return ([
-            "furiosa-llm", "serve", artifact,
+            _server_bin("furiosa"), "serve", artifact,
             "--host", "127.0.0.1", "--port", str(port),
             "--devices", f"npu:{card}:*",
         ], {})
     if backend == "cuda":
         cmd = [
-            "vllm", "serve", artifact,
+            _server_bin("cuda"), "serve", artifact,
             "--host", "127.0.0.1", "--port", str(port),
             "--tensor-parallel-size", str(tp),
         ]

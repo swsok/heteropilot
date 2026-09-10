@@ -135,17 +135,34 @@ measured TPOT error, not a hardware measurement.
 
 ## 2. Not established — and why
 
-**E6's crossover is real in simulation and almost entirely unmeasured.** On
+**E6's crossover is real in simulation and now measured over most of its
+range — upgraded 2026-09-11, and the upgrade did not change it.** On
 `pd-rngd-gpu-card` the recommended backend goes RNGD → cross-vendor P/D → A40 as
-the rate rises from 1 to 10 rps, at both TTFT points. **One of sixteen switchover
-cells is labelled `measured`** — the RNGD card at 1 rps — because the A40 accuracy
-domain has a single point at served concurrency 170.56 and every plan in the sweep
-runs far below it, so its margin is reused outside where it was fitted. A second
-A40 measurement at a different load would fix that and this node has no NVIDIA GPU.
-On the per-PE `pd-rngd-gpu` fixture the RNGD rows carry margin **0.00 %** and
-validity **unknown** for want of any domain at all — including a 4.956 tok/J at
-10 rps, which is D22's retracted headline reproduced exactly and is **not**
-rehabilitated by appearing here. `experiments/results/e6_rps_sweep.md`.
+the rate rises from 1 to 10 rps, at both TTFT points. **Nine of sixteen switchover
+cells are labelled `measured`**, up from one, after the A40 accuracy domain went
+from a single point at served concurrency 170.56 to three
+(`experiments/results/a40_lowload_envelope.md`). Every winner and every tok/J is
+**unchanged to full precision** — so what the extrapolated cells asserted turned
+out to be right, which is a stronger result than the labels alone.
+
+Seven cells still are not measured, and neither group is waiting on effort:
+
+  - **five are `unknown`** on the per-PE `pd-rngd-gpu` fixture, whose RNGD rows
+    carry margin **0.00 %** for want of any domain at all — including a 4.956
+    tok/J at 10 rps, which is D22's retracted headline reproduced exactly and is
+    **not** rehabilitated by appearing here. Only a per-PE RNGD domain fixes
+    these, and that needs the NPU node.
+  - **two are `extrapolated`** on the card fixture at 3.3 rps, whose winner's A40
+    leg is a *prefill role at served concurrency 0.499*. An almost-idle server is
+    not an operating point a bench can hold, so this is not measurable by this
+    method rather than not yet measured.
+
+**Carried with it, and it bears on any future tight-TTFT claim:** the simulator
+is **~18 % optimistic on TTFT at served concurrency 4–11**, where the single
+saturated point had the domain declaring 1.97 % everywhere. It changes no E6
+outcome because no recommended plan comes within 25 % of its TTFT SLO there —
+TPOT binds first — but it is the number a tight-TTFT result would inherit.
+`experiments/results/e6_rps_sweep.md`.
 
 **"tokens/J is unimodal in concurrency" — not observed, and the low-end mechanism
 is wrong.** `docs/rps_aware_planning_design.md` §1 derives it: idle power dominates
