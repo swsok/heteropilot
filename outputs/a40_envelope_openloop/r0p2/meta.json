@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "model": "NousResearch/Meta-Llama-3.1-8B",
+  "vllm_version": "0.19.0",
+  "engine_kwargs": {
+    "model": "/home/swsok/.cache/huggingface/hub/models--NousResearch--Meta-Llama-3.1-8B/snapshots/1f47e50cdbe801ad8a5174156ec3a0655108fb9f",
+    "tensor_parallel_size": 1,
+    "data_parallel_size": 1,
+    "enable_expert_parallel": false,
+    "max_num_seqs": 128,
+    "max_num_batched_tokens": 2048,
+    "max_model_len": null,
+    "dtype": "bfloat16",
+    "kv_cache_dtype": "auto",
+    "seed": 42
+  },
+  "dataset_path": "outputs/a40_envelope_openloop/trace_r0p2.jsonl",
+  "dataset_hash": "8a31c0269201003345b76281e21eb4d3f16e0d2fdba05d5d6ba2097a5365a668",
+  "num_requests": 300,
+  "started_at": "2026-09-10T04:23:05.654327Z",
+  "finished_at": "2026-09-10T04:48:23.869913Z",
+  "tick_seconds": 1.0
+}

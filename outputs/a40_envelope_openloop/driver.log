@@ -1,2 +1,5 @@
 r0p2: empty-card baseline 60 s
 r0p2: offering 0.2 rps over 300 requests (~25 min)
+0.2 rps rep0: served 4.08 (queue slope -0.000 s/s) 293.6 W
+r0p2_rep1: empty-card baseline 60 s
+r0p2_rep1: offering 0.2 rps over 300 requests (~25 min)

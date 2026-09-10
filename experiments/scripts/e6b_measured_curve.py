@@ -7,11 +7,21 @@ computes it (`throughput / mean output tokens`). Putting the two side by side as
 whether the simulator's error at each point stays inside what
 `accuracy_domain` declares -- i.e. whether the domain is honest about itself.
 
-**The asymmetry is the point and must survive into any sentence written from
-this.** The RNGD side is measured silicon. The A40 side exists only in simulation,
-because this node has no NVIDIA GPU (`scripts/whichnode.sh`), so a crossover
-claim reads "RNGD **measured** against A40 **simulated**" and never "RNGD against
-A40".
+**The asymmetry was the point and it is now half closed.** The RNGD side is
+measured silicon. The A40 side was simulation only, because the node this script
+was written on has no NVIDIA GPU -- so a crossover claim had to read "RNGD
+**measured** against A40 **simulated**". Since 2026-09-10 an A40 curve exists
+too, measured on the A40 node (`docs/HANDOVER.md` §2.2), and `--hardware A40`
+emits it.
+
+**The two curves are not interchangeable and this script will not pretend they
+are.** The RNGD curve is CLOSED-LOOP (a fixed number in flight); the A40 curve is
+OPEN-LOOP (an arrival trace replayed), because that is how the A40 accuracy
+domain's existing point was made and a domain must be internally consistent
+before it is externally comparable. Every row carries `closed_loop`, and a
+sentence putting the two devices on one axis has to say which protocol each side
+was measured under. `scripts/whichnode.sh` still decides what may be claimed
+from where: neither curve may be relabelled as the other node's.
 """
 
 from __future__ import annotations
@@ -27,22 +37,50 @@ sys.path.insert(0, str(ROOT))
 from planner.perf_envelope import load_envelope  # noqa: E402
 from planner.predictor.calibration import load_accuracy_domains  # noqa: E402
 
-ENV = ROOT / "profiles/envelopes/RNGD-CARD/meta-llama/Llama-3.1-8B/bf16/tp1.yaml"
-LOWLOAD = ROOT / "outputs/lowload_sim_error/lowload_sim_error.json"
+#: Per hardware: the measured envelope, the simulator-error file to read beside
+#: it, and what one unit of the curve IS. Adding a device is a row, not a branch.
+FIXTURES = {
+    "RNGD-CARD": {
+        "envelope": "profiles/envelopes/RNGD-CARD/meta-llama/Llama-3.1-8B/bf16/tp1.yaml",
+        "lowload": "outputs/lowload_sim_error/lowload_sim_error.json",
+        "unit": "one RNGD card, TP=8 internal",
+    },
+    "A40": {
+        "envelope": "profiles/envelopes/A40/meta-llama/Llama-3.1-8B/bf16/tp1.yaml",
+        "lowload": "outputs/a40_lowload_sim_error/lowload_sim_error.json",
+        "unit": "one A40, TP=1",
+    },
+}
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--out", type=Path, default=ROOT / "outputs/e6/e6b_measured.json")
+    ap.add_argument("--hardware", choices=sorted(FIXTURES), default="RNGD-CARD")
+    ap.add_argument("--out", type=Path, default=None,
+                    help="default: outputs/e6/e6b_measured[_<hw>].json")
     args = ap.parse_args()
 
-    env = load_envelope(ENV)
+    fixture = FIXTURES[args.hardware]
+    env_path = ROOT / fixture["envelope"]
+    lowload_path = ROOT / fixture["lowload"]
+    if args.out is None:
+        suffix = "" if args.hardware == "RNGD-CARD" else f"_{args.hardware.lower()}"
+        args.out = ROOT / f"outputs/e6/e6b_measured{suffix}.json"
+
+    env = load_envelope(env_path)
     mean_out = env.measured_on_workload.output_tokens_mean
     assert mean_out is not None
-    domain = load_accuracy_domains(ROOT)["RNGD-CARD"]
+    domains = load_accuracy_domains(ROOT)
+    if args.hardware not in domains:
+        raise SystemExit(
+            f"no accuracy domain for {args.hardware}: a measured curve without one "
+            f"cannot be checked against what the predictor claims about itself. "
+            f"Rule 3 -- borrowing another device's domain is not an option."
+        )
+    domain = domains[args.hardware]
     sim_err = {round(r["conc_measured"], 2): r
-               for r in json.loads(LOWLOAD.read_text()) if r.get("comparable")}
+               for r in json.loads(lowload_path.read_text()) if r.get("comparable")}
 
     rows = []
     for pt in env.points:
@@ -65,6 +103,7 @@ def main() -> int:
             "measured_power_w": pt.power_w,
             "measured_tok_per_j": pt.tok_per_j,
             "measured_tpot_p50_ms": pt.tpot_p50,
+            "closed_loop": env.closed_loop,
             "domain_declared_tpot_err_pct": declared,
             "observed_sim_tpot_err_pct": observed,
             "agrees": (None if (observed is None or declared is None)
@@ -73,11 +112,18 @@ def main() -> int:
 
     out = {
         "_note": __doc__.strip().splitlines()[0],
-        "envelope": str(ENV.relative_to(ROOT)),
+        "hardware": args.hardware,
+        "envelope": str(env_path.relative_to(ROOT)),
         "mean_output_tokens": mean_out,
-        "unit": "one RNGD card, TP=8 internal",
-        "measured_side": "RNGD: silicon (STEP 3). A40: SIMULATION ONLY -- no NVIDIA "
-                         "GPU on this node, so no measured A40 curve exists.",
+        "unit": fixture["unit"],
+        # Which protocol produced the curve. Two devices measured under different
+        # protocols may be reported side by side only with this attached.
+        "closed_loop": env.closed_loop,
+        "measured_side": (
+            f"{args.hardware}: measured silicon. Curves for different hardware in "
+            f"this directory may have been taken under different load protocols "
+            f"(closed_loop above) and on different nodes; neither may be "
+            f"relabelled as the other's."),
         "points": rows,
     }
     args.out.parent.mkdir(parents=True, exist_ok=True)
