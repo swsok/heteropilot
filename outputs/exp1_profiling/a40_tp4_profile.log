@@ -1,0 +1,67 @@
+[15:01:26] INFO     Model config:                                               
+                    /home/swsok/heteropilot/configs/model/meta-llama/Llama-3.1-8
+                    B.json (model_type=llama → architecture=llama)              
+─────────────── Profiling meta-llama/Llama-3.1-8B on A40 (llama) ───────────────
+           INFO     Variant: bf16                                               
+           INFO     TP degrees: [1, 4]                                          
+           INFO     Output root:                                                
+                    /home/swsok/heteropilot/profiler/perf/A40/meta-llama/Llama-3
+                    .1-8B/bf16                                                  
+           INFO     → TP=1  booting vLLM engine                                 
+[15:01:32] INFO     ✓ TP=1  booting vLLM engine (5.7s)                          
+           INFO     TP=1 limits: num_cache_tokens=9707936 max_model_len=131072  
+                    max_num_batched_tokens=2048 max_num_seqs=256                
+           INFO     dense resume: 1368 prior rows preloaded, 152 prior shot keys
+                    recognized                                                  
+           INFO     dense: skipping 152 already-measured shots, firing 0 new    
+           INFO     dense: nothing to do (all shots already measured)           
+           INFO     per_sequence resume: 80 prior rows preloaded, 40 prior shot 
+                    keys recognized                                             
+           INFO     per_sequence: skipping 40 already-measured shots, firing 0  
+                    new                                                         
+           INFO     per_sequence: nothing to do (all shots already measured)    
+           INFO     attention resume: 8643 prior rows preloaded, 8643 prior shot
+                    keys recognized                                             
+           INFO     attention: skipping 8643 already-measured shots, firing 0   
+                    new                                                         
+           INFO     attention: nothing to do (all shots already measured)       
+           INFO     skew grid: n=2-256 x2 ratio=[0.0625, 0.125, 0.25, 0.5, 0.75,
+                    0.9] pc=0, 16-2048 x2 kp=0, 512-8192 x2 kvs=128-16384 x2    
+                    skew=(T1=4.0, T2 swept)                                     
+           INFO     skew resume: 13009 prior rows on disk, 0 new cases to fire  
+                    (skipped 13009 already-measured)                            
+           INFO     skew:                                                       
+                    /home/swsok/heteropilot/profiler/perf/A40/meta-llama/Llama-3
+                    .1-8B/bf16/tp1/skew.csv already has all 13009 cases; nothing
+                    to do                                                       
+[15:01:33] INFO     → TP=4  booting vLLM engine                                 
+[15:01:40] INFO     ✓ TP=4  booting vLLM engine (7.3s)                          
+           INFO     TP=4 limits: num_cache_tokens=41059664 max_model_len=131072 
+                    max_num_batched_tokens=2048 max_num_seqs=256                
+TP=4  dense ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 152/152 0:00:22 • 0:00:00
+[15:02:02] INFO     ✓ dense →                                                   
+                    /home/swsok/heteropilot/profiler/perf/A40/meta-llama/Llama-3
+                    .1-8B/bf16/tp4/dense.csv                                    
+TP=4  per_sequence ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 40/40 0:00:16 • 0:00:00
+[15:02:19] INFO     ✓ per_sequence →                                            
+                    /home/swsok/heteropilot/profiler/perf/A40/meta-llama/Llama-3
+                    .1-8B/bf16/tp4/per_sequence.csv                             
+TP=4  attention ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 8643/8643 0:42:41 • 0:00:00
+[15:45:01] INFO     ✓ attention →                                               
+                    /home/swsok/heteropilot/profiler/perf/A40/meta-llama/Llama-3
+                    .1-8B/bf16/tp4/attention.csv                                
+           INFO     skew grid: n=2-256 x2 ratio=[0.0625, 0.125, 0.25, 0.5, 0.75,
+                    0.9] pc=0, 16-2048 x2 kp=0, 512-8192 x2 kvs=128-16384 x2    
+                    skew=(T1=4.0, T2 swept)                                     
+TP=4  skew ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 13009/13009 4:23:47 • 0:00:00
+[20:08:48] INFO     mixed: n=12682 alpha mean=-0.327 min=-5763.000 max=15.808   
+           INFO     pure: n=327 alpha mean=0.026 min=-1.086 max=1.248           
+           INFO     ✓ skew →                                                    
+                    /home/swsok/heteropilot/profiler/perf/A40/meta-llama/Llama-3
+                    .1-8B/bf16/tp4/skew.csv                                     
+[20:08:49] INFO     → replicating tp_stable layers across TP folders            
+           INFO     ✓ replicating tp_stable layers across TP folders (0.0s)     
+───────────────────────────────────── Done ─────────────────────────────────────
+[20:08:52] INFO     Results written to:                                         
+                    /home/swsok/heteropilot/profiler/perf/A40/meta-llama/Llama-3
+                    .1-8B/bf16                                                  

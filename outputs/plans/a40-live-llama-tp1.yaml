@@ -1,0 +1,62 @@
+feasible: true
+service_model: NousResearch/Meta-Llama-3.1-8B
+cluster_id: a40x8-node0
+recommended:
+  plan:
+    plan_id: a40-live-llama-tp1
+    model: NousResearch/Meta-Llama-3.1-8B
+    candidate:
+      id: a40-live
+      model: NousResearch/Meta-Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-a40-node0-0
+        role: aggregated
+        tp_size: 1
+        pp_size: 1
+        dp_replicas: 1
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 128
+        max_num_batched_tokens: 2048
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+    predicted:
+      p50_ttft_ms: 0.0
+      p95_ttft_ms: 0.0
+      p99_ttft_ms: 0.0
+      p50_tpot_ms: 0.0
+      p95_tpot_ms: 0.0
+      p99_tpot_ms: 0.0
+      throughput_tps: 0.0
+      slo_goodput_rps: 0.0
+      slo_attainment: 0.0
+      completed_requests: 0
+      completed_tokens: 0
+      total_energy_j: null
+      average_power_w: null
+      peak_power_w: null
+      tokens_per_joule: null
+      sim_wall_seconds: null
+    routing: load
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: minimize_energy
+  value: 0.0
+  note: live A40 deploy loop (ungated mirror = Llama-3.1-8B); predicted filled from
+    sim separately
+  equivalent_candidates: []
+alternatives: []
+unscored: []
+rejected_summary: {}
+evaluated_candidates: 0
+generated_candidates: 0
+reason: ''
+closest_plan: null
+violated_constraints: []
+suggestions: []
+provenance: {}
+caveats: []

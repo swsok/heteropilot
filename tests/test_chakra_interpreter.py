@@ -55,17 +55,49 @@ def test_there_is_no_user_site_fallback():
     D26 was dangerous because a wrong chakra was reachable and succeeded quietly.
     In-process, a venv without chakra raises -- but only if the wrong one is not on
     `sys.path` to be found instead. That is a property of the venv, so assert it.
+
+    **The check was `any('.local' in p for p in sys.path)` and that was a proxy for
+    the wrong thing.** It fails on the A40 node, where `uv` installs the
+    INTERPRETER under `~/.local/share/uv/python/cpython-3.10-.../lib/python3.10`:
+    those entries are the standard library, they are on every venv's path by
+    construction, and no chakra can be dropped into them by a stray `pip install
+    --user`. `~/.local/lib/python3.10/site-packages` -- the directory D26 was
+    actually about -- is absent and `ENABLE_USER_SITE` is False, so the property
+    held on the node where the assertion failed. It passed on the NPU node only
+    because its interpreter happens to live outside `~/.local`.
+
+    So the substring is replaced by the two things that are actually load-bearing:
+    the user-site directory is not importable, and the chakra this interpreter
+    resolves lives inside this interpreter's own prefix. The second is the
+    conclusion rather than a proxy for it -- whatever path a future layout puts the
+    wrong chakra on, an import from outside the venv fails here.
     """
     proc = subprocess.run(
+        # The module the frontend actually imports (serving/core/graph_generator.py
+        # line 21), not the `chakra` namespace above it -- that one is a namespace
+        # package whose `__file__` is None, so it cannot answer "from where".
         [sys.executable, "-c",
          "import site, sys;"
-         "print(site.ENABLE_USER_SITE, any('.local' in p for p in sys.path))"],
-        capture_output=True, text=True, timeout=60,
+         "from chakra.src.converter.llm_converter import LLMConverter;"
+         "u = site.getusersitepackages();"
+         "print(site.ENABLE_USER_SITE);"
+         "print(u in sys.path);"
+         "print(sys.prefix);"
+         "print(sys.modules[LLMConverter.__module__].__file__)"],
+        capture_output=True, text=True, timeout=120,
     )
     assert proc.returncode == 0, proc.stderr
-    enabled, local_on_path = proc.stdout.split()
-    assert enabled == "False" and local_on_path == "False", (
-        "the venv can see ~/.local/lib, so a chakra installed there could shadow or "
-        f"substitute for the venv's (D26): ENABLE_USER_SITE={enabled}, "
-        f"'.local' on sys.path={local_on_path}"
+    enabled, user_site_on_path, prefix, chakra_file = proc.stdout.split("\n")[:4]
+
+    assert enabled == "False" and user_site_on_path == "False", (
+        "the venv can see the user site-packages directory, so a chakra installed "
+        f"there could shadow or substitute for the venv's (D26): "
+        f"ENABLE_USER_SITE={enabled}, user site on sys.path={user_site_on_path}"
+    )
+    # The decisive one: not "could the wrong chakra be reachable" but "is the one
+    # we resolved the venv's". D27 converts with whatever this interpreter imports.
+    assert chakra_file.startswith(prefix), (
+        f"this interpreter's chakra resolves OUTSIDE its own prefix (D26): "
+        f"{chakra_file} is not under {prefix}. The frontend converts in-process "
+        "with exactly this module, so the .et bytes would come from it."
     )

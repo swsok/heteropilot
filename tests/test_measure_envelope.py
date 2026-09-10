@@ -20,7 +20,12 @@ visible in the artifact instead of in a retraction:
 from __future__ import annotations
 
 import importlib.util
+import os
+import shutil
+import signal
+import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -213,3 +218,153 @@ def test_reads_a_real_sampler_header_without_choking(tmp_path):
     assert len(rows) == 1
     assert rows[0].power_w == pytest.approx(38.0)
     assert rows[0].device_sn == "RNGD-A"
+
+
+# --- the CUDA execution half (docs/HANDOVER.md §2.2) ------------------------
+#
+# The analysis above is what the A5 rules live in and it never learned a vendor.
+# What follows guards the three places that DID know one, so that a CUDA point is
+# held to the same rules as an RNGD one -- which is the only reason the two curves
+# can be put in the same table.
+
+def test_the_backend_table_covers_exactly_the_three_vendor_specific_places():
+    """Server launch, sampler, bench interpreter. Nothing else branched."""
+    assert set(me.BACKENDS) == {"furiosa", "cuda"}
+    for backend, entry in me.BACKENDS.items():
+        assert set(entry) == {"sampler", "bench_python"}, backend
+        assert (ROOT / entry["sampler"]).exists(), entry["sampler"]
+
+
+def test_the_furiosa_defaults_are_byte_for_byte_what_they_were():
+    """Every committed RNGD invocation must still run unchanged. The system
+    interpreter and `power_sampler.sh` are what STEP 3 measured with."""
+    assert me.BACKENDS["furiosa"]["bench_python"] == "/usr/bin/python3"
+    assert me.BACKENDS["furiosa"]["sampler"] == "experiments/scripts/power_sampler.sh"
+    cmd, env = me.server_command("furiosa", "/path/to/artifact", 8000, card=2, tp=1)
+    assert cmd[:2] == ["furiosa-llm", "serve"]
+    assert "--devices" in cmd and cmd[cmd.index("--devices") + 1] == "npu:2:*"
+    # FuriosaAI pins by flag, so it needs no environment at all -- an overlay here
+    # would leak into the server and change what a re-run measures.
+    assert env == {}
+
+
+def test_cuda_pins_the_card_by_environment_because_there_is_no_flag():
+    cmd, env = me.server_command("cuda", "meta-llama/Llama-3.1-8B", 8001,
+                                 card=5, tp=1)
+    assert cmd[:2] == ["vllm", "serve"]
+    assert cmd[2] == "meta-llama/Llama-3.1-8B"
+    assert env == {"CUDA_VISIBLE_DEVICES": "5"}
+    # The server must NOT also be told the physical index: inside the process the
+    # pinned card is device 0, and passing 5 through would address a card that is
+    # not visible to it.
+    assert "5" not in cmd
+
+
+def test_cuda_tp_reaches_the_server_and_furiosa_ignores_it():
+    """TP is a launch flag on vLLM and a property of the compiled artifact on
+    FuriosaAI, so the same argument cannot mean the same thing on both."""
+    cmd, _ = me.server_command("cuda", "m", 8000, card=0, tp=4)
+    assert cmd[cmd.index("--tensor-parallel-size") + 1] == "4"
+    furiosa_cmd, _ = me.server_command("furiosa", "m", 8000, card=0, tp=4)
+    assert "--tensor-parallel-size" not in furiosa_cmd
+
+
+def test_an_unknown_backend_fails_loudly_rather_than_defaulting():
+    with pytest.raises(ValueError, match="unknown backend"):
+        me.server_command("rbln", "m", 8000, card=0, tp=1)
+
+
+def _stub_nvidia_smi(tmp_path: Path, rows: str) -> Path:
+    """A fake `nvidia-smi` so this test runs on the NPU and A5000 nodes too.
+
+    The sampler is A40-only in production, but a test that only passes where the
+    hardware is would be a gate that silently stops guarding on two of the three
+    machines this repository moves between.
+    """
+    d = tmp_path / "stubbin"
+    d.mkdir()
+    stub = d / "nvidia-smi"
+    stub.write_text(
+        "#!/usr/bin/env bash\n"
+        'case "$*" in\n'
+        '  *--version*) echo \'NVIDIA-SMI version  : 560.35.05\' ;;\n'
+        f"  *) printf '%s\\n' {rows!r} ;;\n"
+        "esac\n"
+    )
+    stub.chmod(0o755)
+    return d
+
+
+@pytest.mark.skipif(shutil.which("bash") is None, reason="needs bash")
+def test_the_nvidia_sampler_output_round_trips_through_the_analysis(tmp_path):
+    """The whole reason a second sampler was cheap: one schema, one parser.
+
+    Runs the real script against a stubbed `nvidia-smi` and feeds its output to
+    the same `read_sampler_csv` the RNGD files go through. If the columns ever
+    drift apart, every A40 power figure silently becomes null and this fails first.
+    """
+    row = ("3, GPU-deadbeef-0000-0000-0000-000000000000, NVIDIA A40, "
+           "00000000:07:00.0, 148.55, 97, 23034, 46068, 61")
+    stub_dir = _stub_nvidia_smi(tmp_path, row)
+    out = tmp_path / "power.csv"
+
+    env = {**os.environ, "PATH": f"{stub_dir}{os.pathsep}{os.environ['PATH']}"}
+    proc = subprocess.Popen(
+        [str(ROOT / "experiments/scripts/power_sampler_nvidia.sh"),
+         "--out", str(out), "--devices", "3"],
+        env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    try:
+        # Two ticks is enough to show the loop writes more than its header.
+        time.sleep(2.5)
+    finally:
+        os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+        proc.wait(timeout=30)
+
+    rows = me.read_sampler_csv(out)
+    assert len(rows) >= 2, out.read_text()
+    r = rows[0]
+    assert r.power_w == pytest.approx(148.55)
+    assert r.util_mean_pct == pytest.approx(97.0)
+    assert r.util_max_pct == pytest.approx(97.0)
+    # device_sn carries the UUID: nvidia-smi reports `serial` as [N/A] on these
+    # boards and the index moves under CUDA_VISIBLE_DEVICES.
+    assert r.device_sn == "GPU-deadbeef-0000-0000-0000-000000000000"
+    assert r.dram_used_ratio == pytest.approx(23034 / 46068)
+    assert r.dropped is False
+
+    # A5(c) again, now end to end: the analysis must find both numbers, from the
+    # same samples, or refuse to report either.
+    stats = me.window_stats(rows, me.Window(rows[0].ts - 0.5, rows[-1].ts + 0.5),
+                            device_sn=r.device_sn)
+    assert stats["power_w"]["mean"] == pytest.approx(148.55)
+    assert stats["util_pct"]["mean"] == pytest.approx(97.0)
+
+
+@pytest.mark.skipif(shutil.which("bash") is None, reason="needs bash")
+def test_the_nvidia_sampler_records_a_failed_query_as_a_hole(tmp_path):
+    """A dropped sample is a gap in the series, never a reading of zero watts --
+    the same convention as the RNGD sampler, asserted separately because a
+    sampler that silently skips looks identical to one that never ran."""
+    stub_dir = _stub_nvidia_smi(tmp_path, "")   # emits nothing -> query failed
+    out = tmp_path / "power.csv"
+    env = {**os.environ, "PATH": f"{stub_dir}{os.pathsep}{os.environ['PATH']}"}
+    proc = subprocess.Popen(
+        [str(ROOT / "experiments/scripts/power_sampler_nvidia.sh"),
+         "--out", str(out)],
+        env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    try:
+        time.sleep(2.5)
+    finally:
+        os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+        proc.wait(timeout=30)
+
+    rows = me.read_sampler_csv(out)
+    assert rows and all(r.dropped for r in rows)
+    stats = me.window_stats(rows, me.Window(rows[0].ts - 0.5, rows[-1].ts + 0.5))
+    assert stats["samples"] == 0
+    assert stats["dropped_samples"] == len(rows)
+    assert stats["power_w"] is None
