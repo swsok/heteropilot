@@ -67,7 +67,11 @@ def _arg_path(p: Path) -> str:
     is what the committed command lines show.
     """
     try:
-        return str(p.relative_to(ROOT))
+        # resolve() FIRST: a relative argument is not `relative_to` anything, so
+        # comparing it raw sent every repo-local path down the absolute branch --
+        # and `python -m serving` prepends `../` to what it is given, so an
+        # absolute path became `..//home/...` and the run died at startup.
+        return str(p.resolve().relative_to(ROOT))
     except ValueError:
         return str(p.resolve())
 

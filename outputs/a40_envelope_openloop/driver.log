@@ -3,3 +3,11 @@ r0p2: offering 0.2 rps over 300 requests (~25 min)
 0.2 rps rep0: served 4.08 (queue slope -0.000 s/s) 293.6 W
 r0p2_rep1: empty-card baseline 60 s
 r0p2_rep1: offering 0.2 rps over 300 requests (~25 min)
+0.2 rps rep1: served 4.08 (queue slope -0.000 s/s) 294.3 W
+r0p5: empty-card baseline 60 s
+r0p5: offering 0.5 rps over 300 requests (~10 min)
+0.5 rps rep0: served 11.27 (queue slope +0.000 s/s) 294.0 W
+r0p5_rep1: empty-card baseline 60 s
+r0p5_rep1: offering 0.5 rps over 300 requests (~10 min)
+0.5 rps rep1: served 11.27 (queue slope -0.000 s/s) 296.0 W
+wrote outputs/a40_envelope_openloop/envelope_openloop.json

@@ -155,3 +155,49 @@ def test_the_run_prefix_keeps_two_devices_from_colliding(tmp_path, monkeypatch):
         sys.argv = old
     run_id = seen[0][seen[0].index("--run-id") + 1]
     assert run_id.startswith("a40lowload-"), run_id
+
+
+def test_a_relative_repo_path_stays_relative(monkeypatch, tmp_path):
+    """The simulator is launched with `cwd=ROOT` and prepends `../` to what it
+    is given, so an absolute path becomes `..//home/...` and the run dies at
+    startup before simulating anything.
+
+    This is a regression test for a real failure: `_arg_path` compared the
+    argument to ROOT without resolving it first, and a relative argument is not
+    `relative_to` anything -- so every repo-local path passed on the command
+    line took the absolute branch. The two A40 runs died in
+    `config_builder.build_cluster_config` with
+    `'..//home/swsok/heteropilot/experiments/...' not found`.
+    """
+    seen = []
+
+    class _Done(Exception):
+        pass
+
+    def _capture(cmd, *args, **kwargs):
+        seen.append(cmd)
+        raise _Done
+
+    monkeypatch.setattr(ll.subprocess, "run", _capture)
+    # Relative, exactly as it is typed on the command line.
+    argv = ["lowload_sim_error.py",
+            "--cluster", "experiments/configs/clusters/rngd-card-llama31-8b-tp1.json",
+            "--out", str(tmp_path / "out")]
+    old, sys.argv = sys.argv, argv
+    try:
+        with pytest.raises(_Done):
+            ll.main()
+    finally:
+        sys.argv = old
+    cluster = seen[0][seen[0].index("--cluster-config") + 1]
+    assert cluster == "experiments/configs/clusters/rngd-card-llama31-8b-tp1.json", cluster
+    assert not cluster.startswith("/"), "an absolute path here becomes '..//...'"
+
+
+def test_a_path_outside_the_repo_is_absolute_not_a_crash(tmp_path):
+    """The other half: `relative_to` RAISES rather than returning something, so
+    an out-dir outside the tree used to abort the run."""
+    outside = tmp_path / "trace.jsonl"
+    assert ll._arg_path(outside) == str(outside.resolve())
+    assert ll._arg_path(ll.DEFAULT_CLUSTER) == (
+        "experiments/configs/clusters/rngd-card-llama31-8b-tp1.json")
