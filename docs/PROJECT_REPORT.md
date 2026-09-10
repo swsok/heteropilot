@@ -642,6 +642,56 @@ simulator. Unifying them would need its own golden-update plan and is deferred.
 
 ---
 
+### 4.10 RPS-aware selection — performance as a curve, not a scalar
+
+`experiments/results/e6_rps_sweep.md` · `e5_self_rejection.md` ·
+`rngd_lowload_envelope.md` · `docs/rps_sweep_example.md`
+
+**The problem D22 exposed is not a wrong number; it is a wrong shape.** A profile
+that states one throughput and one TPOT is a claim about a single operating point
+pretending to be a claim about the device. The simulator's error is a *function of
+that operating point* — measured, on one RNGD card, at **+11.6 % at served
+concurrency 3.9 and −18 % at 76** — so a planner holding a scalar cannot tell a
+plan that is optimistic from one that is infeasible. §4.8.7's winner passed a 50 ms
+TPOT SLO at a predicted 48.41 ms and 48.41 × 1.18 = 57.1.
+
+Four pieces close that hole, and each is refusable rather than approximate:
+
+| piece | what it is | what it refuses |
+| --- | --- | --- |
+| **performance envelope** (`planner/perf_envelope.py`) | measured curve, `concurrency_metric: served` mandatory | reading past `validity`; `Saturated` separates *genuine* from *unmeasured* |
+| **accuracy domain** (`profiles/calibration/*.yaml`) | the predictor's own error, indexed by operating point | a margin where nothing was measured — 0 and a note, never a borrowed number |
+| **operating point** (`planner/util/operating_point.py`) | served concurrency per hardware, from the run's own CSV | for P/D, the phase split gives prefill and decode their own loads |
+| **RPS axis** (`plan --rps`) | one plan per rate, plus switchover and crossovers | a crossover presented as measured — it is interpolated and labelled `estimated` |
+
+**What it buys, concretely.** E5: with no hand-set margin the planner now rejects
+§4.8.7's committed winner on its own — operating point 74.75, domain −17.69 %,
+robust TPOT 56.97 ms > 50, `SLO_VIOLATED` — and falls back to `agg[cuda:tp4]` at
+2.595 tok/J. That is the D22 retraction reproduced *by the pipeline*, and
+`tests/test_e5_self_rejection.py` holds it in CI with no simulator.
+
+**What it shows.** E6 sweeps two fixtures × two TTFT SLOs × RPS {1, 3.3, 10, 20}.
+There is a crossover: RNGD → cross-vendor P/D → A40 as the rate rises from 1 to 10
+rps. **One of sixteen switchover cells is labelled `measured`**, because the A40
+accuracy domain has a single point at concurrency 170.56 and every plan runs far
+below it. The label is the contribution as much as the crossover is.
+
+**What it costs to be honest.** On the per-PE fixture, which has no accuracy
+domain, the RNGD rows carry margin 0.00 % and validity `unknown` — including
+4.956 tok/J at 10 rps, which is D22's retracted headline reproduced exactly. The
+same silicon, profiled two ways, is margined where a domain exists and refused a
+margin where none does. E7 makes the dependency explicit: removing any single
+domain point never changes the winner (0 of 24), and removing the domain entirely
+flips 3.3 rps to an RNGD-only plan that looks 66 % more efficient.
+
+**Asymmetric TP per phase** (D28) was a prerequisite: `tp_d = 2·tp_p` had been
+recorded as a simulator limitation and was not one. With it enumerated, asymmetric
+P/D wins wherever TTFT is tight. Its dim-1 latency correction is a measured table
+(§`docs/slab3d_calibration.md`), not a law — the factor varies with the split, so
+an unmeasured split is refused rather than predicted.
+
+---
+
 ## 5. Engineering & discipline highlights
 
 - **Sim-vs-real calibration (A40, measured).** Linear fit `real = α·sim + β`:
@@ -685,10 +735,16 @@ simulator. Unifying them would need its own golden-update plan and is deferred.
 | **Exp 4 — GPU vs NPU island (SLO-goodput/J)** | superseded in substance, and its answer changed | The SLO sweeps of §4.8.7 answer the same question across 8 SLO points and two device abstractions — but their loose-TTFT half was retracted (D22) and their tight half is undetermined (D23). What the sweeps now say is that **the GPU wins wherever they can speak at all** |
 | **Tiered profiles / D4** | ✅ **done 2026-09-02** | Closed without external measurements: a datasheet-derived Tier 0 bundle puts Ascend into candidate generation with `profile_tier: analytical`. τ 0.90–0.91 against the measured ranking, top-1 disagreement costing 0.4 %/11.3 %. §4.9 |
 | **The loose-TTFT RNGD energy win (1.67×)** | ✅ **retracted 2026-09-02** | Under the measured 18 % TPOT optimism every RNGD configuration is infeasible on both fixtures; the winner becomes `agg[cuda:tp4]` at 2.595 tok/J. Any margin above 3.3 % rejects the committed winner. D22, `experiments/results/pd_slo_sweep_margin.md` |
-| **The tight-TTFT (sub-second) regime** | **open, blocks the P/D claim** | Every `pd_*`/`mix_*` candidate livelocks: prefill pinned at 1 running request, decode never fed, memory flat at 9 %, at 1080/1800/3600 s alike. The same candidate completed in 280.6 s in an earlier committed run, so it is a regression with an open cause. D23 |
+| **The tight-TTFT (sub-second) regime** | ✅ **resolved 2026-09-07**, and it flipped | Not a livelock in the candidates — **D26**: the Chakra converter ran under whatever `python` PATH found, so a multi-instance run could be built from `.et` bytes produced by the wrong protobuf. 18 completions of 18 with the venv first against 6 hangs of 6 without. Re-run: 0 timeouts where there were 71 and 126, all four tight points FEASIBLE, homogeneous `cuda` P/D winning three of them. `docs/d23_revalidation.md` |
+| **The loose-TTFT winner's infeasibility, found automatically** | ✅ **done 2026-09-09** | E5: with no manual margin the planner rejects it on its own — operating point 74.75, accuracy domain −17.69 %, robust TPOT 56.97 ms > 50. §4.10, `tests/test_e5_self_rejection.py` |
+| **Does the answer depend on arrival rate?** | ✅ **answered 2026-09-09** | Yes: RNGD → cross-vendor P/D → A40 between 1 and 10 rps. But **one of sixteen switchover cells rests on a measured accuracy domain**, because the A40 side has a single calibration point far above where these plans run. §4.10, `experiments/results/e6_rps_sweep.md` |
+| **Asymmetric TP per phase (`tp_d = 2·tp_p`)** | ✅ **done 2026-09-09** (D28) | Never a simulator limitation — `_compute_network_dims` plus a shared `local_dim`. `topology_mode: slab3d` expresses it with no idle rank; R1/R2/R3 byte-identical; the dim-1 latency correction is a 24-point measured table, not a law |
+| **A second A40 measurement, at a load the plans actually run at** | **open, and it is what "extrapolated" means** | The A40 accuracy domain has one point, at served concurrency 170.56, from a run that offered 10.3 rps to one card. Every E6 plan runs far below it, so its 1.42 % margin is held flat and every cuda row reads `extrapolated`. Needs an NVIDIA node; this one has none |
 | **GPU→host leg of the cross-vendor KV path** | ✅ **done 2026-08-27** (A40 server) | Sustained pinned D2H 25.71 GB/s single stream, 82.63 GB/s across 8 GPUs; saturates ~83 GB/s at 40 % of ideal against the NPU leg's 87 %. Unlike RNGD the A40 sustains its peak (0.998), so no D18-style correction was needed — but both legs are now composed from sustained figures. Cross-vendor fixture links land at 12.6–13.0 GB/s against a 35 GB/s placeholder that was 2.7–4.5× too optimistic; still above Exp 3's ~10 GB/s crossing. `experiments/results/gpu_host_bandwidth.md` |
 | **Measured NPU profiles** — ATOM | placeholder stub (D20) | `rebel-compiler` 0.11.0 vs `vllm_rbln`/`optimum-rbln` expecting 0.10.2, **and** the deeper block: host I/O exceeds the kernels and the device tracer's schema is undocumented, so no bundle can reach contract fidelity |
 | **The −71 % TTFT gap (card profile)** | ✅ **resolved 2026-08-28** (retraction) | Not a scheduler difference. The simulator replayed spread arrivals against a bench that fires everything at once and ignores the trace's `arrival_time_ns`. Matched arrivals: **−5.1 %**. Both TTFT calibrations refitted (card fit error 2.34 → 0.103). Deviations D19, `experiments/results/rngd_ttft_gap_resolved.md` |
+| **Simulation cost on the RPS axis** | ✅ **measured and reduced** | A 10 rps point is 1×, 3.3 rps 2.6×, 1 rps **10.3×** — the axis weighs 21.4×, not 6×. D27 (the Chakra converter called in-process) returned 1.55–1.72× with byte-identical output; E6a then ran in 5.0 h against a 12.8 h estimate. `docs/sim_cost_profile.md` |
+| **Surrogate top-K as a cost lever** | ✅ **ruled out 2026-09-08** (D30) | Its proxy tok/J is algebraically invariant to TP and DP, so it cannot rank the axis that decides feasibility. False-infeasible at K=20 on two of three P/D corpora, and the obvious repair breaks the third. Not used in E6. `docs/surrogate_topk_regret.md` |
 | **ASTRA-Sim collective over-charge** | target measured | 115 µs/layer measured against ~340 µs apparently charged. Calibrating `link_bw`/`link_latency` in `rngd-llama31-8b-tp8.json` should shrink the per-PE model's +25.7 % TPOT error |
 | **Asymmetric TP per phase** (D14) | structural | `A40 tp4 prefill + RNGD tp8 decode` — the industry-recommended shape — cannot be enumerated. Card-as-device *sidesteps* it by folding TP=8 inside the device; it does not lift the constraint |
 | **D12 prefix-cache memory growth** | open, blocks Phase 2 | Two attempted fixes were wrong and reverted; `serving/` is pristine. Read D12 before retrying |

@@ -1,0 +1,4905 @@
+feasible: true
+service_model: meta-llama/Llama-3.1-8B
+cluster_id: pd-rngd-gpu
+recommended:
+  plan:
+    plan_id: hp-00014
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: furiosa-rngd-node_rngd0-tp8-dp1-s128-t2048
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: furiosa-rngd-node_rngd0
+        role: aggregated
+        tp_size: 8
+        pp_size: 1
+        dp_replicas: 1
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 128
+        max_num_batched_tokens: 2048
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+        max_model_len: null
+      topology_mode: auto
+    predicted:
+      p50_ttft_ms: 260.0533425
+      p95_ttft_ms: 521.1056199999999
+      p99_ttft_ms: 533.8247064
+      p50_tpot_ms: 14.701124
+      p95_tpot_ms: 15.685691
+      p99_tpot_ms: 15.7383134
+      throughput_tps: 2319.2975160744654
+      slo_goodput_rps: 1.5554272121752166
+      slo_attainment: 1.0
+      completed_requests: 20
+      completed_tokens: 12884
+      total_energy_j: 6300.0
+      average_power_w: 484.3866666666666
+      peak_power_w: 496.86
+      tokens_per_joule: 2.0450793650793653
+      sim_wall_seconds: 35.29
+    routing: single
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: minimize_energy
+  value: -6300.0
+  note: ''
+  equivalent_candidates:
+  - furiosa-rngd-node_rngd0-tp8-dp1-s256-t2048
+  - furiosa-rngd-node_rngd0-tp8-dp1-s32-t2048
+  - furiosa-rngd-node_rngd1-tp8-dp1-s128-t2048
+  - furiosa-rngd-node_rngd1-tp8-dp1-s256-t2048
+  - furiosa-rngd-node_rngd1-tp8-dp1-s32-t2048
+alternatives:
+- plan:
+    plan_id: hp-00015
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: furiosa-rngd-node_rngd0-tp8-dp1-s128-t8192
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: furiosa-rngd-node_rngd0
+        role: aggregated
+        tp_size: 8
+        pp_size: 1
+        dp_replicas: 1
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 128
+        max_num_batched_tokens: 8192
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+        max_model_len: null
+      topology_mode: auto
+    predicted:
+      p50_ttft_ms: 264.6370955
+      p95_ttft_ms: 472.89861485
+      p99_ttft_ms: 483.94714296999996
+      p50_tpot_ms: 14.773819
+      p95_tpot_ms: 15.73860775
+      p99_tpot_ms: 15.79219915
+      throughput_tps: 2316.2474248458875
+      slo_goodput_rps: 1.5533816812057457
+      slo_attainment: 1.0
+      completed_requests: 20
+      completed_tokens: 12884
+      total_energy_j: 6310.0
+      average_power_w: 485.2230769230769
+      peak_power_w: 496.85
+      tokens_per_joule: 2.041838351822504
+      sim_wall_seconds: 36.32
+    routing: single
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: minimize_energy
+  value: -6310.0
+  note: lower p99_ttft_ms, higher p99_tpot_ms (worse), lower peak_power_w, lower tokens_per_joule
+    (worse)
+  equivalent_candidates:
+  - furiosa-rngd-node_rngd0-tp8-dp1-s256-t8192
+  - furiosa-rngd-node_rngd0-tp8-dp1-s32-t8192
+  - furiosa-rngd-node_rngd1-tp8-dp1-s128-t8192
+  - furiosa-rngd-node_rngd1-tp8-dp1-s256-t8192
+  - furiosa-rngd-node_rngd1-tp8-dp1-s32-t8192
+- plan:
+    plan_id: hp-00002
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: furiosa-rngd-node_rngd0-tp4-dp1-s128-t2048
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: furiosa-rngd-node_rngd0
+        role: aggregated
+        tp_size: 4
+        pp_size: 1
+        dp_replicas: 1
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 128
+        max_num_batched_tokens: 2048
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+        max_model_len: null
+      topology_mode: auto
+    predicted:
+      p50_ttft_ms: 799.7730805
+      p95_ttft_ms: 1466.2290479
+      p99_ttft_ms: 1468.3219191800001
+      p50_tpot_ms: 28.786028
+      p95_tpot_ms: 31.0314753
+      p99_tpot_ms: 31.19343586
+      throughput_tps: 1231.395728081101
+      slo_goodput_rps: 0.8258304125015767
+      slo_attainment: 1.0
+      completed_requests: 20
+      completed_tokens: 12884
+      total_energy_j: 9090.0
+      average_power_w: 373.2970833333334
+      peak_power_w: 376.54
+      tokens_per_joule: 1.4173817381738174
+      sim_wall_seconds: 18.08
+    routing: single
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: minimize_energy
+  value: -9090.0
+  note: higher p99_ttft_ms (worse), higher p99_tpot_ms (worse), lower peak_power_w,
+    lower tokens_per_joule (worse), lower active_accelerators
+  equivalent_candidates:
+  - furiosa-rngd-node_rngd0-tp4-dp1-s256-t2048
+  - furiosa-rngd-node_rngd0-tp4-dp1-s32-t2048
+  - furiosa-rngd-node_rngd1-tp4-dp1-s128-t2048
+  - furiosa-rngd-node_rngd1-tp4-dp1-s256-t2048
+  - furiosa-rngd-node_rngd1-tp4-dp1-s32-t2048
+- plan:
+    plan_id: hp-00075
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: cuda-a40-node_a40a-tp4-dp1-s128-t8192
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-a40-node_a40a
+        role: aggregated
+        tp_size: 4
+        pp_size: 1
+        dp_replicas: 1
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 128
+        max_num_batched_tokens: 8192
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+        max_model_len: null
+      topology_mode: auto
+    predicted:
+      p50_ttft_ms: 69.584248
+      p95_ttft_ms: 183.0478668
+      p99_ttft_ms: 184.65448856
+      p50_tpot_ms: 11.742589500000001
+      p95_tpot_ms: 12.210538399999999
+      p99_tpot_ms: 12.265416479999999
+      throughput_tps: 2915.3771069180552
+      slo_goodput_rps: 1.9551855052766784
+      slo_attainment: 1.0
+      completed_requests: 20
+      completed_tokens: 12884
+      total_energy_j: 13710.0
+      average_power_w: 1322.1889999999999
+      peak_power_w: 1365.18
+      tokens_per_joule: 0.9397520058351568
+      sim_wall_seconds: 18.63
+    routing: single
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: minimize_energy
+  value: -13710.0
+  note: lower p99_ttft_ms, lower p99_tpot_ms, higher peak_power_w (worse), lower tokens_per_joule
+    (worse), lower active_accelerators
+  equivalent_candidates:
+  - cuda-a40-node_a40a-tp4-dp1-s256-t8192
+  - cuda-a40-node_a40a-tp4-dp1-s32-t8192
+  - cuda-a40-node_a40b-tp4-dp1-s128-t8192
+  - cuda-a40-node_a40b-tp4-dp1-s256-t8192
+  - cuda-a40-node_a40b-tp4-dp1-s32-t8192
+- plan:
+    plan_id: hp-00074
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: cuda-a40-node_a40a-tp4-dp1-s128-t2048
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-a40-node_a40a
+        role: aggregated
+        tp_size: 4
+        pp_size: 1
+        dp_replicas: 1
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 128
+        max_num_batched_tokens: 2048
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+        max_model_len: null
+      topology_mode: auto
+    predicted:
+      p50_ttft_ms: 68.97669350000001
+      p95_ttft_ms: 245.364527
+      p99_ttft_ms: 258.0836134
+      p50_tpot_ms: 11.746557
+      p95_tpot_ms: 12.27279625
+      p99_tpot_ms: 12.33072725
+      throughput_tps: 2905.9793784048097
+      slo_goodput_rps: 1.9488829578196027
+      slo_attainment: 1.0
+      completed_requests: 20
+      completed_tokens: 12884
+      total_energy_j: 13760.0
+      average_power_w: 1321.962
+      peak_power_w: 1365.09
+      tokens_per_joule: 0.9363372093023256
+      sim_wall_seconds: 19.79
+    routing: single
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: minimize_energy
+  value: -13760.0
+  note: lower p99_ttft_ms, lower p99_tpot_ms, higher peak_power_w (worse), lower tokens_per_joule
+    (worse), lower active_accelerators
+  equivalent_candidates:
+  - cuda-a40-node_a40a-tp4-dp1-s256-t2048
+  - cuda-a40-node_a40a-tp4-dp1-s32-t2048
+  - cuda-a40-node_a40b-tp4-dp1-s128-t2048
+  - cuda-a40-node_a40b-tp4-dp1-s256-t2048
+  - cuda-a40-node_a40b-tp4-dp1-s32-t2048
+- plan:
+    plan_id: hp-00063
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: cuda-a40-node_a40a-tp2-dp1-s128-t8192
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-a40-node_a40a
+        role: aggregated
+        tp_size: 2
+        pp_size: 1
+        dp_replicas: 1
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 128
+        max_num_batched_tokens: 8192
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+        max_model_len: null
+      topology_mode: auto
+    predicted:
+      p50_ttft_ms: 180.4844315
+      p95_ttft_ms: 377.5141598
+      p99_ttft_ms: 379.12078156
+      p50_tpot_ms: 19.928225
+      p95_tpot_ms: 20.86672115
+      p99_tpot_ms: 20.96315223
+      throughput_tps: 1776.4025191638398
+      slo_goodput_rps: 1.191336945318114
+      slo_attainment: 1.0
+      completed_requests: 20
+      completed_tokens: 12884
+      total_energy_j: 14240.0
+      average_power_w: 841.935625
+      peak_power_w: 854.58
+      tokens_per_joule: 0.9047752808988764
+      sim_wall_seconds: 11.17
+    routing: single
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: minimize_energy
+  value: -14240.0
+  note: lower p99_ttft_ms, higher p99_tpot_ms (worse), higher peak_power_w (worse),
+    lower tokens_per_joule (worse), lower active_accelerators
+  equivalent_candidates:
+  - cuda-a40-node_a40a-tp2-dp1-s256-t8192
+  - cuda-a40-node_a40a-tp2-dp1-s32-t8192
+  - cuda-a40-node_a40b-tp2-dp1-s128-t8192
+  - cuda-a40-node_a40b-tp2-dp1-s256-t8192
+  - cuda-a40-node_a40b-tp2-dp1-s32-t8192
+- plan:
+    plan_id: hp-00039
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: cuda-a40-node_a40a-tp1-dp1-s128-t8192
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-a40-node_a40a
+        role: aggregated
+        tp_size: 1
+        pp_size: 1
+        dp_replicas: 1
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 128
+        max_num_batched_tokens: 8192
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+        max_model_len: null
+      topology_mode: auto
+    predicted:
+      p50_ttft_ms: 529.2847165000001
+      p95_ttft_ms: 636.4361575
+      p99_ttft_ms: 679.2650530999999
+      p50_tpot_ms: 37.907735
+      p95_tpot_ms: 39.5066362
+      p99_tpot_ms: 39.66693844
+      throughput_tps: 953.2027727368018
+      slo_goodput_rps: 0.6392614665259216
+      slo_attainment: 1.0
+      completed_requests: 20
+      completed_tokens: 12884
+      total_energy_j: 17780.0
+      average_power_w: 564.8370967741937
+      peak_power_w: 590.93
+      tokens_per_joule: 0.7246344206974128
+      sim_wall_seconds: 6.1
+    routing: single
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: minimize_energy
+  value: -17780.0
+  note: higher p99_ttft_ms (worse), higher p99_tpot_ms (worse), higher peak_power_w
+    (worse), lower tokens_per_joule (worse), lower active_accelerators
+  equivalent_candidates:
+  - cuda-a40-node_a40a-tp1-dp1-s256-t8192
+  - cuda-a40-node_a40a-tp1-dp1-s32-t8192
+  - cuda-a40-node_a40b-tp1-dp1-s128-t8192
+  - cuda-a40-node_a40b-tp1-dp1-s256-t8192
+  - cuda-a40-node_a40b-tp1-dp1-s32-t8192
+- plan:
+    plan_id: hp-00242
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: mix(cuda-a40-node_a40a-tp4-dp1+cuda-a40-node_a40b-tp4-dp1)-s128-t2048
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-a40-node_a40a
+        role: aggregated
+        tp_size: 4
+        pp_size: 1
+        dp_replicas: 1
+      - island_id: cuda-a40-node_a40b
+        role: aggregated
+        tp_size: 4
+        pp_size: 1
+        dp_replicas: 1
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 128
+        max_num_batched_tokens: 2048
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+        max_model_len: null
+      topology_mode: auto
+    predicted:
+      p50_ttft_ms: 70.66304199999999
+      p95_ttft_ms: 124.34197490000001
+      p99_ttft_ms: 144.01080377999997
+      p50_tpot_ms: 17.9834995
+      p95_tpot_ms: 18.43926815
+      p99_tpot_ms: 18.48426243
+      throughput_tps: 1914.634660045073
+      slo_goodput_rps: 1.2840417544397245
+      slo_attainment: 1.0
+      completed_requests: 20
+      completed_tokens: 12884
+      total_energy_j: 28280.0
+      average_power_w: 1829.017333333333
+      peak_power_w: 1897.0
+      tokens_per_joule: 0.45558698727015556
+      sim_wall_seconds: 41.86
+    routing: load
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: minimize_energy
+  value: -28280.0
+  note: lower p99_ttft_ms, higher p99_tpot_ms (worse), higher peak_power_w (worse),
+    lower tokens_per_joule (worse)
+  equivalent_candidates:
+  - mix(cuda-a40-node_a40a-tp4-dp1+cuda-a40-node_a40b-tp4-dp1)-s128-t8192
+  - mix(cuda-a40-node_a40a-tp4-dp1+cuda-a40-node_a40b-tp4-dp1)-s256-t2048
+  - mix(cuda-a40-node_a40a-tp4-dp1+cuda-a40-node_a40b-tp4-dp1)-s256-t8192
+  - mix(cuda-a40-node_a40a-tp4-dp1+cuda-a40-node_a40b-tp4-dp1)-s32-t2048
+  - mix(cuda-a40-node_a40a-tp4-dp1+cuda-a40-node_a40b-tp4-dp1)-s32-t8192
+- plan:
+    plan_id: hp-00230
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s128-t2048
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-a40-node_a40a
+        role: aggregated
+        tp_size: 2
+        pp_size: 1
+        dp_replicas: 2
+      - island_id: cuda-a40-node_a40b
+        role: aggregated
+        tp_size: 2
+        pp_size: 1
+        dp_replicas: 1
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 128
+        max_num_batched_tokens: 2048
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+        max_model_len: null
+      topology_mode: auto
+    predicted:
+      p50_ttft_ms: 84.351688
+      p95_ttft_ms: 149.71993510000001
+      p99_ttft_ms: 160.38428702
+      p50_tpot_ms: 19.0868295
+      p95_tpot_ms: 19.54317615
+      p99_tpot_ms: 19.54409043
+      throughput_tps: 1794.5430897315139
+      slo_goodput_rps: 1.2035028433582684
+      slo_attainment: 1.0
+      completed_requests: 20
+      completed_tokens: 12884
+      total_energy_j: 33810.0
+      average_power_w: 2062.925
+      peak_power_w: 2169.97
+      tokens_per_joule: 0.3810706891452233
+      sim_wall_seconds: 35.54
+    routing: load
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: minimize_energy
+  value: -33810.0
+  note: lower p99_ttft_ms, higher p99_tpot_ms (worse), higher peak_power_w (worse),
+    lower tokens_per_joule (worse), lower active_accelerators
+  equivalent_candidates:
+  - mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s128-t8192
+  - mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s256-t2048
+  - mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s256-t8192
+  - mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s32-t2048
+  - mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s32-t8192
+- plan:
+    plan_id: hp-00050
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: cuda-a40-node_a40a-tp1-dp3-s128-t2048
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-a40-node_a40a
+        role: aggregated
+        tp_size: 1
+        pp_size: 1
+        dp_replicas: 3
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 128
+        max_num_batched_tokens: 2048
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+        max_model_len: null
+      topology_mode: auto
+    predicted:
+      p50_ttft_ms: 162.747113
+      p95_ttft_ms: 262.2309488
+      p99_ttft_ms: 287.99616175999995
+      p50_tpot_ms: 32.1361735
+      p95_tpot_ms: 32.8835762
+      p99_tpot_ms: 32.914815239999996
+      throughput_tps: 1093.2936360308224
+      slo_goodput_rps: 0.7332128200863942
+      slo_attainment: 1.0
+      completed_requests: 20
+      completed_tokens: 12884
+      total_energy_j: 35140.0
+      average_power_w: 1292.4499999999998
+      peak_power_w: 1381.69
+      tokens_per_joule: 0.3666476949345475
+      sim_wall_seconds: 17.6
+    routing: load
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: minimize_energy
+  value: -35140.0
+  note: lower p99_ttft_ms, higher p99_tpot_ms (worse), higher peak_power_w (worse),
+    lower tokens_per_joule (worse), lower active_accelerators
+  equivalent_candidates:
+  - cuda-a40-node_a40a-tp1-dp3-s128-t8192
+  - cuda-a40-node_a40a-tp1-dp3-s256-t2048
+  - cuda-a40-node_a40a-tp1-dp3-s256-t8192
+  - cuda-a40-node_a40a-tp1-dp3-s32-t2048
+  - cuda-a40-node_a40a-tp1-dp3-s32-t8192
+  - cuda-a40-node_a40b-tp1-dp3-s128-t2048
+  - cuda-a40-node_a40b-tp1-dp3-s128-t8192
+  - cuda-a40-node_a40b-tp1-dp3-s256-t2048
+  - cuda-a40-node_a40b-tp1-dp3-s256-t8192
+  - cuda-a40-node_a40b-tp1-dp3-s32-t2048
+  - cuda-a40-node_a40b-tp1-dp3-s32-t8192
+- plan:
+    plan_id: hp-00128
+    model: meta-llama/Llama-3.1-8B
+    candidate:
+      id: mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp2)-s128-t2048
+      model: meta-llama/Llama-3.1-8B
+      dtype: bfloat16
+      assignments:
+      - island_id: cuda-a40-node_a40a
+        role: aggregated
+        tp_size: 1
+        pp_size: 1
+        dp_replicas: 1
+      - island_id: cuda-a40-node_a40b
+        role: aggregated
+        tp_size: 1
+        pp_size: 1
+        dp_replicas: 2
+      serving_arch: aggregated
+      knobs:
+        max_num_seqs: 128
+        max_num_batched_tokens: 2048
+        enable_chunked_prefill: true
+        enable_prefix_caching: false
+        prioritize_prefill: false
+        block_size: 16
+        kv_cache_dtype: auto
+        max_model_len: null
+      topology_mode: auto
+    predicted:
+      p50_ttft_ms: 162.747113
+      p95_ttft_ms: 262.2309488
+      p99_ttft_ms: 287.99616175999995
+      p50_tpot_ms: 32.135014
+      p95_tpot_ms: 32.882725199999996
+      p99_tpot_ms: 32.91372104
+      throughput_tps: 1093.3136053942474
+      slo_goodput_rps: 0.7332262124567416
+      slo_attainment: 1.0
+      completed_requests: 20
+      completed_tokens: 12884
+      total_energy_j: 39680.0
+      average_power_w: 1457.971111111111
+      peak_power_w: 1547.19
+      tokens_per_joule: 0.3246975806451613
+      sim_wall_seconds: 17.77
+    routing: load
+    robust_margin_ttft_percent: 0.0
+    robust_margin_tpot_percent: 0.0
+  objective: minimize_energy
+  value: -39680.0
+  note: lower p99_ttft_ms, higher p99_tpot_ms (worse), higher peak_power_w (worse),
+    lower tokens_per_joule (worse), lower active_accelerators
+  equivalent_candidates:
+  - mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp2)-s128-t8192
+  - mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp2)-s256-t2048
+  - mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp2)-s256-t8192
+  - mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp2)-s32-t2048
+  - mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp2)-s32-t8192
+unscored: []
+rejected_summary:
+  memory_infeasible: 4
+evaluated_candidates: 612
+generated_candidates: 616
+reason: ''
+closest_plan: null
+violated_constraints: []
+suggestions: []
+provenance:
+  git_commit: 801c7bf3e136f953acffc8d9b2ffd88a786328aa
+  git_dirty: true
+  llmservingsim_commit: 2c2042ce4bf1b0283ebeed1db95db6f25e3e7511
+  vllm_version: null
+  backend_version: null
+  model_revision: null
+  hardware_profile_hash: 9d36209c520047e6729f42e721dd71f2a5abfd61b9f235409ae5ad23218f2f0a
+  cluster_spec_hash: 1db71189086838c4ef6e2e4e7bf45269790b58b83de693bb377986fddb4f4a1b
+  service_spec_hash: 860c8a567b759ac948d4ae16951a5c878e7654201d9e89b08bf21e6e38f4880c
+  dataset_hash: 7daa7766e09b50450295482a4fdf5260c0cb5e3beecd79772100c92ab66496de
+  random_seed: 42
+  command: __main__.py plan --service examples/service_specs/llama31-8b.yaml --cluster
+    experiments/configs/clusters/pd-rngd-gpu.yaml --num-requests 20 --seed 42 --enable-pd
+    --workers 32 --work-dir outputs/asym_plan/work --output outputs/asym_plan/plan.yaml
+    --quiet
+  timestamp: '2026-09-09T06:27:13.243330+00:00'
+  python_version: 3.10.12
+  platform: Linux-6.8.0-40-generic-x86_64-with-glibc2.35
+  hostname: etri-001
+  cpu_count: 96
+  accelerators:
+    cuda: null
+    rngd_cards: 3
+    atom_devices: 4
+  workload:
+    path: outputs/asym_plan/work/workload.jsonl
+    num_requests: 20
+    random_seed: 42
+    total_input_tokens: 16938
+    total_output_tokens: 12884
+    horizon_s: 1.585
+  gpu_memory_utilization: 0.9
+  activation_reserve_gb: 0.0
+  enable_prefix_caching: false
+  bound_pruning: true
+  enable_pd: true
+  surrogate: null
+  top_k: null
+  topology:
+    link_bw_gbps: 7.7
+    link_latency_ns: 20000.0
+    basis: 'Level-1 bottleneck over 4 island(s): min bandwidth, max latency. The simulator
+      has no link graph, so contention_group and per-link energy are dropped here
+      (deviations D3).'
+    assumptions: []
+    model_level: 1
+    path_aware: false
+  pd_transfer:
+    note: planner-side analytical KV-transfer cost added to pd_split metrics; the
+      simulator models the prefill->decode handoff as free
+    candidates:
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s32-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s32-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s128-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s128-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s256-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s256-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp1-dp2 D)-s32-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp1-dp2 D)-s32-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp1-dp2 D)-s128-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp1-dp2 D)-s128-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp1-dp2 D)-s256-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp1-dp2 D)-s256-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp3 P + cuda-a40-node_a40b-tp1-dp3 D)-s32-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp3 P + cuda-a40-node_a40b-tp1-dp3 D)-s32-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp3 P + cuda-a40-node_a40b-tp1-dp3 D)-s128-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp3 P + cuda-a40-node_a40b-tp1-dp3 D)-s128-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp3 P + cuda-a40-node_a40b-tp1-dp3 D)-s256-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp3 P + cuda-a40-node_a40b-tp1-dp3 D)-s256-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s32-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s32-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s128-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s128-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s256-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s256-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s32-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s32-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s128-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s128-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s256-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s256-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s32-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s32-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s128-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s128-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s256-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s256-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s32-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s32-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s128-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s128-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s256-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s256-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s32-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s32-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s128-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s128-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s256-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s256-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s32-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s32-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s128-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s128-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s256-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s256-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s32-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s32-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s128-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s128-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s256-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s256-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp1 P + furiosa-rngd-node_rngd0-tp4-dp1
+        D)-s32-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp1 P + furiosa-rngd-node_rngd0-tp4-dp1
+        D)-s32-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp1 P + furiosa-rngd-node_rngd0-tp4-dp1
+        D)-s128-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp1 P + furiosa-rngd-node_rngd0-tp4-dp1
+        D)-s128-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp1 P + furiosa-rngd-node_rngd0-tp4-dp1
+        D)-s256-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp1 P + furiosa-rngd-node_rngd0-tp4-dp1
+        D)-s256-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp2 P + furiosa-rngd-node_rngd0-tp4-dp2
+        D)-s32-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp2 P + furiosa-rngd-node_rngd0-tp4-dp2
+        D)-s32-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp2 P + furiosa-rngd-node_rngd0-tp4-dp2
+        D)-s128-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp2 P + furiosa-rngd-node_rngd0-tp4-dp2
+        D)-s128-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp2 P + furiosa-rngd-node_rngd0-tp4-dp2
+        D)-s256-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp2 P + furiosa-rngd-node_rngd0-tp4-dp2
+        D)-s256-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp4-dp1 P + furiosa-rngd-node_rngd0-tp4-dp1
+        D)-s32-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp4-dp1 P + furiosa-rngd-node_rngd0-tp4-dp1
+        D)-s32-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp4-dp1 P + furiosa-rngd-node_rngd0-tp4-dp1
+        D)-s128-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp4-dp1 P + furiosa-rngd-node_rngd0-tp4-dp1
+        D)-s128-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp4-dp1 P + furiosa-rngd-node_rngd0-tp4-dp1
+        D)-s256-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp4-dp1 P + furiosa-rngd-node_rngd0-tp4-dp1
+        D)-s256-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp4-dp1 P + furiosa-rngd-node_rngd0-tp8-dp1
+        D)-s32-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp4-dp1 P + furiosa-rngd-node_rngd0-tp8-dp1
+        D)-s32-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp4-dp1 P + furiosa-rngd-node_rngd0-tp8-dp1
+        D)-s128-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp4-dp1 P + furiosa-rngd-node_rngd0-tp8-dp1
+        D)-s128-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp4-dp1 P + furiosa-rngd-node_rngd0-tp8-dp1
+        D)-s256-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp4-dp1 P + furiosa-rngd-node_rngd0-tp8-dp1
+        D)-s256-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp1 P + furiosa-rngd-node_rngd1-tp4-dp1
+        D)-s32-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp1 P + furiosa-rngd-node_rngd1-tp4-dp1
+        D)-s32-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp1 P + furiosa-rngd-node_rngd1-tp4-dp1
+        D)-s128-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp1 P + furiosa-rngd-node_rngd1-tp4-dp1
+        D)-s128-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp1 P + furiosa-rngd-node_rngd1-tp4-dp1
+        D)-s256-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp1 P + furiosa-rngd-node_rngd1-tp4-dp1
+        D)-s256-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp2 P + furiosa-rngd-node_rngd1-tp4-dp2
+        D)-s32-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp2 P + furiosa-rngd-node_rngd1-tp4-dp2
+        D)-s32-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp2 P + furiosa-rngd-node_rngd1-tp4-dp2
+        D)-s128-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp2 P + furiosa-rngd-node_rngd1-tp4-dp2
+        D)-s128-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp2 P + furiosa-rngd-node_rngd1-tp4-dp2
+        D)-s256-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp2-dp2 P + furiosa-rngd-node_rngd1-tp4-dp2
+        D)-s256-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp4-dp1 P + furiosa-rngd-node_rngd1-tp4-dp1
+        D)-s32-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp4-dp1 P + furiosa-rngd-node_rngd1-tp4-dp1
+        D)-s32-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp4-dp1 P + furiosa-rngd-node_rngd1-tp4-dp1
+        D)-s128-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp4-dp1 P + furiosa-rngd-node_rngd1-tp4-dp1
+        D)-s128-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp4-dp1 P + furiosa-rngd-node_rngd1-tp4-dp1
+        D)-s256-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp4-dp1 P + furiosa-rngd-node_rngd1-tp4-dp1
+        D)-s256-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp4-dp1 P + furiosa-rngd-node_rngd1-tp8-dp1
+        D)-s32-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp4-dp1 P + furiosa-rngd-node_rngd1-tp8-dp1
+        D)-s32-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp4-dp1 P + furiosa-rngd-node_rngd1-tp8-dp1
+        D)-s128-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp4-dp1 P + furiosa-rngd-node_rngd1-tp8-dp1
+        D)-s128-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp4-dp1 P + furiosa-rngd-node_rngd1-tp8-dp1
+        D)-s256-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40a-tp4-dp1 P + furiosa-rngd-node_rngd1-tp8-dp1
+        D)-s256-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s32-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s32-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s128-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s128-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s256-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s256-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp1-dp2 D)-s32-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp1-dp2 D)-s32-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp1-dp2 D)-s128-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp1-dp2 D)-s128-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp1-dp2 D)-s256-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp1-dp2 D)-s256-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp3 P + cuda-a40-node_a40a-tp1-dp3 D)-s32-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp3 P + cuda-a40-node_a40a-tp1-dp3 D)-s32-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp3 P + cuda-a40-node_a40a-tp1-dp3 D)-s128-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp3 P + cuda-a40-node_a40a-tp1-dp3 D)-s128-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp3 P + cuda-a40-node_a40a-tp1-dp3 D)-s256-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp3 P + cuda-a40-node_a40a-tp1-dp3 D)-s256-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp4 P + cuda-a40-node_a40a-tp1-dp4 D)-s32-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp4 P + cuda-a40-node_a40a-tp1-dp4 D)-s32-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp4 P + cuda-a40-node_a40a-tp1-dp4 D)-s128-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp4 P + cuda-a40-node_a40a-tp1-dp4 D)-s128-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp4 P + cuda-a40-node_a40a-tp1-dp4 D)-s256-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp4 P + cuda-a40-node_a40a-tp1-dp4 D)-s256-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s32-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s32-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s128-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s128-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s256-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s256-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s32-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s32-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s128-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s128-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s256-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s256-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s32-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s32-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s128-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s128-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s256-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s256-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s32-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s32-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s128-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s128-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s256-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s256-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s32-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s32-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s128-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s128-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s256-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s256-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s32-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s32-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s128-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s128-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s256-t2048
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s256-t8192
+      xfer_ms_p50: 2.741978181818182
+      xfer_ms_p95: 9.217381818181819
+      xfer_ms_p99: 10.758967272727272
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 35.2
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp1 P + furiosa-rngd-node_rngd0-tp4-dp1
+        D)-s32-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp1 P + furiosa-rngd-node_rngd0-tp4-dp1
+        D)-s32-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp1 P + furiosa-rngd-node_rngd0-tp4-dp1
+        D)-s128-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp1 P + furiosa-rngd-node_rngd0-tp4-dp1
+        D)-s128-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp1 P + furiosa-rngd-node_rngd0-tp4-dp1
+        D)-s256-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp1 P + furiosa-rngd-node_rngd0-tp4-dp1
+        D)-s256-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp2 P + furiosa-rngd-node_rngd0-tp4-dp2
+        D)-s32-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp2 P + furiosa-rngd-node_rngd0-tp4-dp2
+        D)-s32-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp2 P + furiosa-rngd-node_rngd0-tp4-dp2
+        D)-s128-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp2 P + furiosa-rngd-node_rngd0-tp4-dp2
+        D)-s128-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp2 P + furiosa-rngd-node_rngd0-tp4-dp2
+        D)-s256-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp2 P + furiosa-rngd-node_rngd0-tp4-dp2
+        D)-s256-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp4-dp1 P + furiosa-rngd-node_rngd0-tp4-dp1
+        D)-s32-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp4-dp1 P + furiosa-rngd-node_rngd0-tp4-dp1
+        D)-s32-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp4-dp1 P + furiosa-rngd-node_rngd0-tp4-dp1
+        D)-s128-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp4-dp1 P + furiosa-rngd-node_rngd0-tp4-dp1
+        D)-s128-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp4-dp1 P + furiosa-rngd-node_rngd0-tp4-dp1
+        D)-s256-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp4-dp1 P + furiosa-rngd-node_rngd0-tp4-dp1
+        D)-s256-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp4-dp1 P + furiosa-rngd-node_rngd0-tp8-dp1
+        D)-s32-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp4-dp1 P + furiosa-rngd-node_rngd0-tp8-dp1
+        D)-s32-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp4-dp1 P + furiosa-rngd-node_rngd0-tp8-dp1
+        D)-s128-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp4-dp1 P + furiosa-rngd-node_rngd0-tp8-dp1
+        D)-s128-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp4-dp1 P + furiosa-rngd-node_rngd0-tp8-dp1
+        D)-s256-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp4-dp1 P + furiosa-rngd-node_rngd0-tp8-dp1
+        D)-s256-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp1 P + furiosa-rngd-node_rngd1-tp4-dp1
+        D)-s32-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp1 P + furiosa-rngd-node_rngd1-tp4-dp1
+        D)-s32-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp1 P + furiosa-rngd-node_rngd1-tp4-dp1
+        D)-s128-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp1 P + furiosa-rngd-node_rngd1-tp4-dp1
+        D)-s128-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp1 P + furiosa-rngd-node_rngd1-tp4-dp1
+        D)-s256-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp1 P + furiosa-rngd-node_rngd1-tp4-dp1
+        D)-s256-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp2 P + furiosa-rngd-node_rngd1-tp4-dp2
+        D)-s32-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp2 P + furiosa-rngd-node_rngd1-tp4-dp2
+        D)-s32-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp2 P + furiosa-rngd-node_rngd1-tp4-dp2
+        D)-s128-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp2 P + furiosa-rngd-node_rngd1-tp4-dp2
+        D)-s128-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp2 P + furiosa-rngd-node_rngd1-tp4-dp2
+        D)-s256-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp2-dp2 P + furiosa-rngd-node_rngd1-tp4-dp2
+        D)-s256-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp4-dp1 P + furiosa-rngd-node_rngd1-tp4-dp1
+        D)-s32-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp4-dp1 P + furiosa-rngd-node_rngd1-tp4-dp1
+        D)-s32-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp4-dp1 P + furiosa-rngd-node_rngd1-tp4-dp1
+        D)-s128-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp4-dp1 P + furiosa-rngd-node_rngd1-tp4-dp1
+        D)-s128-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp4-dp1 P + furiosa-rngd-node_rngd1-tp4-dp1
+        D)-s256-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp4-dp1 P + furiosa-rngd-node_rngd1-tp4-dp1
+        D)-s256-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp4-dp1 P + furiosa-rngd-node_rngd1-tp8-dp1
+        D)-s32-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp4-dp1 P + furiosa-rngd-node_rngd1-tp8-dp1
+        D)-s32-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp4-dp1 P + furiosa-rngd-node_rngd1-tp8-dp1
+        D)-s128-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp4-dp1 P + furiosa-rngd-node_rngd1-tp8-dp1
+        D)-s128-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp4-dp1 P + furiosa-rngd-node_rngd1-tp8-dp1
+        D)-s256-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(cuda-a40-node_a40b-tp4-dp1 P + furiosa-rngd-node_rngd1-tp8-dp1
+        D)-s256-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1
+        D)-s32-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1
+        D)-s32-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1
+        D)-s128-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1
+        D)-s128-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1
+        D)-s256-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1
+        D)-s256-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1
+        D)-s32-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1
+        D)-s32-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1
+        D)-s128-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1
+        D)-s128-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1
+        D)-s256-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1
+        D)-s256-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp4-dp1 P + furiosa-rngd-node_rngd1-tp4-dp1
+        D)-s32-t2048
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp4-dp1 P + furiosa-rngd-node_rngd1-tp4-dp1
+        D)-s32-t8192
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp4-dp1 P + furiosa-rngd-node_rngd1-tp4-dp1
+        D)-s128-t2048
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp4-dp1 P + furiosa-rngd-node_rngd1-tp4-dp1
+        D)-s128-t8192
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp4-dp1 P + furiosa-rngd-node_rngd1-tp4-dp1
+        D)-s256-t2048
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp4-dp1 P + furiosa-rngd-node_rngd1-tp4-dp1
+        D)-s256-t8192
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp4-dp2 P + furiosa-rngd-node_rngd1-tp4-dp2
+        D)-s32-t2048
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp4-dp2 P + furiosa-rngd-node_rngd1-tp4-dp2
+        D)-s32-t8192
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp4-dp2 P + furiosa-rngd-node_rngd1-tp4-dp2
+        D)-s128-t2048
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp4-dp2 P + furiosa-rngd-node_rngd1-tp4-dp2
+        D)-s128-t8192
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp4-dp2 P + furiosa-rngd-node_rngd1-tp4-dp2
+        D)-s256-t2048
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp4-dp2 P + furiosa-rngd-node_rngd1-tp4-dp2
+        D)-s256-t8192
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp4-dp1 P + furiosa-rngd-node_rngd1-tp8-dp1
+        D)-s32-t2048
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp4-dp1 P + furiosa-rngd-node_rngd1-tp8-dp1
+        D)-s32-t8192
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp4-dp1 P + furiosa-rngd-node_rngd1-tp8-dp1
+        D)-s128-t2048
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp4-dp1 P + furiosa-rngd-node_rngd1-tp8-dp1
+        D)-s128-t8192
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp4-dp1 P + furiosa-rngd-node_rngd1-tp8-dp1
+        D)-s256-t2048
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp4-dp1 P + furiosa-rngd-node_rngd1-tp8-dp1
+        D)-s256-t8192
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp8-dp1 P + furiosa-rngd-node_rngd1-tp8-dp1
+        D)-s32-t2048
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp8-dp1 P + furiosa-rngd-node_rngd1-tp8-dp1
+        D)-s32-t8192
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp8-dp1 P + furiosa-rngd-node_rngd1-tp8-dp1
+        D)-s128-t2048
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp8-dp1 P + furiosa-rngd-node_rngd1-tp8-dp1
+        D)-s128-t8192
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp8-dp1 P + furiosa-rngd-node_rngd1-tp8-dp1
+        D)-s256-t2048
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd0-tp8-dp1 P + furiosa-rngd-node_rngd1-tp8-dp1
+        D)-s256-t8192
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1
+        D)-s32-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1
+        D)-s32-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1
+        D)-s128-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1
+        D)-s128-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1
+        D)-s256-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1
+        D)-s256-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1
+        D)-s32-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1
+        D)-s32-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1
+        D)-s128-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1
+        D)-s128-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1
+        D)-s256-t2048
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1
+        D)-s256-t8192
+      xfer_ms_p50: 7.624256507936508
+      xfer_ms_p95: 25.714273015873015
+      xfer_ms_p99: 30.020924444444443
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 12.6
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp4-dp1 P + furiosa-rngd-node_rngd0-tp4-dp1
+        D)-s32-t2048
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp4-dp1 P + furiosa-rngd-node_rngd0-tp4-dp1
+        D)-s32-t8192
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp4-dp1 P + furiosa-rngd-node_rngd0-tp4-dp1
+        D)-s128-t2048
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp4-dp1 P + furiosa-rngd-node_rngd0-tp4-dp1
+        D)-s128-t8192
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp4-dp1 P + furiosa-rngd-node_rngd0-tp4-dp1
+        D)-s256-t2048
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp4-dp1 P + furiosa-rngd-node_rngd0-tp4-dp1
+        D)-s256-t8192
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp4-dp2 P + furiosa-rngd-node_rngd0-tp4-dp2
+        D)-s32-t2048
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp4-dp2 P + furiosa-rngd-node_rngd0-tp4-dp2
+        D)-s32-t8192
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp4-dp2 P + furiosa-rngd-node_rngd0-tp4-dp2
+        D)-s128-t2048
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp4-dp2 P + furiosa-rngd-node_rngd0-tp4-dp2
+        D)-s128-t8192
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp4-dp2 P + furiosa-rngd-node_rngd0-tp4-dp2
+        D)-s256-t2048
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp4-dp2 P + furiosa-rngd-node_rngd0-tp4-dp2
+        D)-s256-t8192
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp4-dp1 P + furiosa-rngd-node_rngd0-tp8-dp1
+        D)-s32-t2048
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp4-dp1 P + furiosa-rngd-node_rngd0-tp8-dp1
+        D)-s32-t8192
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp4-dp1 P + furiosa-rngd-node_rngd0-tp8-dp1
+        D)-s128-t2048
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp4-dp1 P + furiosa-rngd-node_rngd0-tp8-dp1
+        D)-s128-t8192
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp4-dp1 P + furiosa-rngd-node_rngd0-tp8-dp1
+        D)-s256-t2048
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp4-dp1 P + furiosa-rngd-node_rngd0-tp8-dp1
+        D)-s256-t8192
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp8-dp1 P + furiosa-rngd-node_rngd0-tp8-dp1
+        D)-s32-t2048
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp8-dp1 P + furiosa-rngd-node_rngd0-tp8-dp1
+        D)-s32-t8192
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp8-dp1 P + furiosa-rngd-node_rngd0-tp8-dp1
+        D)-s128-t2048
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp8-dp1 P + furiosa-rngd-node_rngd0-tp8-dp1
+        D)-s128-t8192
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp8-dp1 P + furiosa-rngd-node_rngd0-tp8-dp1
+        D)-s256-t2048
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+    - candidate_id: pd(furiosa-rngd-node_rngd1-tp8-dp1 P + furiosa-rngd-node_rngd0-tp8-dp1
+        D)-s256-t8192
+      xfer_ms_p50: 12.46332883116883
+      xfer_ms_p95: 42.06517402597403
+      xfer_ms_p99: 49.11242181818182
+      energy_j_per_req: 0.0
+      energy_prompt_tokens_p50: 731
+      prompt_tokens:
+        p50: 731
+        p95: 2470
+        p99: 2884
+      path_bw_gbps: 7.7
+      path_latency_ns: 20000.0
+      class_default: false
+      assumptions: []
+  profile_tier: measured
+  profile_tiers:
+    cuda-a40-node_a40a: measured
+    cuda-a40-node_a40b: measured
+    furiosa-rngd-node_rngd0: measured
+    furiosa-rngd-node_rngd1: measured
+caveats:
+- 'Prefix caching is disabled for every candidate. With it enabled the simulator''s
+  prefix-cache memory grows monotonically and the run dies on any device small enough
+  to saturate (docs/deviations.md D12). Consequence: ServiceSpec.traffic.prefix_share_ratio
+  has no effect on these predictions, and TTFT is pessimistic for workloads with genuinely
+  shared prefixes.'
+- P/D KV-transfer cost is a planner-side analytical add-on; the simulator models the
+  prefill->decode handoff as free (docs/phase5_plan.md increment 2). Reported TTFT
+  and energy for pd_split plans include it. TTFT offsets are per-percentile (p99 uses
+  the p99 prompt length, etc.); the energy offset is a p50/median approximation of
+  the mean, so it is slightly low on skewed prompt distributions. TPOT is unchanged
+  (the transfer is one-time, pre-decode) and transfer power is not modeled. Bandwidth/path/prompt
+  assumptions are recorded in provenance['pd_transfer'].
+profile_tier: measured
+profile_tiers:
+  cuda-a40-node_a40a: measured
+  cuda-a40-node_a40b: measured
+  furiosa-rngd-node_rngd0: measured
+  furiosa-rngd-node_rngd1: measured

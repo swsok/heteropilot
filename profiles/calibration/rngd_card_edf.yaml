@@ -24,6 +24,55 @@ hardware:
           p95_abs_error: 0.03467796787526812
           worst_error: 0.036101083032490974
           sample_count: 5
+    # Where this predictor's error has been MEASURED, and what it was
+    # (docs/rps_aware_planning_design.md §5). The point of carrying it here is
+    # that D22's winner passed a 50 ms TPOT SLO at a predicted 48.41 ms and
+    # 48.41 x 1.18 = 57.1: the configuration was infeasible, not optimistic, and
+    # nothing in the pipeline could see it because the 18 % was a fact about the
+    # simulator that the simulator did not carry.
+    #
+    # Sign: (sim - measured) / measured. Negative TPOT = the simulator is
+    # optimistic, which is the direction that produced the retraction.
+    #
+    #   16.6  the concurrency the EDF-rebuilt bundle was fitted at
+    #         (PROJECT_REPORT §4.8.4: TPOT -3.1 %, was +25.7 % before the rebuild)
+    #   76    interpolated from the c64/c128 envelope points to the load the card
+    #         fixture's winner implies (experiments/results/rngd_concurrency_envelope.md:
+    #         throughput 1.31x optimistic, TPOT 18 % optimistic)
+    accuracy_domain:
+      fitted_at_concurrency: 16.6
+      outside_domain: widen_error_bars
+      source: measured
+      #
+      # The x axis is the operating point AS COMPUTED FROM THE SIMULATION
+      # (planner/util/operating_point.py), because that is what the planner knows
+      # when it consults this table.
+      #
+      # The four low-load points were measured 2026-09-09 against the STEP 3
+      # hardware curve (outputs/lowload_sim_error/). They carry the opposite SIGN
+      # from the high-load pair: below concurrency ~7 the simulator is
+      # PESSIMISTIC, predicting a longer TPOT than the card delivers. Before they
+      # existed, widen_error_bars extrapolated the 16.6 point downwards and
+      # produced a 4.8 % optimistic-side margin at concurrency 10 -- the wrong
+      # sign as well as the wrong size. Measuring replaced a guess that was
+      # backwards.
+      #
+      # Two further points were run and are NOT here. At offered rates matching
+      # the measured c15.3 and c15.59 the simulator settled at served concurrency
+      # 9.1 and 9.3 -- 40 % below the hardware -- so its TPOT is a different
+      # operating point's TPOT and the pair is not comparable. That divergence is
+      # itself the throughput error the 76 point records; both runs are kept in
+      # the raw artifact with `comparable: false`.
+      points:
+        - {conc: 1.09, tpot_err_pct: 3.88, note: "20-req sim at 0.0967 rps vs measured c1.0"}
+        - {conc: 2.19, tpot_err_pct: 11.71, note: "20-req sim at 0.1687 rps vs measured c1.99"}
+        - {conc: 3.92, tpot_err_pct: 11.56, note: "20-req sim at 0.3079 rps vs measured c3.98"}
+        - {conc: 6.41, tpot_err_pct: 6.37, note: "20-req sim at 0.5468 rps vs measured c7.88"}
+        - {conc: 16.6, tpot_err_pct: -3.1, tput_err_pct: -3.1, note: "EDF-rebuilt bundle fit, PROJECT_REPORT §4.8.4"}
+        - {conc: 76.0, tpot_err_pct: -18.0, tput_err_pct: 31.0, note: "interpolated c64/c128, rngd_concurrency_envelope.md"}
+      note: >
+        Measured from served concurrency 1.09 to 76. Above and below that,
+        widen_error_bars extrapolates and the margin grows with distance.
 provenance:
   fitted_from:
     RNGD-CARD:

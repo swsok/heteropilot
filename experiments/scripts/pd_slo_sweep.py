@@ -32,11 +32,13 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
 from planner.envelope import EnvelopeCache
 from planner.inventory import detect_islands, load_cluster_spec, load_profiles_for
 from planner.optimizer import exhaustive
+from planner.predictor.calibration import load_accuracy_domains
 from planner.predictor.llmservingsim import LLMServingSimPredictor
 from planner.spec import load_service_spec
 from planner.topology import TopologyGraph
@@ -65,6 +67,35 @@ def backend_mix(candidate, islands_by_id) -> str:
     return "agg[" + "+".join(sorted(e for s in roles.values() for e in s)) + "]"
 
 
+def _knob_filter(spec_str: str):
+    """`fixed-from:<json>` -> a predicate over candidates.
+
+    A shape whose policy entry is `fixed` keeps only that knob pair. A shape left
+    open -- every configuration with no feasible candidate at 10 rps -- keeps all
+    of them, because which knob revives it at low load is the question E6 asks.
+    A shape the table has never seen is kept, so a widened candidate space fails
+    open rather than silently shrinking.
+    """
+    if not spec_str.startswith("fixed-from:"):
+        raise SystemExit(f"--knob-policy must be 'fixed-from:<json>', got {spec_str!r}")
+    table = json.loads(Path(spec_str.split(":", 1)[1]).read_text())["policy"]
+
+    def shape_of(candidate) -> str:
+        parts = sorted(f"{a.island_id.split('-', 1)[0]}:tp{a.tp_size}"
+                       for a in candidate.assignments)
+        return f"{candidate.serving_arch.value}[{'+'.join(parts)}]"
+
+    def keep(candidate) -> bool:
+        entry = table.get(shape_of(candidate))
+        if entry is None or not entry.get("fixed"):
+            return True
+        want = tuple(entry["knob"])
+        return (candidate.knobs.max_num_seqs,
+                candidate.knobs.max_num_batched_tokens) == want
+
+    return keep
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--service", required=True, type=Path)
@@ -83,6 +114,24 @@ def main() -> int:
              "Use it to encode a MEASURED model error rather than a guess: at the "
              "concurrency the card fixture runs at, the simulator is 18 %% "
              "optimistic on TPOT (deviations D22).")
+    parser.add_argument(
+        "--rps", default=None,
+        help="comma-separated arrival rates. One sweep per rate; the trace is "
+             "regenerated for each, which is also what separates their cache "
+             "entries (the key carries the trace digest).",
+    )
+    parser.add_argument(
+        "--knob-policy", default=None,
+        help="fixed-from:<knob_policy.json> -- keep only the knob each shape won "
+             "with at 10 rps. A heuristic; every result under it must carry the "
+             "`knob: fixed@10rps` label.",
+    )
+    parser.add_argument(
+        "--accuracy-domain", action="store_true",
+        help="size each candidate's margin from its own operating point "
+             "(STEP 4.3). E5 uses this INSTEAD of a manual margin: the question "
+             "is whether the planner rejects D22's winner on its own.",
+    )
     parser.add_argument(
         "--ttft-margin-percent", type=float, default=0.0,
         help="same, for TTFT.")
@@ -113,12 +162,16 @@ def main() -> int:
     # The trace is fixed across the sweep on purpose: only the SLO moves, so the
     # workload must be byte-identical or the comparison is between two workloads.
     base_spec = load_service_spec(args.service)
+    rps_points = ([float(v) for v in args.rps.split(",") if v.strip()]
+                  if args.rps else [base_spec.traffic.arrival_rate_rps])
+    knob_filter = _knob_filter(args.knob_policy) if args.knob_policy else None
+    # Every measured accuracy domain under profiles/calibration/. Empty unless
+    # --accuracy-domain, so the default sweep behaves exactly as before.
+    accuracy_domains: dict = {}
+    if args.accuracy_domain:
+        accuracy_domains = load_accuracy_domains(args.root)
+        print(f"accuracy domains: {sorted(accuracy_domains)}", file=sys.stderr)
     args.work_dir.mkdir(parents=True, exist_ok=True)
-    trace = generate_trace(base_spec, args.work_dir / "sweep_trace.jsonl",
-                           num_requests=args.num_requests, seed=args.seed)
-    predictor = LLMServingSimPredictor(
-        trace, work_dir=args.work_dir, timeout_s=args.timeout,
-    )
 
     # The cache key needs the reduction bandwidth the compiler will use, so the
     # sweep's cached entries match what `plan` would write.
@@ -129,8 +182,20 @@ def main() -> int:
     print(f"sweeping slo.ttft.max_ms (p{base_spec.slo.ttft.percentile}) over {ttft_points} ms\n")
 
     rows = []
-    for ttft in ttft_points:
-        spec = load_service_spec(args.service)
+    for rps in rps_points:
+      # A trace per RATE: the arrival times are what the rate changes, and the
+      # digest goes into the cache key, so entries separate by rate on their own.
+      rate_tag = str(rps).replace(".", "p")
+      rate_spec = base_spec.model_copy(deep=True)
+      rate_spec.traffic.arrival_rate_rps = rps
+      trace = generate_trace(rate_spec, args.work_dir / f"trace_rps{rate_tag}.jsonl",
+                             num_requests=args.num_requests, seed=args.seed)
+      predictor = LLMServingSimPredictor(
+          trace, work_dir=args.work_dir / f"rps{rate_tag}", timeout_s=args.timeout,
+      )
+      for ttft in ttft_points:
+        spec = base_spec.model_copy(deep=True)
+        spec.traffic.arrival_rate_rps = rps
         spec.slo.ttft.max_ms = ttft
         # One cache per SLO point would defeat the point; the key includes the
         # spec, so a shared root still reuses every simulation whose candidate is
@@ -141,21 +206,45 @@ def main() -> int:
             link_bw_gbps=link_bw_gbps,
             trace_digest=prov.hash_file(trace.path),
         )
+        started = time.monotonic()
         output = exhaustive.search(
             spec, cluster, islands, profiles, predictor,
             enable_pd=True, cache=cache, max_workers=args.workers,
             tpot_margin_percent=args.tpot_margin_percent,
             ttft_margin_percent=args.ttft_margin_percent,
+            accuracy_domains=accuracy_domains,
+            candidate_filter=knob_filter,
         )
+        elapsed = time.monotonic() - started
         row = {
+            "rps": rps,
+            "wall_seconds": round(elapsed, 1),
+            "knob_policy": ("fixed@10rps" if knob_filter else None),
             "ttft_slo_max_ms": ttft,
             "feasible": output.feasible,
             "generated": output.generated_candidates,
             "evaluated": output.evaluated_candidates,
+            # Persisted because not persisting it is a recorded trap: this driver
+            # printed INFEASIBLE identically whether candidates were REJECTED or
+            # never evaluated, and on 2026-09-03 that hid 71 of 222 timeouts --
+            # including the committed winner (docs/HANDOVER.md §3). A sweep row
+            # without these counts is not a result.
+            "rejected_summary": dict(output.rejected_summary),
+            "cache_hits": output.provenance.get("envelope_cache_hits", 0),
             "recommended": None,
             "reason": output.reason,
         }
         best = output.recommended
+        if best is not None:
+            plan = best.plan
+            flags = [r.in_calibration_domain for r in plan.operating_point]
+            row["validity"] = (
+                "unknown" if (not flags or any(f is None for f in flags))
+                else "measured" if all(flags) else "extrapolated"
+            )
+            row["applied_tpot_margin_pct"] = plan.robust_margin_tpot_percent
+            row["margin_source"] = plan.margin_source
+            row["operating_point"] = [r.model_dump() for r in plan.operating_point]
         if best is not None:
             plan = best.plan
             cand = plan.candidate

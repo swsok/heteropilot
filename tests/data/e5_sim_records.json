@@ -1,0 +1,5731 @@
+{
+ "_note": "Committed simulation records for the E5 regression test (WORK_ORDER_rps_aware.md rev 2 STEP 5). Metrics and operating points as produced by the 2026-09-07 re-validation sweep on pd-rngd-gpu-card, 300 requests, seed 42. The operating points were computed from the same runs' CSVs by experiments/scripts/backfill_operating_point.py. Feeding these to a mock predictor lets CI hold the E5 verdict permanently without a simulator.",
+ "fixture": "experiments/configs/clusters/pd-rngd-gpu-card.yaml",
+ "num_requests": 300,
+ "records": {
+  "cuda-a40-node_a40a-tp1-dp1-s128-t2048": {
+   "metrics": {
+    "average_power_w": 565.5642528735633,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 100.0178405,
+    "p50_ttft_ms": 43379.017832,
+    "p95_tpot_ms": 117.1348457,
+    "p95_ttft_ms": 103302.1620748,
+    "p99_tpot_ms": 119.62849782999999,
+    "p99_ttft_ms": 106589.86222462,
+    "peak_power_w": 698.52,
+    "sim_wall_seconds": 109.81,
+    "slo_attainment": 0.0,
+    "slo_goodput_rps": 0.0,
+    "throughput_tps": 2607.200034338899,
+    "tokens_per_joule": 1.9359156357736766,
+    "total_energy_j": 98620.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 172.36307630532608,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 173.955582244
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp1-dp1-s128-t8192": {
+   "metrics": {
+    "average_power_w": 566.3753614457831,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 94.976981,
+    "p50_ttft_ms": 38820.6419515,
+    "p95_tpot_ms": 111.8182623,
+    "p95_ttft_ms": 95995.12291600001,
+    "p99_tpot_ms": 113.93085861999998,
+    "p99_ttft_ms": 98957.9015774,
+    "peak_power_w": 806.43,
+    "sim_wall_seconds": 107.98,
+    "slo_attainment": 0.0,
+    "slo_goodput_rps": 0.0,
+    "throughput_tps": 2731.305056211723,
+    "tokens_per_joule": 2.028258791033677,
+    "total_energy_j": 94130.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 168.1481455483363,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 166.051389598
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp1-dp1-s256-t2048": {
+   "metrics": {
+    "average_power_w": 566.1852486187839,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 160.23892,
+    "p50_ttft_ms": 6898.4442899999995,
+    "p95_tpot_ms": 201.44407375,
+    "p95_ttft_ms": 104948.0925123,
+    "p99_tpot_ms": 224.97307354999998,
+    "p99_ttft_ms": 106109.40267153,
+    "peak_power_w": 726.28,
+    "sim_wall_seconds": 143.12,
+    "slo_attainment": 0.0,
+    "slo_goodput_rps": 0.0,
+    "throughput_tps": 2495.9707446809875,
+    "tokens_per_joule": 1.8535922330097088,
+    "total_energy_j": 103000.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 197.87832694104415,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 181.70765862
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp1-dp1-s256-t8192": {
+   "metrics": {
+    "average_power_w": 566.242215568862,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 155.222266,
+    "p50_ttft_ms": 911.334294,
+    "p95_tpot_ms": 190.43930725,
+    "p95_ttft_ms": 91003.81180380001,
+    "p99_tpot_ms": 216.41610747999994,
+    "p99_ttft_ms": 92809.29110227,
+    "peak_power_w": 741.67,
+    "sim_wall_seconds": 140.21,
+    "slo_attainment": 0.0,
+    "slo_goodput_rps": 0.0,
+    "throughput_tps": 2706.8243738167425,
+    "tokens_per_joule": 2.010530749789385,
+    "total_energy_j": 94960.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 192.4049347585554,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 167.55316835
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp1-dp1-s32-t2048": {
+   "metrics": {
+    "average_power_w": 567.046188811188,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 46.121528,
+    "p50_ttft_ms": 107520.30551949999,
+    "p95_tpot_ms": 47.8073206,
+    "p95_ttft_ms": 221707.67946925,
+    "p99_tpot_ms": 48.184257759999994,
+    "p99_ttft_ms": 229778.74566462002,
+    "peak_power_w": 659.64,
+    "sim_wall_seconds": 330.2,
+    "slo_attainment": 0.32,
+    "slo_goodput_rps": 0.3356174008159017,
+    "throughput_tps": 1585.5719699358501,
+    "tokens_per_joule": 1.1766300998397634,
+    "total_energy_j": 162260.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 145.9357256068711,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 286.039996039
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp1-dp1-s32-t8192": {
+   "metrics": {
+    "average_power_w": 567.2378521126752,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 45.805634999999995,
+    "p50_ttft_ms": 106863.895339,
+    "p95_tpot_ms": 47.457986749999996,
+    "p95_ttft_ms": 220147.60373785,
+    "p99_tpot_ms": 47.87459162,
+    "p99_ttft_ms": 228191.77957407,
+    "peak_power_w": 634.51,
+    "sim_wall_seconds": 332.37,
+    "slo_attainment": 0.32,
+    "slo_goodput_rps": 0.3374372085758261,
+    "throughput_tps": 1594.1693673526504,
+    "tokens_per_joule": 1.1829729227337504,
+    "total_energy_j": 161390.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 145.776910439464,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 284.497374801
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp1-dp2-s128-t2048": {
+   "metrics": {
+    "average_power_w": 958.5936734693878,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 86.833969,
+    "p50_ttft_ms": 411.39611049999996,
+    "p95_tpot_ms": 97.31382895,
+    "p95_ttft_ms": 30902.57886990001,
+    "p99_tpot_ms": 98.65173079,
+    "p99_ttft_ms": 33235.06817734,
+    "peak_power_w": 1136.28,
+    "sim_wall_seconds": 158.95,
+    "slo_attainment": 0.05,
+    "slo_goodput_rps": 0.15268707954191377,
+    "throughput_tps": 4616.6159996133965,
+    "tokens_per_joule": 2.0293367346938775,
+    "total_energy_j": 94080.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 88.95958690705622,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 98.240139539
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp1-dp2-s128-t8192": {
+   "metrics": {
+    "average_power_w": 954.8974226804122,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 85.669782,
+    "p50_ttft_ms": 355.2908925,
+    "p95_tpot_ms": 93.67778475,
+    "p95_ttft_ms": 28828.3025778,
+    "p99_tpot_ms": 94.60079666,
+    "p99_ttft_ms": 32590.1417547,
+    "peak_power_w": 1262.92,
+    "sim_wall_seconds": 156.08,
+    "slo_attainment": 0.04666666666666667,
+    "slo_goodput_rps": 0.1442188253158961,
+    "throughput_tps": 4672.040955521113,
+    "tokens_per_joule": 2.0624392351733825,
+    "total_energy_j": 92570.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 88.03378700439994,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 97.074705534
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp1-dp2-s256-t2048": {
+   "metrics": {
+    "average_power_w": 967.1197619047617,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 92.002571,
+    "p50_ttft_ms": 404.843164,
+    "p95_tpot_ms": 102.70659260000001,
+    "p95_ttft_ms": 1099.5059156,
+    "p99_tpot_ms": 105.68460642,
+    "p99_ttft_ms": 1550.8919024699994,
+    "peak_power_w": 1067.63,
+    "sim_wall_seconds": 113.42,
+    "slo_attainment": 0.0,
+    "slo_goodput_rps": 0.0,
+    "throughput_tps": 5352.366881766987,
+    "tokens_per_joule": 2.3374142997061704,
+    "total_energy_j": 81680.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 103.62455983669983,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 84.735783256
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp1-dp2-s256-t8192": {
+   "metrics": {
+    "average_power_w": 962.9044047619046,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 90.595399,
+    "p50_ttft_ms": 341.57663349999996,
+    "p95_tpot_ms": 100.38465835000001,
+    "p95_ttft_ms": 705.8249481,
+    "p99_tpot_ms": 103.22976007999999,
+    "p99_ttft_ms": 847.8712812399996,
+    "peak_power_w": 1262.92,
+    "sim_wall_seconds": 117.98,
+    "slo_attainment": 0.0,
+    "slo_goodput_rps": 0.0,
+    "throughput_tps": 5360.76582686769,
+    "tokens_per_joule": 2.3523903400689994,
+    "total_energy_j": 81160.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 102.02624228270557,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 84.603024017
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp1-dp2-s32-t2048": {
+   "metrics": {
+    "average_power_w": 959.4452941176473,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 45.574663,
+    "p50_ttft_ms": 44269.2925905,
+    "p95_tpot_ms": 47.8578399,
+    "p95_ttft_ms": 90747.24459015,
+    "p99_tpot_ms": 48.53829885,
+    "p99_ttft_ms": 96349.59017305,
+    "peak_power_w": 1072.63,
+    "sim_wall_seconds": 362.39,
+    "slo_attainment": 0.67,
+    "slo_goodput_rps": 1.305869737150794,
+    "throughput_tps": 2946.5683730256696,
+    "tokens_per_joule": 1.2953388968043964,
+    "total_energy_j": 147390.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 69.52690145208285,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 153.920405904
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp1-dp2-s32-t8192": {
+   "metrics": {
+    "average_power_w": 962.9497350993374,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 45.296620000000004,
+    "p50_ttft_ms": 44193.5123475,
+    "p95_tpot_ms": 47.95470525,
+    "p95_ttft_ms": 91029.6348003,
+    "p99_tpot_ms": 48.56704170999999,
+    "p99_ttft_ms": 92942.62599038999,
+    "peak_power_w": 1057.78,
+    "sim_wall_seconds": 359.46,
+    "slo_attainment": 0.68,
+    "slo_goodput_rps": 1.347276498463265,
+    "throughput_tps": 2995.2928494290873,
+    "tokens_per_joule": 1.3106336239445322,
+    "total_energy_j": 145670.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 71.30121844805595,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 151.416580214
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp1-dp3-s128-t2048": {
+   "metrics": {
+    "average_power_w": 1360.0571830985914,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 68.6275035,
+    "p50_ttft_ms": 207.1769415,
+    "p95_tpot_ms": 74.06195790000001,
+    "p95_ttft_ms": 616.0880182500001,
+    "p99_tpot_ms": 76.53173425,
+    "p99_ttft_ms": 786.5326114299999,
+    "peak_power_w": 1526.13,
+    "sim_wall_seconds": 195.67,
+    "slo_attainment": 0.0,
+    "slo_goodput_rps": 0.0,
+    "throughput_tps": 6318.661525998203,
+    "tokens_per_joule": 1.9662203913491245,
+    "total_energy_j": 97100.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 62.30884471346582,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 71.777384836
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp1-dp3-s128-t8192": {
+   "metrics": {
+    "average_power_w": 1349.7561971830987,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 68.26831,
+    "p50_ttft_ms": 204.067443,
+    "p95_tpot_ms": 73.17689955,
+    "p95_ttft_ms": 462.28188635000004,
+    "p99_tpot_ms": 74.67060538999999,
+    "p99_ttft_ms": 629.8405269499998,
+    "peak_power_w": 1547.54,
+    "sim_wall_seconds": 191.43,
+    "slo_attainment": 0.0,
+    "slo_goodput_rps": 0.0,
+    "throughput_tps": 6345.814395606041,
+    "tokens_per_joule": 1.9842028684265225,
+    "total_energy_j": 96220.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 61.575239080703,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 71.470259249
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp1-dp3-s256-t2048": {
+   "metrics": {
+    "average_power_w": 1360.0571830985914,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 68.6275035,
+    "p50_ttft_ms": 207.1769415,
+    "p95_tpot_ms": 74.06195790000001,
+    "p95_ttft_ms": 616.0880182500001,
+    "p99_tpot_ms": 76.53173425,
+    "p99_ttft_ms": 786.5326114299999,
+    "peak_power_w": 1526.13,
+    "sim_wall_seconds": 193.49,
+    "slo_attainment": 0.0,
+    "slo_goodput_rps": 0.0,
+    "throughput_tps": 6318.661525998203,
+    "tokens_per_joule": 1.9662203913491245,
+    "total_energy_j": 97100.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 62.30884471346582,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 71.777384836
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp1-dp3-s256-t8192": {
+   "metrics": {
+    "average_power_w": 1349.7561971830987,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 68.26831,
+    "p50_ttft_ms": 204.067443,
+    "p95_tpot_ms": 73.17689955,
+    "p95_ttft_ms": 462.28188635000004,
+    "p99_tpot_ms": 74.67060538999999,
+    "p99_ttft_ms": 629.8405269499998,
+    "peak_power_w": 1547.54,
+    "sim_wall_seconds": 191.2,
+    "slo_attainment": 0.0,
+    "slo_goodput_rps": 0.0,
+    "throughput_tps": 6345.814395606041,
+    "tokens_per_joule": 1.9842028684265225,
+    "total_energy_j": 96220.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 61.575239080703,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 71.470259249
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp1-dp3-s32-t2048": {
+   "metrics": {
+    "average_power_w": 1369.1857009345804,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 44.930544,
+    "p50_ttft_ms": 19711.411071,
+    "p95_tpot_ms": 48.2491472,
+    "p95_ttft_ms": 46171.250289450014,
+    "p99_tpot_ms": 48.8714158,
+    "p99_ttft_ms": 53043.3928681,
+    "peak_power_w": 1533.69,
+    "sim_wall_seconds": 404.36,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 2.785511179466278,
+    "throughput_tps": 4211.107946005324,
+    "tokens_per_joule": 1.2970108695652174,
+    "total_energy_j": 147200.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 47.04769668068311,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 107.700160104
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp1-dp3-s32-t8192": {
+   "metrics": {
+    "average_power_w": 1368.2140186915892,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 44.799490500000005,
+    "p50_ttft_ms": 19655.027548500002,
+    "p95_tpot_ms": 47.6967566,
+    "p95_ttft_ms": 45667.77032120001,
+    "p99_tpot_ms": 48.42593693,
+    "p99_ttft_ms": 52554.146651539995,
+    "peak_power_w": 1479.63,
+    "sim_wall_seconds": 404.17,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 2.795994378104505,
+    "throughput_tps": 4226.95634087461,
+    "tokens_per_joule": 1.301520212693435,
+    "total_energy_j": 146690.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 47.00783554111462,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 107.296353079
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp1-dp4-s128-t2048": {
+   "metrics": {
+    "average_power_w": 1733.118636363637,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 57.2104975,
+    "p50_ttft_ms": 173.0572675,
+    "p95_tpot_ms": 61.5941075,
+    "p95_ttft_ms": 530.4673524500001,
+    "p99_tpot_ms": 63.383811859999994,
+    "p99_ttft_ms": 723.8807668799999,
+    "peak_power_w": 1933.35,
+    "sim_wall_seconds": 281.28,
+    "slo_attainment": 0.09666666666666666,
+    "slo_goodput_rps": 0.4388881077828238,
+    "throughput_tps": 6863.861922051674,
+    "tokens_per_joule": 1.6672779669897826,
+    "total_energy_j": 114510.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 42.036505594109855,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 66.076066965
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp1-dp4-s128-t8192": {
+   "metrics": {
+    "average_power_w": 1736.1460000000006,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 56.829487,
+    "p50_ttft_ms": 171.754212,
+    "p95_tpot_ms": 60.34133215000001,
+    "p95_ttft_ms": 378.89090280000005,
+    "p99_tpot_ms": 61.987428599999994,
+    "p99_ttft_ms": 466.92385169999943,
+    "peak_power_w": 1873.64,
+    "sim_wall_seconds": 276.95,
+    "slo_attainment": 0.09666666666666666,
+    "slo_goodput_rps": 0.4418268773697422,
+    "throughput_tps": 6909.821947642785,
+    "tokens_per_joule": 1.6841919548341566,
+    "total_energy_j": 113360.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 41.60764823194191,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 65.63656827
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp1-dp4-s256-t2048": {
+   "metrics": {
+    "average_power_w": 1733.118636363637,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 57.2104975,
+    "p50_ttft_ms": 173.0572675,
+    "p95_tpot_ms": 61.5941075,
+    "p95_ttft_ms": 530.4673524500001,
+    "p99_tpot_ms": 63.383811859999994,
+    "p99_ttft_ms": 723.8807668799999,
+    "peak_power_w": 1933.35,
+    "sim_wall_seconds": 280.92,
+    "slo_attainment": 0.09666666666666666,
+    "slo_goodput_rps": 0.4388881077828238,
+    "throughput_tps": 6863.861922051674,
+    "tokens_per_joule": 1.6672779669897826,
+    "total_energy_j": 114510.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 42.036505594109855,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 66.076066965
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp1-dp4-s256-t8192": {
+   "metrics": {
+    "average_power_w": 1736.1460000000006,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 56.829487,
+    "p50_ttft_ms": 171.754212,
+    "p95_tpot_ms": 60.34133215000001,
+    "p95_ttft_ms": 378.89090280000005,
+    "p99_tpot_ms": 61.987428599999994,
+    "p99_ttft_ms": 466.92385169999943,
+    "peak_power_w": 1873.64,
+    "sim_wall_seconds": 277.17,
+    "slo_attainment": 0.09666666666666666,
+    "slo_goodput_rps": 0.4418268773697422,
+    "throughput_tps": 6909.821947642785,
+    "tokens_per_joule": 1.6841919548341566,
+    "total_energy_j": 113360.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 41.60764823194191,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 65.63656827
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp1-dp4-s32-t2048": {
+   "metrics": {
+    "average_power_w": 1739.1815730337082,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 44.4797445,
+    "p50_ttft_ms": 14309.930226,
+    "p95_tpot_ms": 47.727183350000004,
+    "p95_ttft_ms": 31202.1316012,
+    "p99_tpot_ms": 47.904544359999996,
+    "p99_ttft_ms": 32334.946585209993,
+    "peak_power_w": 1873.14,
+    "sim_wall_seconds": 452.81,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 3.3709059407035946,
+    "throughput_tps": 5096.101892096287,
+    "tokens_per_joule": 1.2332536657838642,
+    "total_energy_j": 154810.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 34.13876852853615,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 88.996846924
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp1-dp4-s32-t8192": {
+   "metrics": {
+    "average_power_w": 1740.73617977528,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 44.22964399999999,
+    "p50_ttft_ms": 14273.445072999999,
+    "p95_tpot_ms": 47.2569395,
+    "p95_ttft_ms": 30784.046030550002,
+    "p99_tpot_ms": 47.48540055,
+    "p99_ttft_ms": 32596.23319607,
+    "peak_power_w": 1866.84,
+    "sim_wall_seconds": 452.37,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 3.363531119197134,
+    "throughput_tps": 5084.9527106910355,
+    "tokens_per_joule": 1.2311065256641733,
+    "total_energy_j": 155080.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 34.51583560305504,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 89.191979907
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp2-dp1-s128-t2048": {
+   "metrics": {
+    "average_power_w": 833.3946391752579,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 55.155734,
+    "p50_ttft_ms": 19181.8821685,
+    "p95_tpot_ms": 63.640986,
+    "p95_ttft_ms": 45933.119416400004,
+    "p99_tpot_ms": 64.89088923,
+    "p99_ttft_ms": 47145.01019196,
+    "peak_power_w": 854.47,
+    "sim_wall_seconds": 130.65,
+    "slo_attainment": 0.29,
+    "slo_goodput_rps": 0.8944708432749928,
+    "throughput_tps": 4662.938193636901,
+    "tokens_per_joule": 2.353840463567994,
+    "total_energy_j": 81110.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 154.93363359445897,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 97.264210068
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp2-dp1-s128-t8192": {
+   "metrics": {
+    "average_power_w": 833.0237894736844,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 54.2427105,
+    "p50_ttft_ms": 18607.522638,
+    "p95_tpot_ms": 62.376926,
+    "p95_ttft_ms": 44477.576862249996,
+    "p99_tpot_ms": 63.66986987,
+    "p99_ttft_ms": 45718.782355510004,
+    "peak_power_w": 854.28,
+    "sim_wall_seconds": 130.93,
+    "slo_attainment": 0.32,
+    "slo_goodput_rps": 1.0021952708348154,
+    "throughput_tps": 4734.7149640480175,
+    "tokens_per_joule": 2.3915821119879745,
+    "total_energy_j": 79830.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 153.57141986463196,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 95.789715631
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp2-dp1-s256-t2048": {
+   "metrics": {
+    "average_power_w": 830.1423529411766,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 82.870923,
+    "p50_ttft_ms": 758.73183,
+    "p95_tpot_ms": 91.71817700000001,
+    "p95_ttft_ms": 29437.66599945,
+    "p99_tpot_ms": 92.8385351,
+    "p99_ttft_ms": 31222.1765968,
+    "peak_power_w": 854.54,
+    "sim_wall_seconds": 92.1,
+    "slo_attainment": 0.13333333333333333,
+    "slo_goodput_rps": 0.47056209637792346,
+    "throughput_tps": 5335.433037623857,
+    "tokens_per_joule": 2.7042492917847025,
+    "total_energy_j": 70600.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 188.62274357131133,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 85.004721604
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp2-dp1-s256-t8192": {
+   "metrics": {
+    "average_power_w": 829.3559036144579,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 81.5633595,
+    "p50_ttft_ms": 425.1458395,
+    "p95_tpot_ms": 89.2666537,
+    "p95_ttft_ms": 27867.05768985,
+    "p99_tpot_ms": 90.42535801000001,
+    "p99_ttft_ms": 29812.30545965,
+    "peak_power_w": 854.19,
+    "sim_wall_seconds": 92.48,
+    "slo_attainment": 0.13333333333333333,
+    "slo_goodput_rps": 0.47804605819925966,
+    "throughput_tps": 5420.289377437941,
+    "tokens_per_joule": 2.7494239631336406,
+    "total_energy_j": 69440.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 186.87734997577132,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 83.673945876
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp2-dp1-s32-t2048": {
+   "metrics": {
+    "average_power_w": 840.7517647058822,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 24.676409999999997,
+    "p50_ttft_ms": 51458.0825655,
+    "p95_tpot_ms": 25.65326585,
+    "p95_ttft_ms": 106434.59814915,
+    "p99_tpot_ms": 25.88984564,
+    "p99_ttft_ms": 110002.83602182,
+    "peak_power_w": 854.36,
+    "sim_wall_seconds": 377.23,
+    "slo_attainment": 0.5933333333333334,
+    "slo_goodput_rps": 1.158921302079834,
+    "throughput_tps": 2952.8859021425937,
+    "tokens_per_joule": 1.478052179298599,
+    "total_energy_j": 129169.99999999999
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 133.43495166103514,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 153.591102071
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp2-dp1-s32-t8192": {
+   "metrics": {
+    "average_power_w": 840.7666666666665,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 24.6485045,
+    "p50_ttft_ms": 51386.3681925,
+    "p95_tpot_ms": 25.620757150000003,
+    "p95_ttft_ms": 106202.98323755,
+    "p99_tpot_ms": 25.797062429999997,
+    "p99_ttft_ms": 109805.81338475,
+    "peak_power_w": 854.49,
+    "sim_wall_seconds": 374.74,
+    "slo_attainment": 0.5966666666666667,
+    "slo_goodput_rps": 1.167086073175976,
+    "throughput_tps": 2957.076627765434,
+    "tokens_per_joule": 1.4801147375765562,
+    "total_energy_j": 128990.00000000001
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 133.41415797519434,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 153.373435014
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp2-dp2-s128-t2048": {
+   "metrics": {
+    "average_power_w": 1502.9778571428576,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 46.2506705,
+    "p50_ttft_ms": 149.5258965,
+    "p95_tpot_ms": 52.08129945,
+    "p95_ttft_ms": 4582.30007595,
+    "p99_tpot_ms": 53.429772480000004,
+    "p99_ttft_ms": 6103.382269499999,
+    "peak_power_w": 1575.74,
+    "sim_wall_seconds": 204.58,
+    "slo_attainment": 0.85,
+    "slo_goodput_rps": 4.506482530240486,
+    "throughput_tps": 8015.123793402665,
+    "tokens_per_joule": 2.2524775837659274,
+    "total_energy_j": 84760.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 77.50326168382028,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 56.585152231
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp2-dp2-s128-t8192": {
+   "metrics": {
+    "average_power_w": 1478.8536842105264,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 45.7641925,
+    "p50_ttft_ms": 143.8722315,
+    "p95_tpot_ms": 51.31678465,
+    "p95_ttft_ms": 4027.90538535,
+    "p99_tpot_ms": 53.19242197,
+    "p99_ttft_ms": 6091.630026419998,
+    "peak_power_w": 1605.13,
+    "sim_wall_seconds": 207.19,
+    "slo_attainment": 0.8766666666666667,
+    "slo_goodput_rps": 4.607380171956003,
+    "throughput_tps": 7945.313235925513,
+    "tokens_per_joule": 2.261549395877754,
+    "total_energy_j": 84420.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 77.45164993470233,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 57.082330996
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp2-dp2-s256-t2048": {
+   "metrics": {
+    "average_power_w": 1504.279814814815,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 46.860125499999995,
+    "p50_ttft_ms": 145.434439,
+    "p95_tpot_ms": 52.723080800000005,
+    "p95_ttft_ms": 445.50450589999997,
+    "p99_tpot_ms": 54.028635879999996,
+    "p99_ttft_ms": 617.8405028099987,
+    "peak_power_w": 1575.74,
+    "sim_wall_seconds": 191.16,
+    "slo_attainment": 0.8166666666666667,
+    "slo_goodput_rps": 4.494610933037649,
+    "throughput_tps": 8320.295341784065,
+    "tokens_per_joule": 2.3334148130041554,
+    "total_energy_j": 81820.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 80.18333313331459,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 54.509723678
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp2-dp2-s256-t8192": {
+   "metrics": {
+    "average_power_w": 1495.785370370371,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 46.65408,
+    "p50_ttft_ms": 142.8917325,
+    "p95_tpot_ms": 52.06494255,
+    "p95_ttft_ms": 377.7886101000001,
+    "p99_tpot_ms": 53.473837520000004,
+    "p99_ttft_ms": 589.6191995899995,
+    "peak_power_w": 1587.82,
+    "sim_wall_seconds": 189.62,
+    "slo_attainment": 0.84,
+    "slo_goodput_rps": 4.599207408228173,
+    "throughput_tps": 8277.423532958654,
+    "tokens_per_joule": 2.341427520235467,
+    "total_energy_j": 81540.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 80.07972131649359,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 54.792049506
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp2-dp2-s32-t2048": {
+   "metrics": {
+    "average_power_w": 1503.4239759036147,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 24.3484465,
+    "p50_ttft_ms": 18115.669842000003,
+    "p95_tpot_ms": 25.46582275,
+    "p95_ttft_ms": 37226.586995050005,
+    "p99_tpot_ms": 25.7941896,
+    "p99_ttft_ms": 39224.27200969,
+    "peak_power_w": 1589.72,
+    "sim_wall_seconds": 438.69,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 3.5995937096104753,
+    "throughput_tps": 5441.829774252021,
+    "tokens_per_joule": 1.5255293647622852,
+    "total_energy_j": 125150.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 59.457557854593034,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 83.342739265
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp2-dp2-s32-t8192": {
+   "metrics": {
+    "average_power_w": 1502.828072289157,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 24.3236595,
+    "p50_ttft_ms": 18095.6467225,
+    "p95_tpot_ms": 25.4484905,
+    "p95_ttft_ms": 37128.879948199996,
+    "p99_tpot_ms": 25.75644406,
+    "p99_ttft_ms": 39065.14826433,
+    "peak_power_w": 1589.62,
+    "sim_wall_seconds": 436.57,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 3.604694816082234,
+    "throughput_tps": 5449.541576004961,
+    "tokens_per_joule": 1.527482198575886,
+    "total_energy_j": 124990.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 59.43252072286719,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 83.224798577
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp4-dp1-s128-t2048": {
+   "metrics": {
+    "average_power_w": 1295.5092982456138,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 31.289213,
+    "p50_ttft_ms": 5791.8451495,
+    "p95_tpot_ms": 36.077388750000004,
+    "p95_ttft_ms": 15531.4648712,
+    "p99_tpot_ms": 36.794523899999994,
+    "p99_ttft_ms": 16159.514659550001,
+    "peak_power_w": 1365.44,
+    "sim_wall_seconds": 176.84,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 5.188856475179465,
+    "throughput_tps": 7844.4613306115625,
+    "tokens_per_joule": 2.5449213543055187,
+    "total_energy_j": 75020.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 127.27969607000259,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 57.816206988
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp4-dp1-s128-t8192": {
+   "metrics": {
+    "average_power_w": 1292.5101785714285,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 30.6726345,
+    "p50_ttft_ms": 5382.407556,
+    "p95_tpot_ms": 35.0936752,
+    "p95_ttft_ms": 14490.084847150001,
+    "p99_tpot_ms": 35.58226791,
+    "p99_ttft_ms": 15070.10466225,
+    "peak_power_w": 1365.39,
+    "sim_wall_seconds": 173.24,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 5.279963373257342,
+    "throughput_tps": 7982.195828056716,
+    "tokens_per_joule": 2.5954323001631323,
+    "total_energy_j": 73560.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 125.25991854774531,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 56.818575962
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp4-dp1-s256-t2048": {
+   "metrics": {
+    "average_power_w": 1286.821176470588,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 43.8010555,
+    "p50_ttft_ms": 167.4628525,
+    "p95_tpot_ms": 50.543049700000005,
+    "p95_ttft_ms": 3543.6173883500005,
+    "p99_tpot_ms": 52.38743885999999,
+    "p99_ttft_ms": 4700.62871983,
+    "peak_power_w": 1366.18,
+    "sim_wall_seconds": 127.34,
+    "slo_attainment": 0.92,
+    "slo_goodput_rps": 5.355256650411574,
+    "throughput_tps": 8800.02549078882,
+    "tokens_per_joule": 2.874435411020777,
+    "total_energy_j": 66420.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 157.85302165988375,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 51.538146165
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp4-dp1-s256-t8192": {
+   "metrics": {
+    "average_power_w": 1282.5282,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 41.660385500000004,
+    "p50_ttft_ms": 135.660029,
+    "p95_tpot_ms": 47.84671595,
+    "p95_ttft_ms": 1808.8116490000004,
+    "p99_tpot_ms": 49.39561789999999,
+    "p99_ttft_ms": 2972.06280743,
+    "peak_power_w": 1367.43,
+    "sim_wall_seconds": 126.57,
+    "slo_attainment": 0.99,
+    "slo_goodput_rps": 5.919073057776737,
+    "throughput_tps": 9038.783290925548,
+    "tokens_per_joule": 2.963215893217445,
+    "total_energy_j": 64430.00000000001
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 153.84364421265596,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 50.176775502
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp4-dp1-s32-t2048": {
+   "metrics": {
+    "average_power_w": 1319.8238709677416,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 15.008518500000001,
+    "p50_ttft_ms": 26096.566539,
+    "p95_tpot_ms": 15.5651299,
+    "p95_ttft_ms": 53972.4780338,
+    "p99_tpot_ms": 15.79047033,
+    "p99_ttft_ms": 55731.77766639,
+    "peak_power_w": 1365.49,
+    "sim_wall_seconds": 453.53,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 3.1958964792838267,
+    "throughput_tps": 4831.524338416496,
+    "tokens_per_joule": 1.5396774193548388,
+    "total_energy_j": 124000.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 115.75267555785106,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 93.870374696
+    }
+   }
+  },
+  "cuda-a40-node_a40a-tp4-dp1-s32-t8192": {
+   "metrics": {
+    "average_power_w": 1319.518924731183,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 14.924376500000001,
+    "p50_ttft_ms": 25990.894907,
+    "p95_tpot_ms": 15.4875387,
+    "p95_ttft_ms": 53576.3242919,
+    "p99_tpot_ms": 15.67151576,
+    "p99_ttft_ms": 55362.33861626,
+    "peak_power_w": 1375.78,
+    "sim_wall_seconds": 447.23,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 3.208934354667021,
+    "throughput_tps": 4851.2348680420555,
+    "tokens_per_joule": 1.5466623460790667,
+    "total_energy_j": 123440.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 115.64607141152425,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 93.488980092
+    }
+   }
+  },
+  "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t2048": {
+   "metrics": {
+    "average_power_w": 558.7417777777777,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 47.980503999999996,
+    "p50_ttft_ms": 17772.382501499997,
+    "p95_tpot_ms": 53.9420958,
+    "p95_ttft_ms": 36883.5742441,
+    "p99_tpot_ms": 55.72345274999999,
+    "p99_ttft_ms": 37358.93203376,
+    "peak_power_w": 619.81,
+    "sim_wall_seconds": 109.45,
+    "slo_attainment": 0.6366666666666667,
+    "slo_goodput_rps": 2.122859104885489,
+    "throughput_tps": 5040.812302892408,
+    "tokens_per_joule": 3.7941176470588234,
+    "total_energy_j": 50320.0
+   },
+   "operating_point": {
+    "RNGD-CARD": {
+     "concurrency": 144.60850153103917,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 89.972998943
+    }
+   }
+  },
+  "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t8192": {
+   "metrics": {
+    "average_power_w": 558.0734831460672,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 47.8131305,
+    "p50_ttft_ms": 17408.165431,
+    "p95_tpot_ms": 53.1931151,
+    "p95_ttft_ms": 36352.590904749995,
+    "p99_tpot_ms": 55.1233781,
+    "p99_ttft_ms": 36848.85841381,
+    "peak_power_w": 655.32,
+    "sim_wall_seconds": 110.48,
+    "slo_attainment": 0.67,
+    "slo_goodput_rps": 2.245903888023978,
+    "throughput_tps": 5067.664237128015,
+    "tokens_per_joule": 3.8145854145854146,
+    "total_energy_j": 50050.0
+   },
+   "operating_point": {
+    "RNGD-CARD": {
+     "concurrency": 143.874581570482,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 89.496260758
+    }
+   }
+  },
+  "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t2048": {
+   "metrics": {
+    "average_power_w": 558.6316842105261,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 83.644541,
+    "p50_ttft_ms": 660.9834965,
+    "p95_tpot_ms": 98.06104525,
+    "p95_ttft_ms": 40077.855475,
+    "p99_tpot_ms": 103.62865589,
+    "p99_ttft_ms": 40546.92654241,
+    "peak_power_w": 616.28,
+    "sim_wall_seconds": 132.29,
+    "slo_attainment": 0.21,
+    "slo_goodput_rps": 0.6599070019929734,
+    "throughput_tps": 4750.670507347415,
+    "tokens_per_joule": 3.5766204571000375,
+    "total_energy_j": 53380.0
+   },
+   "operating_point": {
+    "RNGD-CARD": {
+     "concurrency": 177.56355340934107,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 95.467997475
+    }
+   }
+  },
+  "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t8192": {
+   "metrics": {
+    "average_power_w": 559.3124731182797,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 81.7891275,
+    "p50_ttft_ms": 520.5563445,
+    "p95_tpot_ms": 93.54520175,
+    "p95_ttft_ms": 38553.62646000001,
+    "p99_tpot_ms": 96.88101724999997,
+    "p99_ttft_ms": 38887.971059460004,
+    "peak_power_w": 768.76,
+    "sim_wall_seconds": 129.7,
+    "slo_attainment": 0.22,
+    "slo_goodput_rps": 0.7047005454054855,
+    "throughput_tps": 4842.541988811632,
+    "tokens_per_joule": 3.6455986251670804,
+    "total_energy_j": 52370.0
+   },
+   "operating_point": {
+    "RNGD-CARD": {
+     "concurrency": 175.40864504060534,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 93.65680278
+    }
+   }
+  },
+  "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t2048": {
+   "metrics": {
+    "average_power_w": 560.0206122448978,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 31.6257245,
+    "p50_ttft_ms": 70509.895012,
+    "p95_tpot_ms": 32.46888085,
+    "p95_ttft_ms": 143717.75021215001,
+    "p99_tpot_ms": 32.7937137,
+    "p99_ttft_ms": 148739.3644084,
+    "peak_power_w": 620.74,
+    "sim_wall_seconds": 329.39,
+    "slo_attainment": 0.44,
+    "slo_goodput_rps": 0.6708687130290028,
+    "throughput_tps": 2305.0286628866274,
+    "tokens_per_joule": 1.7321720195971693,
+    "total_energy_j": 110220.0
+   },
+   "operating_point": {
+    "RNGD-CARD": {
+     "concurrency": 139.83837126842622,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 196.759809239
+    }
+   }
+  },
+  "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t8192": {
+   "metrics": {
+    "average_power_w": 560.0320408163265,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 31.629475999999997,
+    "p50_ttft_ms": 70498.2706885,
+    "p95_tpot_ms": 32.48259515,
+    "p95_ttft_ms": 143737.88900415,
+    "p99_tpot_ms": 32.75131554,
+    "p99_ttft_ms": 148755.90838442,
+    "peak_power_w": 616.74,
+    "sim_wall_seconds": 330.47,
+    "slo_attainment": 0.44,
+    "slo_goodput_rps": 0.6708296036865596,
+    "throughput_tps": 2304.8942876302362,
+    "tokens_per_joule": 1.7321720195971693,
+    "total_energy_j": 110220.0
+   },
+   "operating_point": {
+    "RNGD-CARD": {
+     "concurrency": 139.80779381911952,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 196.771280329
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp1)-s128-t2048": {
+   "metrics": {
+    "average_power_w": 1122.6191836734695,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 86.74764350000001,
+    "p50_ttft_ms": 407.15589350000005,
+    "p95_tpot_ms": 97.99121195,
+    "p95_ttft_ms": 31161.102735550005,
+    "p99_tpot_ms": 99.41838667,
+    "p99_ttft_ms": 33630.9432361,
+    "peak_power_w": 1305.21,
+    "sim_wall_seconds": 159.21,
+    "slo_attainment": 0.05,
+    "slo_goodput_rps": 0.15199686967780976,
+    "throughput_tps": 4595.74695220432,
+    "tokens_per_joule": 1.7263767067546794,
+    "total_energy_j": 110590.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 89.2253697913813,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 98.686242893
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp1)-s128-t8192": {
+   "metrics": {
+    "average_power_w": 1132.943157894737,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 85.44836649999999,
+    "p50_ttft_ms": 353.2326175,
+    "p95_tpot_ms": 93.11464635,
+    "p95_ttft_ms": 29116.06027375,
+    "p99_tpot_ms": 93.98860367,
+    "p99_ttft_ms": 32083.405405269998,
+    "peak_power_w": 1447.9299999999998,
+    "sim_wall_seconds": 157.97,
+    "slo_attainment": 0.043333333333333335,
+    "slo_goodput_rps": 0.13551248608740826,
+    "throughput_tps": 4727.68664635576,
+    "tokens_per_joule": 1.7640210662478055,
+    "total_energy_j": 108230.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 88.22142414578713,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 95.932119433
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp1)-s256-t2048": {
+   "metrics": {
+    "average_power_w": 1133.12265060241,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 91.952399,
+    "p50_ttft_ms": 401.4289125,
+    "p95_tpot_ms": 103.43386045,
+    "p95_ttft_ms": 1176.0605276000006,
+    "p99_tpot_ms": 106.63816148,
+    "p99_ttft_ms": 1713.1161333399996,
+    "peak_power_w": 1252.8,
+    "sim_wall_seconds": 112.41,
+    "slo_attainment": 0.0,
+    "slo_goodput_rps": 0.0,
+    "throughput_tps": 5426.7403141252125,
+    "tokens_per_joule": 2.0151994933502215,
+    "total_energy_j": 94740.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 103.97247298045733,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 83.574480028
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp1)-s256-t8192": {
+   "metrics": {
+    "average_power_w": 1125.8015476190474,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 90.561193,
+    "p50_ttft_ms": 341.536012,
+    "p95_tpot_ms": 100.59420435000001,
+    "p95_ttft_ms": 692.8046963500002,
+    "p99_tpot_ms": 103.46774481,
+    "p99_ttft_ms": 856.6204166599996,
+    "peak_power_w": 1447.9299999999998,
+    "sim_wall_seconds": 116.33,
+    "slo_attainment": 0.0,
+    "slo_goodput_rps": 0.0,
+    "throughput_tps": 5342.269630932074,
+    "tokens_per_joule": 2.0067269287365987,
+    "total_energy_j": 95140.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 102.11653999507811,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 84.895939616
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp1)-s32-t2048": {
+   "metrics": {
+    "average_power_w": 1124.9808496732019,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 45.574560500000004,
+    "p50_ttft_ms": 44267.9499585,
+    "p95_tpot_ms": 47.857596099999995,
+    "p95_ttft_ms": 90742.67917715,
+    "p99_tpot_ms": 48.53728075,
+    "p99_ttft_ms": 96347.39283605,
+    "peak_power_w": 1233.3200000000002,
+    "sim_wall_seconds": 363.33,
+    "slo_attainment": 0.67,
+    "slo_goodput_rps": 1.3058883797527145,
+    "throughput_tps": 2946.6104382482927,
+    "tokens_per_joule": 1.1044137212934575,
+    "total_energy_j": 172870.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 69.52417171280213,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 153.918208567
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp1)-s32-t8192": {
+   "metrics": {
+    "average_power_w": 1128.441523178807,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 45.29542,
+    "p50_ttft_ms": 44191.7936285,
+    "p95_tpot_ms": 47.954615649999994,
+    "p95_ttft_ms": 91026.04005960001,
+    "p99_tpot_ms": 48.567040639999995,
+    "p99_ttft_ms": 92938.72638138999,
+    "peak_power_w": 1221.6799999999998,
+    "sim_wall_seconds": 360.02,
+    "slo_attainment": 0.68,
+    "slo_goodput_rps": 1.347311215182826,
+    "throughput_tps": 2995.3700323547714,
+    "tokens_per_joule": 1.1181914021318964,
+    "total_energy_j": 170740.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 71.2998468271976,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 151.412678601
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp2)-s128-t2048": {
+   "metrics": {
+    "average_power_w": 1525.4777464788735,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 68.6264125,
+    "p50_ttft_ms": 207.18719,
+    "p95_tpot_ms": 74.0556468,
+    "p95_ttft_ms": 615.69518655,
+    "p99_tpot_ms": 76.52395421999998,
+    "p99_ttft_ms": 786.2019174299998,
+    "peak_power_w": 1688.77,
+    "sim_wall_seconds": 195.18,
+    "slo_attainment": 0.0,
+    "slo_goodput_rps": 0.0,
+    "throughput_tps": 6318.992576329729,
+    "tokens_per_joule": 1.751881079097082,
+    "total_energy_j": 108980.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 62.30693461704766,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 71.773624438
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp2)-s128-t8192": {
+   "metrics": {
+    "average_power_w": 1515.2559154929577,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 68.2681855,
+    "p50_ttft_ms": 204.059928,
+    "p95_tpot_ms": 73.17533130000001,
+    "p95_ttft_ms": 462.20749935000003,
+    "p99_tpot_ms": 74.67039475,
+    "p99_ttft_ms": 628.6738999499997,
+    "peak_power_w": 1712.56,
+    "sim_wall_seconds": 194.01,
+    "slo_attainment": 0.0,
+    "slo_goodput_rps": 0.0,
+    "throughput_tps": 6345.8211214239545,
+    "tokens_per_joule": 1.7667962243198223,
+    "total_energy_j": 108060.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 61.57346631738498,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 71.470183499
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp2)-s256-t2048": {
+   "metrics": {
+    "average_power_w": 1525.4777464788735,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 68.6264125,
+    "p50_ttft_ms": 207.18719,
+    "p95_tpot_ms": 74.0556468,
+    "p95_ttft_ms": 615.69518655,
+    "p99_tpot_ms": 76.52395421999998,
+    "p99_ttft_ms": 786.2019174299998,
+    "peak_power_w": 1688.77,
+    "sim_wall_seconds": 194.35,
+    "slo_attainment": 0.0,
+    "slo_goodput_rps": 0.0,
+    "throughput_tps": 6318.992576329729,
+    "tokens_per_joule": 1.751881079097082,
+    "total_energy_j": 108980.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 62.30693461704766,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 71.773624438
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp2)-s256-t8192": {
+   "metrics": {
+    "average_power_w": 1515.2559154929577,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 68.2681855,
+    "p50_ttft_ms": 204.059928,
+    "p95_tpot_ms": 73.17533130000001,
+    "p95_ttft_ms": 462.20749935000003,
+    "p99_tpot_ms": 74.67039475,
+    "p99_ttft_ms": 628.6738999499997,
+    "peak_power_w": 1712.56,
+    "sim_wall_seconds": 193.66,
+    "slo_attainment": 0.0,
+    "slo_goodput_rps": 0.0,
+    "throughput_tps": 6345.8211214239545,
+    "tokens_per_joule": 1.7667962243198223,
+    "total_energy_j": 108060.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 61.57346631738498,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 71.470183499
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp2)-s32-t2048": {
+   "metrics": {
+    "average_power_w": 1534.6909345794395,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 44.928134,
+    "p50_ttft_ms": 19711.218252,
+    "p95_tpot_ms": 48.2479551,
+    "p95_ttft_ms": 46167.32349860002,
+    "p99_tpot_ms": 48.86827979,
+    "p99_ttft_ms": 53039.4993701,
+    "peak_power_w": 1699.19,
+    "sim_wall_seconds": 404.11,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 2.7856031372102996,
+    "throughput_tps": 4211.246966803159,
+    "tokens_per_joule": 1.1568805671696056,
+    "total_energy_j": 165030.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 47.04634229722059,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 107.696604729
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp2)-s32-t8192": {
+   "metrics": {
+    "average_power_w": 1533.7038317757012,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 44.7977355,
+    "p50_ttft_ms": 19654.0841155,
+    "p95_tpot_ms": 47.69521375,
+    "p95_ttft_ms": 45666.38745415002,
+    "p99_tpot_ms": 48.42462598,
+    "p99_ttft_ms": 52552.81792954,
+    "peak_power_w": 1645.06,
+    "sim_wall_seconds": 404.24,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 2.7960580325421374,
+    "throughput_tps": 4227.052573016877,
+    "tokens_per_joule": 1.1609607783520828,
+    "total_energy_j": 164450.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 47.0070706287264,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 107.293910394
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp3)-s128-t2048": {
+   "metrics": {
+    "average_power_w": 1898.6842424242425,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 57.2094825,
+    "p50_ttft_ms": 172.65243850000002,
+    "p95_tpot_ms": 61.5922393,
+    "p95_ttft_ms": 526.6792471000002,
+    "p99_tpot_ms": 63.38361465999999,
+    "p99_ttft_ms": 722.5093596699999,
+    "peak_power_w": 2104.83,
+    "sim_wall_seconds": 283.45,
+    "slo_attainment": 0.09666666666666666,
+    "slo_goodput_rps": 0.43889843707662995,
+    "throughput_tps": 6864.023464014604,
+    "tokens_per_joule": 1.5218812275807094,
+    "total_energy_j": 125450.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 42.03729083845564,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 66.074511892
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp3)-s128-t8192": {
+   "metrics": {
+    "average_power_w": 1901.6844615384616,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 56.8279785,
+    "p50_ttft_ms": 171.1722,
+    "p95_tpot_ms": 60.337188350000005,
+    "p95_ttft_ms": 379.1629922,
+    "p99_tpot_ms": 61.987061659999995,
+    "p99_ttft_ms": 466.9021484699995,
+    "peak_power_w": 2039.81,
+    "sim_wall_seconds": 274.57,
+    "slo_attainment": 0.09666666666666666,
+    "slo_goodput_rps": 0.44182795886146586,
+    "throughput_tps": 6909.8388613156085,
+    "tokens_per_joule": 1.536826853417049,
+    "total_energy_j": 124230.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 41.60755257823932,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 65.636407607
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp3)-s256-t2048": {
+   "metrics": {
+    "average_power_w": 1898.6842424242425,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 57.2094825,
+    "p50_ttft_ms": 172.65243850000002,
+    "p95_tpot_ms": 61.5922393,
+    "p95_ttft_ms": 526.6792471000002,
+    "p99_tpot_ms": 63.38361465999999,
+    "p99_ttft_ms": 722.5093596699999,
+    "peak_power_w": 2104.83,
+    "sim_wall_seconds": 277.43,
+    "slo_attainment": 0.09666666666666666,
+    "slo_goodput_rps": 0.43889843707662995,
+    "throughput_tps": 6864.023464014604,
+    "tokens_per_joule": 1.5218812275807094,
+    "total_energy_j": 125450.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 42.03729083845564,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 66.074511892
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp3)-s256-t8192": {
+   "metrics": {
+    "average_power_w": 1901.6844615384616,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 56.8279785,
+    "p50_ttft_ms": 171.1722,
+    "p95_tpot_ms": 60.337188350000005,
+    "p95_ttft_ms": 379.1629922,
+    "p99_tpot_ms": 61.987061659999995,
+    "p99_ttft_ms": 466.9021484699995,
+    "peak_power_w": 2039.81,
+    "sim_wall_seconds": 274.68,
+    "slo_attainment": 0.09666666666666666,
+    "slo_goodput_rps": 0.44182795886146586,
+    "throughput_tps": 6909.8388613156085,
+    "tokens_per_joule": 1.536826853417049,
+    "total_energy_j": 124230.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 41.60755257823932,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 65.636407607
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp3)-s32-t2048": {
+   "metrics": {
+    "average_power_w": 1904.6752808988765,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 44.47868,
+    "p50_ttft_ms": 14307.860361,
+    "p95_tpot_ms": 47.72607455,
+    "p95_ttft_ms": 31202.21887715,
+    "p99_tpot_ms": 47.90212342,
+    "p99_ttft_ms": 32333.850768619996,
+    "peak_power_w": 2038.6399999999999,
+    "sim_wall_seconds": 450.31,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 3.3709109462670566,
+    "throughput_tps": 5096.109459457073,
+    "tokens_per_joule": 1.1260395163668535,
+    "total_energy_j": 169550.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 34.13628974660859,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 88.99671477
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp3)-s32-t8192": {
+   "metrics": {
+    "average_power_w": 1906.2720224719096,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 44.227921499999994,
+    "p50_ttft_ms": 14272.340829,
+    "p95_tpot_ms": 47.255957800000004,
+    "p95_ttft_ms": 30783.5141598,
+    "p99_tpot_ms": 47.48535998,
+    "p99_ttft_ms": 32593.67255907,
+    "peak_power_w": 2032.69,
+    "sim_wall_seconds": 453.31,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 3.363518948536846,
+    "throughput_tps": 5084.934311208519,
+    "tokens_per_joule": 1.1240506329113924,
+    "total_energy_j": 169850.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 34.513708306084524,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 89.192302642
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp4)-s128-t2048": {
+   "metrics": {
+    "average_power_w": 2306.228387096774,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 50.1537175,
+    "p50_ttft_ms": 157.79451749999998,
+    "p95_tpot_ms": 54.76060485000001,
+    "p95_ttft_ms": 460.4046278500001,
+    "p99_tpot_ms": 55.89089808,
+    "p99_ttft_ms": 613.7446555999999,
+    "peak_power_w": 2456.9300000000003,
+    "sim_wall_seconds": 368.73,
+    "slo_attainment": 0.4866666666666667,
+    "slo_goodput_rps": 2.327464390300454,
+    "throughput_tps": 7230.076830025322,
+    "tokens_per_joule": 1.3275850079966622,
+    "total_energy_j": 143810.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 31.317006394826524,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 62.729208923
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp4)-s128-t8192": {
+   "metrics": {
+    "average_power_w": 2258.8384126984124,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 49.890688,
+    "p50_ttft_ms": 157.827247,
+    "p95_tpot_ms": 54.2758921,
+    "p95_ttft_ms": 350.11586425,
+    "p99_tpot_ms": 55.42069721,
+    "p99_ttft_ms": 427.58510699999994,
+    "peak_power_w": 2475.5099999999998,
+    "sim_wall_seconds": 367.03,
+    "slo_attainment": 0.5166666666666667,
+    "slo_goodput_rps": 2.449730389644774,
+    "throughput_tps": 7168.021753085948,
+    "tokens_per_joule": 1.3389438249526615,
+    "total_energy_j": 142590.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 31.25370244893207,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 63.272268922
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp4)-s256-t2048": {
+   "metrics": {
+    "average_power_w": 2306.228387096774,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 50.1537175,
+    "p50_ttft_ms": 157.79451749999998,
+    "p95_tpot_ms": 54.76060485000001,
+    "p95_ttft_ms": 460.4046278500001,
+    "p99_tpot_ms": 55.89089808,
+    "p99_ttft_ms": 613.7446555999999,
+    "peak_power_w": 2456.9300000000003,
+    "sim_wall_seconds": 372.3,
+    "slo_attainment": 0.4866666666666667,
+    "slo_goodput_rps": 2.327464390300454,
+    "throughput_tps": 7230.076830025322,
+    "tokens_per_joule": 1.3275850079966622,
+    "total_energy_j": 143810.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 31.317006394826524,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 62.729208923
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp4)-s256-t8192": {
+   "metrics": {
+    "average_power_w": 2258.8384126984124,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 49.890688,
+    "p50_ttft_ms": 157.827247,
+    "p95_tpot_ms": 54.2758921,
+    "p95_ttft_ms": 350.11586425,
+    "p99_tpot_ms": 55.42069721,
+    "p99_ttft_ms": 427.58510699999994,
+    "peak_power_w": 2475.5099999999998,
+    "sim_wall_seconds": 366.85,
+    "slo_attainment": 0.5166666666666667,
+    "slo_goodput_rps": 2.449730389644774,
+    "throughput_tps": 7168.021753085948,
+    "tokens_per_joule": 1.3389438249526615,
+    "total_energy_j": 142590.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 31.25370244893207,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 63.272268922
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp4)-s32-t2048": {
+   "metrics": {
+    "average_power_w": 2296.3172222222215,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 43.4766585,
+    "p50_ttft_ms": 276.08512199999996,
+    "p95_tpot_ms": 47.24414765,
+    "p95_ttft_ms": 13601.17534815,
+    "p99_tpot_ms": 49.16014071,
+    "p99_ttft_ms": 14754.56842926,
+    "peak_power_w": 2476.17,
+    "sim_wall_seconds": 460.22,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 4.142896571512052,
+    "throughput_tps": 6263.189607846205,
+    "tokens_per_joule": 1.1514383933417767,
+    "total_energy_j": 165810.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 28.093796332755733,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 72.413103929
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp4)-s32-t8192": {
+   "metrics": {
+    "average_power_w": 2292.024027777778,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 43.3376135,
+    "p50_ttft_ms": 276.08512199999996,
+    "p95_tpot_ms": 46.9783184,
+    "p95_ttft_ms": 13447.785343149999,
+    "p99_tpot_ms": 48.72806491,
+    "p99_ttft_ms": 14512.018714979999,
+    "peak_power_w": 2411.31,
+    "sim_wall_seconds": 459.65,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 4.1431635839553245,
+    "throughput_tps": 6263.59327458782,
+    "tokens_per_joule": 1.1539437896645512,
+    "total_energy_j": 165450.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 28.117946451647374,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 72.408437157
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t2048": {
+   "metrics": {
+    "average_power_w": 989.285376344086,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 46.4926145,
+    "p50_ttft_ms": 231.30052849999998,
+    "p95_tpot_ms": 93.65900045000001,
+    "p95_ttft_ms": 23821.18060000001,
+    "p99_tpot_ms": 95.37920838,
+    "p99_ttft_ms": 30292.32674493,
+    "peak_power_w": 1207.76,
+    "sim_wall_seconds": 160.98,
+    "slo_attainment": 0.5333333333333333,
+    "slo_goodput_rps": 1.7114754418061464,
+    "throughput_tps": 4851.358984065214,
+    "tokens_per_joule": 2.065339679792298,
+    "total_energy_j": 92440.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 87.3231498542084,
+     "phase": "total",
+     "requests": 147,
+     "wall_s": 93.486588292
+    },
+    "RNGD-CARD": {
+     "concurrency": 44.722794435036434,
+     "phase": "total",
+     "requests": 153,
+     "wall_s": 93.486588292
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t8192": {
+   "metrics": {
+    "average_power_w": 992.839239130435,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 46.509823,
+    "p50_ttft_ms": 234.823576,
+    "p95_tpot_ms": 90.82203735,
+    "p95_ttft_ms": 23188.83174150001,
+    "p99_tpot_ms": 92.66878584,
+    "p99_ttft_ms": 28580.89110617,
+    "peak_power_w": 1245.33,
+    "sim_wall_seconds": 161.65,
+    "slo_attainment": 0.53,
+    "slo_goodput_rps": 1.723083978524118,
+    "throughput_tps": 4914.983260175428,
+    "tokens_per_joule": 2.0840519593930793,
+    "total_energy_j": 91610.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 85.96195720469669,
+     "phase": "total",
+     "requests": 146,
+     "wall_s": 92.276407872
+    },
+    "RNGD-CARD": {
+     "concurrency": 45.315418922086494,
+     "phase": "total",
+     "requests": 154,
+     "wall_s": 92.276407872
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t2048": {
+   "metrics": {
+    "average_power_w": 1007.1742682926829,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 47.974136,
+    "p50_ttft_ms": 202.26086600000002,
+    "p95_tpot_ms": 100.17267865000001,
+    "p95_ttft_ms": 859.34387915,
+    "p99_tpot_ms": 103.33767233999998,
+    "p99_ttft_ms": 1065.0746396099998,
+    "peak_power_w": 1207.76,
+    "sim_wall_seconds": 134.47,
+    "slo_attainment": 0.5133333333333333,
+    "slo_goodput_rps": 1.8667709813539266,
+    "throughput_tps": 5497.725393313739,
+    "tokens_per_joule": 2.2991329479768785,
+    "total_energy_j": 83040.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 100.60239992963957,
+     "phase": "total",
+     "requests": 146,
+     "wall_s": 82.495389921
+    },
+    "RNGD-CARD": {
+     "concurrency": 50.81618469404749,
+     "phase": "total",
+     "requests": 154,
+     "wall_s": 82.495389921
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t8192": {
+   "metrics": {
+    "average_power_w": 1003.7001204819276,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 48.051664,
+    "p50_ttft_ms": 195.36419949999998,
+    "p95_tpot_ms": 98.37101265,
+    "p95_ttft_ms": 604.8482731500002,
+    "p99_tpot_ms": 100.7730782,
+    "p99_ttft_ms": 735.5562317999999,
+    "peak_power_w": 1292.03,
+    "sim_wall_seconds": 136.51,
+    "slo_attainment": 0.51,
+    "slo_goodput_rps": 1.8408297765506492,
+    "throughput_tps": 5456.760878218639,
+    "tokens_per_joule": 2.288659793814433,
+    "total_energy_j": 83420.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 99.21207227907144,
+     "phase": "total",
+     "requests": 147,
+     "wall_s": 83.114692053
+    },
+    "RNGD-CARD": {
+     "concurrency": 49.722722499238714,
+     "phase": "total",
+     "requests": 153,
+     "wall_s": 83.114692053
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t2048": {
+   "metrics": {
+    "average_power_w": 1057.2117266187045,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 32.6321865,
+    "p50_ttft_ms": 29100.599658,
+    "p95_tpot_ms": 46.30015615,
+    "p95_ttft_ms": 72924.30650805,
+    "p99_tpot_ms": 47.18778245,
+    "p99_ttft_ms": 83122.09530401,
+    "peak_power_w": 1200.72,
+    "sim_wall_seconds": 368.45,
+    "slo_attainment": 0.88,
+    "slo_goodput_rps": 1.8961045520029127,
+    "throughput_tps": 3257.399887127822,
+    "tokens_per_joule": 1.2971871178149206,
+    "total_energy_j": 147180.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 65.82710039683975,
+     "phase": "total",
+     "requests": 140,
+     "wall_s": 139.232828549
+    },
+    "RNGD-CARD": {
+     "concurrency": 55.81479403489296,
+     "phase": "total",
+     "requests": 160,
+     "wall_s": 139.232828549
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t8192": {
+   "metrics": {
+    "average_power_w": 1042.1365277777772,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 32.1878705,
+    "p50_ttft_ms": 29068.706258,
+    "p95_tpot_ms": 48.1142441,
+    "p95_ttft_ms": 74171.75713245002,
+    "p99_tpot_ms": 48.92546162,
+    "p99_ttft_ms": 86643.61305952,
+    "peak_power_w": 1216.57,
+    "sim_wall_seconds": 369.02,
+    "slo_attainment": 0.8866666666666667,
+    "slo_goodput_rps": 1.8407675632324967,
+    "throughput_tps": 3138.557136563071,
+    "tokens_per_joule": 1.268655724632866,
+    "total_energy_j": 150490.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 64.61306127197555,
+     "phase": "total",
+     "requests": 140,
+     "wall_s": 144.504936589
+    },
+    "RNGD-CARD": {
+     "concurrency": 53.06150928435255,
+     "phase": "total",
+     "requests": 160,
+     "wall_s": 144.504936589
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp2)-s128-t2048": {
+   "metrics": {
+    "average_power_w": 1898.691818181819,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 57.210229999999996,
+    "p50_ttft_ms": 173.3942705,
+    "p95_tpot_ms": 61.59045965,
+    "p95_ttft_ms": 527.8144126500002,
+    "p99_tpot_ms": 63.381158039999995,
+    "p99_ttft_ms": 721.6235896699999,
+    "peak_power_w": 2086.8900000000003,
+    "sim_wall_seconds": 283.45,
+    "slo_attainment": 0.09666666666666666,
+    "slo_goodput_rps": 0.43890243316085675,
+    "throughput_tps": 6864.085959602603,
+    "tokens_per_joule": 1.5218812275807094,
+    "total_energy_j": 125450.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 42.03857311759439,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 66.073910302
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp2)-s128-t8192": {
+   "metrics": {
+    "average_power_w": 1901.8524615384613,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 56.8260755,
+    "p50_ttft_ms": 170.804347,
+    "p95_tpot_ms": 60.3371006,
+    "p95_ttft_ms": 379.1469602,
+    "p99_tpot_ms": 61.984210149999996,
+    "p99_ttft_ms": 466.87222874999946,
+    "peak_power_w": 2038.42,
+    "sim_wall_seconds": 277.31,
+    "slo_attainment": 0.09666666666666666,
+    "slo_goodput_rps": 0.4418360378622757,
+    "throughput_tps": 6909.965210480791,
+    "tokens_per_joule": 1.536826853417049,
+    "total_energy_j": 124230.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 41.60721552523203,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 65.635207441
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp2)-s256-t2048": {
+   "metrics": {
+    "average_power_w": 1898.691818181819,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 57.210229999999996,
+    "p50_ttft_ms": 173.3942705,
+    "p95_tpot_ms": 61.59045965,
+    "p95_ttft_ms": 527.8144126500002,
+    "p99_tpot_ms": 63.381158039999995,
+    "p99_ttft_ms": 721.6235896699999,
+    "peak_power_w": 2086.8900000000003,
+    "sim_wall_seconds": 280.34,
+    "slo_attainment": 0.09666666666666666,
+    "slo_goodput_rps": 0.43890243316085675,
+    "throughput_tps": 6864.085959602603,
+    "tokens_per_joule": 1.5218812275807094,
+    "total_energy_j": 125450.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 42.03857311759439,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 66.073910302
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp2)-s256-t8192": {
+   "metrics": {
+    "average_power_w": 1901.8524615384613,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 56.8260755,
+    "p50_ttft_ms": 170.804347,
+    "p95_tpot_ms": 60.3371006,
+    "p95_ttft_ms": 379.1469602,
+    "p99_tpot_ms": 61.984210149999996,
+    "p99_ttft_ms": 466.87222874999946,
+    "peak_power_w": 2038.42,
+    "sim_wall_seconds": 277.95,
+    "slo_attainment": 0.09666666666666666,
+    "slo_goodput_rps": 0.4418360378622757,
+    "throughput_tps": 6909.965210480791,
+    "tokens_per_joule": 1.536826853417049,
+    "total_energy_j": 124230.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 41.60721552523203,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 65.635207441
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp2)-s32-t2048": {
+   "metrics": {
+    "average_power_w": 1904.7132584269661,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 44.4767195,
+    "p50_ttft_ms": 14308.338269,
+    "p95_tpot_ms": 47.7241219,
+    "p95_ttft_ms": 31201.760185550003,
+    "p99_tpot_ms": 47.906708460000004,
+    "p99_ttft_ms": 32332.772773579993,
+    "peak_power_w": 2038.6399999999999,
+    "sim_wall_seconds": 452.51,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 3.370989741477776,
+    "throughput_tps": 5096.228581268687,
+    "tokens_per_joule": 1.1260395163668535,
+    "total_energy_j": 169550.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 34.13935804839752,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 88.994634516
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp2)-s32-t8192": {
+   "metrics": {
+    "average_power_w": 1906.2379775280908,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 44.2284695,
+    "p50_ttft_ms": 14272.688535000001,
+    "p95_tpot_ms": 47.2559472,
+    "p95_ttft_ms": 30782.232247699998,
+    "p99_tpot_ms": 47.48429755,
+    "p99_ttft_ms": 32594.40491907,
+    "peak_power_w": 2030.15,
+    "sim_wall_seconds": 455.98,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 3.3636118624178932,
+    "throughput_tps": 5085.074777484747,
+    "tokens_per_joule": 1.1240506329113924,
+    "total_energy_j": 169850.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 34.51531271502383,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 89.189838861
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp3)-s128-t2048": {
+   "metrics": {
+    "average_power_w": 2283.7465079365084,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 50.177405,
+    "p50_ttft_ms": 160.646272,
+    "p95_tpot_ms": 54.85431195,
+    "p95_ttft_ms": 460.4157733500001,
+    "p99_tpot_ms": 56.140371009999996,
+    "p99_ttft_ms": 612.5474375899998,
+    "peak_power_w": 2501.41,
+    "sim_wall_seconds": 372.84,
+    "slo_attainment": 0.48333333333333334,
+    "slo_goodput_rps": 2.300107453050731,
+    "throughput_tps": 7194.371268512203,
+    "tokens_per_joule": 1.3262017227007503,
+    "total_energy_j": 143960.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 31.567666580072306,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 63.040533088
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp3)-s128-t8192": {
+   "metrics": {
+    "average_power_w": 2258.904444444444,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 49.886116,
+    "p50_ttft_ms": 157.664965,
+    "p95_tpot_ms": 54.2772631,
+    "p95_ttft_ms": 351.1937019500001,
+    "p99_tpot_ms": 55.42028177,
+    "p99_ttft_ms": 426.7367242799999,
+    "peak_power_w": 2471.73,
+    "sim_wall_seconds": 366.56,
+    "slo_attainment": 0.5166666666666667,
+    "slo_goodput_rps": 2.4496979387186624,
+    "throughput_tps": 7167.926800210619,
+    "tokens_per_joule": 1.3389438249526615,
+    "total_energy_j": 142590.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 31.254090929905754,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 63.273107084
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp3)-s256-t2048": {
+   "metrics": {
+    "average_power_w": 2283.7465079365084,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 50.177405,
+    "p50_ttft_ms": 160.646272,
+    "p95_tpot_ms": 54.85431195,
+    "p95_ttft_ms": 460.4157733500001,
+    "p99_tpot_ms": 56.140371009999996,
+    "p99_ttft_ms": 612.5474375899998,
+    "peak_power_w": 2501.41,
+    "sim_wall_seconds": 374.06,
+    "slo_attainment": 0.48333333333333334,
+    "slo_goodput_rps": 2.300107453050731,
+    "throughput_tps": 7194.371268512203,
+    "tokens_per_joule": 1.3262017227007503,
+    "total_energy_j": 143960.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 31.567666580072306,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 63.040533088
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp3)-s256-t8192": {
+   "metrics": {
+    "average_power_w": 2258.904444444444,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 49.886116,
+    "p50_ttft_ms": 157.664965,
+    "p95_tpot_ms": 54.2772631,
+    "p95_ttft_ms": 351.1937019500001,
+    "p99_tpot_ms": 55.42028177,
+    "p99_ttft_ms": 426.7367242799999,
+    "peak_power_w": 2471.73,
+    "sim_wall_seconds": 366.41,
+    "slo_attainment": 0.5166666666666667,
+    "slo_goodput_rps": 2.4496979387186624,
+    "throughput_tps": 7167.926800210619,
+    "tokens_per_joule": 1.3389438249526615,
+    "total_energy_j": 142590.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 31.254090929905754,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 63.273107084
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp3)-s32-t2048": {
+   "metrics": {
+    "average_power_w": 2296.469722222221,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 43.475353999999996,
+    "p50_ttft_ms": 275.64021549999995,
+    "p95_tpot_ms": 47.2410045,
+    "p95_ttft_ms": 13598.848211150002,
+    "p99_tpot_ms": 49.15691368,
+    "p99_ttft_ms": 14791.64394147,
+    "peak_power_w": 2472.67,
+    "sim_wall_seconds": 459.96,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 4.142914233438425,
+    "throughput_tps": 6263.216308969877,
+    "tokens_per_joule": 1.1513689542877819,
+    "total_energy_j": 165820.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 28.093428309864933,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 72.41279522
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp3)-s32-t8192": {
+   "metrics": {
+    "average_power_w": 2292.0919444444453,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 43.334886,
+    "p50_ttft_ms": 275.64021549999995,
+    "p95_tpot_ms": 46.9777398,
+    "p95_ttft_ms": 13449.214566400002,
+    "p99_tpot_ms": 48.72832965,
+    "p99_ttft_ms": 14551.79491545,
+    "peak_power_w": 2399.95,
+    "sim_wall_seconds": 458.98,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 4.143539794816853,
+    "throughput_tps": 6264.162026406169,
+    "tokens_per_joule": 1.153874048108304,
+    "total_energy_j": 165460.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 28.115460342568632,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 72.401862865
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp4)-s128-t2048": {
+   "metrics": {
+    "average_power_w": 2645.36131147541,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 45.812797,
+    "p50_ttft_ms": 147.1701305,
+    "p95_tpot_ms": 50.201818249999995,
+    "p95_ttft_ms": 430.016674,
+    "p99_tpot_ms": 50.915866019999996,
+    "p99_ttft_ms": 560.0882075399996,
+    "peak_power_w": 2858.16,
+    "sim_wall_seconds": 456.35,
+    "slo_attainment": 0.93,
+    "slo_goodput_rps": 4.569716105953695,
+    "throughput_tps": 7428.442055720147,
+    "tokens_per_joule": 1.1823868210813153,
+    "total_energy_j": 161470.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 24.727230836324846,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 61.054120985
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp4)-s128-t8192": {
+   "metrics": {
+    "average_power_w": 2608.7178688524587,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 45.7949665,
+    "p50_ttft_ms": 147.33660500000002,
+    "p95_tpot_ms": 50.245472199999995,
+    "p95_ttft_ms": 342.6132495,
+    "p99_tpot_ms": 51.535284260000005,
+    "p99_ttft_ms": 373.48630196999994,
+    "peak_power_w": 2970.52,
+    "sim_wall_seconds": 449.54,
+    "slo_attainment": 0.93,
+    "slo_goodput_rps": 4.514788913086946,
+    "throughput_tps": 7339.153474102919,
+    "tokens_per_joule": 1.1941456092069052,
+    "total_energy_j": 159880.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 24.971893155811223,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 61.796909085
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp4)-s256-t2048": {
+   "metrics": {
+    "average_power_w": 2645.36131147541,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 45.812797,
+    "p50_ttft_ms": 147.1701305,
+    "p95_tpot_ms": 50.201818249999995,
+    "p95_ttft_ms": 430.016674,
+    "p99_tpot_ms": 50.915866019999996,
+    "p99_ttft_ms": 560.0882075399996,
+    "peak_power_w": 2858.16,
+    "sim_wall_seconds": 456.29,
+    "slo_attainment": 0.93,
+    "slo_goodput_rps": 4.569716105953695,
+    "throughput_tps": 7428.442055720147,
+    "tokens_per_joule": 1.1823868210813153,
+    "total_energy_j": 161470.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 24.727230836324846,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 61.054120985
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp4)-s256-t8192": {
+   "metrics": {
+    "average_power_w": 2608.7178688524587,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 45.7949665,
+    "p50_ttft_ms": 147.33660500000002,
+    "p95_tpot_ms": 50.245472199999995,
+    "p95_ttft_ms": 342.6132495,
+    "p99_tpot_ms": 51.535284260000005,
+    "p99_ttft_ms": 373.48630196999994,
+    "peak_power_w": 2970.52,
+    "sim_wall_seconds": 448.0,
+    "slo_attainment": 0.93,
+    "slo_goodput_rps": 4.514788913086946,
+    "throughput_tps": 7339.153474102919,
+    "tokens_per_joule": 1.1941456092069052,
+    "total_energy_j": 159880.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 24.971893155811223,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 61.796909085
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp4)-s32-t2048": {
+   "metrics": {
+    "average_power_w": 2638.4380882352953,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 42.73501,
+    "p50_ttft_ms": 186.8711525,
+    "p95_tpot_ms": 46.79422335,
+    "p95_ttft_ms": 10310.36743735,
+    "p99_tpot_ms": 47.34792836,
+    "p99_ttft_ms": 11359.608939279999,
+    "peak_power_w": 2858.16,
+    "sim_wall_seconds": 530.6,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 4.396757440959267,
+    "throughput_tps": 6646.973931667811,
+    "tokens_per_joule": 1.0626147937886126,
+    "total_energy_j": 179670.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 23.521364103389292,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 68.232101504
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp4)-s32-t8192": {
+   "metrics": {
+    "average_power_w": 2636.2061764705886,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 42.6842675,
+    "p50_ttft_ms": 188.82067,
+    "p95_tpot_ms": 46.478139649999996,
+    "p95_ttft_ms": 10077.75874475,
+    "p99_tpot_ms": 47.09214012,
+    "p99_ttft_ms": 11182.468812379999,
+    "peak_power_w": 2951.27,
+    "sim_wall_seconds": 532.9,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 4.358868017977427,
+    "throughput_tps": 6589.693080898094,
+    "tokens_per_joule": 1.0603721188558735,
+    "total_energy_j": 180050.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 23.34355588966667,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 68.825208463
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp2+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t2048": {
+   "metrics": {
+    "average_power_w": 1414.5647142857142,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 60.717169,
+    "p50_ttft_ms": 168.3875415,
+    "p95_tpot_ms": 71.22109425000001,
+    "p95_ttft_ms": 525.6310704500005,
+    "p99_tpot_ms": 73.13266094,
+    "p99_ttft_ms": 744.3125551499999,
+    "peak_power_w": 1666.8,
+    "sim_wall_seconds": 214.43,
+    "slo_attainment": 0.36666666666666664,
+    "slo_goodput_rps": 1.5518404469642026,
+    "throughput_tps": 6398.336916316396,
+    "tokens_per_joule": 1.9137931034482758,
+    "total_energy_j": 99760.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 57.83242776897543,
+     "phase": "total",
+     "requests": 191,
+     "wall_s": 70.883575831
+    },
+    "RNGD-CARD": {
+     "concurrency": 36.84173134009566,
+     "phase": "total",
+     "requests": 109,
+     "wall_s": 70.883575831
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp2+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t8192": {
+   "metrics": {
+    "average_power_w": 1429.2884285714285,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 60.880621000000005,
+    "p50_ttft_ms": 164.602217,
+    "p95_tpot_ms": 71.3714229,
+    "p95_ttft_ms": 423.08037225000004,
+    "p99_tpot_ms": 73.23083102,
+    "p99_ttft_ms": 582.4634548199998,
+    "peak_power_w": 1626.2800000000002,
+    "sim_wall_seconds": 216.77,
+    "slo_attainment": 0.37666666666666665,
+    "slo_goodput_rps": 1.6089996039635572,
+    "throughput_tps": 6457.883658255043,
+    "tokens_per_joule": 1.9042489527229205,
+    "total_energy_j": 100260.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 58.25554280697817,
+     "phase": "total",
+     "requests": 188,
+     "wall_s": 70.229973781
+    },
+    "RNGD-CARD": {
+     "concurrency": 36.72118786049871,
+     "phase": "total",
+     "requests": 112,
+     "wall_s": 70.229973781
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp2+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t2048": {
+   "metrics": {
+    "average_power_w": 1414.5647142857142,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 60.717169,
+    "p50_ttft_ms": 168.3875415,
+    "p95_tpot_ms": 71.22109425000001,
+    "p95_ttft_ms": 525.6310704500005,
+    "p99_tpot_ms": 73.13266094,
+    "p99_ttft_ms": 744.3125551499999,
+    "peak_power_w": 1666.8,
+    "sim_wall_seconds": 213.83,
+    "slo_attainment": 0.36666666666666664,
+    "slo_goodput_rps": 1.5518404469642026,
+    "throughput_tps": 6398.336916316396,
+    "tokens_per_joule": 1.9137931034482758,
+    "total_energy_j": 99760.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 57.83242776897543,
+     "phase": "total",
+     "requests": 191,
+     "wall_s": 70.883575831
+    },
+    "RNGD-CARD": {
+     "concurrency": 36.84173134009566,
+     "phase": "total",
+     "requests": 109,
+     "wall_s": 70.883575831
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp2+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t8192": {
+   "metrics": {
+    "average_power_w": 1429.2884285714285,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 60.880621000000005,
+    "p50_ttft_ms": 164.602217,
+    "p95_tpot_ms": 71.3714229,
+    "p95_ttft_ms": 423.08037225000004,
+    "p99_tpot_ms": 73.23083102,
+    "p99_ttft_ms": 582.4634548199998,
+    "peak_power_w": 1626.2800000000002,
+    "sim_wall_seconds": 216.85,
+    "slo_attainment": 0.37666666666666665,
+    "slo_goodput_rps": 1.6089996039635572,
+    "throughput_tps": 6457.883658255043,
+    "tokens_per_joule": 1.9042489527229205,
+    "total_energy_j": 100260.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 58.25554280697817,
+     "phase": "total",
+     "requests": 188,
+     "wall_s": 70.229973781
+    },
+    "RNGD-CARD": {
+     "concurrency": 36.72118786049871,
+     "phase": "total",
+     "requests": 112,
+     "wall_s": 70.229973781
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp2+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t2048": {
+   "metrics": {
+    "average_power_w": 1470.5557142857144,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 42.524767499999996,
+    "p50_ttft_ms": 18480.1976015,
+    "p95_tpot_ms": 47.1783866,
+    "p95_ttft_ms": 38858.7353012,
+    "p99_tpot_ms": 48.07302291,
+    "p99_ttft_ms": 40043.160711979996,
+    "peak_power_w": 1686.1,
+    "sim_wall_seconds": 392.99,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 3.0353923062802646,
+    "throughput_tps": 4588.8757347114415,
+    "tokens_per_joule": 1.315872906471845,
+    "total_energy_j": 145090.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 44.01073039632014,
+     "phase": "total",
+     "requests": 187,
+     "wall_s": 98.834012124
+    },
+    "RNGD-CARD": {
+     "concurrency": 39.11109595300274,
+     "phase": "total",
+     "requests": 113,
+     "wall_s": 98.834012124
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp2+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t8192": {
+   "metrics": {
+    "average_power_w": 1471.5021428571429,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 42.397007,
+    "p50_ttft_ms": 18388.927028500002,
+    "p95_tpot_ms": 46.8083588,
+    "p95_ttft_ms": 38420.20765140001,
+    "p99_tpot_ms": 47.619613109999996,
+    "p99_ttft_ms": 39541.40338546999,
+    "peak_power_w": 1628.08,
+    "sim_wall_seconds": 392.68,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 3.0564244312714504,
+    "throughput_tps": 4620.671890951866,
+    "tokens_per_joule": 1.3219775654341503,
+    "total_energy_j": 144420.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 43.95745204397862,
+     "phase": "total",
+     "requests": 187,
+     "wall_s": 98.153907203
+    },
+    "RNGD-CARD": {
+     "concurrency": 39.54012883589396,
+     "phase": "total",
+     "requests": 113,
+     "wall_s": 98.153907203
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp3)-s128-t2048": {
+   "metrics": {
+    "average_power_w": 2645.400163934426,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 45.812723500000004,
+    "p50_ttft_ms": 147.337392,
+    "p95_tpot_ms": 50.201813449999996,
+    "p95_ttft_ms": 430.016674,
+    "p99_tpot_ms": 50.915866019999996,
+    "p99_ttft_ms": 560.0554639499996,
+    "peak_power_w": 2871.74,
+    "sim_wall_seconds": 456.05,
+    "slo_attainment": 0.93,
+    "slo_goodput_rps": 4.569719805717382,
+    "throughput_tps": 7428.448069984388,
+    "tokens_per_joule": 1.1823868210813153,
+    "total_energy_j": 161470.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 24.727209680024874,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 61.054071554
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp3)-s128-t8192": {
+   "metrics": {
+    "average_power_w": 2608.7421311475414,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 45.792376000000004,
+    "p50_ttft_ms": 147.32451550000002,
+    "p95_tpot_ms": 50.24537975,
+    "p95_ttft_ms": 345.08076954999996,
+    "p99_tpot_ms": 51.5351015,
+    "p99_ttft_ms": 373.48630196999994,
+    "peak_power_w": 2970.5699999999997,
+    "sim_wall_seconds": 448.07,
+    "slo_attainment": 0.93,
+    "slo_goodput_rps": 4.514791826296147,
+    "throughput_tps": 7339.15820975941,
+    "tokens_per_joule": 1.1941456092069052,
+    "total_energy_j": 159880.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 24.971890560457084,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 61.79686921
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp3)-s256-t2048": {
+   "metrics": {
+    "average_power_w": 2645.400163934426,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 45.812723500000004,
+    "p50_ttft_ms": 147.337392,
+    "p95_tpot_ms": 50.201813449999996,
+    "p95_ttft_ms": 430.016674,
+    "p99_tpot_ms": 50.915866019999996,
+    "p99_ttft_ms": 560.0554639499996,
+    "peak_power_w": 2871.74,
+    "sim_wall_seconds": 456.02,
+    "slo_attainment": 0.93,
+    "slo_goodput_rps": 4.569719805717382,
+    "throughput_tps": 7428.448069984388,
+    "tokens_per_joule": 1.1823868210813153,
+    "total_energy_j": 161470.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 24.727209680024874,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 61.054071554
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp3)-s256-t8192": {
+   "metrics": {
+    "average_power_w": 2608.7421311475414,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 45.792376000000004,
+    "p50_ttft_ms": 147.32451550000002,
+    "p95_tpot_ms": 50.24537975,
+    "p95_ttft_ms": 345.08076954999996,
+    "p99_tpot_ms": 51.5351015,
+    "p99_ttft_ms": 373.48630196999994,
+    "peak_power_w": 2970.5699999999997,
+    "sim_wall_seconds": 447.8,
+    "slo_attainment": 0.93,
+    "slo_goodput_rps": 4.514791826296147,
+    "throughput_tps": 7339.15820975941,
+    "tokens_per_joule": 1.1941456092069052,
+    "total_energy_j": 159880.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 24.971890560457084,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 61.79686921
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp3)-s32-t2048": {
+   "metrics": {
+    "average_power_w": 2638.4347058823537,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 42.73501,
+    "p50_ttft_ms": 186.70719,
+    "p95_tpot_ms": 46.794087850000004,
+    "p95_ttft_ms": 10310.2891913,
+    "p99_tpot_ms": 47.347948530000004,
+    "p99_ttft_ms": 11359.54455714,
+    "peak_power_w": 2871.74,
+    "sim_wall_seconds": 531.14,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 4.3967564593715736,
+    "throughput_tps": 6646.972447713351,
+    "tokens_per_joule": 1.0626147937886126,
+    "total_energy_j": 179670.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 23.52131791928875,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 68.232116737
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp3)-s32-t8192": {
+   "metrics": {
+    "average_power_w": 2636.2160294117643,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 42.6846735,
+    "p50_ttft_ms": 188.2717845,
+    "p95_tpot_ms": 46.4780661,
+    "p95_ttft_ms": 10077.8547694,
+    "p99_tpot_ms": 47.09300218,
+    "p99_ttft_ms": 11182.41907538,
+    "peak_power_w": 2951.27,
+    "sim_wall_seconds": 532.61,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 4.358876074194667,
+    "throughput_tps": 6589.705260206756,
+    "tokens_per_joule": 1.0603721188558735,
+    "total_energy_j": 180050.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 23.343570639769517,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 68.825081258
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp4)-s128-t2048": {
+   "metrics": {
+    "average_power_w": 3033.257627118643,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 43.220115,
+    "p50_ttft_ms": 143.075855,
+    "p95_tpot_ms": 46.5598326,
+    "p95_ttft_ms": 407.1714397000001,
+    "p99_tpot_ms": 47.00088950999999,
+    "p99_ttft_ms": 540.3619544599997,
+    "peak_power_w": 3247.45,
+    "sim_wall_seconds": 547.26,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 5.08732717944281,
+    "throughput_tps": 7690.970356609847,
+    "tokens_per_joule": 1.0667113643982569,
+    "total_energy_j": 178980.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 20.984462328214715,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 58.97006216
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp4)-s128-t8192": {
+   "metrics": {
+    "average_power_w": 3025.101016949152,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 43.332225,
+    "p50_ttft_ms": 143.1555085,
+    "p95_tpot_ms": 45.98132245,
+    "p95_ttft_ms": 339.10190385000004,
+    "p99_tpot_ms": 46.54961795999999,
+    "p99_ttft_ms": 399.8936635399998,
+    "peak_power_w": 3314.9,
+    "sim_wall_seconds": 543.41,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 5.053657419654106,
+    "throughput_tps": 7640.068750458881,
+    "tokens_per_joule": 1.0674867207156835,
+    "total_energy_j": 178850.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 20.414350673912274,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 59.362947483
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp4)-s256-t2048": {
+   "metrics": {
+    "average_power_w": 3033.257627118643,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 43.220115,
+    "p50_ttft_ms": 143.075855,
+    "p95_tpot_ms": 46.5598326,
+    "p95_ttft_ms": 407.1714397000001,
+    "p99_tpot_ms": 47.00088950999999,
+    "p99_ttft_ms": 540.3619544599997,
+    "peak_power_w": 3247.45,
+    "sim_wall_seconds": 544.31,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 5.08732717944281,
+    "throughput_tps": 7690.970356609847,
+    "tokens_per_joule": 1.0667113643982569,
+    "total_energy_j": 178980.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 20.984462328214715,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 58.97006216
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp4)-s256-t8192": {
+   "metrics": {
+    "average_power_w": 3025.101016949152,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 43.332225,
+    "p50_ttft_ms": 143.1555085,
+    "p95_tpot_ms": 45.98132245,
+    "p95_ttft_ms": 339.10190385000004,
+    "p99_tpot_ms": 46.54961795999999,
+    "p99_ttft_ms": 399.8936635399998,
+    "peak_power_w": 3314.9,
+    "sim_wall_seconds": 545.88,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 5.053657419654106,
+    "throughput_tps": 7640.068750458881,
+    "tokens_per_joule": 1.0674867207156835,
+    "total_energy_j": 178850.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 20.414350673912274,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 59.362947483
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp4)-s32-t2048": {
+   "metrics": {
+    "average_power_w": 3042.2891935483885,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 42.3552715,
+    "p50_ttft_ms": 161.3939455,
+    "p95_tpot_ms": 44.82005795,
+    "p95_ttft_ms": 5639.6258029,
+    "p99_tpot_ms": 45.46479228,
+    "p99_ttft_ms": 7129.361035669999,
+    "peak_power_w": 3245.67,
+    "sim_wall_seconds": 590.84,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 4.7885696285959,
+    "throughput_tps": 7239.311678814995,
+    "tokens_per_joule": 1.008291523633483,
+    "total_energy_j": 189350.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 19.603946653672576,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 62.649188227
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp4)-s32-t8192": {
+   "metrics": {
+    "average_power_w": 3016.448253968254,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 42.119848000000005,
+    "p50_ttft_ms": 160.198612,
+    "p95_tpot_ms": 44.830392950000004,
+    "p95_ttft_ms": 5504.906661500001,
+    "p99_tpot_ms": 45.28213898,
+    "p99_ttft_ms": 6619.413941709999,
+    "peak_power_w": 3246.15,
+    "sim_wall_seconds": 596.33,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 4.716384270309,
+    "throughput_tps": 7130.182576010442,
+    "tokens_per_joule": 1.0014687368862778,
+    "total_energy_j": 190640.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 19.398284192702665,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 63.608048625
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp3+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t2048": {
+   "metrics": {
+    "average_power_w": 1855.0344444444443,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 52.158689,
+    "p50_ttft_ms": 154.2986635,
+    "p95_tpot_ms": 58.456769099999995,
+    "p95_ttft_ms": 479.7575379000001,
+    "p99_tpot_ms": 59.34723524999999,
+    "p99_ttft_ms": 659.76103687,
+    "peak_power_w": 2028.9699999999998,
+    "sim_wall_seconds": 301.84,
+    "slo_attainment": 0.41333333333333333,
+    "slo_goodput_rps": 1.9449724738979182,
+    "throughput_tps": 7113.846620114839,
+    "tokens_per_joule": 1.624436314132562,
+    "total_energy_j": 117530.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 39.14078471493432,
+     "phase": "total",
+     "requests": 212,
+     "wall_s": 63.754115631
+    },
+    "RNGD-CARD": {
+     "concurrency": 30.23999617967503,
+     "phase": "total",
+     "requests": 88,
+     "wall_s": 63.754115631
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp3+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t8192": {
+   "metrics": {
+    "average_power_w": 1836.6096875000005,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 52.165510499999996,
+    "p50_ttft_ms": 147.2607205,
+    "p95_tpot_ms": 58.4023288,
+    "p95_ttft_ms": 352.71219805000004,
+    "p99_tpot_ms": 59.01344061999999,
+    "p99_ttft_ms": 513.4772154699999,
+    "peak_power_w": 2077.23,
+    "sim_wall_seconds": 300.85,
+    "slo_attainment": 0.42333333333333334,
+    "slo_goodput_rps": 1.9795806014371482,
+    "throughput_tps": 7069.39407270866,
+    "tokens_per_joule": 1.622090059473237,
+    "total_energy_j": 117700.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 38.66591752454938,
+     "phase": "total",
+     "requests": 212,
+     "wall_s": 64.155003291
+    },
+    "RNGD-CARD": {
+     "concurrency": 29.834772276249154,
+     "phase": "total",
+     "requests": 88,
+     "wall_s": 64.155003291
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp3+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t2048": {
+   "metrics": {
+    "average_power_w": 1855.0344444444443,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 52.158689,
+    "p50_ttft_ms": 154.2986635,
+    "p95_tpot_ms": 58.456769099999995,
+    "p95_ttft_ms": 479.7575379000001,
+    "p99_tpot_ms": 59.34723524999999,
+    "p99_ttft_ms": 659.76103687,
+    "peak_power_w": 2028.9699999999998,
+    "sim_wall_seconds": 302.12,
+    "slo_attainment": 0.41333333333333333,
+    "slo_goodput_rps": 1.9449724738979182,
+    "throughput_tps": 7113.846620114839,
+    "tokens_per_joule": 1.624436314132562,
+    "total_energy_j": 117530.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 39.14078471493432,
+     "phase": "total",
+     "requests": 212,
+     "wall_s": 63.754115631
+    },
+    "RNGD-CARD": {
+     "concurrency": 30.23999617967503,
+     "phase": "total",
+     "requests": 88,
+     "wall_s": 63.754115631
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp3+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t8192": {
+   "metrics": {
+    "average_power_w": 1836.6096875000005,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 52.165510499999996,
+    "p50_ttft_ms": 147.2607205,
+    "p95_tpot_ms": 58.4023288,
+    "p95_ttft_ms": 352.71219805000004,
+    "p99_tpot_ms": 59.01344061999999,
+    "p99_ttft_ms": 513.4772154699999,
+    "peak_power_w": 2077.23,
+    "sim_wall_seconds": 300.59,
+    "slo_attainment": 0.42333333333333334,
+    "slo_goodput_rps": 1.9795806014371482,
+    "throughput_tps": 7069.39407270866,
+    "tokens_per_joule": 1.622090059473237,
+    "total_energy_j": 117700.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 38.66591752454938,
+     "phase": "total",
+     "requests": 212,
+     "wall_s": 64.155003291
+    },
+    "RNGD-CARD": {
+     "concurrency": 29.834772276249154,
+     "phase": "total",
+     "requests": 88,
+     "wall_s": 64.155003291
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp3+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t2048": {
+   "metrics": {
+    "average_power_w": 1823.0742857142852,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 42.7257015,
+    "p50_ttft_ms": 8520.574241,
+    "p95_tpot_ms": 47.6161333,
+    "p95_ttft_ms": 23011.639192700004,
+    "p99_tpot_ms": 48.21768009,
+    "p99_ttft_ms": 29229.997597009995,
+    "peak_power_w": 2032.68,
+    "sim_wall_seconds": 443.55,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 3.5650707860599025,
+    "throughput_tps": 5389.6383636575,
+    "tokens_per_joule": 1.2454011741682975,
+    "total_energy_j": 153300.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 31.64731787418259,
+     "phase": "total",
+     "requests": 210,
+     "wall_s": 84.149801786
+    },
+    "RNGD-CARD": {
+     "concurrency": 29.440472340258875,
+     "phase": "total",
+     "requests": 90,
+     "wall_s": 84.149801786
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp3+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t8192": {
+   "metrics": {
+    "average_power_w": 1846.0613414634156,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 42.7357145,
+    "p50_ttft_ms": 8540.402904,
+    "p95_tpot_ms": 47.12938165,
+    "p95_ttft_ms": 22559.952525250003,
+    "p99_tpot_ms": 47.712059780000004,
+    "p99_ttft_ms": 28717.58082156999,
+    "peak_power_w": 2043.6499999999999,
+    "sim_wall_seconds": 442.5,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 3.623270788428837,
+    "throughput_tps": 5477.624545238831,
+    "tokens_per_joule": 1.255391899000526,
+    "total_energy_j": 152080.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 31.864890151195777,
+     "phase": "total",
+     "requests": 209,
+     "wall_s": 82.798117369
+    },
+    "RNGD-CARD": {
+     "concurrency": 30.43635094209916,
+     "phase": "total",
+     "requests": 91,
+     "wall_s": 82.798117369
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp4)-s128-t2048": {
+   "metrics": {
+    "average_power_w": 3366.48224137931,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 41.3895695,
+    "p50_ttft_ms": 136.8685045,
+    "p95_tpot_ms": 43.7601824,
+    "p95_ttft_ms": 386.183641,
+    "p99_tpot_ms": 44.440715829999995,
+    "p99_ttft_ms": 480.7570681499999,
+    "peak_power_w": 3710.96,
+    "sim_wall_seconds": 624.83,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 5.138087491442077,
+    "throughput_tps": 7767.709288687217,
+    "tokens_per_joule": 0.9751264109505082,
+    "total_energy_j": 195790.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 17.274597550598024,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 58.387483767
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp4)-s128-t8192": {
+   "metrics": {
+    "average_power_w": 3365.39724137931,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 41.1532435,
+    "p50_ttft_ms": 137.27734049999998,
+    "p95_tpot_ms": 43.835789749999996,
+    "p95_ttft_ms": 335.9611523000001,
+    "p99_tpot_ms": 44.57444269,
+    "p99_ttft_ms": 368.54709984,
+    "peak_power_w": 3683.45,
+    "sim_wall_seconds": 627.0,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 5.162546155342729,
+    "throughput_tps": 7804.685652185584,
+    "tokens_per_joule": 0.9773727859117436,
+    "total_energy_j": 195340.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 17.51083925679197,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 58.110860605
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp4)-s256-t2048": {
+   "metrics": {
+    "average_power_w": 3366.48224137931,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 41.3895695,
+    "p50_ttft_ms": 136.8685045,
+    "p95_tpot_ms": 43.7601824,
+    "p95_ttft_ms": 386.183641,
+    "p99_tpot_ms": 44.440715829999995,
+    "p99_ttft_ms": 480.7570681499999,
+    "peak_power_w": 3710.96,
+    "sim_wall_seconds": 624.51,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 5.138087491442077,
+    "throughput_tps": 7767.709288687217,
+    "tokens_per_joule": 0.9751264109505082,
+    "total_energy_j": 195790.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 17.274597550598024,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 58.387483767
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp4)-s256-t8192": {
+   "metrics": {
+    "average_power_w": 3365.39724137931,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 41.1532435,
+    "p50_ttft_ms": 137.27734049999998,
+    "p95_tpot_ms": 43.835789749999996,
+    "p95_ttft_ms": 335.9611523000001,
+    "p99_tpot_ms": 44.57444269,
+    "p99_ttft_ms": 368.54709984,
+    "peak_power_w": 3683.45,
+    "sim_wall_seconds": 622.79,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 5.162546155342729,
+    "throughput_tps": 7804.685652185584,
+    "tokens_per_joule": 0.9773727859117436,
+    "total_energy_j": 195340.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 17.51083925679197,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 58.110860605
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp4)-s32-t2048": {
+   "metrics": {
+    "average_power_w": 3412.261034482758,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 41.2487965,
+    "p50_ttft_ms": 138.5523475,
+    "p95_tpot_ms": 43.7282278,
+    "p95_ttft_ms": 704.9482210000008,
+    "p99_tpot_ms": 44.42038546999999,
+    "p99_ttft_ms": 2768.7345449399977,
+    "peak_power_w": 3710.96,
+    "sim_wall_seconds": 643.6,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 5.103654297400482,
+    "throughput_tps": 7715.653530267074,
+    "tokens_per_joule": 0.9594451982511684,
+    "total_energy_j": 198990.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 17.589715467804478,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 58.781410832
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp4)-s32-t8192": {
+   "metrics": {
+    "average_power_w": 3398.72448275862,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 41.122643,
+    "p50_ttft_ms": 139.382165,
+    "p95_tpot_ms": 43.7547067,
+    "p95_ttft_ms": 623.0229610500008,
+    "p99_tpot_ms": 44.50847675,
+    "p99_ttft_ms": 2016.4958653399974,
+    "peak_power_w": 3683.45,
+    "sim_wall_seconds": 636.34,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 5.120254012136805,
+    "throughput_tps": 7740.748813008301,
+    "tokens_per_joule": 0.9647296614451744,
+    "total_energy_j": 197900.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 17.717513138822603,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 58.590843206
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp4+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t2048": {
+   "metrics": {
+    "average_power_w": 2227.9093442622952,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 47.32497,
+    "p50_ttft_ms": 144.9026735,
+    "p95_tpot_ms": 54.7586936,
+    "p95_ttft_ms": 408.0992787500001,
+    "p99_tpot_ms": 56.41562538,
+    "p99_ttft_ms": 593.26224698,
+    "peak_power_w": 2448.89,
+    "sim_wall_seconds": 389.73,
+    "slo_attainment": 0.7333333333333333,
+    "slo_goodput_rps": 3.5761475003746996,
+    "throughput_tps": 7372.341858533819,
+    "tokens_per_joule": 1.3978620588665984,
+    "total_energy_j": 136580.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 29.9851281936023,
+     "phase": "total",
+     "requests": 227,
+     "wall_s": 61.518715315
+    },
+    "RNGD-CARD": {
+     "concurrency": 24.13132881874453,
+     "phase": "total",
+     "requests": 73,
+     "wall_s": 61.518715315
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp4+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t8192": {
+   "metrics": {
+    "average_power_w": 2239.1413114754096,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 48.298838,
+    "p50_ttft_ms": 140.43470150000002,
+    "p95_tpot_ms": 52.3168939,
+    "p95_ttft_ms": 330.95831850000013,
+    "p99_tpot_ms": 53.449612210000005,
+    "p99_ttft_ms": 393.45460599,
+    "peak_power_w": 2504.18,
+    "sim_wall_seconds": 391.53,
+    "slo_attainment": 0.7033333333333334,
+    "slo_goodput_rps": 3.4501766184973577,
+    "throughput_tps": 7416.032004850408,
+    "tokens_per_joule": 1.3960222287218484,
+    "total_energy_j": 136760.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 29.53452672499973,
+     "phase": "total",
+     "requests": 226,
+     "wall_s": 61.156289469
+    },
+    "RNGD-CARD": {
+     "concurrency": 23.979319785291402,
+     "phase": "total",
+     "requests": 74,
+     "wall_s": 61.156289469
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp4+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t2048": {
+   "metrics": {
+    "average_power_w": 2227.9093442622952,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 47.32497,
+    "p50_ttft_ms": 144.9026735,
+    "p95_tpot_ms": 54.7586936,
+    "p95_ttft_ms": 408.0992787500001,
+    "p99_tpot_ms": 56.41562538,
+    "p99_ttft_ms": 593.26224698,
+    "peak_power_w": 2448.89,
+    "sim_wall_seconds": 389.78,
+    "slo_attainment": 0.7333333333333333,
+    "slo_goodput_rps": 3.5761475003746996,
+    "throughput_tps": 7372.341858533819,
+    "tokens_per_joule": 1.3978620588665984,
+    "total_energy_j": 136580.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 29.9851281936023,
+     "phase": "total",
+     "requests": 227,
+     "wall_s": 61.518715315
+    },
+    "RNGD-CARD": {
+     "concurrency": 24.13132881874453,
+     "phase": "total",
+     "requests": 73,
+     "wall_s": 61.518715315
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp4+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t8192": {
+   "metrics": {
+    "average_power_w": 2239.1413114754096,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 48.298838,
+    "p50_ttft_ms": 140.43470150000002,
+    "p95_tpot_ms": 52.3168939,
+    "p95_ttft_ms": 330.95831850000013,
+    "p99_tpot_ms": 53.449612210000005,
+    "p99_ttft_ms": 393.45460599,
+    "peak_power_w": 2504.18,
+    "sim_wall_seconds": 394.99,
+    "slo_attainment": 0.7033333333333334,
+    "slo_goodput_rps": 3.4501766184973577,
+    "throughput_tps": 7416.032004850408,
+    "tokens_per_joule": 1.3960222287218484,
+    "total_energy_j": 136760.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 29.53452672499973,
+     "phase": "total",
+     "requests": 226,
+     "wall_s": 61.156289469
+    },
+    "RNGD-CARD": {
+     "concurrency": 23.979319785291402,
+     "phase": "total",
+     "requests": 74,
+     "wall_s": 61.156289469
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp4+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t2048": {
+   "metrics": {
+    "average_power_w": 2216.1723943661964,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 42.067535500000005,
+    "p50_ttft_ms": 275.543694,
+    "p95_tpot_ms": 47.5707174,
+    "p95_ttft_ms": 12558.74230865,
+    "p99_tpot_ms": 49.00535127,
+    "p99_ttft_ms": 13191.93085714,
+    "peak_power_w": 2448.89,
+    "sim_wall_seconds": 478.2,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 4.22782023749402,
+    "throughput_tps": 6391.576356841086,
+    "tokens_per_joule": 1.2131918408845397,
+    "total_energy_j": 157370.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 26.660457649288205,
+     "phase": "total",
+     "requests": 227,
+     "wall_s": 70.958551487
+    },
+    "RNGD-CARD": {
+     "concurrency": 23.108428023737343,
+     "phase": "total",
+     "requests": 73,
+     "wall_s": 70.958551487
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp1-dp4+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t8192": {
+   "metrics": {
+    "average_power_w": 2232.1791428571432,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 41.9024825,
+    "p50_ttft_ms": 266.87674749999996,
+    "p95_tpot_ms": 47.231120600000004,
+    "p95_ttft_ms": 12371.32324015,
+    "p99_tpot_ms": 48.62831984,
+    "p99_ttft_ms": 13037.859252960001,
+    "peak_power_w": 2432.25,
+    "sim_wall_seconds": 482.71,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 4.244800307144875,
+    "throughput_tps": 6417.2466563385515,
+    "tokens_per_joule": 1.2169035630059277,
+    "total_energy_j": 156890.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 26.600342438024548,
+     "phase": "total",
+     "requests": 227,
+     "wall_s": 70.674702764
+    },
+    "RNGD-CARD": {
+     "concurrency": 23.306175286385816,
+     "phase": "total",
+     "requests": 73,
+     "wall_s": 70.674702764
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp1)-s128-t2048": {
+   "metrics": {
+    "average_power_w": 1461.5372727272718,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 56.067492,
+    "p50_ttft_ms": 233.310259,
+    "p95_tpot_ms": 62.8619502,
+    "p95_ttft_ms": 11913.88299055,
+    "p99_tpot_ms": 64.83154180999999,
+    "p99_ttft_ms": 14568.78438508,
+    "peak_power_w": 1566.7,
+    "sim_wall_seconds": 198.97,
+    "slo_attainment": 0.25333333333333335,
+    "slo_goodput_rps": 1.1414028259397357,
+    "throughput_tps": 6811.426493003025,
+    "tokens_per_joule": 1.9662203913491245,
+    "total_energy_j": 97100.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 83.06783658671833,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 66.584730888
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp1)-s128-t8192": {
+   "metrics": {
+    "average_power_w": 1469.9664615384613,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 56.182964999999996,
+    "p50_ttft_ms": 223.9928075,
+    "p95_tpot_ms": 62.56116945,
+    "p95_ttft_ms": 11123.713398050006,
+    "p99_tpot_ms": 64.04619136,
+    "p99_ttft_ms": 14768.104575389998,
+    "peak_power_w": 1605.44,
+    "sim_wall_seconds": 199.81,
+    "slo_attainment": 0.26,
+    "slo_goodput_rps": 1.1837519968526904,
+    "throughput_tps": 6883.01704354588,
+    "tokens_per_joule": 1.978855721393035,
+    "total_energy_j": 96480.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 82.44521386100911,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 65.892180294
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp1)-s256-t2048": {
+   "metrics": {
+    "average_power_w": 1446.115806451613,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 58.120363999999995,
+    "p50_ttft_ms": 216.46703150000002,
+    "p95_tpot_ms": 66.65084185,
+    "p95_ttft_ms": 606.1506156,
+    "p99_tpot_ms": 68.71705383,
+    "p99_ttft_ms": 947.3776383199998,
+    "peak_power_w": 1552.71,
+    "sim_wall_seconds": 164.83,
+    "slo_attainment": 0.20666666666666667,
+    "slo_goodput_rps": 1.0004894339445307,
+    "throughput_tps": 7318.69316778872,
+    "tokens_per_joule": 2.129140180662429,
+    "total_energy_j": 89670.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 91.14656368607085,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 61.96966994
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp1)-s256-t8192": {
+   "metrics": {
+    "average_power_w": 1453.0293442622954,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 57.5949855,
+    "p50_ttft_ms": 210.19567849999999,
+    "p95_tpot_ms": 65.79530505000001,
+    "p95_ttft_ms": 578.5491698500001,
+    "p99_tpot_ms": 68.02787882999999,
+    "p99_ttft_ms": 769.85655646,
+    "peak_power_w": 1557.1,
+    "sim_wall_seconds": 164.2,
+    "slo_attainment": 0.22,
+    "slo_goodput_rps": 1.0759615526297135,
+    "throughput_tps": 7393.7632529548855,
+    "tokens_per_joule": 2.1449275362318843,
+    "total_energy_j": 89010.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 90.38365999776096,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 61.340481766
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp1)-s32-t2048": {
+   "metrics": {
+    "average_power_w": 1493.561770833333,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 28.7987355,
+    "p50_ttft_ms": 24239.52879,
+    "p95_tpot_ms": 30.654546,
+    "p95_ttft_ms": 49126.2759652,
+    "p99_tpot_ms": 31.29628449,
+    "p99_ttft_ms": 50433.98060609,
+    "peak_power_w": 1549.33,
+    "sim_wall_seconds": 433.27,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 3.1182939709932818,
+    "throughput_tps": 4714.205642407934,
+    "tokens_per_joule": 1.3280467445742905,
+    "total_energy_j": 143760.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 64.66661921342876,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 96.206452243
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp1)-s32-t8192": {
+   "metrics": {
+    "average_power_w": 1491.8246875000002,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 28.756149999999998,
+    "p50_ttft_ms": 24225.9228345,
+    "p95_tpot_ms": 30.764600450000003,
+    "p95_ttft_ms": 48753.5417321,
+    "p99_tpot_ms": 31.0978313,
+    "p99_ttft_ms": 49518.18474868999,
+    "peak_power_w": 1616.1100000000001,
+    "sim_wall_seconds": 431.26,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 3.1151863334689622,
+    "throughput_tps": 4709.507547075043,
+    "tokens_per_joule": 1.3296190542516888,
+    "total_energy_j": 143590.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 63.99181043440627,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 96.302425565
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s128-t2048": {
+   "metrics": {
+    "average_power_w": 2050.2122641509427,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 41.987824,
+    "p50_ttft_ms": 146.4148235,
+    "p95_tpot_ms": 47.11149985,
+    "p95_ttft_ms": 465.32074985000014,
+    "p99_tpot_ms": 48.77286468,
+    "p99_ttft_ms": 563.27889936,
+    "peak_power_w": 2162.74,
+    "sim_wall_seconds": 298.43,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 5.639050676095285,
+    "throughput_tps": 8525.060421614091,
+    "tokens_per_joule": 1.7526852106857616,
+    "total_energy_j": 108930.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 50.28234251626393,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 53.200444052
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s128-t8192": {
+   "metrics": {
+    "average_power_w": 2042.075283018868,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 42.079092,
+    "p50_ttft_ms": 143.444372,
+    "p95_tpot_ms": 46.30420625,
+    "p95_ttft_ms": 367.153777,
+    "p99_tpot_ms": 47.43461605999999,
+    "p99_ttft_ms": 437.28614539999955,
+    "peak_power_w": 2168.12,
+    "sim_wall_seconds": 298.72,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 5.649361721578709,
+    "throughput_tps": 8540.648557065475,
+    "tokens_per_joule": 1.761417104898976,
+    "total_energy_j": 108390.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 50.23487938875363,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 53.103344198
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s256-t2048": {
+   "metrics": {
+    "average_power_w": 2050.2122641509427,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 41.987824,
+    "p50_ttft_ms": 146.4148235,
+    "p95_tpot_ms": 47.11149985,
+    "p95_ttft_ms": 465.32074985000014,
+    "p99_tpot_ms": 48.77286468,
+    "p99_ttft_ms": 563.27889936,
+    "peak_power_w": 2162.74,
+    "sim_wall_seconds": 300.71,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 5.639050676095285,
+    "throughput_tps": 8525.060421614091,
+    "tokens_per_joule": 1.7526852106857616,
+    "total_energy_j": 108930.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 50.28234251626393,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 53.200444052
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s256-t8192": {
+   "metrics": {
+    "average_power_w": 2042.075283018868,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 42.079092,
+    "p50_ttft_ms": 143.444372,
+    "p95_tpot_ms": 46.30420625,
+    "p95_ttft_ms": 367.153777,
+    "p99_tpot_ms": 47.43461605999999,
+    "p99_ttft_ms": 437.28614539999955,
+    "peak_power_w": 2168.12,
+    "sim_wall_seconds": 295.21,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 5.649361721578709,
+    "throughput_tps": 8540.648557065475,
+    "tokens_per_joule": 1.761417104898976,
+    "total_energy_j": 108390.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 50.23487938875363,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 53.103344198
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s32-t2048": {
+   "metrics": {
+    "average_power_w": 2049.611884057971,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 28.442076,
+    "p50_ttft_ms": 9144.2518035,
+    "p95_tpot_ms": 30.31715985,
+    "p95_ttft_ms": 21144.6443552,
+    "p99_tpot_ms": 30.72277129,
+    "p99_ttft_ms": 23746.54242771,
+    "peak_power_w": 2178.21,
+    "sim_wall_seconds": 483.71,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 4.315876362734956,
+    "throughput_tps": 6524.698726419079,
+    "tokens_per_joule": 1.3442230514679998,
+    "total_energy_j": 142030.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 39.81465889066201,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 69.510795673
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s32-t8192": {
+   "metrics": {
+    "average_power_w": 2050.8762318840572,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 28.377952,
+    "p50_ttft_ms": 9142.9761565,
+    "p95_tpot_ms": 30.27510025,
+    "p95_ttft_ms": 20949.95908565,
+    "p99_tpot_ms": 30.57248391,
+    "p99_ttft_ms": 24063.812093909997,
+    "peak_power_w": 2198.6,
+    "sim_wall_seconds": 487.11,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 4.2891194216671735,
+    "throughput_tps": 6484.247850482217,
+    "tokens_per_joule": 1.3391316546257979,
+    "total_energy_j": 142570.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 39.75317596074823,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 69.944426934
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp2)-s128-t2048": {
+   "metrics": {
+    "average_power_w": 2606.2030612244894,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 33.0819405,
+    "p50_ttft_ms": 127.032617,
+    "p95_tpot_ms": 37.39943445,
+    "p95_ttft_ms": 369.666303,
+    "p99_tpot_ms": 38.517335759999995,
+    "p99_ttft_ms": 534.57480516,
+    "peak_power_w": 2768.18,
+    "sim_wall_seconds": 437.47,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 6.006548856727461,
+    "throughput_tps": 9080.640496112008,
+    "tokens_per_joule": 1.4819529612667854,
+    "total_energy_j": 128830.00000000001
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 32.94356806032057,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 49.945485695
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp2)-s128-t8192": {
+   "metrics": {
+    "average_power_w": 2658.8222916666664,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 33.0995605,
+    "p50_ttft_ms": 125.3873585,
+    "p95_tpot_ms": 36.813225,
+    "p95_ttft_ms": 318.17912665000006,
+    "p99_tpot_ms": 37.93286148,
+    "p99_ttft_ms": 389.1905765699994,
+    "peak_power_w": 2770.8,
+    "sim_wall_seconds": 440.6,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 6.16675747601102,
+    "throughput_tps": 9322.8422846587,
+    "tokens_per_joule": 1.4831041715217899,
+    "total_energy_j": 128729.99999999999
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 33.23979079365544,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 48.647932267
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp2)-s256-t2048": {
+   "metrics": {
+    "average_power_w": 2606.2030612244894,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 33.0819405,
+    "p50_ttft_ms": 127.032617,
+    "p95_tpot_ms": 37.39943445,
+    "p95_ttft_ms": 369.666303,
+    "p99_tpot_ms": 38.517335759999995,
+    "p99_ttft_ms": 534.57480516,
+    "peak_power_w": 2768.18,
+    "sim_wall_seconds": 435.21,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 6.006548856727461,
+    "throughput_tps": 9080.640496112008,
+    "tokens_per_joule": 1.4819529612667854,
+    "total_energy_j": 128830.00000000001
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 32.94356806032057,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 49.945485695
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp2)-s256-t8192": {
+   "metrics": {
+    "average_power_w": 2658.8222916666664,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 33.0995605,
+    "p50_ttft_ms": 125.3873585,
+    "p95_tpot_ms": 36.813225,
+    "p95_ttft_ms": 318.17912665000006,
+    "p99_tpot_ms": 37.93286148,
+    "p99_ttft_ms": 389.1905765699994,
+    "peak_power_w": 2770.8,
+    "sim_wall_seconds": 443.64,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 6.16675747601102,
+    "throughput_tps": 9322.8422846587,
+    "tokens_per_joule": 1.4831041715217899,
+    "total_energy_j": 128729.99999999999
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 33.23979079365544,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 48.647932267
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp2)-s32-t2048": {
+   "metrics": {
+    "average_power_w": 2626.8878947368426,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 27.8590315,
+    "p50_ttft_ms": 4545.0453325,
+    "p95_tpot_ms": 31.05192645,
+    "p95_ttft_ms": 10496.553297600001,
+    "p99_tpot_ms": 32.131150299999995,
+    "p99_ttft_ms": 11832.082703659997,
+    "peak_power_w": 2767.87,
+    "sim_wall_seconds": 571.98,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 5.229341169973251,
+    "throughput_tps": 7905.665687353862,
+    "tokens_per_joule": 1.270935960591133,
+    "total_energy_j": 150220.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 28.29083247921737,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 57.368603472
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp2)-s32-t8192": {
+   "metrics": {
+    "average_power_w": 2619.973157894738,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 27.656023,
+    "p50_ttft_ms": 4583.1734115,
+    "p95_tpot_ms": 31.0152203,
+    "p95_ttft_ms": 10223.295488400001,
+    "p99_tpot_ms": 32.293368689999994,
+    "p99_ttft_ms": 11533.535493419993,
+    "peak_power_w": 2774.61,
+    "sim_wall_seconds": 573.19,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 5.214427159601523,
+    "throughput_tps": 7883.118835613986,
+    "tokens_per_joule": 1.2727151523231786,
+    "total_energy_j": 150010.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 28.426558450986583,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 57.532685915
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp4-dp1+cuda-a40-node_a40b-tp4-dp1)-s128-t2048": {
+   "metrics": {
+    "average_power_w": 1805.8462264150944,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 43.653946,
+    "p50_ttft_ms": 164.3509655,
+    "p95_tpot_ms": 48.25714575,
+    "p95_ttft_ms": 4214.852069050001,
+    "p99_tpot_ms": 50.562050449999994,
+    "p99_ttft_ms": 4758.140538359999,
+    "peak_power_w": 1943.51,
+    "sim_wall_seconds": 251.85,
+    "slo_attainment": 0.9833333333333333,
+    "slo_goodput_rps": 5.486514575178144,
+    "throughput_tps": 8435.041901296847,
+    "tokens_per_joule": 1.9708888200681325,
+    "total_energy_j": 96870.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 75.06419210293218,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 53.768197634
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp4-dp1+cuda-a40-node_a40b-tp4-dp1)-s128-t8192": {
+   "metrics": {
+    "average_power_w": 1796.8650943396224,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 43.098022,
+    "p50_ttft_ms": 159.463979,
+    "p95_tpot_ms": 47.641249,
+    "p95_ttft_ms": 3446.8102730000014,
+    "p99_tpot_ms": 49.71814834,
+    "p99_ttft_ms": 4725.701265029999,
+    "peak_power_w": 1938.2,
+    "sim_wall_seconds": 252.42,
+    "slo_attainment": 0.99,
+    "slo_goodput_rps": 5.547591495467194,
+    "throughput_tps": 8471.508431244796,
+    "tokens_per_joule": 1.9902011883665172,
+    "total_energy_j": 95930.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 75.00274919001272,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 53.536746576
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp4-dp1+cuda-a40-node_a40b-tp4-dp1)-s256-t2048": {
+   "metrics": {
+    "average_power_w": 1794.5934615384613,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 44.250491,
+    "p50_ttft_ms": 153.83061650000002,
+    "p95_tpot_ms": 49.39083705000001,
+    "p95_ttft_ms": 469.8062960000001,
+    "p99_tpot_ms": 51.585765959999996,
+    "p99_ttft_ms": 722.7941411799997,
+    "peak_power_w": 1939.1100000000001,
+    "sim_wall_seconds": 235.5,
+    "slo_attainment": 0.9666666666666667,
+    "slo_goodput_rps": 5.568070207538889,
+    "throughput_tps": 8708.020199022638,
+    "tokens_per_joule": 2.0425805071145824,
+    "total_energy_j": 93470.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 78.32293832993042,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 52.082676617
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp4-dp1+cuda-a40-node_a40b-tp4-dp1)-s256-t8192": {
+   "metrics": {
+    "average_power_w": 1799.307450980392,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 43.6625345,
+    "p50_ttft_ms": 153.719582,
+    "p95_tpot_ms": 48.7643156,
+    "p95_ttft_ms": 393.3293668,
+    "p99_tpot_ms": 49.90285192999999,
+    "p99_ttft_ms": 518.78460078,
+    "peak_power_w": 1940.1399999999999,
+    "sim_wall_seconds": 239.07,
+    "slo_attainment": 0.99,
+    "slo_goodput_rps": 5.741835445415506,
+    "throughput_tps": 8768.130715176474,
+    "tokens_per_joule": 2.054228534538412,
+    "total_energy_j": 92940.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 77.9633200869033,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 51.725620287
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp4-dp1+cuda-a40-node_a40b-tp4-dp1)-s32-t2048": {
+   "metrics": {
+    "average_power_w": 1801.9068674698794,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 24.981353,
+    "p50_ttft_ms": 19147.7340975,
+    "p95_tpot_ms": 26.26389015,
+    "p95_ttft_ms": 38913.27196775,
+    "p99_tpot_ms": 26.63833362,
+    "p99_ttft_ms": 39895.89753912,
+    "peak_power_w": 1905.1100000000001,
+    "sim_wall_seconds": 524.15,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 3.5735452198696094,
+    "throughput_tps": 5402.449927946677,
+    "tokens_per_joule": 1.2617804507302888,
+    "total_energy_j": 151310.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 60.64471112810266,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 83.950245916
+    }
+   }
+  },
+  "mix(cuda-a40-node_a40a-tp4-dp1+cuda-a40-node_a40b-tp4-dp1)-s32-t8192": {
+   "metrics": {
+    "average_power_w": 1784.3987058823525,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 25.019324,
+    "p50_ttft_ms": 19310.2391835,
+    "p95_tpot_ms": 26.15332935,
+    "p95_ttft_ms": 38343.422747,
+    "p99_tpot_ms": 26.5148555,
+    "p99_ttft_ms": 40395.02484838,
+    "peak_power_w": 1874.27,
+    "sim_wall_seconds": 527.98,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 3.5301181940591015,
+    "throughput_tps": 5336.797384596609,
+    "tokens_per_joule": 1.2583706828368046,
+    "total_energy_j": 151720.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 59.85575532574602,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 84.982990231
+    }
+   }
+  },
+  "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t2048": {
+   "metrics": {
+    "average_power_w": 1115.530357142857,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 43.061666,
+    "p50_ttft_ms": 127.994867,
+    "p95_tpot_ms": 47.459420949999995,
+    "p95_ttft_ms": 3902.4379003000004,
+    "p99_tpot_ms": 49.06719308,
+    "p99_ttft_ms": 4306.5552618599995,
+    "peak_power_w": 1207.68,
+    "sim_wall_seconds": 164.55,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 5.295321807972598,
+    "throughput_tps": 8005.414556074893,
+    "tokens_per_joule": 3.029995238850976,
+    "total_energy_j": 63010.0
+   },
+   "operating_point": {
+    "RNGD-CARD": {
+     "concurrency": 71.56506976521102,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 56.653780616
+    }
+   }
+  },
+  "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t8192": {
+   "metrics": {
+    "average_power_w": 1111.8469642857146,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 42.9494505,
+    "p50_ttft_ms": 125.25356450000001,
+    "p95_tpot_ms": 46.7204685,
+    "p95_ttft_ms": 3398.2422929,
+    "p99_tpot_ms": 47.62217808,
+    "p99_ttft_ms": 4589.071247199999,
+    "peak_power_w": 1202.27,
+    "sim_wall_seconds": 160.61,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 5.3525256812249475,
+    "throughput_tps": 8091.894799619064,
+    "tokens_per_joule": 3.0625601539942253,
+    "total_energy_j": 62340.0
+   },
+   "operating_point": {
+    "RNGD-CARD": {
+     "concurrency": 72.24992517554034,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 56.048306513
+    }
+   }
+  },
+  "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t2048": {
+   "metrics": {
+    "average_power_w": 1116.0520370370368,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 43.508741,
+    "p50_ttft_ms": 115.6839315,
+    "p95_tpot_ms": 48.07931605,
+    "p95_ttft_ms": 431.2535616500001,
+    "p99_tpot_ms": 49.57610877,
+    "p99_ttft_ms": 672.7236146399999,
+    "peak_power_w": 1207.68,
+    "sim_wall_seconds": 155.03,
+    "slo_attainment": 0.9966666666666667,
+    "slo_goodput_rps": 5.521704878914015,
+    "throughput_tps": 8375.576808254267,
+    "tokens_per_joule": 3.159880834160874,
+    "total_energy_j": 60420.0
+   },
+   "operating_point": {
+    "RNGD-CARD": {
+     "concurrency": 74.67989805617482,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 54.149942193
+    }
+   }
+  },
+  "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192": {
+   "metrics": {
+    "average_power_w": 1116.451296296296,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 43.151739,
+    "p50_ttft_ms": 115.8307475,
+    "p95_tpot_ms": 47.49744575,
+    "p95_ttft_ms": 317.32928985,
+    "p99_tpot_ms": 48.409747059999994,
+    "p99_ttft_ms": 480.09208702,
+    "peak_power_w": 1202.27,
+    "sim_wall_seconds": 154.74,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 5.551886357249013,
+    "throughput_tps": 8393.286276025487,
+    "tokens_per_joule": 3.163545981772991,
+    "total_energy_j": 60350.0
+   },
+   "operating_point": {
+    "RNGD-CARD": {
+     "concurrency": 74.749623725649,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 54.035688178
+    }
+   }
+  },
+  "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t2048": {
+   "metrics": {
+    "average_power_w": 1113.2593396226414,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 31.412464,
+    "p50_ttft_ms": 27287.520564500002,
+    "p95_tpot_ms": 32.3738548,
+    "p95_ttft_ms": 54490.10030985001,
+    "p99_tpot_ms": 32.783347,
+    "p99_ttft_ms": 57971.5358582,
+    "peak_power_w": 1147.69,
+    "sim_wall_seconds": 372.44,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 2.8265924875944988,
+    "throughput_tps": 4273.214256820487,
+    "tokens_per_joule": 1.615911976301312,
+    "total_energy_j": 118150.0
+   },
+   "operating_point": {
+    "RNGD-CARD": {
+     "concurrency": 64.1178911024654,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 106.134860726
+    }
+   }
+  },
+  "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t8192": {
+   "metrics": {
+    "average_power_w": 1117.7509523809522,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 31.404336,
+    "p50_ttft_ms": 27429.1233885,
+    "p95_tpot_ms": 32.5021558,
+    "p95_ttft_ms": 55106.5092245,
+    "p99_tpot_ms": 32.83282867,
+    "p99_ttft_ms": 56765.70194257,
+    "peak_power_w": 1163.51,
+    "sim_wall_seconds": 371.2,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 2.8520814578023685,
+    "throughput_tps": 4311.748227091042,
+    "tokens_per_joule": 1.624298111281266,
+    "total_energy_j": 117540.0
+   },
+   "operating_point": {
+    "RNGD-CARD": {
+     "concurrency": 64.92577462448662,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 105.186336519
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s128-t2048": {
+   "metrics": {
+    "average_power_w": 937.4434246575338,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 46.616501,
+    "p50_ttft_ms": 2690.099917,
+    "p95_tpot_ms": 56.3382176,
+    "p95_ttft_ms": 5594.90391315,
+    "p99_tpot_ms": 60.58357711999998,
+    "p99_ttft_ms": 5816.518881409999,
+    "peak_power_w": 1174.58,
+    "sim_wall_seconds": 143.05,
+    "slo_attainment": 0.7433333333333333,
+    "slo_goodput_rps": 3.0415849111124826,
+    "throughput_tps": 6185.969936462879,
+    "tokens_per_joule": 2.7790393013100436,
+    "total_energy_j": 68700.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 11.80969966970658,
+     "phase": "prefill",
+     "requests": 300,
+     "wall_s": 73.317039148
+    },
+    "RNGD-CARD": {
+     "concurrency": 113.95564041783746,
+     "phase": "decode",
+     "requests": 300,
+     "wall_s": 73.317039148
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp1-dp2 D)-s128-t2048": {
+   "metrics": {
+    "average_power_w": 1468.5108860759492,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 63.2481725,
+    "p50_ttft_ms": 142.12356899999997,
+    "p95_tpot_ms": 69.79399869999999,
+    "p95_ttft_ms": 527.8940807000002,
+    "p99_tpot_ms": 77.438658,
+    "p99_ttft_ms": 724.2224496299997,
+    "peak_power_w": 1999.37,
+    "sim_wall_seconds": 243.25,
+    "slo_attainment": 0.016666666666666666,
+    "slo_goodput_rps": 0.06303595074048146,
+    "throughput_tps": 5717.8271981971475,
+    "tokens_per_joule": 1.640770024063252,
+    "total_energy_j": 116360.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 75.1687193134663,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 79.319815776
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp1-dp2 D)-s128-t8192": {
+   "metrics": {
+    "average_power_w": 1464.901265822785,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 63.527973,
+    "p50_ttft_ms": 138.9300695,
+    "p95_tpot_ms": 69.42643955,
+    "p95_ttft_ms": 423.37500805000013,
+    "p99_tpot_ms": 76.83506288000001,
+    "p99_ttft_ms": 546.8419197999996,
+    "peak_power_w": 1993.37,
+    "sim_wall_seconds": 246.36,
+    "slo_attainment": 0.016666666666666666,
+    "slo_goodput_rps": 0.06324693450730265,
+    "throughput_tps": 5736.964987127705,
+    "tokens_per_joule": 1.6482776482776482,
+    "total_energy_j": 115830.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 75.42224405601398,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 79.055214912
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp1-dp2 D)-s256-t2048": {
+   "metrics": {
+    "average_power_w": 1482.4871999999998,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 64.324154,
+    "p50_ttft_ms": 142.12356899999997,
+    "p95_tpot_ms": 69.64165340000001,
+    "p95_ttft_ms": 527.8940807000002,
+    "p99_tpot_ms": 71.08450375999999,
+    "p99_ttft_ms": 724.2224496299997,
+    "peak_power_w": 1999.37,
+    "sim_wall_seconds": 223.24,
+    "slo_attainment": 0.016666666666666666,
+    "slo_goodput_rps": 0.0665439549875339,
+    "throughput_tps": 6036.029142636233,
+    "tokens_per_joule": 1.7142857142857142,
+    "total_energy_j": 111370.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 80.6807572597002,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 75.138305214
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp1-dp2 D)-s256-t8192": {
+   "metrics": {
+    "average_power_w": 1485.7824324324324,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 64.8241695,
+    "p50_ttft_ms": 138.9300695,
+    "p95_tpot_ms": 69.3347908,
+    "p95_ttft_ms": 423.3682143000001,
+    "p99_tpot_ms": 70.6832648,
+    "p99_ttft_ms": 546.8419197999996,
+    "peak_power_w": 1993.37,
+    "sim_wall_seconds": 223.14,
+    "slo_attainment": 0.016666666666666666,
+    "slo_goodput_rps": 0.06689772849970384,
+    "throughput_tps": 6068.1190181140355,
+    "tokens_per_joule": 1.7246612466124662,
+    "total_energy_j": 110700.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 81.13572321156617,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 74.740953275
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp1-dp2 D)-s32-t2048": {
+   "metrics": {
+    "average_power_w": 1410.2583088235292,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 97.86023,
+    "p50_ttft_ms": 142.12356899999997,
+    "p95_tpot_ms": 169.31591345,
+    "p95_ttft_ms": 527.7108921500004,
+    "p99_tpot_ms": 183.4641412299999,
+    "p99_ttft_ms": 724.1593324599997,
+    "peak_power_w": 2001.14,
+    "sim_wall_seconds": 526.6,
+    "slo_attainment": 0.21333333333333335,
+    "slo_goodput_rps": 0.46789315952772914,
+    "throughput_tps": 3315.73218582387,
+    "tokens_per_joule": 0.9914316871786882,
+    "total_energy_j": 192570.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 66.81934143907868,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 136.783363246
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp1-dp2 D)-s32-t8192": {
+   "metrics": {
+    "average_power_w": 1408.1417777777772,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 97.559923,
+    "p50_ttft_ms": 138.9300695,
+    "p95_tpot_ms": 171.12587820000002,
+    "p95_ttft_ms": 423.2175529000001,
+    "p99_tpot_ms": 188.10668106,
+    "p99_ttft_ms": 547.0274768299995,
+    "peak_power_w": 2007.2399999999998,
+    "sim_wall_seconds": 517.5,
+    "slo_attainment": 0.21333333333333335,
+    "slo_goodput_rps": 0.47419388802203977,
+    "throughput_tps": 3360.382396747685,
+    "tokens_per_joule": 1.0042606911787912,
+    "total_energy_j": 190110.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 67.81738962458327,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 134.965889727
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp1-dp3 P + cuda-a40-node_a40b-tp1-dp3 D)-s128-t2048": {
+   "metrics": {
+    "average_power_w": 2050.3960606060605,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 52.633413000000004,
+    "p50_ttft_ms": 115.01881,
+    "p95_tpot_ms": 56.076358400000004,
+    "p95_ttft_ms": 394.3872614,
+    "p99_tpot_ms": 57.636800980000004,
+    "p99_ttft_ms": 551.4282293899998,
+    "peak_power_w": 2675.67,
+    "sim_wall_seconds": 397.83,
+    "slo_attainment": 0.26,
+    "slo_goodput_rps": 1.170251820725812,
+    "throughput_tps": 6804.519230981058,
+    "tokens_per_joule": 1.4026890015428697,
+    "total_energy_j": 136110.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 49.42175301614941,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 66.652320995
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp1-dp3 P + cuda-a40-node_a40b-tp1-dp3 D)-s128-t8192": {
+   "metrics": {
+    "average_power_w": 2045.532121212122,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 52.641091,
+    "p50_ttft_ms": 114.8876695,
+    "p95_tpot_ms": 55.972363249999994,
+    "p95_ttft_ms": 306.07488495,
+    "p99_tpot_ms": 57.148702889999996,
+    "p99_ttft_ms": 450.23314037999995,
+    "peak_power_w": 2574.56,
+    "sim_wall_seconds": 392.01,
+    "slo_attainment": 0.26666666666666666,
+    "slo_goodput_rps": 1.1959019350196693,
+    "throughput_tps": 6779.822198787697,
+    "tokens_per_joule": 1.401762114537445,
+    "total_energy_j": 136200.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 49.22195663096551,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 66.895117114
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp1-dp3 P + cuda-a40-node_a40b-tp1-dp3 D)-s256-t2048": {
+   "metrics": {
+    "average_power_w": 2050.3960606060605,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 52.633413000000004,
+    "p50_ttft_ms": 115.01881,
+    "p95_tpot_ms": 56.076358400000004,
+    "p95_ttft_ms": 394.3872614,
+    "p99_tpot_ms": 57.636800980000004,
+    "p99_ttft_ms": 551.4282293899998,
+    "peak_power_w": 2675.67,
+    "sim_wall_seconds": 393.68,
+    "slo_attainment": 0.26,
+    "slo_goodput_rps": 1.170251820725812,
+    "throughput_tps": 6804.519230981058,
+    "tokens_per_joule": 1.4026890015428697,
+    "total_energy_j": 136110.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 49.42175301614941,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 66.652320995
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp1-dp3 P + cuda-a40-node_a40b-tp1-dp3 D)-s256-t8192": {
+   "metrics": {
+    "average_power_w": 2045.532121212122,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 52.641091,
+    "p50_ttft_ms": 114.8876695,
+    "p95_tpot_ms": 55.972363249999994,
+    "p95_ttft_ms": 306.07488495,
+    "p99_tpot_ms": 57.148702889999996,
+    "p99_ttft_ms": 450.23314037999995,
+    "peak_power_w": 2574.56,
+    "sim_wall_seconds": 391.75,
+    "slo_attainment": 0.26666666666666666,
+    "slo_goodput_rps": 1.1959019350196693,
+    "throughput_tps": 6779.822198787697,
+    "tokens_per_joule": 1.401762114537445,
+    "total_energy_j": 136200.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 49.22195663096551,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 66.895117114
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp1-dp3 P + cuda-a40-node_a40b-tp1-dp3 D)-s32-t2048": {
+   "metrics": {
+    "average_power_w": 1983.1878787878795,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 66.497645,
+    "p50_ttft_ms": 115.022572,
+    "p95_tpot_ms": 103.35622245000002,
+    "p95_ttft_ms": 394.38634265,
+    "p99_tpot_ms": 117.10516768999999,
+    "p99_ttft_ms": 551.42669853,
+    "peak_power_w": 2613.48,
+    "sim_wall_seconds": 677.6,
+    "slo_attainment": 0.32,
+    "slo_goodput_rps": 0.9634504244378344,
+    "throughput_tps": 4551.670991127729,
+    "tokens_per_joule": 0.9683014657402241,
+    "total_energy_j": 197170.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 42.36271954571512,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 99.641867983
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp1-dp3 P + cuda-a40-node_a40b-tp1-dp3 D)-s32-t8192": {
+   "metrics": {
+    "average_power_w": 1977.2576767676762,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 66.4134,
+    "p50_ttft_ms": 114.935641,
+    "p95_tpot_ms": 103.0069502,
+    "p95_ttft_ms": 305.99801445,
+    "p99_tpot_ms": 118.79881233999998,
+    "p99_ttft_ms": 450.2140752799999,
+    "peak_power_w": 2586.38,
+    "sim_wall_seconds": 682.06,
+    "slo_attainment": 0.32,
+    "slo_goodput_rps": 0.9669233166723874,
+    "throughput_tps": 4568.078127850464,
+    "tokens_per_joule": 0.9734856210483378,
+    "total_energy_j": 196120.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 42.4868854831042,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 99.283984929
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s128-t2048": {
+   "metrics": {
+    "average_power_w": 2617.9932258064523,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 45.983892,
+    "p50_ttft_ms": 98.9834465,
+    "p95_tpot_ms": 49.7540528,
+    "p95_ttft_ms": 349.7676098500005,
+    "p99_tpot_ms": 51.37604118,
+    "p99_ttft_ms": 491.75029512999987,
+    "peak_power_w": 3220.69,
+    "sim_wall_seconds": 640.66,
+    "slo_attainment": 0.9533333333333334,
+    "slo_goodput_rps": 4.5802072224076085,
+    "throughput_tps": 7263.263786814963,
+    "tokens_per_joule": 1.170426679744973,
+    "total_energy_j": 163120.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 34.89075121207111,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 62.442589628
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s128-t8192": {
+   "metrics": {
+    "average_power_w": 2613.717903225806,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 45.891285499999995,
+    "p50_ttft_ms": 98.979685,
+    "p95_tpot_ms": 49.909556099999996,
+    "p95_ttft_ms": 291.62636290000006,
+    "p99_tpot_ms": 51.51762866,
+    "p99_ttft_ms": 322.89816692,
+    "peak_power_w": 3172.37,
+    "sim_wall_seconds": 635.06,
+    "slo_attainment": 0.9533333333333334,
+    "slo_goodput_rps": 4.564902811176356,
+    "throughput_tps": 7238.994147805913,
+    "tokens_per_joule": 1.1698529411764707,
+    "total_energy_j": 163200.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 34.76807390889546,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 62.651936269
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s256-t2048": {
+   "metrics": {
+    "average_power_w": 2617.9932258064523,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 45.983892,
+    "p50_ttft_ms": 98.9834465,
+    "p95_tpot_ms": 49.7540528,
+    "p95_ttft_ms": 349.7676098500005,
+    "p99_tpot_ms": 51.37604118,
+    "p99_ttft_ms": 491.75029512999987,
+    "peak_power_w": 3220.69,
+    "sim_wall_seconds": 642.88,
+    "slo_attainment": 0.9533333333333334,
+    "slo_goodput_rps": 4.5802072224076085,
+    "throughput_tps": 7263.263786814963,
+    "tokens_per_joule": 1.170426679744973,
+    "total_energy_j": 163120.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 34.89075121207111,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 62.442589628
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s256-t8192": {
+   "metrics": {
+    "average_power_w": 2613.717903225806,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 45.891285499999995,
+    "p50_ttft_ms": 98.979685,
+    "p95_tpot_ms": 49.909556099999996,
+    "p95_ttft_ms": 291.62636290000006,
+    "p99_tpot_ms": 51.51762866,
+    "p99_ttft_ms": 322.89816692,
+    "peak_power_w": 3172.37,
+    "sim_wall_seconds": 644.88,
+    "slo_attainment": 0.9533333333333334,
+    "slo_goodput_rps": 4.564902811176356,
+    "throughput_tps": 7238.994147805913,
+    "tokens_per_joule": 1.1698529411764707,
+    "total_energy_j": 163200.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 34.76807390889546,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 62.651936269
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s32-t2048": {
+   "metrics": {
+    "average_power_w": 2560.231975308642,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 55.853140999999994,
+    "p50_ttft_ms": 98.97365049999999,
+    "p95_tpot_ms": 76.5929328,
+    "p95_ttft_ms": 349.7413060000005,
+    "p99_tpot_ms": 83.49100857999998,
+    "p99_ttft_ms": 491.70561527999985,
+    "peak_power_w": 3204.58,
+    "sim_wall_seconds": 899.67,
+    "slo_attainment": 0.43333333333333335,
+    "slo_goodput_rps": 1.5967469758426036,
+    "throughput_tps": 5570.644870636361,
+    "tokens_per_joule": 0.9179287465743545,
+    "total_energy_j": 207990.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 30.85775336367866,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 81.415529177
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s32-t8192": {
+   "metrics": {
+    "average_power_w": 2525.3763414634145,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 55.563055,
+    "p50_ttft_ms": 98.9854275,
+    "p95_tpot_ms": 75.13442045000001,
+    "p95_ttft_ms": 291.62623900000006,
+    "p99_tpot_ms": 82.53076754,
+    "p99_ttft_ms": 322.85109309,
+    "peak_power_w": 3173.2799999999997,
+    "sim_wall_seconds": 897.62,
+    "slo_attainment": 0.4266666666666667,
+    "slo_goodput_rps": 1.5529083296139408,
+    "throughput_tps": 5502.354571000921,
+    "tokens_per_joule": 0.9192103996148291,
+    "total_energy_j": 207700.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 30.372978490890514,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 82.425985848
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s128-t2048": {
+   "metrics": {
+    "average_power_w": 1140.9704938271605,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 60.089220999999995,
+    "p50_ttft_ms": 861.8819725000001,
+    "p95_tpot_ms": 78.02738455000001,
+    "p95_ttft_ms": 1500.01948715,
+    "p99_tpot_ms": 85.29037458999998,
+    "p99_ttft_ms": 1780.09279746,
+    "peak_power_w": 1468.8600000000001,
+    "sim_wall_seconds": 158.89,
+    "slo_attainment": 0.43,
+    "slo_goodput_rps": 1.5877929413835865,
+    "throughput_tps": 5582.347653149516,
+    "tokens_per_joule": 2.058880621158201,
+    "total_energy_j": 92730.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 133.94667155587962,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 81.244850407
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s128-t8192": {
+   "metrics": {
+    "average_power_w": 1129.6928395061734,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 60.174105999999995,
+    "p50_ttft_ms": 756.9004525,
+    "p95_tpot_ms": 78.80801835,
+    "p95_ttft_ms": 1488.3182459000009,
+    "p99_tpot_ms": 86.03834107999998,
+    "p99_ttft_ms": 1736.4546620799968,
+    "peak_power_w": 1551.79,
+    "sim_wall_seconds": 156.27,
+    "slo_attainment": 0.43,
+    "slo_goodput_rps": 1.5899517019931475,
+    "throughput_tps": 5589.9374036191175,
+    "tokens_per_joule": 2.082233613262079,
+    "total_energy_j": 91690.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 134.10954737000395,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 81.134540023
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s256-t2048": {
+   "metrics": {
+    "average_power_w": 1160.895416666666,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 62.170879,
+    "p50_ttft_ms": 861.8819725000001,
+    "p95_tpot_ms": 67.874296,
+    "p95_ttft_ms": 1500.01948715,
+    "p99_tpot_ms": 69.40080338,
+    "p99_ttft_ms": 1780.09279746,
+    "peak_power_w": 1484.9699999999998,
+    "sim_wall_seconds": 120.61,
+    "slo_attainment": 0.12333333333333334,
+    "slo_goodput_rps": 0.513038622939062,
+    "throughput_tps": 6288.702646808469,
+    "tokens_per_joule": 2.2793696275071635,
+    "total_energy_j": 83760.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 160.69949694962062,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 72.119326588
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s256-t8192": {
+   "metrics": {
+    "average_power_w": 1147.9222222222224,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 62.3960315,
+    "p50_ttft_ms": 757.0704145,
+    "p95_tpot_ms": 68.039291,
+    "p95_ttft_ms": 1488.248228050001,
+    "p99_tpot_ms": 69.87766871999999,
+    "p99_ttft_ms": 1736.3809590799967,
+    "peak_power_w": 1529.26,
+    "sim_wall_seconds": 118.51,
+    "slo_attainment": 0.12333333333333334,
+    "slo_goodput_rps": 0.5135460432252094,
+    "throughput_tps": 6294.922481249508,
+    "tokens_per_joule": 2.307190332326284,
+    "total_energy_j": 82750.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 160.93918053659914,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 72.048067526
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s32-t2048": {
+   "metrics": {
+    "average_power_w": 1075.6766013071897,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 104.9459985,
+    "p50_ttft_ms": 861.7955975,
+    "p95_tpot_ms": 197.21495880000003,
+    "p95_ttft_ms": 1499.9331121500002,
+    "p99_tpot_ms": 221.55440192999993,
+    "p99_ttft_ms": 1780.00642246,
+    "peak_power_w": 1471.74,
+    "sim_wall_seconds": 410.2,
+    "slo_attainment": 0.20666666666666667,
+    "slo_goodput_rps": 0.4038753038352095,
+    "throughput_tps": 2954.393446379184,
+    "tokens_per_joule": 1.1560399636693914,
+    "total_energy_j": 165150.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 132.29633166685798,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 153.512728833
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s32-t8192": {
+   "metrics": {
+    "average_power_w": 1069.5744444444447,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 105.3432655,
+    "p50_ttft_ms": 756.5178015,
+    "p95_tpot_ms": 197.94542485000002,
+    "p95_ttft_ms": 1488.195766250001,
+    "p99_tpot_ms": 221.8064946799999,
+    "p99_ttft_ms": 1736.3145890799967,
+    "peak_power_w": 1548.44,
+    "sim_wall_seconds": 408.26,
+    "slo_attainment": 0.20666666666666667,
+    "slo_goodput_rps": 0.40388741961624275,
+    "throughput_tps": 2954.482074685353,
+    "tokens_per_joule": 1.1626575726204251,
+    "total_energy_j": 164210.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 132.30560523110805,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 153.508123771
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp2-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s128-t2048": {
+   "metrics": {
+    "average_power_w": 2026.056226415094,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 36.44406,
+    "p50_ttft_ms": 117.38512499999999,
+    "p95_tpot_ms": 39.1566511,
+    "p95_ttft_ms": 397.9913210500001,
+    "p99_tpot_ms": 39.726927859999996,
+    "p99_ttft_ms": 626.07409803,
+    "peak_power_w": 2479.13,
+    "sim_wall_seconds": 372.36,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 5.611091552509543,
+    "throughput_tps": 8482.792098168402,
+    "tokens_per_joule": 1.767286864759789,
+    "total_energy_j": 108030.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 63.37366960982584,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 53.465532899
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp2-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s128-t8192": {
+   "metrics": {
+    "average_power_w": 2011.8128301886795,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 36.419587,
+    "p50_ttft_ms": 117.329229,
+    "p95_tpot_ms": 39.319992400000004,
+    "p95_ttft_ms": 360.7971079500001,
+    "p99_tpot_ms": 39.895410379999994,
+    "p99_ttft_ms": 708.3307972999999,
+    "peak_power_w": 2508.1899999999996,
+    "sim_wall_seconds": 372.89,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 5.565321825829883,
+    "throughput_tps": 8413.597883071358,
+    "tokens_per_joule": 1.77253736886083,
+    "total_energy_j": 107710.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 62.8976627947032,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 53.905238437
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp2-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s256-t2048": {
+   "metrics": {
+    "average_power_w": 2026.056226415094,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 36.44406,
+    "p50_ttft_ms": 117.38512499999999,
+    "p95_tpot_ms": 39.1566511,
+    "p95_ttft_ms": 397.9913210500001,
+    "p99_tpot_ms": 39.726927859999996,
+    "p99_ttft_ms": 626.07409803,
+    "peak_power_w": 2479.13,
+    "sim_wall_seconds": 371.32,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 5.611091552509543,
+    "throughput_tps": 8482.792098168402,
+    "tokens_per_joule": 1.767286864759789,
+    "total_energy_j": 108030.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 63.37366960982584,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 53.465532899
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp2-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s256-t8192": {
+   "metrics": {
+    "average_power_w": 2011.8128301886795,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 36.419587,
+    "p50_ttft_ms": 117.329229,
+    "p95_tpot_ms": 39.319992400000004,
+    "p95_ttft_ms": 360.7971079500001,
+    "p99_tpot_ms": 39.895410379999994,
+    "p99_ttft_ms": 708.3307972999999,
+    "peak_power_w": 2508.1899999999996,
+    "sim_wall_seconds": 380.01,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 5.565321825829883,
+    "throughput_tps": 8413.597883071358,
+    "tokens_per_joule": 1.77253736886083,
+    "total_energy_j": 107710.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 62.8976627947032,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 53.905238437
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp2-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s32-t2048": {
+   "metrics": {
+    "average_power_w": 1895.5646987951802,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 51.749713,
+    "p50_ttft_ms": 117.2811035,
+    "p95_tpot_ms": 84.5470222,
+    "p95_ttft_ms": 397.81527115000017,
+    "p99_tpot_ms": 91.79178634999998,
+    "p99_ttft_ms": 625.9153460299999,
+    "peak_power_w": 2485.67,
+    "sim_wall_seconds": 582.54,
+    "slo_attainment": 0.47,
+    "slo_goodput_rps": 1.6862567139979237,
+    "throughput_tps": 5423.970292882811,
+    "tokens_per_joule": 1.2074373893245636,
+    "total_energy_j": 158120.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 57.86250655714064,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 83.617161509
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp2-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s32-t8192": {
+   "metrics": {
+    "average_power_w": 1881.1827380952363,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 52.603956499999995,
+    "p50_ttft_ms": 117.2746665,
+    "p95_tpot_ms": 82.56135515000001,
+    "p95_ttft_ms": 360.7859645000001,
+    "p99_tpot_ms": 90.95058397999996,
+    "p99_ttft_ms": 708.38725857,
+    "peak_power_w": 2520.6099999999997,
+    "sim_wall_seconds": 582.93,
+    "slo_attainment": 0.47333333333333333,
+    "slo_goodput_rps": 1.688987600872129,
+    "throughput_tps": 5394.495560117906,
+    "tokens_per_joule": 1.2071320182094083,
+    "total_energy_j": 158160.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 57.56632580605726,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 84.074033419
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s128-t2048": {
+   "metrics": {
+    "average_power_w": 1443.8371875,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 42.3171495,
+    "p50_ttft_ms": 487.596396,
+    "p95_tpot_ms": 51.80939935000001,
+    "p95_ttft_ms": 950.8974339500002,
+    "p99_tpot_ms": 55.79036307999999,
+    "p99_ttft_ms": 1234.2206598599996,
+    "peak_power_w": 1766.28,
+    "sim_wall_seconds": 227.38,
+    "slo_attainment": 0.91,
+    "slo_goodput_rps": 4.232872025370823,
+    "throughput_tps": 7032.102856302589,
+    "tokens_per_joule": 2.051359192006017,
+    "total_energy_j": 93070.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 119.9579144398862,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 64.495217045
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s128-t8192": {
+   "metrics": {
+    "average_power_w": 1415.7078124999998,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 42.6712415,
+    "p50_ttft_ms": 335.1281815,
+    "p95_tpot_ms": 52.44415865,
+    "p95_ttft_ms": 756.4234463000001,
+    "p99_tpot_ms": 56.10454088999999,
+    "p99_ttft_ms": 971.9948666799999,
+    "peak_power_w": 1702.04,
+    "sim_wall_seconds": 240.74,
+    "slo_attainment": 0.9066666666666666,
+    "slo_goodput_rps": 4.223483582391422,
+    "throughput_tps": 7042.301740834773,
+    "tokens_per_joule": 2.094569391113549,
+    "total_energy_j": 91150.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 119.8178928775359,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 64.401813028
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s256-t2048": {
+   "metrics": {
+    "average_power_w": 1487.2789473684213,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 42.4238425,
+    "p50_ttft_ms": 487.596396,
+    "p95_tpot_ms": 46.44301435,
+    "p95_ttft_ms": 950.8974339500002,
+    "p99_tpot_ms": 47.155757359999996,
+    "p99_ttft_ms": 1234.2224448899997,
+    "peak_power_w": 1776.03,
+    "sim_wall_seconds": 185.74,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 5.244393423784195,
+    "throughput_tps": 7928.421534142709,
+    "tokens_per_joule": 2.243478260869565,
+    "total_energy_j": 85100.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 138.218693611882,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 57.20394634
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s256-t8192": {
+   "metrics": {
+    "average_power_w": 1456.0470175438597,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 42.658769,
+    "p50_ttft_ms": 335.0437345,
+    "p95_tpot_ms": 46.49019705,
+    "p95_ttft_ms": 756.2178753000001,
+    "p99_tpot_ms": 47.2382997,
+    "p99_ttft_ms": 971.7892956799999,
+    "peak_power_w": 1736.67,
+    "sim_wall_seconds": 195.41,
+    "slo_attainment": 1.0,
+    "slo_goodput_rps": 5.248373193841786,
+    "throughput_tps": 7934.438110718073,
+    "tokens_per_joule": 2.2933333333333334,
+    "total_energy_j": 83250.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 138.04237648910618,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 57.160569365
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s32-t2048": {
+   "metrics": {
+    "average_power_w": 1327.2651127819547,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 88.6864605,
+    "p50_ttft_ms": 487.5919245,
+    "p95_tpot_ms": 164.77044150000003,
+    "p95_ttft_ms": 950.8884909500002,
+    "p99_tpot_ms": 185.42598015999994,
+    "p99_ttft_ms": 1234.2106058499999,
+    "peak_power_w": 1777.84,
+    "sim_wall_seconds": 510.19,
+    "slo_attainment": 0.24,
+    "slo_goodput_rps": 0.5405642735726182,
+    "throughput_tps": 3405.0819297681182,
+    "tokens_per_joule": 1.0796810495956568,
+    "total_energy_j": 176830.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 127.91689200949997,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 133.194151963
+    }
+   }
+  },
+  "pd(cuda-a40-node_a40a-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s32-t8192": {
+   "metrics": {
+    "average_power_w": 1313.6830075187972,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 89.05379400000001,
+    "p50_ttft_ms": 335.0570515,
+    "p95_tpot_ms": 165.47631740000003,
+    "p95_ttft_ms": 756.2216213000002,
+    "p99_tpot_ms": 185.94808094999993,
+    "p99_ttft_ms": 971.7930416799999,
+    "peak_power_w": 1700.76,
+    "sim_wall_seconds": 509.39,
+    "slo_attainment": 0.23666666666666666,
+    "slo_goodput_rps": 0.5330580072448874,
+    "throughput_tps": 3405.091963828514,
+    "tokens_per_joule": 1.0908467603702434,
+    "total_energy_j": 175020.0
+   },
+   "operating_point": {
+    "A40": {
+     "concurrency": 127.88477898080073,
+     "phase": "total",
+     "requests": 300,
+     "wall_s": 133.193759469
+    }
+   }
+  }
+ },
+ "seed": 42,
+ "service": "examples/service_specs/llama31-8b.yaml"
+}

@@ -14,6 +14,7 @@ from pathlib import Path
 
 import yaml
 
+from planner import sweep as sweep_mod
 from planner.envelope import EnvelopeCache
 from planner.inventory import (
     AcceleratorProfile,
@@ -25,7 +26,9 @@ from planner.inventory import (
     load_profiles_for,
 )
 from planner.optimizer import exhaustive
+from planner.perf_envelope import PerfEnvelope, find_envelope
 from planner.plan import DeploymentPlan, PlannerOutput
+from planner.predictor.calibration import load_accuracy_domains
 from planner.predictor.llmservingsim import LLMServingSimPredictor
 from planner.render import render, render_deployment_handle, render_deployment_metrics
 from planner.spec import ServiceSpec, SpecError, load_service_spec
@@ -153,12 +156,127 @@ def _write_output(output: PlannerOutput, path: Path) -> None:
     path.write_text(yaml.safe_dump(output.model_dump(mode="json"), sort_keys=False))
 
 
+def _load_envelopes(
+    cluster: ClusterSpecV2, profiles: dict[str, AcceleratorProfile], spec: ServiceSpec
+) -> dict[str, PerfEnvelope]:
+    """Measured envelopes for the hardware this cluster actually contains.
+
+    Keyed by `sim_hardware`, which is what an operating point is attributed to.
+    Hardware without a curve is simply absent -- the prefilter then leaves its
+    candidates alone.
+    """
+    out: dict[str, PerfEnvelope] = {}
+    dtype = spec.service.dtype
+    for node in cluster.nodes:
+        for accel in node.accelerators:
+            profile = profiles.get(accel.model)
+            if profile is None or profile.sim_hardware is None:
+                continue
+            hw = profile.sim_hardware
+            if hw in out:
+                continue
+            env = find_envelope(hw, spec.model, dtype, 1)
+            if env is not None:
+                out[hw] = env
+    return out
+
 def cmd_plan(args: argparse.Namespace) -> int:
+    """One plan, or one per rate when --rps is given."""
+    if not getattr(args, "rps", None):
+        return _plan_once(args)
+    return _plan_sweep(args)
+
+
+def _merge_caveats(rates: list[float], outputs: list[PlannerOutput]) -> list[str]:
+    """One entry per distinct caveat; rate-specific ones say which rate."""
+    shared, tagged = [], []
+    counts: dict[str, int] = {}
+    for out in outputs:
+        for c in out.caveats:
+            counts[c] = counts.get(c, 0) + 1
+    seen: set[str] = set()
+    for rate, out in zip(rates, outputs, strict=False):
+        for c in out.caveats:
+            if counts[c] == len(outputs):
+                if c not in seen:
+                    seen.add(c)
+                    shared.append(c)
+            else:
+                tagged.append(f"[rps {rate}] {c}")
+    return shared + tagged
+
+
+def _plan_sweep(args: argparse.Namespace) -> int:
+    """Run the planner once per arrival rate and report where the answer changes.
+
+    Each rate gets its own output file and work directory; the envelope cache is
+    shared deliberately. Its key includes the trace digest and RPS changes the
+    arrival times, so entries separate by rate on their own -- verified rather
+    than assumed (`planner/envelope.py:key_for` has no RPS field, and needs none).
+    """
+    import copy as _copy
+
+    rates = [float(v) for v in str(args.rps).split(",") if v.strip()]
+    if not rates:
+        print("error: --rps parsed to no values", file=sys.stderr)
+        return 2
+    if sorted(rates) != rates:
+        print("error: --rps must be ascending so adjacency means what the "
+              "switchover table says it means", file=sys.stderr)
+        return 2
+
+    base_out = Path(args.output) if args.output else None
+    rows, outputs = [], []
+    for rate in rates:
+        sub = _copy.copy(args)
+        sub.rps = None
+        sub.quiet = True
+        sub._rps_override = rate
+        tag = str(rate).replace(".", "p")
+        sub.output = str(base_out.with_name(f"{base_out.stem}_rps{tag}{base_out.suffix}")) \
+            if base_out else None
+        if getattr(args, "work_dir", None):
+            sub.work_dir = str(Path(args.work_dir) / f"rps{tag}")
+        print(f"\n=== rps {rate} ===", file=sys.stderr)
+        out = _plan_once(sub, return_output=True)
+        if not isinstance(out, PlannerOutput):
+            return int(out)
+        outputs.append(out)
+        rows.append(sweep_mod.row_for(rate, out))
+
+    sweep = sweep_mod.SweepOutput(
+        service_model=outputs[0].service_model,
+        cluster_id=outputs[0].cluster_id,
+        rps_values=rates,
+        switchover=rows,
+        crossovers=sweep_mod.find_crossovers(rows),
+        provenance={"per_rps_outputs": [r.plan_id for r in rows],
+                    "shared_cache_dir": getattr(args, "cache_dir", None)},
+        # Per-rate caveats are tagged with their rate. Untagged, three lines each
+        # saying "306 candidate(s)" read as 918.
+        caveats=_merge_caveats(rates, outputs),
+    )
+    print(sweep_mod.render(sweep))
+    if base_out:
+        sweep_path = base_out.with_name(f"{base_out.stem}_switchover{base_out.suffix}")
+        sweep_path.write_text(
+            yaml.safe_dump(sweep.model_dump(mode="json"), sort_keys=False))
+        print(f"\nwrote {sweep_path}")
+    return 0 if any(r.feasible for r in rows) else 3
+
+
+def _plan_once(args: argparse.Namespace, return_output: bool = False):
     if args.oracle and args.top_k is not None:
         print("error: --oracle simulates everything; --top-k is a heuristic subset - "
               "they are mutually exclusive", file=sys.stderr)
         return 1
     spec = load_service_spec(args.service)
+    override = getattr(args, "_rps_override", None)
+    if override is not None:
+        # A ServiceSpec is frozen-ish by convention; copy rather than mutate so a
+        # sweep cannot leak one rate's rate into another's provenance.
+        spec = spec.model_copy(deep=True)
+        spec.traffic.arrival_rate_rps = override
     cluster = load_cluster_spec(args.cluster)
     profiles = load_profiles_for(cluster, args.root)
     islands = detect_islands(cluster, profiles)
@@ -241,6 +359,17 @@ def cmd_plan(args: argparse.Namespace) -> int:
         from planner.optimizer.surrogate import AnalyticalRooflineRanker
         surrogate = AnalyticalRooflineRanker()
 
+    accuracy_domains = load_accuracy_domains(args.root) if args.accuracy_domain else None
+    envelopes = (_load_envelopes(cluster, profiles, spec)
+                 if args.envelope_prefilter else None)
+    provenance["accuracy_domain"] = sorted(accuracy_domains) if accuracy_domains else None
+    provenance["envelope_prefilter"] = sorted(envelopes) if envelopes else None
+    # Both margins are recorded even when only one binds, so a plan says what it
+    # was checked against rather than only what won (STEP 4.3).
+    provenance["manual_margin_percent"] = {
+        "ttft": args.ttft_margin_percent, "tpot": args.tpot_margin_percent,
+    }
+
     try:
         runner = exhaustive.oracle if args.oracle else exhaustive.search
         output = runner(
@@ -251,6 +380,10 @@ def cmd_plan(args: argparse.Namespace) -> int:
             activation_reserve_gb=args.activation_reserve_gb,
             surrogate=surrogate,
             top_k=args.top_k,
+            envelopes=envelopes,
+            accuracy_domains=accuracy_domains,
+            ttft_margin_percent=args.ttft_margin_percent,
+            tpot_margin_percent=args.tpot_margin_percent,
             max_workers=args.workers,
             provenance=provenance,
             progress=progress,
@@ -261,10 +394,14 @@ def cmd_plan(args: argparse.Namespace) -> int:
     if cache is not None:
         output.provenance["envelope_cache"] = cache.stats()
 
-    print(render(output))
+    if not args.quiet or not return_output:
+        print(render(output))
     if args.output:
         _write_output(output, Path(args.output))
-        print(f"\nwrote {args.output}")
+        if not return_output:
+            print(f"\nwrote {args.output}")
+    if return_output:
+        return output
     return 0 if output.feasible else 3
 
 
@@ -502,6 +639,25 @@ def build_parser() -> argparse.ArgumentParser:
                            "only speeds the search up - the result is byte-identical. Use "
                            "--workers 1 to force sequential.")
     plan.add_argument("--quiet", action="store_true")
+    plan.add_argument("--accuracy-domain", action="store_true",
+                      help="size each candidate's SLO margin from its own operating "
+                           "point, using the measured accuracy domains in "
+                           "profiles/calibration/. Opt-in: the default path applies "
+                           "no automatic margin and its output is unchanged.")
+    plan.add_argument("--envelope-prefilter", action="store_true",
+                      help="reject, before simulating, candidates whose predicted "
+                           "operating point falls outside the hardware's measured "
+                           "performance envelope. Epistemic, not a sound bound: it "
+                           "can drop the optimum, and the rejection says so.")
+    plan.add_argument("--rps", default=None,
+                      help="comma-separated arrival rates to sweep, e.g. "
+                           "'1,3.3,10,20'. Runs one plan per rate and emits the "
+                           "switchover table and any backend crossovers.")
+    plan.add_argument("--tpot-margin-percent", type=float, default=0.0,
+                      help="a manual SLO margin floor. When --accuracy-domain also "
+                           "applies, the LARGER of the two is used and both are "
+                           "recorded in provenance.")
+    plan.add_argument("--ttft-margin-percent", type=float, default=0.0)
     plan.set_defaults(func=cmd_plan)
 
     validate = sub.add_parser("validate-plan",

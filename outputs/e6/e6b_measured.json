@@ -1,0 +1,69 @@
+{
+  "_note": "E6b: tokens/J against RPS from the MEASUREMENT, beside the simulator's answer.",
+  "envelope": "profiles/envelopes/RNGD-CARD/meta-llama/Llama-3.1-8B/bf16/tp1.yaml",
+  "mean_output_tokens": 652.51,
+  "unit": "one RNGD card, TP=8 internal",
+  "measured_side": "RNGD: silicon (STEP 3). A40: SIMULATION ONLY -- no NVIDIA GPU on this node, so no measured A40 curve exists.",
+  "points": [
+    {
+      "measured_served_conc": 1.0,
+      "sim_served_conc": 1.0947333417158036,
+      "rps_per_card": 0.09670349879695331,
+      "measured_tput_tok_s": 63.1,
+      "measured_power_w": 151.1,
+      "measured_tok_per_j": 0.418,
+      "measured_tpot_p50_ms": 15.71,
+      "domain_declared_tpot_err_pct": 3.913692786940674,
+      "observed_sim_tpot_err_pct": 3.8752132399745265,
+      "agrees": false
+    },
+    {
+      "measured_served_conc": 1.99,
+      "sim_served_conc": 2.1900236525044225,
+      "rps_per_card": 0.16873304623683927,
+      "measured_tput_tok_s": 110.1,
+      "measured_power_w": 140.6,
+      "measured_tok_per_j": 0.783,
+      "measured_tpot_p50_ms": 18.01,
+      "domain_declared_tpot_err_pct": 11.70999794920482,
+      "observed_sim_tpot_err_pct": 11.70739311493614,
+      "agrees": true
+    },
+    {
+      "measured_served_conc": 3.98,
+      "sim_served_conc": 3.9224436921872377,
+      "rps_per_card": 0.3078880017164488,
+      "measured_tput_tok_s": 200.9,
+      "measured_power_w": 139.9,
+      "measured_tok_per_j": 1.436,
+      "measured_tpot_p50_ms": 19.48,
+      "domain_declared_tpot_err_pct": 11.55490652110371,
+      "observed_sim_tpot_err_pct": 11.558318788501026,
+      "agrees": true
+    },
+    {
+      "measured_served_conc": 7.88,
+      "sim_served_conc": 6.407201996082492,
+      "rps_per_card": 0.5468115431181132,
+      "measured_tput_tok_s": 356.8,
+      "measured_power_w": 143.2,
+      "measured_tok_per_j": 2.492,
+      "measured_tpot_p50_ms": 21.86,
+      "domain_declared_tpot_err_pct": 6.375831984069023,
+      "observed_sim_tpot_err_pct": 6.371994510521509,
+      "agrees": true
+    },
+    {
+      "measured_served_conc": 15.59,
+      "sim_served_conc": null,
+      "rps_per_card": 0.916767559117868,
+      "measured_tput_tok_s": 598.2,
+      "measured_power_w": 151.8,
+      "measured_tok_per_j": 3.941,
+      "measured_tpot_p50_ms": 26.05,
+      "domain_declared_tpot_err_pct": null,
+      "observed_sim_tpot_err_pct": null,
+      "agrees": null
+    }
+  ]
+}

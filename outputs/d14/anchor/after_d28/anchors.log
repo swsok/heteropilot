@@ -1,0 +1,3 @@
+auto exit=0 elapsed=31s rows=21
+slab3d exit=0 elapsed=32s rows=21
+R3 PASS: auto and slab3d are byte-identical

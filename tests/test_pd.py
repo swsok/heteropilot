@@ -110,11 +110,49 @@ def test_pd_enumerates_both_directions(spec, cluster, islands, profiles) -> None
     assert (a, b) in directed and (b, a) in directed
 
 
-def test_pd_uniform_devices_per_replica(spec, cluster, islands, profiles) -> None:
-    """D14: the simulator mis-scopes collectives for unequal instance sizes, so
-    P/D pairs must be uniform in devices-per-replica - same rule as mixed."""
+def test_pd_device_ratio_is_1x_or_2x(spec, cluster, islands, profiles) -> None:
+    """D28 replaces D14's uniformity rule.
+
+    D14 recorded that the simulator mis-scopes collectives for unequal instance
+    sizes and concluded P/D pairs must be uniform. The cause was
+    `_compute_network_dims`, not the simulator, and `topology_mode: slab3d` now
+    encodes `tp_d = 2 * tp_p` with no idle rank. Other ratios still need
+    idle-rank padding, whose interaction with the frontend's iteration barrier is
+    unverified, so they stay unenumerated.
+    """
     for cand in _pd(spec, cluster, islands, profiles):
-        assert len({a.devices_per_replica for a in cand.assignments}) == 1
+        p, d = cand.assignments
+        assert d.devices_per_replica in (p.devices_per_replica,
+                                         2 * p.devices_per_replica), (
+            f"{cand.id}: ratio {d.devices_per_replica}/{p.devices_per_replica} is "
+            f"neither 1x nor 2x"
+        )
+
+
+def test_the_topology_mode_matches_the_ratio(spec, cluster, islands, profiles) -> None:
+    """The mark the compiler keys on must never disagree with the placement."""
+    for cand in _pd(spec, cluster, islands, profiles):
+        p, d = cand.assignments
+        want = "slab3d" if d.tp_size == 2 * p.tp_size else "auto"
+        assert cand.topology_mode == want, f"{cand.id}: expected {want}"
+
+
+def test_asymmetric_pd_candidates_are_actually_enumerated(
+    spec, cluster, islands, profiles
+) -> None:
+    """The point of D28: without this the change is invisible."""
+    asym = [c for c in _pd(spec, cluster, islands, profiles)
+            if c.assignments[1].tp_size == 2 * c.assignments[0].tp_size]
+    assert asym, "no tp_d = 2*tp_p candidate was generated on this fixture"
+    assert all(c.topology_mode == "slab3d" for c in asym)
+
+
+def test_aggregated_candidates_stay_on_auto(spec, cluster, islands, profiles) -> None:
+    """`slab3d` must not leak onto anything the old path could express."""
+    res = CandidateGenerator(spec, cluster, islands, profiles, enable_pd=True).generate()
+    for c in res.candidates:
+        if c.serving_arch is not ServingArch.PD_SPLIT:
+            assert c.topology_mode == "auto", c.id
 
 
 def test_enable_pd_false_produces_no_pd_candidates(spec, cluster, islands, profiles) -> None:

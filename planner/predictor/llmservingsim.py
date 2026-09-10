@@ -23,12 +23,14 @@ from pathlib import Path
 
 import pandas as pd
 
+from planner.calibration import slab3d_calibration
 from planner.inventory import AcceleratorProfile, ClusterSpecV2, ExecutionIsland
-from planner.plan import CandidateConfig, PredictedMetrics
+from planner.plan import CandidateConfig, PredictedMetrics, Role
 from planner.predictor import Predictor, SimOutcome, SimResult
 from planner.spec import ServiceSpec
 from planner.topology import TopologyGraph, TopologyReduction
 from planner.util import memory as memutil
+from planner.util.operating_point import operating_points
 from planner.util.percentile import percentile
 from planner.util.power_parse import PowerParseError, parse_power
 from planner.util.workload import WorkloadTrace
@@ -36,7 +38,7 @@ from planner.util.workload import WorkloadTrace
 # Reuse the simulator's own (pinned) dimension inference so the per-dimension
 # link_bw list the Level-2 compile emits always matches the length ASTRA-Sim
 # expects; replicating the logic here would risk drifting from upstream (D14).
-from serving.core.config_builder import _compute_network_dims
+from serving.core.config_builder import TOPOLOGY_MODE_KEY, _compute_network_dims
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -71,6 +73,15 @@ def _repo_relative(path: Path) -> str:
             f"{resolved} is not reachable from the repository root; the simulator "
             f"only accepts repo-relative paths"
         ) from exc
+
+
+class OutsideCalibrationDomain(ValueError):
+    """The candidate is representable; the number it would need was never measured.
+
+    Deliberately NOT a `CompileError`. A compile failure is a broken candidate and
+    lands in SIM_ERROR; this is a refusal to guess, and reporting it as a failure
+    would let an unmeasured configuration read as an infeasible one (A6).
+    """
 
 
 class CompileError(ValueError):
@@ -256,12 +267,55 @@ def compile_to_sim_config(
             link_bw = perdim.intra_bw_gbps
             link_latency = perdim.intra_lat_ns
 
-    config = {
+    config: dict = {
         "num_nodes": len(nodes),
         "link_bw": link_bw,
         "link_latency": link_latency,
         "nodes": nodes,
     }
+
+    if candidate.topology_mode == "slab3d":
+        # D28: dims are [g, 2, n_slabs] and the tp=2g decode allreduce spans dims
+        # 0 and 1. That turns a flat ring of 2g into a hierarchical g x 2, which
+        # is 24.4 % (tp8) / 13.4 % (tp4) optimistic on TPOT unless dim 1 carries
+        # the measured correction (STEP 2.2). Outside the measured domain we
+        # refuse rather than fall back to 1.0 -- the fallback would silently
+        # reinstate exactly that error, in the one place nobody has checked.
+        decode = next(
+            (a for a in candidate.assignments if a.role is Role.DECODE), None
+        )
+        if decode is None:
+            raise CompileError(
+                f"candidate {candidate.id}: topology_mode slab3d without a decode "
+                f"assignment; slab3d exists for asymmetric P/D"
+            )
+        scalar_bw = link_bw[0] if isinstance(link_bw, list) else link_bw
+        calib = slab3d_calibration()
+        factor = calib.factor_for(decode.tp_size, scalar_bw)
+        if factor is None:
+            raise OutsideCalibrationDomain(calib.domain_note(decode.tp_size, scalar_bw))
+        base = link_latency[0] if isinstance(link_latency, list) else link_latency
+        # Compute the dims the way `build_cluster_config` will: it stamps the
+        # cluster config's topology_mode onto every instance and only then calls
+        # `_compute_network_dims`. Calling it on un-stamped instances returns the
+        # `auto` dims instead, and the emitted list is then the wrong length --
+        # which is precisely how `[1,2]` failed with "'link_bw' must have exactly
+        # 3 value(s) ... but got 2".
+        flattened = [
+            {**inst, TOPOLOGY_MODE_KEY: "slab3d"}
+            for node in nodes for inst in node["instances"]
+        ]
+        dims = _compute_network_dims(flattened)
+        # dim 0 keeps the fitted per-hop latency, dim 1 carries the correction, and
+        # any further dim (the slab axis) keeps the base value.
+        latencies = [float(base)] * len(dims)
+        if len(latencies) > 1:
+            latencies[1] = float(base) * factor
+        config["link_latency"] = latencies
+        config["link_bw"] = ([float(scalar_bw)] * len(dims)
+                             if not isinstance(link_bw, list) else link_bw)
+        config["topology_mode"] = "slab3d"
+
     return config, reduction
 
 
@@ -337,6 +391,10 @@ class LLMServingSimPredictor(Predictor):
                 activation_reserve_gb=self.activation_reserve_gb,
                 topology_level=self.topology_level,
             )
+        except OutsideCalibrationDomain as exc:
+            return SimResult(
+                candidate.id, SimOutcome.OUTSIDE_CALIBRATION_DOMAIN, detail=str(exc)
+            )
         except CompileError as exc:
             return SimResult(candidate.id, SimOutcome.CRASHED, detail=f"compile failed: {exc}")
         self.last_reduction = reduction
@@ -356,12 +414,14 @@ class LLMServingSimPredictor(Predictor):
         # total would under-count energy and inflate tokens/J (deviations D14).
         power_complete = all("power" in node for node in config["nodes"])
 
-        result = self._run_once(candidate, spec, config_path, run_dir, power_complete)
+        result = self._run_once(candidate, spec, config_path, run_dir, power_complete,
+                                config=config)
         if result.outcome is SimOutcome.CRASHED and self.retry_once:
             # §5.5 asks for one retry. A deterministic simulator rarely benefits,
             # but a transient failure (disk, port, ASTRA-Sim startup) can.
             retry = self._run_once(
-                candidate, spec, config_path, run_dir, power_complete, attempt=2
+                candidate, spec, config_path, run_dir, power_complete, attempt=2,
+                config=config,
             )
             if retry.ok:
                 retry.warnings.append("succeeded on retry after a first-attempt failure")
@@ -382,6 +442,7 @@ class LLMServingSimPredictor(Predictor):
         run_dir: Path,
         power_complete: bool,
         attempt: int = 1,
+        config: dict | None = None,
     ) -> SimResult:
         csv_path = run_dir / f"sim{attempt}.csv"
         log_path = run_dir / f"sim{attempt}.log"
@@ -470,6 +531,13 @@ class LLMServingSimPredictor(Predictor):
             metrics=metrics,
             warnings=warnings,
             artifacts={"log": str(log_path), "csv": str(csv_path), "config": str(config_path)},
+            # Computed here, where the CSV and the compiled config are both in
+            # hand, so it survives into the cache with the metrics.
+            operating_point={
+                hw: {"concurrency": p.concurrency, "phase": p.phase,
+                     "requests": p.requests, "wall_s": p.wall_s}
+                for hw, p in operating_points(csv_path, config or {}).items()
+            },
         )
 
     def _parse(

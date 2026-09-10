@@ -16,13 +16,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from planner.candidate_generator import CandidateGenerator          # noqa: E402
-from planner.inventory import (                                     # noqa: E402
-    detect_islands, load_cluster_spec, load_profiles_for,
+from planner.candidate_generator import CandidateGenerator
+from planner.inventory import (
+    detect_islands,
+    load_cluster_spec,
+    load_profiles_for,
 )
-from planner.optimizer import greedy                                # noqa: E402
-from planner.optimizer.surrogate import AnalyticalRooflineRanker    # noqa: E402
-from planner.spec import load_service_spec                          # noqa: E402
+from planner.optimizer import greedy
+from planner.optimizer.surrogate import AnalyticalRooflineRanker
+from planner.spec import load_service_spec
 
 
 def main() -> int:

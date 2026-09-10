@@ -17,7 +17,13 @@ _FMT = (
     "{:<15}"  # weight_size
     "{:<15}"  # output_loc
     "{:<15}"  # output_size
-    "{:<15}"  # comm_type
+    # comm_type is wider than the rest (deviations.md D28). A 3-D topology tag is
+    # longer than 15 characters, and this format PADS but does not TRUNCATE, so an
+    # overlong tag used to run into the next column and the reader -- which splits
+    # on whitespace -- silently mis-assigned every field after it. Widening the
+    # column is the narrow fix; making the trace not depend on column width at all
+    # is docs/upstream_issues/llmservingsim-trace-column-overflow.md.
+    "{:<24}"  # comm_type
     "{:<15}"  # comm_size
     "{:<15}"  # misc
     "\n"

@@ -247,6 +247,53 @@ class ProfilePower(_Strict):
     source: Source = Source.PLACEHOLDER
 
 
+class PowerModelPoint(_Strict):
+    """One measured operating point: a wattage and the load it was taken at.
+
+    A5(c): a power figure without the utilisation it was taken at is not a
+    measurement, so `util_pct` is required even when the model is not keyed on it.
+    """
+
+    power_w: float = Field(ge=0)
+    util_pct: float = Field(ge=0, le=100)
+    served_conc: float | None = Field(default=None, gt=0)
+    tput_tok_s: float | None = Field(default=None, ge=0)
+
+
+class PowerModelValidity(_Strict):
+    """Where the curve may be evaluated. `refuse` outside is the default (A6)."""
+
+    served_conc_min: float = Field(gt=0)
+    served_conc_max: float = Field(gt=0)
+    extrapolation: str = "refuse"
+
+
+class PowerModel(_Strict):
+    """Power as a function of the operating point, replacing the scalar
+    `active_power` where a curve has been measured
+    (`docs/rps_aware_planning_design.md` §3).
+
+    `kind` is data, not an enum, because the explanatory variable is a property of
+    the device and the measured range rather than of the schema. ATOM's power is
+    monotone in utilisation over a 59 pp span; the RNGD card sits at 84.7-92.1 %
+    throughout and its power is U-shaped in concurrency, so keying it on
+    utilisation does not fit (deviations D31). Both are legitimate models of their
+    own measurement, and forcing one form would mean fitting a curve the data does
+    not support.
+
+    Optional throughout: a profile with only the scalar `power:` block stays valid.
+    """
+
+    kind: str
+    idle_w: float = Field(ge=0)
+    points: list[PowerModelPoint] = Field(min_length=1)
+    validity: PowerModelValidity
+    saturation_knee: float | None = None
+    additive_across_units: bool | None = None
+    quantisation_w: float | None = Field(default=None, ge=0)
+    source: Source = Source.PLACEHOLDER
+
+
 class Datasheet(_Strict):
     """Datasheet values needed for Tier 0 roofline generation.
 
@@ -318,6 +365,9 @@ class AcceleratorProfile(_Strict):
     tdp_w: float | None = Field(default=None, gt=0)
     idle_power_w: float | None = Field(default=None, ge=0)
     power: ProfilePower | None = None
+    #: Measured power curve, where one exists. The scalar `power:` block above is
+    #: kept for back-compatibility and is what the simulator compiler still emits.
+    power_model: PowerModel | None = None
     source: Source = Source.PLACEHOLDER
     perf_data: str | None = None
     supported_models: list[SupportedModel] = Field(default_factory=list)

@@ -530,6 +530,14 @@ A cold-cache run reporting a non-zero hit count is a bug, not a nicety — worth
 
 ## D14 — The simulator's topology inference requires uniform instance sizes · Resolved (constraint enumerated around)
 
+> **LIFTED 2026-09-09 for the 2x case (D28).** The uniformity is not the
+> simulator's; it was `_compute_network_dims` plus a shared `local_dim`.
+> `topology_mode: slab3d` expresses `tp_d = 2 * tp_p` with no idle rank, the
+> generator enumerates it, and the compiler emits it with a measured dim-1 latency
+> correction. Other ratios still need idle-rank padding, whose interaction with the
+> frontend's iteration barrier is unverified, and remain enumerated around.
+
+
 ### Measured 2026-09-04 (`WORK_ORDER_spikes.md` STEP B) — the constraint is liftable, and worse than recorded
 
 `docs/d14_spike.md`. Two corrections to what follows, both measured on
@@ -687,13 +695,40 @@ drops, TTFT flat, `none`-mode control flat — all PASS) and `tests/test_sim_pd_
 | D19 | Phase 4 | **Resolved** (retraction) — the card profile's −71 % TTFT error was an arrival-pattern mismatch in the validation harness, not a scheduler difference; matched arrivals give −5.1 %. Both RNGD TTFT calibrations refitted |
 | D20 | Phase 3 / Exp 4 | **Open** — ATOM layerwise profiling blocked: host I/O exceeds the kernels and the device tracer's schema is undocumented. Memory and power measured; no perf bundle, so ATOM stays out of candidate generation |
 | D21 | Phase 3 | **Decided 2026-09-02** — Tier 0/1 synthetic profiles: `datasheet:` fields are vendor spec, never measurements. Generated bundles carry `tier: analytical`/`calibrated` and a `-t0`/`-t1` hardware-label suffix so they can never shadow a measured bundle; `PlannerOutput.profile_tier` propagates the weakest tier with a mandatory caveat. `flops_efficiency`/`mem_efficiency` stay empty until fitted against a measured bundle |
-| D22 | Phase 4 | **Resolved** (retraction + measurement) — the c1–c32 curve's top point was a 24-request pool running at eff 21.2, not c32; envelope measured to eff 107.2. At eff 76 the simulator is 1.31× optimistic on throughput and 18 % on TPOT. The re-run is **done for the loose-TTFT regime**: with the measured 18 % margin every RNGD config is rejected on both fixtures and the winner becomes `agg[cuda:tp4]` at 2.595 tok/J — the committed winner is infeasible, not merely optimistic. Tight-TTFT rows still open — the 1800 s re-run kept them undetermined, and D23 explains why: those candidates livelock |
-| D23 | Phase 4 / Phase 5 | **Diagnosed 2026-09-04, root cause open upstream** — the candidates do **not** livelock: one completes alone in 343 s at N=300. ASTRA-Sim races on a fixed cwd-relative `tmp__mem/*.json` (13 of 64 bare processes fail), and the frontend spins forever on the dead child (`controller.py` `read_wait` on EOF) with its stderr captured and never read. Unfixed at both upstream heads; `experiments/scripts/astra_isolated.sh` works around it, 64/64. `docs/d23_spike.md` |
+| D22 | Phase 4 | **Resolved** (retraction + measurement), **basis re-validated 2026-09-07**. The c1–c32 curve's top point was a 24-request pool at eff 21.2; the envelope now runs 1.00 → 107.2. At eff 76 the simulator is 1.31× optimistic on throughput and 18 % on TPOT, and with that margin every RNGD config is rejected — the committed winner is infeasible, not optimistic. **Both regimes are now determined**: the tight half was D26, not the candidates. And since 2026-09-09 the planner finds this unaided (E5) |
+| D23 | Phase 4 / Phase 5 | **Resolved 2026-09-07.** Not a livelock and not the `tmp__mem` race (real, D25, but it crashes rather than hangs). The cause is **D26**: the Chakra converter ran under a PATH-resolved `python`, so a wrong-protobuf `chakra` could build the workload graph and a multi-instance run then never finished its first prefill batch. 18/18 complete with the venv first against 6/6 hanging without. `docs/d23_revalidation.md` |
 | D24 | — | **Resolved** — the work order's layout lists `profiles/networks/`, but Level-1 interconnect-class values live inline in `planner/topology.py` and the YAMLs were an unread duplicate read only by ScenarioLab's cluster generator. Moved out with it (STEP 3.3); recoverable if Phase 5 ever wants them as data |
+| D25 | Phase 4 | **Resolved** — ASTRA-Sim writes `tmp__mem/<name>.json` cwd-relative with no run id; the frontend now gives each child `cwd=run_paths.inputs_root`. Second sanctioned `serving/` edit. D25-b adds dead-child detection so a killed child reports instead of hanging |
+| D26 | Phase 4 | **Resolved** — `sys.executable` for the Chakra converter. **This is what D23 actually was**; third sanctioned `serving/` edit. Subsumed by D27, kept because it explains the symptom |
+| D27 | — | **Resolved** — the converter is called in-process rather than spawned. 1.55–1.72× faster, seven byte-identical comparisons. Fourth sanctioned `serving/` edit. Done against the 30 % rule, because the cheaper lever the rule assumed (`--top-k`) turned out to be unusable — D30 |
+| D28 | Phase 5 | **Resolved** — `topology_mode: slab3d` expresses `tp_d = 2·tp_p` with no idle rank; fifth sanctioned `serving/` edit, R1/R2/**R3** byte-identical. Lifts the 2× case of D14 and D16(b). Its dim-1 latency correction is a 24-point measured table with `extrapolation: refuse`, not a law |
+| D29 | Phase 4 | **Resolved** — the SLO margin comes from the candidate's own operating point, not a hand-set constant. One-sided; manual and automatic coexist with the larger winning; hardware without a domain gets 0 and a note. The A40 domain is a separate opt-in file so the default path stays byte-identical. **D29b**: `power_model` is parsed and deliberately unused by the planner's energy, because changing that definition would break every historical tok/J comparison |
+| D30 | — | **Open (measured, not fixed)** — the roofline surrogate's proxy tok/J is algebraically invariant to TP and DP, so `--top-k` is false-infeasible at K=20 on two of three P/D corpora. The obvious repair (order by the roofline floor) fixes those two and breaks the third, so **no ranker change was made** and top-K is not used as a cost lever. `docs/surrogate_topk_regret.md` |
+| D31 | — | **Resolved** — utilisation does not explain RNGD card power (falls 92.1 → 84.7 % while power is U-shaped, r = +0.24), so the §3 power model is keyed on served concurrency instead. Device- and range-specific; §3's ATOM example spans 59 pp of utilisation and the schema is right there |
+
+**Reading order.** The entries below are in the order they were written, not
+numerically: D30 and D31 precede D28 and D29 in the file because the surrogate and
+power-model findings landed before the work orders that reserved those numbers.
+This table is the index.
+
+**Still open, in the order they bind:** **D20** (ATOM, blocks it from candidate
+generation), **D10** (memory derating), **D30** (no usable surrogate for P/D
+corpora), and the one this sprint created — **a second A40 accuracy-domain point**,
+without which every cuda row in E6 reads `extrapolated`. That last needs an NVIDIA
+node and this one has none.
 
 ---
 
 ## D16 — `LinkType` has no on-package fabric, and cross-vendor P/D needs a shared TP degree · Resolved (one added type) + Open (the TP constraint)
+
+> **(b) LIFTED 2026-09-09 for the 2x case (D28).** "The simulator requires a
+> shared TP degree" is false for it: `slab3d` encodes `tp_d = 2 * tp_p` directly,
+> and `plan --enable-pd` now enumerates, compiles and ranks such candidates. The
+> size-4 island bridging workaround in the fixture still works and is kept, but is
+> **no longer required**. (c) is unaffected: cross-vendor P/D before Phase 5
+> remains out of scope, and this changes only how a pair is *encoded*, not which
+> pairs are permitted.
+
 
 Two problems surfaced together while building the first heterogeneous
 RNGD + GPU P/D fixture (`experiments/configs/clusters/pd-rngd-gpu.yaml`).
@@ -1815,3 +1850,246 @@ default.
   never true. The denominator is now `abs(oracle_value)`. The published curve is
   unaffected — its oracle value is +1.660, which only
   `maximize_slo_goodput_per_joule` can be.
+
+## D28 — asymmetric TP per phase: `topology_mode: slab3d` · Resolved (fifth sanctioned `serving/` edit)
+
+*D29 is reserved for `WORK_ORDER_rps_aware.md` STEP 4.*
+
+**What D14 and D16(b) said, and why it was wrong.** Both record that the
+simulator "requires uniform instance sizes", so `tp_d = 2 · tp_p` was out of
+reach and heterogeneous P/D had to be worked around. The `spike/d14-asym-tp`
+investigation (`docs/d14_spike.md`) established that the simulator never required
+it:
+
+- ASTRA-Sim reads a per-collective `involved_dim` (`Workload.cc:275-296`) and
+  supports up to five dimensions;
+- the vendored Chakra converter writes an arbitrary-length `involved_dim`
+  through to the ET (`llm_converter.py:226-233`);
+- `tp_dim` is **already** a per-instance field, and the EP path already uses
+  two-dimensional involvement.
+
+The uniformity came from one function. `_compute_network_dims` folded every
+instance into `[npus_per_group, num_instances]` with an integer division, and
+`_resolve_dp_groups` then gave all of them the same `local_dim`.
+
+**The edit.** A cluster config may set a top-level `topology_mode`. Absent, or
+`"auto"`, is the pre-D28 path byte for byte. `"slab3d"` computes `[g, 2, n_slabs]`,
+where `g` is the smallest compute TP: a tp=g instance occupies half a slab and a
+tp=2g one a whole slab, so `tp_d = 2 · tp_p` costs no idle rank.
+`A40 tp4 prefill + RNGD tp8 decode` is `[4, 2, 2]` — 16 ranks, none idle.
+
+**`tp_dim` is keyed on the collective, not the footprint.** A prefill instance
+occupies `2 · tp` ranks (compute + sender) but its TP group is still only `g`
+wide, so it gets `[T, F, F]` while a full-slab decode gets `[T, T, F]`. Keying on
+the footprint gives both `[T, T, F]`, which declares a 2g-rank allreduce for a
+g-rank group; the prefill batch then waits for ranks that never join. That was
+done once during the spike, presented **exactly as D23's signature**, and was
+reported as "D23 reproduced" before it was found to be self-inflicted.
+`tests/test_slab3d_config.py` pins it with a case where prefill and decode occupy
+equal rank counts and must still differ.
+
+**What is refused rather than reshaped**: odd half-slab counts, MoE/EP instances,
+widths that are neither `g` nor `2g` (4× ratios would need idle-rank padding,
+whose interaction with the frontend's iteration barrier is unverified), and a
+full-slab instance that starts half a slab in — `[half, full, half]` straddles a
+boundary because ranks are handed out as consecutive blocks.
+
+**`_FMT` comm_type widened 15 → 24** (`serving/core/utils.py`). The row format
+pads but does not truncate, so a three-dimensional tag runs into the next column
+and the whitespace-splitting reader silently mis-assigns every field after it. At
+width 15, `ALLREDUCE:1,1,0` and a comm_size of `4` merge into `ALLREDUCE:1,1,04`:
+ten fields where there should be eleven. Eliminating the reparse is
+`docs/upstream_issues/llmservingsim-trace-column-overflow.md`; this widens the
+column only.
+
+**Byte-identity.** Every trace row goes through `formatter`, so the widening moved
+the *text* of every row from column 9 on. The parsed CSVs did not move: R1 ×3 and
+R2 reproduce `after_d25_d26` exactly, and **R3** — colocated tp4×2 under `auto`
+against the same under `slab3d` — is byte-identical between the two modes. R3 is
+the strongest of the three, because two colocated tp4 instances are two half slabs
+and therefore yield `[4, 2]` with `[T, F]`, exactly what `auto` computes: it says
+the new path agrees with the old where they overlap, not merely that it stays out
+of the way. `experiments/scripts/slab3d_anchors.sh`.
+
+**The calibration is done (STEP 2.2, 2026-09-09).** The flat ring becoming
+hierarchical makes decode look **24.4 %** faster at tp8 and **13.4 %** at tp4;
+multiplying dim 1's `link_latency` by **4** for `[4,2]` and **2** for `[2,2]`
+removes it to within **0.008 %**, at all three bandwidths measured. The factor is
+bandwidth-independent, split-dependent, and recorded as a table rather than a law
+in `profiles/calibration/slab3d_latency.yaml` with
+`validity.extrapolation: refuse`. Both values equal `tp/2`, which hop counting
+derives — `2(tp-1)` flat against `2(tp/2-1) + 2` split — but a derivation is not a
+measurement and unmeasured splits stay refused. `docs/slab3d_calibration.md`.
+
+So a `slab3d` plan at a **measured** `(split, link_bw)` may now quote absolute
+TPOT. Three things it still may not: any other split or bandwidth, TTFT and
+throughput (only TPOT p50 was fitted), and **P/D configurations** — the fit is
+single-instance and colocated by construction, and a real P/D run also sends the
+prefill compute→sender COMM_SEND across dim 1, which this experiment excluded on
+purpose so the allreduce could be isolated.
+
+**The planner side is done (STEP 2.3).** `_pd_candidates` enumerates
+`tp_d in {tp_p, 2 * tp_p}` and marks the 2x pairs `topology_mode: slab3d`; the
+compiler emits that mode plus a per-dim `link_latency` whose dim 1 carries the
+measured factor. A candidate whose `(split, link_bw)` is not in the table is
+**refused**, into its own bucket:
+`SimOutcome.OUTSIDE_CALIBRATION_DOMAIN` ->
+`RejectionStage.OUTSIDE_CALIBRATION_DOMAIN`. That is an epistemic category, kept
+distinct from both a feasibility verdict and a crash, because "never measured" is
+not "does not work" and a sweep full of refusals must not read as a sweep that
+found nothing feasible.
+
+**The refusal earned its keep immediately.** The first end-to-end
+`plan --enable-pd` on `pd-rngd-gpu.yaml` refused candidates for three points the
+work order's table did not cover: **12.6 Gbps** (the A40<->RNGD cross-vendor link;
+35.2 is the composed A40<->A40 value, not this one), **7.7** (`fabric-rngd0-rngd1`,
+which is the asymmetric NPU P/D case D14/D16(b) was actually written about), and the
+**`[1,2]`** split. Measuring all three brought the table to 15 points -- factors
+still 4 / 2 / 1, bandwidth-independent over a 13x range -- and every asymmetric
+candidate on the fixture now compiles. Had the compiler fallen back to a factor of
+1.0 instead, those runs would have produced 12.6-24.4 % optimistic TPOT on exactly
+the candidates D28 exists to enable, and reported them as ordinary results.
+
+**The end-to-end run also caught a defect fourteen unit tests missed.** The compiler
+sized its per-dim list from `_compute_network_dims` called on instance dicts it had
+not stamped with the mode, so it got `auto`'s dimension count while
+`build_cluster_config` -- which stamps first -- got slab3d's. Every asymmetric
+candidate died in `_normalize_network_dim_values` with *"'link_bw' must have exactly
+3 value(s) ... but got 2"*, and the first run's 84 `sim_error`s were that, not the
+pre-existing P/D failures they resembled. The tests checked the list's CONTENTS and
+never its LENGTH against the function the simulator would use. Fixed by stamping the
+mode before computing, and a test now runs the config through
+`_normalize_network_dim_values` itself.
+
+**`split2` came back as an instrument.** 2.1 was right to leave it out — it
+describes no placement — but 2.2's calibration is defined as *single instance,
+flat vs split*, and splitting one TP group is the only way to attribute the
+difference to the allreduce rather than to a changed instance mix. It refuses
+anything but one colocated non-MoE instance, is excluded from
+`DEPLOYABLE_TOPOLOGY_MODES`, and a test asserts `planner/` never emits it.
+
+## D31 — utilisation does not explain RNGD card power; the §3 power model is keyed on served concurrency instead · Resolved (schema adapted, measurement kept)
+
+`docs/rps_aware_planning_design.md` §3 proposes
+`power_model: {kind: piecewise_linear_in_util, ...}` and argues the case well: *"a
+power figure without the utilisation it was taken at is not a measurement"*. That
+principle stands and A5(c) keeps it. What does not transfer is the **functional
+form**, and the design's own example says why.
+
+**The measurement** (`WORK_ORDER_rps_aware.md` STEP 3.2, two repeats per point,
+agreeing to within 0.72 %):
+
+| served conc | util % | power W | tput tok/s |
+| ---: | ---: | ---: | ---: |
+| 1.00 | 92.1 | 151.1 | 63.1 |
+| 1.99 | 88.0 | 140.6 | 110.1 |
+| 3.98 | 86.5 | 139.9 | 200.9 |
+| 7.88 | 85.3 | 143.2 | 356.8 |
+| 15.59 | 84.7 | 151.8 | 598.2 |
+
+**Utilisation falls monotonically while power falls and then rises.** No monotone
+function of utilisation fits, piecewise-linear or otherwise; the correlation is
+r = +0.24. The card sits between 84.7 % and 92.1 % across the whole range — a
+7.4 pp span — so utilisation has almost no dynamic range to explain an 8.2 %
+movement in power that reverses direction.
+
+§3's example is an **ATOM** card at 36.2 / 64.4 / 95.1 % utilisation reading
+44.3 / 54.9 / 68.7 W. There utilisation spans 59 pp and is monotone in power, and
+the schema is the right one. The divergence is device- and range-specific, not a
+flaw in the design.
+
+**What was done.** `profiles/accelerators/furiosa_rngd_card.yaml` gains a
+`power_model` with `kind: piecewise_linear_in_served_conc`, its five measured
+points, and `validity.extrapolation: refuse` above conc 15.59 where power was
+never measured. Each point still carries the utilisation it was taken at, because
+A5(c) is about provenance rather than about the fit. The pre-existing scalar
+`power:` block is untouched for back-compatibility.
+
+**Why the shape is worth keeping in view.** The U is physical: at concurrency 1
+every decode step streams the whole model for a single token, so the card is
+memory-bandwidth-bound and draws 151 W to produce 63 tok/s; batching amortises
+that traffic, and the minimum near c4 is where the memory-bound and compute-bound
+terms cross. **Across a 9.5x throughput range the power moves 1.085x**, so energy
+per token is set almost entirely by throughput — 0.418 tok/J at c1 against
+3.941 at c15.59, a **9.4x** span. That is the quantitative form of the premise
+behind this whole work order: at low load an accelerator is not merely slower, it
+is dramatically less efficient, and a planner that treats performance as a scalar
+cannot see it.
+
+**What is NOT claimed.** Power above conc 15.59 is unmeasured. D22's four points
+(conc 15.3 to 107.2) keep `power_w: null` and were not back-filled (A2).
+
+## D29 — the SLO margin comes from the candidate's own operating point, and the A40 domain is opt-in · Resolved
+
+`WORK_ORDER_rps_aware.md` rev 2 STEP 4.2–4.3, implementing
+`docs/rps_aware_planning_design.md` §5.
+
+**What was wrong with a constant.** `pd_slo_sweep.py --tpot-margin-percent` is one
+number applied to every candidate, and the simulator's error is not one number. On
+the RNGD card it is **+11.6 %** at served concurrency 3.9 and **−18 %** at 76 — not
+merely different in size but opposite in sign. A constant is therefore too loose
+somewhere or too tight everywhere, and D22 is what "too loose at the top" looks
+like: the winner passed a 50 ms TPOT SLO at a predicted 48.41 ms, and
+48.41 × 1.18 = 57.1 ms. The configuration was infeasible, not optimistic, and
+nothing in the pipeline could see it because the 18 % was a fact about the
+simulator that the simulator did not carry.
+
+**What replaces it.** `planner/util/operating_point.py` reads the served
+concurrency each hardware kind actually ran at, out of the simulation's own CSV by
+Little's law. `AccuracyDomain.tpot_error_at(conc)` prices the simulator's error
+there, and feasibility applies it.
+
+**Four decisions, each of which could have gone the other way.**
+
+1. **The margin is one-sided.** Where the simulator is *pessimistic* the prediction
+   is left alone rather than deflated. Deflating would make plans look better than
+   the hardware measured, which is the direction of the retraction.
+2. **Manual and automatic coexist; the larger wins.** A hand-set
+   `--tpot-margin-percent` is an explicit instruction not to go below a floor, so
+   it is a floor. Both values are recorded in provenance, so a plan says what it
+   was checked against and not only which check bound.
+3. **Hardware with no accuracy domain gets margin 0 and a note.** Never a margin
+   borrowed from a different device — that would be rule 3 with extra steps.
+4. **The A40 domain lives in its own file and is opt-in.** `profiles/calibration/a40.yaml`
+   is on the default planning path; a domain there would apply an automatic margin
+   to every A40 candidate and move the frozen output for both `examples/` specs.
+   So it is `profiles/calibration/a40.accuracy.yaml`, reached only by
+   `plan --accuracy-domain`, and the default path is byte-identical.
+
+**The A40 point had to be computed, not read.** Its `fitted_at_concurrency` is
+**170.56**, derived from `outputs/phase0_bench/A40/vllm/requests.jsonl` — whose
+mean latency, TTFT and TPOT reproduce the committed summary exactly, which is what
+licenses the derivation. It counts requests *in the system*, queued as well as
+running, and the engine's `max_num_seqs` was 128: that run offered ~10.3 rps to one
+A40 and the card could not keep up. The RNGD envelope uses the same definition but
+was measured closed-loop, where in-system and running nearly coincide. **Comparing
+the two domains' concurrency axes therefore needs care**, and the file says so.
+
+**A measurement that changed the answer.** The RNGD domain originally had two
+points, 16.6 and 76, and `widen_error_bars` extrapolated below 16.6 — producing a
+4.8 % optimistic-side margin at concurrency 10. Measuring the low end
+(`outputs/lowload_sim_error/`, STEP 4.2) found the simulator is **pessimistic**
+there, so the correct margin is **zero**. The extrapolation had the sign wrong, not
+just the magnitude. Four of six attempted points are in the domain; the two nearest
+16.6 are excluded because the simulator settled 40 % below the hardware's occupancy
+at the same offered rate, which makes its TPOT a different operating point's TPOT.
+
+## D29b — `power_model` is not wired into the planner's energy, on purpose
+
+STEP 4.6. `profiles/accelerators/furiosa_rngd_card.yaml` carries a measured
+`power_model` (D31) and `planner/inventory.py` parses it. The planner does **not**
+use it to compute energy, and that is a decision rather than an omission.
+
+Today's `total_energy_j` comes from the simulator's **node-level** power
+(`PROJECT_REPORT.md` §4.8.7: the ~558 W figure is node power, not card power).
+Swapping in a card-level curve would change what `tokens_per_joule` *means*, and
+every tok/J in `CLAIMS.md`, `PROJECT_REPORT.md` and the sweep results was computed
+under the old definition. The comparison across all of them would silently break —
+new numbers would look better or worse than old ones for a reason that is not a
+change in the hardware or the plan.
+
+So `power_model` is used **only** to compute the measured curve E6b compares
+against, where it is the right instrument because that side is a card measurement.
+If the planner's energy definition is ever changed, it must be a deliberate,
+documented migration that re-derives the historical numbers — not a side effect of
+this file appearing.

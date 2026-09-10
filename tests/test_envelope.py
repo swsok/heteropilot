@@ -198,3 +198,45 @@ def test_unmapped_island_refuses_a_key(tmp_path: Path, spec) -> None:
     c = cache(tmp_path, spec)
     c.put(bad, result("x"))
     assert c.get(bad) is None
+
+
+# --- the operating point must survive the cache ----------------------------
+
+def test_the_operating_point_round_trips_through_the_cache(tmp_path, spec):
+    """A cached run must still earn its accuracy-domain margin (STEP 4.3).
+
+    Found the hard way: the margin was derived from `SimResult.artifacts["csv"]`,
+    which a cache hit does not have, so a warm cache silently dropped every
+    margin to zero and printed the plan as though nothing had changed. Nothing
+    failed and nothing warned -- the numbers were just quietly less safe. The
+    operating point is a property of the run, so it is cached with the metrics.
+    """
+    c = cache(tmp_path, spec)
+    r = result()
+    r.operating_point = {"A40": {"concurrency": 14.86, "phase": "total",
+                                 "requests": 20, "wall_s": 27.4}}
+    cand = candidate()
+    c.put(cand, r)
+
+    got = cache(tmp_path, spec).get(cand)
+    assert got is not None and got.ok
+    assert got.operating_point["A40"]["concurrency"] == pytest.approx(14.86)
+    assert got.operating_point["A40"]["phase"] == "total"
+
+
+def test_a_pre_existing_cache_entry_says_it_cannot_be_margined(tmp_path, spec):
+    """Entries written before this existed must announce the gap rather than
+    look like a run that simply had no load."""
+    import json
+
+    c = cache(tmp_path, spec)
+    cand = candidate()
+    c.put(cand, result())
+    path = next((tmp_path / "env").glob("*.json"))
+    payload = json.loads(path.read_text())
+    payload.pop("operating_point", None)
+    path.write_text(json.dumps(payload))
+
+    got = cache(tmp_path, spec).get(cand)
+    assert got is not None and got.operating_point == {}
+    assert any("predates operating-point caching" in w for w in got.warnings)

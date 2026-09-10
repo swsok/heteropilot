@@ -29,13 +29,14 @@ golden tests - are unaffected. A caller wires it in explicitly via
 
 from __future__ import annotations
 
+import itertools
 import re
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from planner.envelope import workload_bucket
 from planner.plan import DeploymentPlan
@@ -90,6 +91,115 @@ class BucketError(_Strict):
     tpot: ErrorStats = Field(default_factory=ErrorStats)
 
 
+class AccuracyPoint(_Strict):
+    """The simulator's SIGNED error at one served concurrency.
+
+    Sign convention: `(sim - measured) / measured * 100`. Negative TPOT means the
+    simulator is optimistic -- it predicts a shorter time per token than the
+    hardware delivers -- which is the direction that produced D22.
+    """
+
+    conc: float = Field(gt=0)
+    tpot_err_pct: float
+    tput_err_pct: float | None = None
+    ttft_err_pct: float | None = None
+    note: str = ""
+
+
+class AccuracyDomain(_Strict):
+    """Where a predictor's error has been measured, and what it was.
+
+    `docs/rps_aware_planning_design.md` §5, the most transferable lesson from D22:
+    the card fixture's winner passed a 50 ms TPOT SLO at a predicted 48.41 ms, and
+    48.41 x 1.18 = 57.1. The winner was not optimistic, it was infeasible, and
+    nothing in the pipeline could see it because the 18 % was a fact about the
+    simulator that the simulator did not carry.
+
+    Outside the measured points the policy is `widen_error_bars`: take the nearest
+    measured point's error and add |slope| x distance, uncapped. That is
+    deliberately pessimistic and deliberately unbounded -- an extrapolated margin
+    should get worse the further it reaches, so that a candidate far outside the
+    domain is rejected by its own uncertainty rather than by a guess.
+    """
+
+    fitted_at_concurrency: float = Field(gt=0)
+    points: list[AccuracyPoint] = Field(min_length=1)
+    outside_domain: Literal["widen_error_bars", "refuse"] = "widen_error_bars"
+    source: str = "measured"
+    note: str = ""
+
+    @model_validator(mode="after")
+    def _sorted(self) -> AccuracyDomain:
+        concs = [p.conc for p in self.points]
+        if concs != sorted(concs):
+            raise ValueError(f"accuracy_domain points must be sorted by conc: {concs}")
+        if len(set(concs)) != len(concs):
+            raise ValueError(f"duplicate concurrency in accuracy_domain: {concs}")
+        return self
+
+    @property
+    def conc_min(self) -> float:
+        return self.points[0].conc
+
+    @property
+    def conc_max(self) -> float:
+        return self.points[-1].conc
+
+    def _err_at(self, conc: float, field: str) -> float | None:
+        vals = [(p.conc, getattr(p, field)) for p in self.points
+                if getattr(p, field) is not None]
+        if not vals:
+            return None
+        if len(vals) == 1:
+            # One point: no slope to widen along, so the error is carried flat and
+            # `in_domain` is what tells the caller it is an extrapolation.
+            return vals[0][1]
+        if conc <= vals[0][0]:
+            (x0, y0), (x1, y1) = vals[0], vals[1]
+            slope = (y1 - y0) / (x1 - x0)
+            return y0 - abs(slope) * (x0 - conc)
+        if conc >= vals[-1][0]:
+            (x0, y0), (x1, y1) = vals[-2], vals[-1]
+            slope = (y1 - y0) / (x1 - x0)
+            return y1 - abs(slope) * (conc - x1)
+        for (x0, y0), (x1, y1) in itertools.pairwise(vals):
+            if x0 <= conc <= x1:
+                t = (conc - x0) / (x1 - x0)
+                return y0 + t * (y1 - y0)
+        raise AssertionError("unreachable: conc is bracketed")
+
+    def in_domain(self, conc: float) -> bool:
+        return self.conc_min <= conc <= self.conc_max
+
+    def tpot_error_at(self, conc: float) -> float:
+        """Signed simulator error in TPOT, in percent, at this operating point."""
+        v = self._err_at(conc, "tpot_err_pct")
+        assert v is not None  # tpot_err_pct is required on every point
+        return v
+
+    def ttft_error_at(self, conc: float) -> float | None:
+        return self._err_at(conc, "ttft_err_pct")
+
+    @staticmethod
+    def margin_from_error(err_pct: float | None) -> float:
+        """The inflation to apply, in percent: only where the simulator is optimistic.
+
+        A pessimistic predictor is left alone. Deflating a prediction because the
+        simulator ran slow would make plans look better than the hardware measured,
+        which is the exact direction of the D22 retraction -- so the margin is
+        one-sided by construction.
+        """
+        if err_pct is None:
+            return 0.0
+        return max(0.0, -err_pct)
+
+    def tpot_margin_pct(self, conc: float) -> float:
+        return self.margin_from_error(self.tpot_error_at(conc))
+
+    def ttft_margin_pct(self, conc: float) -> float:
+        return self.margin_from_error(self.ttft_error_at(conc))
+
+
 class HardwareCalibration(_Strict):
     """Linear fits and error distributions for one hardware kind."""
 
@@ -98,6 +208,9 @@ class HardwareCalibration(_Strict):
     tpot: LinearFit = Field(default_factory=LinearFit)
     #: keyed by workload_bucket
     errors: dict[str, BucketError] = Field(default_factory=dict)
+    #: Where this predictor's error has been measured (design §5). Optional: a
+    #: hardware without one gets margin 0 and a caveat, never a guessed margin.
+    accuracy_domain: AccuracyDomain | None = None
 
 
 class CalibrationModel(_Strict):
@@ -363,3 +476,25 @@ def load_calibration(path: str | Path) -> CalibrationModel:
     if not raw:
         return CalibrationModel.identity()
     return CalibrationModel.model_validate(raw)
+
+
+def load_accuracy_domains(root: Path | str = ".") -> dict[str, AccuracyDomain]:
+    """Every measured accuracy domain under `<root>/profiles/calibration/`.
+
+    That directory holds two kinds of file: hardware calibrations (this schema)
+    and standalone tables such as `slab3d_latency.yaml`, which is a lookup for a
+    topology correction and has nothing to do with a `hardware:` block. A file
+    that does not parse as a calibration is skipped rather than fatal -- a
+    sibling artifact must not be able to stop a planning run -- but the skip is
+    narrow: only a validation failure, never an unreadable disk.
+    """
+    out: dict[str, AccuracyDomain] = {}
+    for path in sorted((Path(root) / "profiles/calibration").glob("*.yaml")):
+        try:
+            model = load_calibration(path)
+        except (ValidationError, KeyError, TypeError):
+            continue                      # not a hardware calibration file
+        for hardware, cal in model.hardware.items():
+            if cal.accuracy_domain is not None:
+                out[hardware] = cal.accuracy_domain
+    return out

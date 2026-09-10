@@ -1,0 +1,104 @@
+{
+  "service": "examples/service_specs/llama31-8b.yaml",
+  "cluster": "experiments/configs/clusters/pd-rngd-gpu-card.yaml",
+  "num_requests": 300,
+  "seed": 42,
+  "islands": [
+    {
+      "id": "furiosa-rngd-card-node_rngd0",
+      "backend": "furiosa",
+      "size": 1
+    },
+    {
+      "id": "furiosa-rngd-card-node_rngd1",
+      "backend": "furiosa",
+      "size": 1
+    },
+    {
+      "id": "cuda-a40-node_a40a",
+      "backend": "cuda",
+      "size": 4
+    },
+    {
+      "id": "cuda-a40-node_a40b",
+      "backend": "cuda",
+      "size": 4
+    }
+  ],
+  "sweep": [
+    {
+      "rps": 1.0,
+      "wall_seconds": 4641.6,
+      "knob_policy": null,
+      "ttft_slo_max_ms": 64000.0,
+      "feasible": true,
+      "generated": 528,
+      "evaluated": 528,
+      "rejected_summary": {},
+      "cache_hits": 403,
+      "recommended": {
+        "plan_id": "hp-00002",
+        "arch": "aggregated",
+        "backend_mix": "agg[furiosa:tp1]",
+        "accelerators": 1,
+        "tokens_per_joule": 1.0739115761052986,
+        "slo_goodput_rps": 0.9462009982520242,
+        "p99_ttft_ms": 386.8874920799997,
+        "p99_tpot_ms": 29.8842646,
+        "average_power_w": 559.7535331230281,
+        "slo_attainment": 1.0
+      },
+      "reason": "",
+      "validity": "measured",
+      "applied_tpot_margin_pct": 3.048764018748316,
+      "margin_source": "accuracy_domain",
+      "operating_point": [
+        {
+          "hardware": "RNGD-CARD",
+          "concurrency": 16.544868569276172,
+          "phase": "total",
+          "tpot_error_pct": -3.048764018748316,
+          "ttft_error_pct": null,
+          "in_calibration_domain": true
+        }
+      ]
+    },
+    {
+      "rps": 1.0,
+      "wall_seconds": 0.2,
+      "knob_policy": null,
+      "ttft_slo_max_ms": 8000.0,
+      "feasible": true,
+      "generated": 528,
+      "evaluated": 528,
+      "rejected_summary": {},
+      "cache_hits": 528,
+      "recommended": {
+        "plan_id": "hp-00002",
+        "arch": "aggregated",
+        "backend_mix": "agg[furiosa:tp1]",
+        "accelerators": 1,
+        "tokens_per_joule": 1.0739115761052986,
+        "slo_goodput_rps": 0.9462009982520242,
+        "p99_ttft_ms": 386.8874920799997,
+        "p99_tpot_ms": 29.8842646,
+        "average_power_w": 559.7535331230281,
+        "slo_attainment": 1.0
+      },
+      "reason": "",
+      "validity": "measured",
+      "applied_tpot_margin_pct": 3.048764018748316,
+      "margin_source": "accuracy_domain",
+      "operating_point": [
+        {
+          "hardware": "RNGD-CARD",
+          "concurrency": 16.544868569276172,
+          "phase": "total",
+          "tpot_error_pct": -3.048764018748316,
+          "ttft_error_pct": null,
+          "in_calibration_domain": true
+        }
+      ]
+    }
+  ]
+}

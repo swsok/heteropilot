@@ -1,0 +1,1082 @@
+{
+  "tp2_bw100p0_flat": {
+    "csv": "outputs/slab3d_calib/tp2_bw100p0_flat.csv",
+    "log": "outputs/slab3d_calib/tp2_bw100p0_flat.log",
+    "n_tpot": 20,
+    "name": "tp2_bw100p0_flat",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 22.140888
+  },
+  "tp2_bw100p0_split_f1": {
+    "csv": "outputs/slab3d_calib/tp2_bw100p0_split_f1.csv",
+    "log": "outputs/slab3d_calib/tp2_bw100p0_split_f1.log",
+    "n_tpot": 20,
+    "name": "tp2_bw100p0_split_f1",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 22.140888
+  },
+  "tp2_bw100p0_split_f2": {
+    "csv": "outputs/slab3d_calib/tp2_bw100p0_split_f2.csv",
+    "log": "outputs/slab3d_calib/tp2_bw100p0_split_f2.log",
+    "n_tpot": 20,
+    "name": "tp2_bw100p0_split_f2",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 24.7431115
+  },
+  "tp2_bw100p0_split_f4": {
+    "csv": "outputs/slab3d_calib/tp2_bw100p0_split_f4.csv",
+    "log": "outputs/slab3d_calib/tp2_bw100p0_split_f4.log",
+    "n_tpot": 20,
+    "name": "tp2_bw100p0_split_f4",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 29.8237975
+  },
+  "tp2_bw100p0_split_f8": {
+    "csv": "outputs/slab3d_calib/tp2_bw100p0_split_f8.csv",
+    "log": "outputs/slab3d_calib/tp2_bw100p0_split_f8.log",
+    "n_tpot": 20,
+    "name": "tp2_bw100p0_split_f8",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 40.0605905
+  },
+  "tp2_bw12p6_flat": {
+    "csv": "outputs/slab3d_calib/tp2_bw12p6_flat.csv",
+    "log": "outputs/slab3d_calib/tp2_bw12p6_flat.log",
+    "n_tpot": 20,
+    "name": "tp2_bw12p6_flat",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 23.1307665
+  },
+  "tp2_bw12p6_split_f1": {
+    "csv": "outputs/slab3d_calib/tp2_bw12p6_split_f1.csv",
+    "log": "outputs/slab3d_calib/tp2_bw12p6_split_f1.log",
+    "n_tpot": 20,
+    "name": "tp2_bw12p6_split_f1",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 23.1307665
+  },
+  "tp2_bw12p6_split_f2": {
+    "csv": "outputs/slab3d_calib/tp2_bw12p6_split_f2.csv",
+    "log": "outputs/slab3d_calib/tp2_bw12p6_split_f2.log",
+    "n_tpot": 20,
+    "name": "tp2_bw12p6_split_f2",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 25.500419
+  },
+  "tp2_bw12p6_split_f4": {
+    "csv": "outputs/slab3d_calib/tp2_bw12p6_split_f4.csv",
+    "log": "outputs/slab3d_calib/tp2_bw12p6_split_f4.log",
+    "n_tpot": 20,
+    "name": "tp2_bw12p6_split_f4",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 30.621735
+  },
+  "tp2_bw12p6_split_f8": {
+    "csv": "outputs/slab3d_calib/tp2_bw12p6_split_f8.csv",
+    "log": "outputs/slab3d_calib/tp2_bw12p6_split_f8.log",
+    "n_tpot": 20,
+    "name": "tp2_bw12p6_split_f8",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 40.9068825
+  },
+  "tp2_bw12p9_flat": {
+    "csv": "outputs/slab3d_calib/tp2_bw12p9_flat.csv",
+    "log": "outputs/slab3d_calib/tp2_bw12p9_flat.log",
+    "n_tpot": 20,
+    "name": "tp2_bw12p9_flat",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 23.1027085
+  },
+  "tp2_bw12p9_split_f1": {
+    "csv": "outputs/slab3d_calib/tp2_bw12p9_split_f1.csv",
+    "log": "outputs/slab3d_calib/tp2_bw12p9_split_f1.log",
+    "n_tpot": 20,
+    "name": "tp2_bw12p9_split_f1",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 23.1027085
+  },
+  "tp2_bw12p9_split_f2": {
+    "csv": "outputs/slab3d_calib/tp2_bw12p9_split_f2.csv",
+    "log": "outputs/slab3d_calib/tp2_bw12p9_split_f2.log",
+    "n_tpot": 20,
+    "name": "tp2_bw12p9_split_f2",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 25.559324
+  },
+  "tp2_bw12p9_split_f4": {
+    "csv": "outputs/slab3d_calib/tp2_bw12p9_split_f4.csv",
+    "log": "outputs/slab3d_calib/tp2_bw12p9_split_f4.log",
+    "n_tpot": 20,
+    "name": "tp2_bw12p9_split_f4",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 30.5949405
+  },
+  "tp2_bw12p9_split_f8": {
+    "csv": "outputs/slab3d_calib/tp2_bw12p9_split_f8.csv",
+    "log": "outputs/slab3d_calib/tp2_bw12p9_split_f8.log",
+    "n_tpot": 20,
+    "name": "tp2_bw12p9_split_f8",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 40.8801565
+  },
+  "tp2_bw13p0_flat": {
+    "csv": "outputs/slab3d_calib/tp2_bw13p0_flat.csv",
+    "log": "outputs/slab3d_calib/tp2_bw13p0_flat.log",
+    "n_tpot": 20,
+    "name": "tp2_bw13p0_flat",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 23.0935915
+  },
+  "tp2_bw13p0_split_f1": {
+    "csv": "outputs/slab3d_calib/tp2_bw13p0_split_f1.csv",
+    "log": "outputs/slab3d_calib/tp2_bw13p0_split_f1.log",
+    "n_tpot": 20,
+    "name": "tp2_bw13p0_split_f1",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 23.0935915
+  },
+  "tp2_bw13p0_split_f2": {
+    "csv": "outputs/slab3d_calib/tp2_bw13p0_split_f2.csv",
+    "log": "outputs/slab3d_calib/tp2_bw13p0_split_f2.log",
+    "n_tpot": 20,
+    "name": "tp2_bw13p0_split_f2",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 25.6540125
+  },
+  "tp2_bw13p0_split_f4": {
+    "csv": "outputs/slab3d_calib/tp2_bw13p0_split_f4.csv",
+    "log": "outputs/slab3d_calib/tp2_bw13p0_split_f4.log",
+    "n_tpot": 20,
+    "name": "tp2_bw13p0_split_f4",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 30.5862335
+  },
+  "tp2_bw13p0_split_f8": {
+    "csv": "outputs/slab3d_calib/tp2_bw13p0_split_f8.csv",
+    "log": "outputs/slab3d_calib/tp2_bw13p0_split_f8.log",
+    "n_tpot": 20,
+    "name": "tp2_bw13p0_split_f8",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 40.871471
+  },
+  "tp2_bw13p1_flat": {
+    "csv": "outputs/slab3d_calib/tp2_bw13p1_flat.csv",
+    "log": "outputs/slab3d_calib/tp2_bw13p1_flat.log",
+    "n_tpot": 20,
+    "name": "tp2_bw13p1_flat",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 23.0846895
+  },
+  "tp2_bw13p1_split_f1": {
+    "csv": "outputs/slab3d_calib/tp2_bw13p1_split_f1.csv",
+    "log": "outputs/slab3d_calib/tp2_bw13p1_split_f1.log",
+    "n_tpot": 20,
+    "name": "tp2_bw13p1_split_f1",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 23.0846895
+  },
+  "tp2_bw13p1_split_f2": {
+    "csv": "outputs/slab3d_calib/tp2_bw13p1_split_f2.csv",
+    "log": "outputs/slab3d_calib/tp2_bw13p1_split_f2.log",
+    "n_tpot": 20,
+    "name": "tp2_bw13p1_split_f2",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 25.6450685
+  },
+  "tp2_bw13p1_split_f4": {
+    "csv": "outputs/slab3d_calib/tp2_bw13p1_split_f4.csv",
+    "log": "outputs/slab3d_calib/tp2_bw13p1_split_f4.log",
+    "n_tpot": 20,
+    "name": "tp2_bw13p1_split_f4",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 30.620521500000002
+  },
+  "tp2_bw13p1_split_f8": {
+    "csv": "outputs/slab3d_calib/tp2_bw13p1_split_f8.csv",
+    "log": "outputs/slab3d_calib/tp2_bw13p1_split_f8.log",
+    "n_tpot": 20,
+    "name": "tp2_bw13p1_split_f8",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 40.862950999999995
+  },
+  "tp2_bw16p0_flat": {
+    "csv": "outputs/slab3d_calib/tp2_bw16p0_flat.csv",
+    "log": "outputs/slab3d_calib/tp2_bw16p0_flat.log",
+    "n_tpot": 20,
+    "name": "tp2_bw16p0_flat",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 22.8674355
+  },
+  "tp2_bw16p0_split_f1": {
+    "csv": "outputs/slab3d_calib/tp2_bw16p0_split_f1.csv",
+    "log": "outputs/slab3d_calib/tp2_bw16p0_split_f1.log",
+    "n_tpot": 20,
+    "name": "tp2_bw16p0_split_f1",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 22.8674355
+  },
+  "tp2_bw16p0_split_f2": {
+    "csv": "outputs/slab3d_calib/tp2_bw16p0_split_f2.csv",
+    "log": "outputs/slab3d_calib/tp2_bw16p0_split_f2.log",
+    "n_tpot": 20,
+    "name": "tp2_bw16p0_split_f2",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 25.4265735
+  },
+  "tp2_bw16p0_split_f4": {
+    "csv": "outputs/slab3d_calib/tp2_bw16p0_split_f4.csv",
+    "log": "outputs/slab3d_calib/tp2_bw16p0_split_f4.log",
+    "n_tpot": 20,
+    "name": "tp2_bw16p0_split_f4",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 30.547219499999997
+  },
+  "tp2_bw16p0_split_f8": {
+    "csv": "outputs/slab3d_calib/tp2_bw16p0_split_f8.csv",
+    "log": "outputs/slab3d_calib/tp2_bw16p0_split_f8.log",
+    "n_tpot": 20,
+    "name": "tp2_bw16p0_split_f8",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 40.617937
+  },
+  "tp2_bw35p2_flat": {
+    "csv": "outputs/slab3d_calib/tp2_bw35p2_flat.csv",
+    "log": "outputs/slab3d_calib/tp2_bw35p2_flat.log",
+    "n_tpot": 20,
+    "name": "tp2_bw35p2_flat",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 22.4337515
+  },
+  "tp2_bw35p2_split_f1": {
+    "csv": "outputs/slab3d_calib/tp2_bw35p2_split_f1.csv",
+    "log": "outputs/slab3d_calib/tp2_bw35p2_split_f1.log",
+    "n_tpot": 20,
+    "name": "tp2_bw35p2_split_f1",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 22.4337515
+  },
+  "tp2_bw35p2_split_f2": {
+    "csv": "outputs/slab3d_calib/tp2_bw35p2_split_f2.csv",
+    "log": "outputs/slab3d_calib/tp2_bw35p2_split_f2.log",
+    "n_tpot": 20,
+    "name": "tp2_bw35p2_split_f2",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 24.995182
+  },
+  "tp2_bw35p2_split_f4": {
+    "csv": "outputs/slab3d_calib/tp2_bw35p2_split_f4.csv",
+    "log": "outputs/slab3d_calib/tp2_bw35p2_split_f4.log",
+    "n_tpot": 20,
+    "name": "tp2_bw35p2_split_f4",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 30.151275
+  },
+  "tp2_bw35p2_split_f8": {
+    "csv": "outputs/slab3d_calib/tp2_bw35p2_split_f8.csv",
+    "log": "outputs/slab3d_calib/tp2_bw35p2_split_f8.log",
+    "n_tpot": 20,
+    "name": "tp2_bw35p2_split_f8",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 40.2139155
+  },
+  "tp2_bw7p7_flat": {
+    "csv": "outputs/slab3d_calib/tp2_bw7p7_flat.csv",
+    "log": "outputs/slab3d_calib/tp2_bw7p7_flat.log",
+    "n_tpot": 20,
+    "name": "tp2_bw7p7_flat",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 23.696233
+  },
+  "tp2_bw7p7_split_f1": {
+    "csv": "outputs/slab3d_calib/tp2_bw7p7_split_f1.csv",
+    "log": "outputs/slab3d_calib/tp2_bw7p7_split_f1.log",
+    "n_tpot": 20,
+    "name": "tp2_bw7p7_split_f1",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 23.696233
+  },
+  "tp2_bw7p7_split_f2": {
+    "csv": "outputs/slab3d_calib/tp2_bw7p7_split_f2.csv",
+    "log": "outputs/slab3d_calib/tp2_bw7p7_split_f2.log",
+    "n_tpot": 20,
+    "name": "tp2_bw7p7_split_f2",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 26.0912045
+  },
+  "tp2_bw7p7_split_f4": {
+    "csv": "outputs/slab3d_calib/tp2_bw7p7_split_f4.csv",
+    "log": "outputs/slab3d_calib/tp2_bw7p7_split_f4.log",
+    "n_tpot": 20,
+    "name": "tp2_bw7p7_split_f4",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 31.2121745
+  },
+  "tp2_bw7p7_split_f8": {
+    "csv": "outputs/slab3d_calib/tp2_bw7p7_split_f8.csv",
+    "log": "outputs/slab3d_calib/tp2_bw7p7_split_f8.log",
+    "n_tpot": 20,
+    "name": "tp2_bw7p7_split_f8",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 41.459184
+  },
+  "tp4_bw100p0_flat": {
+    "csv": "outputs/slab3d_calib/tp4_bw100p0_flat.csv",
+    "log": "outputs/slab3d_calib/tp4_bw100p0_flat.log",
+    "n_tpot": 20,
+    "name": "tp4_bw100p0_flat",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 18.5235365
+  },
+  "tp4_bw100p0_split_f1": {
+    "csv": "outputs/slab3d_calib/tp4_bw100p0_split_f1.csv",
+    "log": "outputs/slab3d_calib/tp4_bw100p0_split_f1.log",
+    "n_tpot": 20,
+    "name": "tp4_bw100p0_split_f1",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 15.9693345
+  },
+  "tp4_bw100p0_split_f2": {
+    "csv": "outputs/slab3d_calib/tp4_bw100p0_split_f2.csv",
+    "log": "outputs/slab3d_calib/tp4_bw100p0_split_f2.log",
+    "n_tpot": 20,
+    "name": "tp4_bw100p0_split_f2",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 18.523718
+  },
+  "tp4_bw100p0_split_f4": {
+    "csv": "outputs/slab3d_calib/tp4_bw100p0_split_f4.csv",
+    "log": "outputs/slab3d_calib/tp4_bw100p0_split_f4.log",
+    "n_tpot": 20,
+    "name": "tp4_bw100p0_split_f4",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 23.592623
+  },
+  "tp4_bw100p0_split_f8": {
+    "csv": "outputs/slab3d_calib/tp4_bw100p0_split_f8.csv",
+    "log": "outputs/slab3d_calib/tp4_bw100p0_split_f8.log",
+    "n_tpot": 20,
+    "name": "tp4_bw100p0_split_f8",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 33.8387635
+  },
+  "tp4_bw12p6_flat": {
+    "csv": "outputs/slab3d_calib/tp4_bw12p6_flat.csv",
+    "log": "outputs/slab3d_calib/tp4_bw12p6_flat.log",
+    "n_tpot": 20,
+    "name": "tp4_bw12p6_flat",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 19.999381999999997
+  },
+  "tp4_bw12p6_split_f1": {
+    "csv": "outputs/slab3d_calib/tp4_bw12p6_split_f1.csv",
+    "log": "outputs/slab3d_calib/tp4_bw12p6_split_f1.log",
+    "n_tpot": 20,
+    "name": "tp4_bw12p6_split_f1",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 17.4787155
+  },
+  "tp4_bw12p6_split_f2": {
+    "csv": "outputs/slab3d_calib/tp4_bw12p6_split_f2.csv",
+    "log": "outputs/slab3d_calib/tp4_bw12p6_split_f2.log",
+    "n_tpot": 20,
+    "name": "tp4_bw12p6_split_f2",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 19.9996795
+  },
+  "tp4_bw12p6_split_f4": {
+    "csv": "outputs/slab3d_calib/tp4_bw12p6_split_f4.csv",
+    "log": "outputs/slab3d_calib/tp4_bw12p6_split_f4.log",
+    "n_tpot": 20,
+    "name": "tp4_bw12p6_split_f4",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 25.0942835
+  },
+  "tp4_bw12p6_split_f8": {
+    "csv": "outputs/slab3d_calib/tp4_bw12p6_split_f8.csv",
+    "log": "outputs/slab3d_calib/tp4_bw12p6_split_f8.log",
+    "n_tpot": 20,
+    "name": "tp4_bw12p6_split_f8",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 35.307253
+  },
+  "tp4_bw12p9_flat": {
+    "csv": "outputs/slab3d_calib/tp4_bw12p9_flat.csv",
+    "log": "outputs/slab3d_calib/tp4_bw12p9_flat.log",
+    "n_tpot": 20,
+    "name": "tp4_bw12p9_flat",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 19.9968735
+  },
+  "tp4_bw12p9_split_f1": {
+    "csv": "outputs/slab3d_calib/tp4_bw12p9_split_f1.csv",
+    "log": "outputs/slab3d_calib/tp4_bw12p9_split_f1.log",
+    "n_tpot": 20,
+    "name": "tp4_bw12p9_split_f1",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 17.4365725
+  },
+  "tp4_bw12p9_split_f2": {
+    "csv": "outputs/slab3d_calib/tp4_bw12p9_split_f2.csv",
+    "log": "outputs/slab3d_calib/tp4_bw12p9_split_f2.log",
+    "n_tpot": 20,
+    "name": "tp4_bw12p9_split_f2",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 19.997059999999998
+  },
+  "tp4_bw12p9_split_f4": {
+    "csv": "outputs/slab3d_calib/tp4_bw12p9_split_f4.csv",
+    "log": "outputs/slab3d_calib/tp4_bw12p9_split_f4.log",
+    "n_tpot": 20,
+    "name": "tp4_bw12p9_split_f4",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 24.9994795
+  },
+  "tp4_bw12p9_split_f8": {
+    "csv": "outputs/slab3d_calib/tp4_bw12p9_split_f8.csv",
+    "log": "outputs/slab3d_calib/tp4_bw12p9_split_f8.log",
+    "n_tpot": 20,
+    "name": "tp4_bw12p9_split_f8",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 35.31188950000001
+  },
+  "tp4_bw13p0_flat": {
+    "csv": "outputs/slab3d_calib/tp4_bw13p0_flat.csv",
+    "log": "outputs/slab3d_calib/tp4_bw13p0_flat.log",
+    "n_tpot": 20,
+    "name": "tp4_bw13p0_flat",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 19.983212
+  },
+  "tp4_bw13p0_split_f1": {
+    "csv": "outputs/slab3d_calib/tp4_bw13p0_split_f1.csv",
+    "log": "outputs/slab3d_calib/tp4_bw13p0_split_f1.log",
+    "n_tpot": 20,
+    "name": "tp4_bw13p0_split_f1",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 17.4229095
+  },
+  "tp4_bw13p0_split_f2": {
+    "csv": "outputs/slab3d_calib/tp4_bw13p0_split_f2.csv",
+    "log": "outputs/slab3d_calib/tp4_bw13p0_split_f2.log",
+    "n_tpot": 20,
+    "name": "tp4_bw13p0_split_f2",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 19.983395
+  },
+  "tp4_bw13p0_split_f4": {
+    "csv": "outputs/slab3d_calib/tp4_bw13p0_split_f4.csv",
+    "log": "outputs/slab3d_calib/tp4_bw13p0_split_f4.log",
+    "n_tpot": 20,
+    "name": "tp4_bw13p0_split_f4",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 24.985623
+  },
+  "tp4_bw13p0_split_f8": {
+    "csv": "outputs/slab3d_calib/tp4_bw13p0_split_f8.csv",
+    "log": "outputs/slab3d_calib/tp4_bw13p0_split_f8.log",
+    "n_tpot": 20,
+    "name": "tp4_bw13p0_split_f8",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 35.2449445
+  },
+  "tp4_bw13p1_flat": {
+    "csv": "outputs/slab3d_calib/tp4_bw13p1_flat.csv",
+    "log": "outputs/slab3d_calib/tp4_bw13p1_flat.log",
+    "n_tpot": 20,
+    "name": "tp4_bw13p1_flat",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 19.9696295
+  },
+  "tp4_bw13p1_split_f1": {
+    "csv": "outputs/slab3d_calib/tp4_bw13p1_split_f1.csv",
+    "log": "outputs/slab3d_calib/tp4_bw13p1_split_f1.log",
+    "n_tpot": 20,
+    "name": "tp4_bw13p1_split_f1",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 17.409447
+  },
+  "tp4_bw13p1_split_f2": {
+    "csv": "outputs/slab3d_calib/tp4_bw13p1_split_f2.csv",
+    "log": "outputs/slab3d_calib/tp4_bw13p1_split_f2.log",
+    "n_tpot": 20,
+    "name": "tp4_bw13p1_split_f2",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 19.9699305
+  },
+  "tp4_bw13p1_split_f4": {
+    "csv": "outputs/slab3d_calib/tp4_bw13p1_split_f4.csv",
+    "log": "outputs/slab3d_calib/tp4_bw13p1_split_f4.log",
+    "n_tpot": 20,
+    "name": "tp4_bw13p1_split_f4",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 25.050023
+  },
+  "tp4_bw13p1_split_f8": {
+    "csv": "outputs/slab3d_calib/tp4_bw13p1_split_f8.csv",
+    "log": "outputs/slab3d_calib/tp4_bw13p1_split_f8.log",
+    "n_tpot": 20,
+    "name": "tp4_bw13p1_split_f8",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 35.232112
+  },
+  "tp4_bw16p0_flat": {
+    "csv": "outputs/slab3d_calib/tp4_bw16p0_flat.csv",
+    "log": "outputs/slab3d_calib/tp4_bw16p0_flat.log",
+    "n_tpot": 20,
+    "name": "tp4_bw16p0_flat",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 19.7750125
+  },
+  "tp4_bw16p0_split_f1": {
+    "csv": "outputs/slab3d_calib/tp4_bw16p0_split_f1.csv",
+    "log": "outputs/slab3d_calib/tp4_bw16p0_split_f1.log",
+    "n_tpot": 20,
+    "name": "tp4_bw16p0_split_f1",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 17.214513
+  },
+  "tp4_bw16p0_split_f2": {
+    "csv": "outputs/slab3d_calib/tp4_bw16p0_split_f2.csv",
+    "log": "outputs/slab3d_calib/tp4_bw16p0_split_f2.log",
+    "n_tpot": 20,
+    "name": "tp4_bw16p0_split_f2",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 19.775194
+  },
+  "tp4_bw16p0_split_f4": {
+    "csv": "outputs/slab3d_calib/tp4_bw16p0_split_f4.csv",
+    "log": "outputs/slab3d_calib/tp4_bw16p0_split_f4.log",
+    "n_tpot": 20,
+    "name": "tp4_bw16p0_split_f4",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 24.764906500000002
+  },
+  "tp4_bw16p0_split_f8": {
+    "csv": "outputs/slab3d_calib/tp4_bw16p0_split_f8.csv",
+    "log": "outputs/slab3d_calib/tp4_bw16p0_split_f8.log",
+    "n_tpot": 20,
+    "name": "tp4_bw16p0_split_f8",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 34.954454
+  },
+  "tp4_bw35p2_flat": {
+    "csv": "outputs/slab3d_calib/tp4_bw35p2_flat.csv",
+    "log": "outputs/slab3d_calib/tp4_bw35p2_flat.log",
+    "n_tpot": 20,
+    "name": "tp4_bw35p2_flat",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 18.8832095
+  },
+  "tp4_bw35p2_split_f1": {
+    "csv": "outputs/slab3d_calib/tp4_bw35p2_split_f1.csv",
+    "log": "outputs/slab3d_calib/tp4_bw35p2_split_f1.log",
+    "n_tpot": 20,
+    "name": "tp4_bw35p2_split_f1",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 16.321207
+  },
+  "tp4_bw35p2_split_f2": {
+    "csv": "outputs/slab3d_calib/tp4_bw35p2_split_f2.csv",
+    "log": "outputs/slab3d_calib/tp4_bw35p2_split_f2.log",
+    "n_tpot": 20,
+    "name": "tp4_bw35p2_split_f2",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 18.8835175
+  },
+  "tp4_bw35p2_split_f4": {
+    "csv": "outputs/slab3d_calib/tp4_bw35p2_split_f4.csv",
+    "log": "outputs/slab3d_calib/tp4_bw35p2_split_f4.log",
+    "n_tpot": 20,
+    "name": "tp4_bw35p2_split_f4",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 24.013095
+  },
+  "tp4_bw35p2_split_f8": {
+    "csv": "outputs/slab3d_calib/tp4_bw35p2_split_f8.csv",
+    "log": "outputs/slab3d_calib/tp4_bw35p2_split_f8.log",
+    "n_tpot": 20,
+    "name": "tp4_bw35p2_split_f8",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 34.198291
+  },
+  "tp4_bw7p7_flat": {
+    "csv": "outputs/slab3d_calib/tp4_bw7p7_flat.csv",
+    "log": "outputs/slab3d_calib/tp4_bw7p7_flat.log",
+    "n_tpot": 20,
+    "name": "tp4_bw7p7_flat",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 20.855626
+  },
+  "tp4_bw7p7_split_f1": {
+    "csv": "outputs/slab3d_calib/tp4_bw7p7_split_f1.csv",
+    "log": "outputs/slab3d_calib/tp4_bw7p7_split_f1.log",
+    "n_tpot": 20,
+    "name": "tp4_bw7p7_split_f1",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 18.295252499999997
+  },
+  "tp4_bw7p7_split_f2": {
+    "csv": "outputs/slab3d_calib/tp4_bw7p7_split_f2.csv",
+    "log": "outputs/slab3d_calib/tp4_bw7p7_split_f2.log",
+    "n_tpot": 20,
+    "name": "tp4_bw7p7_split_f2",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 20.8557955
+  },
+  "tp4_bw7p7_split_f4": {
+    "csv": "outputs/slab3d_calib/tp4_bw7p7_split_f4.csv",
+    "log": "outputs/slab3d_calib/tp4_bw7p7_split_f4.log",
+    "n_tpot": 20,
+    "name": "tp4_bw7p7_split_f4",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 25.838382
+  },
+  "tp4_bw7p7_split_f8": {
+    "csv": "outputs/slab3d_calib/tp4_bw7p7_split_f8.csv",
+    "log": "outputs/slab3d_calib/tp4_bw7p7_split_f8.log",
+    "n_tpot": 20,
+    "name": "tp4_bw7p7_split_f8",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 36.135973
+  },
+  "tp8_bw100p0_flat": {
+    "csv": "outputs/slab3d_calib/tp8_bw100p0_flat.csv",
+    "log": "outputs/slab3d_calib/tp8_bw100p0_flat.log",
+    "n_tpot": 20,
+    "name": "tp8_bw100p0_flat",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 32.19672
+  },
+  "tp8_bw100p0_split_f1": {
+    "csv": "outputs/slab3d_calib/tp8_bw100p0_split_f1.csv",
+    "log": "outputs/slab3d_calib/tp8_bw100p0_split_f1.log",
+    "n_tpot": 20,
+    "name": "tp8_bw100p0_split_f1",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 24.5734535
+  },
+  "tp8_bw100p0_split_f2": {
+    "csv": "outputs/slab3d_calib/tp8_bw100p0_split_f2.csv",
+    "log": "outputs/slab3d_calib/tp8_bw100p0_split_f2.log",
+    "n_tpot": 20,
+    "name": "tp8_bw100p0_split_f2",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 27.130913
+  },
+  "tp8_bw100p0_split_f4": {
+    "csv": "outputs/slab3d_calib/tp8_bw100p0_split_f4.csv",
+    "log": "outputs/slab3d_calib/tp8_bw100p0_split_f4.log",
+    "n_tpot": 20,
+    "name": "tp8_bw100p0_split_f4",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 32.1945625
+  },
+  "tp8_bw100p0_split_f8": {
+    "csv": "outputs/slab3d_calib/tp8_bw100p0_split_f8.csv",
+    "log": "outputs/slab3d_calib/tp8_bw100p0_split_f8.log",
+    "n_tpot": 20,
+    "name": "tp8_bw100p0_split_f8",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 42.373741499999994
+  },
+  "tp8_bw12p6_flat": {
+    "csv": "outputs/slab3d_calib/tp8_bw12p6_flat.csv",
+    "log": "outputs/slab3d_calib/tp8_bw12p6_flat.log",
+    "n_tpot": 20,
+    "name": "tp8_bw12p6_flat",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 34.072688
+  },
+  "tp8_bw12p6_split_f1": {
+    "csv": "outputs/slab3d_calib/tp8_bw12p6_split_f1.csv",
+    "log": "outputs/slab3d_calib/tp8_bw12p6_split_f1.log",
+    "n_tpot": 20,
+    "name": "tp8_bw12p6_split_f1",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 26.390767
+  },
+  "tp8_bw12p6_split_f2": {
+    "csv": "outputs/slab3d_calib/tp8_bw12p6_split_f2.csv",
+    "log": "outputs/slab3d_calib/tp8_bw12p6_split_f2.log",
+    "n_tpot": 20,
+    "name": "tp8_bw12p6_split_f2",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 28.9413675
+  },
+  "tp8_bw12p6_split_f4": {
+    "csv": "outputs/slab3d_calib/tp8_bw12p6_split_f4.csv",
+    "log": "outputs/slab3d_calib/tp8_bw12p6_split_f4.log",
+    "n_tpot": 20,
+    "name": "tp8_bw12p6_split_f4",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 34.070508000000004
+  },
+  "tp8_bw12p6_split_f8": {
+    "csv": "outputs/slab3d_calib/tp8_bw12p6_split_f8.csv",
+    "log": "outputs/slab3d_calib/tp8_bw12p6_split_f8.log",
+    "n_tpot": 20,
+    "name": "tp8_bw12p6_split_f8",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 44.310249
+  },
+  "tp8_bw12p9_flat": {
+    "csv": "outputs/slab3d_calib/tp8_bw12p9_flat.csv",
+    "log": "outputs/slab3d_calib/tp8_bw12p9_flat.log",
+    "n_tpot": 20,
+    "name": "tp8_bw12p9_flat",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 34.024049500000004
+  },
+  "tp8_bw12p9_split_f1": {
+    "csv": "outputs/slab3d_calib/tp8_bw12p9_split_f1.csv",
+    "log": "outputs/slab3d_calib/tp8_bw12p9_split_f1.log",
+    "n_tpot": 20,
+    "name": "tp8_bw12p9_split_f1",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 26.3421345
+  },
+  "tp8_bw12p9_split_f2": {
+    "csv": "outputs/slab3d_calib/tp8_bw12p9_split_f2.csv",
+    "log": "outputs/slab3d_calib/tp8_bw12p9_split_f2.log",
+    "n_tpot": 20,
+    "name": "tp8_bw12p9_split_f2",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 28.8932455
+  },
+  "tp8_bw12p9_split_f4": {
+    "csv": "outputs/slab3d_calib/tp8_bw12p9_split_f4.csv",
+    "log": "outputs/slab3d_calib/tp8_bw12p9_split_f4.log",
+    "n_tpot": 20,
+    "name": "tp8_bw12p9_split_f4",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 34.021873
+  },
+  "tp8_bw12p9_split_f8": {
+    "csv": "outputs/slab3d_calib/tp8_bw12p9_split_f8.csv",
+    "log": "outputs/slab3d_calib/tp8_bw12p9_split_f8.log",
+    "n_tpot": 20,
+    "name": "tp8_bw12p9_split_f8",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 44.261612
+  },
+  "tp8_bw13p0_flat": {
+    "csv": "outputs/slab3d_calib/tp8_bw13p0_flat.csv",
+    "log": "outputs/slab3d_calib/tp8_bw13p0_flat.log",
+    "n_tpot": 20,
+    "name": "tp8_bw13p0_flat",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 34.008597
+  },
+  "tp8_bw13p0_split_f1": {
+    "csv": "outputs/slab3d_calib/tp8_bw13p0_split_f1.csv",
+    "log": "outputs/slab3d_calib/tp8_bw13p0_split_f1.log",
+    "n_tpot": 20,
+    "name": "tp8_bw13p0_split_f1",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 26.326330499999997
+  },
+  "tp8_bw13p0_split_f2": {
+    "csv": "outputs/slab3d_calib/tp8_bw13p0_split_f2.csv",
+    "log": "outputs/slab3d_calib/tp8_bw13p0_split_f2.log",
+    "n_tpot": 20,
+    "name": "tp8_bw13p0_split_f2",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 28.8776135
+  },
+  "tp8_bw13p0_split_f4": {
+    "csv": "outputs/slab3d_calib/tp8_bw13p0_split_f4.csv",
+    "log": "outputs/slab3d_calib/tp8_bw13p0_split_f4.log",
+    "n_tpot": 20,
+    "name": "tp8_bw13p0_split_f4",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 34.0060685
+  },
+  "tp8_bw13p0_split_f8": {
+    "csv": "outputs/slab3d_calib/tp8_bw13p0_split_f8.csv",
+    "log": "outputs/slab3d_calib/tp8_bw13p0_split_f8.log",
+    "n_tpot": 20,
+    "name": "tp8_bw13p0_split_f8",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 44.245807
+  },
+  "tp8_bw13p1_flat": {
+    "csv": "outputs/slab3d_calib/tp8_bw13p1_flat.csv",
+    "log": "outputs/slab3d_calib/tp8_bw13p1_flat.log",
+    "n_tpot": 20,
+    "name": "tp8_bw13p1_flat",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 33.992409
+  },
+  "tp8_bw13p1_split_f1": {
+    "csv": "outputs/slab3d_calib/tp8_bw13p1_split_f1.csv",
+    "log": "outputs/slab3d_calib/tp8_bw13p1_split_f1.log",
+    "n_tpot": 20,
+    "name": "tp8_bw13p1_split_f1",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 26.3105005
+  },
+  "tp8_bw13p1_split_f2": {
+    "csv": "outputs/slab3d_calib/tp8_bw13p1_split_f2.csv",
+    "log": "outputs/slab3d_calib/tp8_bw13p1_split_f2.log",
+    "n_tpot": 20,
+    "name": "tp8_bw13p1_split_f2",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 28.861956999999997
+  },
+  "tp8_bw13p1_split_f4": {
+    "csv": "outputs/slab3d_calib/tp8_bw13p1_split_f4.csv",
+    "log": "outputs/slab3d_calib/tp8_bw13p1_split_f4.log",
+    "n_tpot": 20,
+    "name": "tp8_bw13p1_split_f4",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 33.990238
+  },
+  "tp8_bw13p1_split_f8": {
+    "csv": "outputs/slab3d_calib/tp8_bw13p1_split_f8.csv",
+    "log": "outputs/slab3d_calib/tp8_bw13p1_split_f8.log",
+    "n_tpot": 20,
+    "name": "tp8_bw13p1_split_f8",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 44.229976
+  },
+  "tp8_bw16p0_flat": {
+    "csv": "outputs/slab3d_calib/tp8_bw16p0_flat.csv",
+    "log": "outputs/slab3d_calib/tp8_bw16p0_flat.log",
+    "n_tpot": 20,
+    "name": "tp8_bw16p0_flat",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 33.627896
+  },
+  "tp8_bw16p0_split_f1": {
+    "csv": "outputs/slab3d_calib/tp8_bw16p0_split_f1.csv",
+    "log": "outputs/slab3d_calib/tp8_bw16p0_split_f1.log",
+    "n_tpot": 20,
+    "name": "tp8_bw16p0_split_f1",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 25.4135335
+  },
+  "tp8_bw16p0_split_f2": {
+    "csv": "outputs/slab3d_calib/tp8_bw16p0_split_f2.csv",
+    "log": "outputs/slab3d_calib/tp8_bw16p0_split_f2.log",
+    "n_tpot": 20,
+    "name": "tp8_bw16p0_split_f2",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 27.973477
+  },
+  "tp8_bw16p0_split_f4": {
+    "csv": "outputs/slab3d_calib/tp8_bw16p0_split_f4.csv",
+    "log": "outputs/slab3d_calib/tp8_bw16p0_split_f4.log",
+    "n_tpot": 20,
+    "name": "tp8_bw16p0_split_f4",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 33.625367499999996
+  },
+  "tp8_bw16p0_split_f8": {
+    "csv": "outputs/slab3d_calib/tp8_bw16p0_split_f8.csv",
+    "log": "outputs/slab3d_calib/tp8_bw16p0_split_f8.log",
+    "n_tpot": 20,
+    "name": "tp8_bw16p0_split_f8",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 43.864858999999996
+  },
+  "tp8_bw35p2_flat": {
+    "csv": "outputs/slab3d_calib/tp8_bw35p2_flat.csv",
+    "log": "outputs/slab3d_calib/tp8_bw35p2_flat.log",
+    "n_tpot": 20,
+    "name": "tp8_bw35p2_flat",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 32.307874
+  },
+  "tp8_bw35p2_split_f1": {
+    "csv": "outputs/slab3d_calib/tp8_bw35p2_split_f1.csv",
+    "log": "outputs/slab3d_calib/tp8_bw35p2_split_f1.log",
+    "n_tpot": 20,
+    "name": "tp8_bw35p2_split_f1",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 24.927453
+  },
+  "tp8_bw35p2_split_f2": {
+    "csv": "outputs/slab3d_calib/tp8_bw35p2_split_f2.csv",
+    "log": "outputs/slab3d_calib/tp8_bw35p2_split_f2.log",
+    "n_tpot": 20,
+    "name": "tp8_bw35p2_split_f2",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 27.48682
+  },
+  "tp8_bw35p2_split_f4": {
+    "csv": "outputs/slab3d_calib/tp8_bw35p2_split_f4.csv",
+    "log": "outputs/slab3d_calib/tp8_bw35p2_split_f4.log",
+    "n_tpot": 20,
+    "name": "tp8_bw35p2_split_f4",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 32.3057065
+  },
+  "tp8_bw35p2_split_f8": {
+    "csv": "outputs/slab3d_calib/tp8_bw35p2_split_f8.csv",
+    "log": "outputs/slab3d_calib/tp8_bw35p2_split_f8.log",
+    "n_tpot": 20,
+    "name": "tp8_bw35p2_split_f8",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 42.8373445
+  },
+  "tp8_bw7p7_flat": {
+    "csv": "outputs/slab3d_calib/tp8_bw7p7_flat.csv",
+    "log": "outputs/slab3d_calib/tp8_bw7p7_flat.log",
+    "n_tpot": 20,
+    "name": "tp8_bw7p7_flat",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 35.1388815
+  },
+  "tp8_bw7p7_split_f1": {
+    "csv": "outputs/slab3d_calib/tp8_bw7p7_split_f1.csv",
+    "log": "outputs/slab3d_calib/tp8_bw7p7_split_f1.log",
+    "n_tpot": 20,
+    "name": "tp8_bw7p7_split_f1",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 27.456395
+  },
+  "tp8_bw7p7_split_f2": {
+    "csv": "outputs/slab3d_calib/tp8_bw7p7_split_f2.csv",
+    "log": "outputs/slab3d_calib/tp8_bw7p7_split_f2.log",
+    "n_tpot": 20,
+    "name": "tp8_bw7p7_split_f2",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 30.016395000000003
+  },
+  "tp8_bw7p7_split_f4": {
+    "csv": "outputs/slab3d_calib/tp8_bw7p7_split_f4.csv",
+    "log": "outputs/slab3d_calib/tp8_bw7p7_split_f4.log",
+    "n_tpot": 20,
+    "name": "tp8_bw7p7_split_f4",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 35.136395
+  },
+  "tp8_bw7p7_split_f8": {
+    "csv": "outputs/slab3d_calib/tp8_bw7p7_split_f8.csv",
+    "log": "outputs/slab3d_calib/tp8_bw7p7_split_f8.log",
+    "n_tpot": 20,
+    "name": "tp8_bw7p7_split_f8",
+    "rc": 0,
+    "rows": 20,
+    "tpot_p50": 44.876626
+  }
+}

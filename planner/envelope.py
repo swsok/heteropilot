@@ -184,11 +184,17 @@ class EnvelopeCache:
             self.misses += 1
             return None
         self.hits += 1
+        op = payload.get("operating_point") or {}
         return SimResult(
             candidate_id=candidate.id,
             outcome=SimOutcome.OK,
             metrics=metrics,
-            warnings=["metrics served from the envelope cache"],
+            warnings=["metrics served from the envelope cache"] + (
+                [] if op else
+                ["this cache entry predates operating-point caching, so no "
+                 "accuracy-domain margin can be applied to it"]
+            ),
+            operating_point=op,
         )
 
     def put(self, candidate: CandidateConfig, result: SimResult) -> None:
@@ -207,6 +213,10 @@ class EnvelopeCache:
             "candidate_id": candidate.id,
             "trace_digest": self.trace_digest,
             "metrics": result.metrics.model_dump(),
+            # Cached with the metrics because it is the same kind of thing: a
+            # property of the run. Leaving it out meant a warm cache silently
+            # dropped the accuracy-domain margin to zero (STEP 4.3).
+            "operating_point": result.operating_point,
             "provenance": {
                 "git_commit": prov.git_commit(),
                 "llmservingsim_commit": prov.upstream_commit(),
