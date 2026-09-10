@@ -1,9 +1,11 @@
 # HeteroPilot — current state and what to do next
 
-> **This is the live handover.** Written 2026-09-04 at `main` = `8bb2f6f`, after the
-> consolidation sprint (`WORK_ORDER_consolidation.md`, PRs #47–#51). It is
-> **node-agnostic**: every open item says which machine it needs. Earlier handovers
-> are historical and must not be read as status:
+> **This is the live handover.** Rewritten 2026-09-10 on branch
+> `feat/rps-step6-docs` (`c78ff16`), at the end of `WORK_ORDER_rps_aware.md` rev 2
+> (STEP 0–6, PRs #60–#70). `main` is `b5c5d53`; that stack is not merged yet, so
+> read the PR list before assuming what is on `main`. It is **node-agnostic**:
+> every open item says which machine it needs. Earlier handovers are historical
+> and must not be read as status:
 > `docs/HANDOVER_2026-08-31.md` (→ NPU, the previous live one),
 > `docs/HANDOVER_NPU.md` (→ NPU, 2026-08-25),
 > `docs/HANDOVER_A40.md` (→ A40, 2026-08-26).
@@ -14,13 +16,15 @@
 **Gates at this commit**, on the NPU node in `.venv`:
 
 ```
-pytest -q     440 passed in 86.66s
+pytest -q     622 passed in 140.45s
 ruff check .  All checks passed!
-mypy          Success: no issues found in 46 source files
+mypy          Success: no issues found in 38 source files
 ```
 
-440, not the 522 of two commits ago: ScenarioLab left this repo and took 82 tests
-with it (§1). `mypy` covers `planner`, `profiler/synth`, `profiler/contract.py`.
+622, up from 440 at the last handover: the rps-aware sprint added ~180, most of
+them holding a refusal in place (an envelope that will not be read past its ends,
+a calibration domain that returns None rather than 1.0, a surrogate that is not
+silently swapped). `mypy` covers `planner`, `profiler/synth`, `profiler/contract.py`.
 
 ---
 
@@ -50,7 +54,8 @@ claim a result from hardware the detector does not list.
 | 3 Heterogeneous profiles | ✅ done (`CsvProfileImporter`) |
 | **Tiered profiles (Tier 0/1)** | ✅ **done** — D4 closed without external measurements; `docs/tier0_calibration.md` |
 | 4 Real deploy + calibration | ✅ CUDA. NPU launcher still a stub |
-| 5 Topology-aware P/D | ✅ core. Network-aware routing deferred. **Tight-TTFT blocked by D23** |
+| 5 Topology-aware P/D | ✅ core, and **asymmetric TP per phase now representable** (D28). Network-aware routing deferred. **D23 resolved** — it was D26, a PATH-resolved Chakra interpreter |
+| **RPS-aware selection** | ✅ **done 2026-09-09** — envelope, accuracy domain, operating-point margins, `plan --rps`. §2.1 |
 | 6 Online replanning | ⛔ not started — **requires explicit user approval** |
 
 **ScenarioLab moved out** on 2026-09-03 to `swsok/heteropilot-scenariolab`
@@ -78,9 +83,19 @@ regenerates. Synthetic bundles are **gitignored on purpose** (`profiler/perf/*-t
 touches one carries the weakest tier in `PlannerOutput.profile_tier` plus a
 mandatory caveat — D21.
 
-Calibrations (`profiles/calibration/`): `a40.yaml`, `rngd.yaml`, `rngd_card_edf.yaml`.
-Tier 1 efficiency fits: `a40.efficiency.yaml`, `rtxpro6000.efficiency.yaml`. All
-bucket-scoped — **do not extrapolate outside the bucket named in the file.**
+Calibrations (`profiles/calibration/`): `a40.yaml`, `rngd.yaml`, `rngd_card_edf.yaml`,
+and since this sprint `a40.accuracy.yaml` (opt-in, D29) and `slab3d_latency.yaml`
+(a topology correction, not a hardware calibration — `load_accuracy_domains` skips
+it deliberately). Tier 1 efficiency fits: `a40.efficiency.yaml`,
+`rtxpro6000.efficiency.yaml`. All bucket-scoped — **do not extrapolate outside the
+bucket named in the file.**
+
+**Two new artifact kinds, and the rule attached to each:**
+
+| artifact | what it is | the refusal it carries |
+| --- | --- | --- |
+| `profiles/envelopes/<HW>/…/tp<N>.yaml` | a measured performance curve | `concurrency_metric: served` and `validity` are mandatory; a file missing either **does not load** |
+| `accuracy_domain:` inside a calibration | the predictor's own error vs operating point | outside the measured points the margin **widens with distance and never caps**; hardware without one gets margin 0 and a note |
 
 **What can be claimed right now, with the label each claim earns, is one page:
 `docs/CLAIMS.md`.** It is the input to the paper outline — Established / Not
@@ -131,79 +146,49 @@ not a gap to paper over.
 
 ## 2. Next work, in priority order
 
-### 2.1 `WORK_ORDER_rps_aware.md` — **written, rev 2 (2026-09-08); STEP 0, 1, 1.5 done**
+### 2.1 `WORK_ORDER_rps_aware.md` — **complete, STEP 0–6, PRs #60–#70**
 
-`docs/rps_aware_planning_design.md` is the design; it argues that performance is a
-curve over the operating point, not a scalar, and that the planner currently
-conflates requested with served concurrency — the conflation that produced D22.
+Delivered, in the order it binds:
 
-**rev 2 rewrote E6a's cost model and removed its main lever.** The original estimate
-was ~60 h from a 10 rps per-point figure; the RPS axis is not six equal points, and
-measured multipliers (3.3 rps **2.63×**, 1 rps **10.32×**, axis weight **21.4×**) put
-it at **218 h**. D27 cuts that to ~140 h, and `--top-k 20` — the planned reduction,
-citing §4.7's regret-0 curve — **is not usable**: it is false-infeasible on two of
-three P/D corpora (D30), and the obvious repair breaks the third, so no ranker change
-was made. rev 2's E6a therefore drops top-K and buys the time elsewhere: **64 workers,
-knob fixing per `(fixture, arch, backend_mix)` from the 10 rps results, and RPS
-{1, 3.3, 10, 20}** — about **10 h**, with the knob fixing labelled a heuristic and its
-regret measured at the 1 rps point. RNGD-bearing configurations keep all six knobs,
-because which knob survives at low load is the question E6 exists to answer. rev 2
-also starts **STEP 3 in parallel with STEP 2**, since the hardware measurement is
-independent of the code.
+| step | what landed |
+| --- | --- |
+| 0 | D22 §4.4's "never terminates at 3.3 rps" was a **D26 artifact**; Exp 5 survives the retrospective check with zero differing fields |
+| 1 | The RPS axis costs **21.4×**, not 6× (1 rps = 10.3× a 10 rps point) → E6a was 218 h, not 60. **D27** returned 1.55–1.72× byte-identically |
+| 1.5 | §4.7's "regret 0 at every K" **partly retracted** (D30); top-K is not a cost lever on P/D corpora |
+| 2 | **D28** — `slab3d` for `tp_d = 2·tp_p`, plus a 24-point measured latency table with `extrapolation: refuse` |
+| 3 | The RNGD envelope from **concurrency 1**: tok/J spans **9.4×** while power spans 1.085×. "tokens/J is unimodal" is **not observed** |
+| 4 | Envelope, accuracy domain, operating-point margins, `plan --rps`. **D29**, **D31** |
+| 5 | **E5** the planner self-rejects D22's winner; **E6** there is a crossover; **E7** it survives losing any one calibration point but not the domain |
+| 6 | This rewrite, plus `docs/PAPER_OUTLINE.md` |
 
-**Deliberately not done in the consolidation sprint**: the low-load end of the
-RNGD envelope is unmeasured, and measuring it was explicitly out of scope (that
-sprint made no new numbers). It belongs in this work order, together with the
-power crossover, which is a hypothesis in the design document and not a
-measurement.
+**The one-sentence state of the science:** the planner can now price its own
+predictor and finds a crossover on the RPS axis — and **one of sixteen E6 cells
+rests on a measured accuracy domain**, which §2.2 is about.
 
-**Three work orders' conclusions, for this one to carry** (`WORK_ORDER_spikes.md`
-2026-09-04, `WORK_ORDER_d23_fix_revalidation.md` 2026-09-07):
+Not delivered, deliberately: a third E6 fixture. The work order names
+`pd-rngd-gpu-card`, `pd-rngd-gpu` and "STEP 2's asymmetric fixture", but
+`pd-rngd-gpu.yaml` already yields the `A40 tp4 P + RNGD tp8 D` shape once
+`--enable-pd` is on, so a separate ClusterSpecV2 would have duplicated it. Recorded
+here rather than silently dropped.
 
-- **D23 — closed 2026-09-07** (`docs/d23_spike.md` for the spike,
-  `docs/d23_revalidation.md` for the fix and re-validation). The root cause was
-  **D26**: `graph_generator.py` invoked the Chakra converter as bare `python`, so the
-  workload graph could be built by a `chakra` with protobuf below the required
-  version, and a multi-instance run then never finished its first prefill batch.
-  18 completions of 18 with the venv first on `PATH` against 6 hangs of 6 without.
-  Fixed with `sys.executable`; **D25** (per-run cwd) and **D25-b** (dead-child
-  detection) fix the two faults the spike had found, which are real but produce
-  crashes and hangs rather than this symptom.
-  **The tight-TTFT regime is determined and it flipped**: 0 timeouts where there
-  were 71 and 126, all four points FEASIBLE, and homogeneous `cuda` P/D wins three
-  of them. D22 survives — 0 of 45 RNGD-only and 0 of 18 mixed candidates pass.
-- **D23 fix / re-validation (`docs/d23_revalidation.md`)** — the three harness
-  fixes are on `main`, and everything the faults touched has been re-run. Two things
-  to carry: **(a)** past *completed* results are trustworthy — 18 of 18 reproduce the
-  committed CSV byte for byte — but a sweep with timeouts must be read as "the best
-  of what evaluated", which is exactly how four INFEASIBLE verdicts turned out to be
-  wrong; **(b)** the tight regime now has an evaluated answer and P/D wins it
-  homogeneously, so the RPS-aware work order has a real operating point to start
-  from rather than a hole.
-- **D14 (`docs/d14_spike.md`)** — asymmetric TP per phase is representable; the
-  constraint is two sites in our `config_builder.py`, not ASTRA-Sim. Verdict **go**.
-  Carry over: the 24.4 % accuracy cost and its 4× per-dim `link_latency` correction
-  **need a calibration domain before any absolute number is quoted** — §2.5 lists all
-  four items.
+### 2.2 A second A40 accuracy-domain point — **needs an NVIDIA node**
 
-### 2.2 D23 — diagnose the P/D livelock — **any node** (simulation only)
+**The single largest thing standing between E6 and a quotable result.** The A40
+accuracy domain has exactly one point, at served concurrency **170.56**, taken
+from a validation run that offered ~10.3 rps to one card and queued most of it.
+Every plan E6 recommends runs far below that, so the 1.42 % margin is held flat
+and **fifteen of sixteen switchover cells read `extrapolated`**. A single point
+carries no slope, so `widen_error_bars` cannot even widen it honestly.
 
-**Spiked 2026-09-04** (`docs/d23_spike.md`): root-caused to a race on ASTRA-Sim's
-fixed `tmp__mem/` path plus a frontend that cannot notice its child died.
-`experiments/scripts/astra_isolated.sh` makes 64 concurrent runs survive where 13
-of 64 died. **D23's original 52,903-tick symptom is still unreproduced** — a stall
-during the D14 spike briefly looked like it and was the spike's own bug, so it is
-not evidence either way.
+What is needed is one more A40 measurement at a load the plans actually sit at —
+served concurrency roughly 3 to 15 — following STEP 3's protocol
+(`experiments/scripts/measure_envelope.py`, which is vendor-agnostic and already
+written). `nvidia-smi --query-gpu=power.draw,utilization.gpu` at 1 Hz replaces the
+`furiosa-smi` pair. **This node has no NVIDIA GPU**, so it cannot be done here.
 
-Nothing about the tight-TTFT regime can be settled until this is understood, and
-it blocks the only claim P/D disaggregation had. D23 lists three probes, cheapest
-first: bisect `link_bw` between 35.0 and 35.2 on the one candidate (a cliff there
-means a threshold bug, not a bandwidth effect); diff the `.hp-pd-slo` run's
-simulator inputs against the current ones beyond `cluster.json`, in particular the
-A40 perf bundle that the Tier 0 merge touched; instrument the prefill instance's
-admission path.
-
-Do not raise the timeout. It has been tried at 1080, 1800 and 3600 s.
+The same run would give the A40 half of E6b, which is currently simulation only —
+so every crossover sentence has to read "RNGD **measured** against A40
+**simulated**".
 
 ### 2.3 ATOM layerwise bundle (D20) — **needs the NPU node**, and probably the vendor
 
@@ -213,36 +198,36 @@ Exp 4. Memory and power *are* measured. Resolution paths, in order of expected
 effort: the trace schema from Rebellions; a torch backend registering device
 `rbln`; a llama entry in vllm-rbln's native model registry.
 
-### 2.4 TTFT tail under-prediction — **any node** (simulation only)
+### 2.4 A surrogate that can rank P/D — **any node** (simulation only)
 
-Unchanged.
+**D30.** `--top-k` is currently unusable on any P/D or heterogeneous corpus, so
+E6 ran without it. The cause is structural: the roofline proxy's tok/J is
+*algebraically invariant to TP and DP* — throughput and power both scale with
+`tp·dp`, so the ratio cancels — which leaves the ranker blind to the axis that
+decides feasibility. It is false-infeasible at K=20 on two of three corpora.
 
-### 2.5 D14 — asymmetric TP per phase — **any node**, largest change
+**Do not fix this by ordering on the roofline TPOT floor.** That was tried and
+measured: it repairs those two corpora and breaks the third, which is the same
+one-fixture error that produced the "regret 0.000 at every K" claim now partly
+retracted. Any replacement needs its regret measured across all three corpora
+before it is switched on; `exp_surrogate.py --cache-dir --rankers` replays them
+without re-simulating.
 
-**Spiked 2026-09-04** (`docs/d14_spike.md`, branch `spike/d14-asym-tp`, not merged).
-Verdict **go**: the constraint is ours, not ASTRA-Sim's, and lifting it is two sites
-in `serving/core/config_builder.py`. `A40 tp4 prefill + RNGD tp8 decode` ran to
-completion under the prototype (86 s, consistency check passed). Under `auto` the
-same fixture compiles to a **15-rank topology for 16 ranks** and hangs — worse than
-D14 recorded.
+### 2.5 The rest of the tight-TTFT and asymmetric-P/D story — **any node**
 
-What `WORK_ORDER_rps_aware.md` (or its successor) must carry over:
+D23 and D14 are **closed** (D26 and D28 respectively); what remains is narrower:
 
-1. **Two sites, not one.** `_compute_network_dims`'s integer division *and*
-   `_resolve_dp_groups`'s uniform `local_dim`.
-2. **`tp_dim` is keyed on the collective, not the footprint.** A prefill tp=g
-   instance occupies 2g ranks but its TP group is g wide. Getting this wrong
-   produces a stall that looks exactly like D23; it cost a run here.
-3. **Calibration is the gate, not the code.** Splitting a TP group across dims
-   moves TPOT by 24.4 %; a per-dim `link_latency` of 4× the scalar closes it to
-   0.008 %, but that 4× is fitted at one bandwidth and one split. No absolute
-   number may be quoted from a slab3d plan until it has a calibration domain the
-   way `docs/tier0_calibration.md` scopes Tier 0. Ranking claims are fine.
-4. **An upstream blocker ships with it**: a 3-D collective tag is exactly the width
-   of the trace row's `comm_type` column, and `generate_trace` re-parses its own
-   fixed-width file with whitespace splitting.
-   `docs/upstream_issues/llmservingsim-trace-column-overflow.md`; runtime
-   workaround in `experiments/scripts/b3_widecol_run.py`.
+- The `slab3d` dim-1 calibration is fitted at **two** dims (a single colocated
+  instance) and applied at **three** (a P/D pair), taking dim 1 to be the same
+  axis in both. Hop counting supports it; nothing measures it. A P/D-side
+  measurement would close the one assumption in that path.
+- Only **TPOT p50** was fitted. TTFT and throughput under `slab3d` are unmeasured,
+  so an asymmetric plan's absolute TTFT is not quotable.
+- 68–114 candidates per E6 point fail in the simulator's KV allocator
+  (`tried to load 92.00MB but only 25.49MB is available`) after passing the
+  generator's memory bound. Deterministic, reproducible, and it means every "best"
+  in E6 is the best of what evaluated. Reconciling the two memory models is
+  D10-adjacent and unstarted.
 
 ### 2.6 Smaller, any node
 
