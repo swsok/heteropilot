@@ -236,3 +236,24 @@ A40 envelope for the same model and TP degree would give the loader two curves
 for one device differing by a protocol the schema has one boolean for, and the
 22 % TTFT gap above is exactly the size of mistake that invites. The closed-loop
 data lives in `outputs/a40_envelope_closedloop/` and in this table.
+
+## E6b now has an A40 half
+
+`e6b_measured_curve.py --hardware A40` → `outputs/e6/e6b_measured_a40.json`:
+
+| served conc | sim conc | rps/card | **tok/J** | domain declares | observed | agrees |
+| ---: | ---: | ---: | ---: | ---: | ---: | :---: |
+| 4.08 | 4.04 | 0.1976 | 0.439 | +0.59 % | +0.59 % | ✓ |
+| 11.27 | 10.80 | 0.4818 | 1.066 | −0.32 % | −0.32 % | ✓ |
+
+The agreement is a **self-consistency check on how the domain was recorded, not
+independent confirmation** — these are the points the domain was fitted from, so
+it reproduces them by construction. It catches a domain written on the wrong
+axis or with a transposed sign, which is what it is for.
+
+What changes is the sentence E6b's crossover has to be written in. It no longer
+reads "RNGD **measured** against A40 **simulated**" — both sides are measured.
+It must instead say **which protocol each side was measured under**: the RNGD
+curve is closed-loop, the A40 curve open-loop, and the table above shows that
+gap is worth ~22 % on TTFT and ~1 % on TPOT. Every row of both artifacts carries
+`closed_loop` so the distinction cannot be lost downstream.

@@ -1,0 +1,37 @@
+{
+  "_note": "E6b: tokens/J against RPS from the MEASUREMENT, beside the simulator's answer.",
+  "hardware": "A40",
+  "envelope": "profiles/envelopes/A40/meta-llama/Llama-3.1-8B/bf16/tp1.yaml",
+  "mean_output_tokens": 652.51,
+  "unit": "one A40, TP=1",
+  "closed_loop": false,
+  "measured_side": "A40: measured silicon. Curves for different hardware in this directory may have been taken under different load protocols (closed_loop above) and on different nodes; neither may be relabelled as the other's.",
+  "points": [
+    {
+      "measured_served_conc": 4.076,
+      "sim_served_conc": 4.04299731573051,
+      "rps_per_card": 0.19763681782654674,
+      "measured_tput_tok_s": 128.96,
+      "measured_power_w": 293.95,
+      "measured_tok_per_j": 0.4387,
+      "measured_tpot_p50_ms": 31.334,
+      "closed_loop": false,
+      "domain_declared_tpot_err_pct": 0.5899996384955992,
+      "observed_sim_tpot_err_pct": 0.5925113295461842,
+      "agrees": true
+    },
+    {
+      "measured_served_conc": 11.272,
+      "sim_served_conc": 10.800242474836278,
+      "rps_per_card": 0.4818470215015862,
+      "measured_tput_tok_s": 314.41,
+      "measured_power_w": 294.98,
+      "measured_tok_per_j": 1.0658,
+      "measured_tpot_p50_ms": 35.494,
+      "closed_loop": false,
+      "domain_declared_tpot_err_pct": -0.32000166951877757,
+      "observed_sim_tpot_err_pct": -0.3246886797768682,
+      "agrees": true
+    }
+  ]
+}
