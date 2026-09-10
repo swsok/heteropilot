@@ -14,9 +14,22 @@ Written at `main` = `8bb2f6f`, after the consolidation sprint
 | **sim-on-measured** | LLMServingSim, driven by a bundle whose latencies are measured |
 | **analytical** | LLMServingSim, driven by a datasheet-derived (Tier 0) bundle — never a measurement |
 
-**The one-line summary a reviewer will ask for first: no experiment in this
-repository currently shows a heterogeneous configuration winning.** §3 explains
-what happened to the result that used to.
+**The one-line summary a reviewer will ask for first — updated 2026-09-09.** A
+heterogeneous configuration now wins, **in simulation, at one arrival rate, with an
+extrapolated margin**: on `pd-rngd-gpu-card` at 3.3 rps the recommended plan is
+`P[cuda:tp1] D[furiosa:tp1]` — an A40 prefill with an RNGD-card decode — at
+1.833 tok/J. At 1 rps an NPU-only plan wins (`agg[furiosa:tp1]`, 1.074 tok/J) and
+that is the **one cell of sixteen** whose margin rests on a measured accuracy
+domain. Above 10 rps the GPU wins everywhere.
+
+So the honest one-liner is now two: *there is a crossover, and almost none of the
+curve is measured.* §1.2b and §2 carry both halves; `experiments/results/e6_rps_sweep.md`
+has the tables.
+
+> The previous summary read *"no experiment in this repository currently shows a
+> heterogeneous configuration winning"*, and was true until E6. It is kept here
+> because what changed is the experiment, not the standard of evidence — the
+> retracted result §3 describes is still retracted.
 
 ---
 
@@ -70,6 +83,23 @@ performance prediction for that hardware. Every plan built on one carries
 | …and the recommendation it falls back to | `agg[cuda:tp4]`, **2.595 tok/J** | sim-on-measured | same |
 | The margin is read from the run, not set by hand | 0.00 % at 1 rps, 3.05 % at the RNGD card's own operating point, 12.52 % for the cross-vendor P/D plan | measured domain | `experiments/results/e6_rps_sweep.md` |
 | Held in CI without a simulator | 199 committed records replayed through a mock predictor | — | `tests/data/e5_sim_records.json` |
+
+### 1.2c Asymmetric TP per phase (`slab3d`, D28)
+
+| claim | number | label | artifact |
+| --- | --- | --- | --- |
+| The simulator never required uniform instance sizes | `_compute_network_dims` did; `topology_mode: slab3d` expresses `tp_d = 2·tp_p` with **no idle rank** | — | `deviations.md` D28, `docs/d14_spike.md` |
+| The encoding changes nothing where it overlaps the old path | R1 ×3, R2 and **R3** (colocated tp4×2, `auto` vs `slab3d`) byte-identical | — | `experiments/scripts/slab3d_anchors.sh` |
+| Uncorrected, the 3-D encoding under-predicts TPOT | **−24.4 %** at tp8, **−13.4 %** at tp4 | sim-vs-sim | `docs/slab3d_calibration.md` |
+| One dim-1 latency factor removes it | 4 for `[4,2]`, 2 for `[2,2]`, 1 for `[1,2]`; residual **≤ 0.008 %** | fitted | `profiles/calibration/slab3d_latency.yaml` |
+| …and it does not depend on bandwidth | same factor at **8 bandwidths over a 13× range** (7.7–100 Gbps) | fitted | same |
+| Asymmetric P/D wins where TTFT is tight | `P[cuda:tp2] D[cuda:tp4]`, `P[cuda:tp1] D[cuda:tp2]` at 10 and 20 rps | sim-on-measured | `experiments/results/e6_rps_sweep.md` |
+
+**What this does not license.** Absolute TPOT only at a `(split, link_bw)` in the
+table — outside it the compiler refuses (`OUTSIDE_CALIBRATION_DOMAIN`). Not TTFT or
+throughput: only TPOT p50 was fitted. And not P/D specifically — the fit is
+single-instance and colocated by construction, while a real P/D run also crosses
+dim 1 with the prefill compute→sender `COMM_SEND`.
 
 ### 1.3 The cross-vendor KV path
 
@@ -131,6 +161,13 @@ either — but "each device has a sweet spot" does not hold here.
 `experiments/results/rngd_lowload_envelope.md`.
 
 Stated as plainly as §1, because these are the rows a reviewer will find anyway.
+
+**Superseded 2026-09-09 by E6 — see the note at the top of this file and §2.**
+On the RPS axis a heterogeneous plan wins at 3.3 rps and an NPU-only plan at 1 rps,
+both in simulation and only the latter on a measured margin. The paragraph below
+described the state when every sweep ran at a single arrival rate of 10 rps, where
+the GPU does still win. It is kept because its two reasons are still the reasons,
+and because the second of them was resolved rather than removed.
 
 **No heterogeneous configuration is shown to win.** The GPU wins wherever the
 sweeps can speak — which, since 2026-09-07, is everywhere they were asked. Two
@@ -264,6 +301,16 @@ used as a cost lever for P/D or heterogeneous sweeps. **No ranker change was mad
 the obvious repair (order by the roofline floor) fixes two corpora and breaks the
 third, which is the same one-fixture error again. `docs/surrogate_topk_regret.md`,
 `deviations.md` D30.
+
+**D26 — the retrospective check that came back clean.** *Claimed (implicitly):*
+results produced before D26 was found might be contaminated, since a wrong-version
+`chakra` silently converted the workload graph and only multi-instance candidates
+were affected. *Measured:* the Exp 5 four-combination table reproduces with **zero
+differing fields** across all five rows, and D22 §4.4's "RNGD candidates never
+terminate at 3.3 rps" was itself the D26 artifact — the same candidates complete in
+69–82 s. *Changed:* nothing needed re-running. The check is recorded because a
+retrospective that finds nothing is only worth something if it was actually run:
+`docs/rps_step0_retro.md`.
 
 **The pattern is worth stating in the paper.** All four were caught by internal
 discipline — provenance labels, sustained-vs-peak hygiene, applying a measured

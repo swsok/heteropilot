@@ -74,6 +74,28 @@ without a rate rather than with a fabricated midpoint.
 "306 candidate(s)" are three rates, not 918 candidates, so rate-specific caveats
 carry an `[rps N]` tag.
 
+## Verified with `--enable-pd` too
+
+`WORK_ORDER_rps_aware.md` §7 asks that
+`plan --rps … --accuracy-domain --enable-pd` emit the switchover table and the
+crossovers or their absence. It does — run 2026-09-10 on `pd-rngd-gpu-card`,
+300 requests, rates 10 and 20 against the E6 cache:
+
+```
+    rps  recommended                                  backend  acc   tok/J   avg W  p99 TPOT  margin  validity
+   10.0  cuda-a40-node_a40a-tp4-dp1-s128-t8192        cuda       4   2.595  1292.5     35.58   1.42%  extrapolated
+   20.0  pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40…) cuda       6   2.481  1371.9     48.52   1.42%  extrapolated
+
+--- Crossovers ---
+  none: the same backend wins at every rate swept.
+```
+
+**"none" here and a crossover in E6 are not a contradiction.** This run uses the
+service spec's own TTFT SLO (25 s) and its full candidate set, where E6 swept
+64 s and 8 s over a knob-fixed set — and it covers only 10 and 20 rps, both on
+the same side of E6's crossover. The switchover table is conditional on the SLO
+and on which candidates were asked about, which is why both travel with it.
+
 ## The two opt-in stages
 
 Both default off, so the plain `plan` path is unchanged.
