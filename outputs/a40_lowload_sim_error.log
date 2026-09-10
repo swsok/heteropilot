@@ -1,1 +1,6 @@
   conc 4.076: offering 0.1976 rps
+    sim served 4.04 (gap -0.8%)  tpot 31.52 vs 31.33  err +0.59%
+  conc 11.272: offering 0.4818 rps
+    sim served 10.80 (gap -4.2%)  tpot 35.38 vs 35.49  err -0.32%
+
+wrote outputs/a40_lowload_sim_error/lowload_sim_error.json
