@@ -15,26 +15,42 @@
 #
 # ---------------------------------------------------------------------------
 # INVESTIGATION RESULT (work order §0.4) - what the work order asked for and
-# what the repository actually holds. Three of the four "조사 필요" rows could
-# not be filled as specified:
+# what the repository actually holds. THREE of the four "조사 필요" rows could
+# not be filled as specified, and the fourth is filled from a different file
+# than the one named:
 #
-#  1. `profile`/`calibrated` and `profile`/`analytical` were specified as
-#     "±calibration_report.operator_error_p95" from experiments/tier_validation/
-#     E1/E2. THAT FIELD DOES NOT EXIST. The string `operator_error_p95` appears
-#     nowhere in the repository, `experiments/tier_validation/` holds only the
-#     four harness scripts (no committed result artifacts), and the tier
-#     validation numbers that DO exist are MAPE, not p95. The rows below use
-#     those MAPE figures and say so; they are operator-level (per-kernel)
-#     errors, not end-to-end, and not a 95th percentile.
+#  1. `calibration_report.operator_error_p95` DOES NOT EXIST, and neither does
+#     any p95 of RELATIVE error anywhere in this repository. The strings
+#     `operator_error` and `calibration_report` occur only in the work order
+#     itself, and profiler/synth/calibrate.py's `ScalingTable.to_dict` persists
+#     no error field at all (scalars / piecewise / n_anchors /
+#     anchors_per_family / derived_from). The one genuine p95 in the code is
+#     `p95_abs_error_us` (profiler/synth/diff.py:88, computed :196, serialized
+#     :128): absolute MICROSECONDS, unusable as a ±fraction, and held by no
+#     committed artifact.
+#     Nor are E1/E2 the experiments the work order assumes: E1
+#     (`e1_plan_agreement.py`) measures PLAN AGREEMENT - top-1/top-3 match,
+#     rel.err, Kendall tau - and carries no operator-error field at all; E2
+#     (`e2_budget_pareto.py`) is a measurement-BUDGET Pareto study. The two
+#     `profile` rows below take E2's committed MAPE figures and label them for
+#     what they are: MEANS, operator-level, A40-only.
 #  2. `power`/`vendor_spec` was specified as the TDP-vs-measured error p95 from
 #     outputs/phase0_power_repro.csv. THAT FILE HOLDS NO POWER DATA - it is a
-#     per-request latency CSV (columns: instance id, request id, model, input,
-#     output, arrival, end_time, latency, queuing_delay, TTFT, TPOT, ITL). No
-#     accelerator profile sets `tdp_w` either. Honest answer: unbounded.
+#     per-request latency CSV (12 columns: instance id, request id, model,
+#     input, output, arrival, end_time, latency, queuing_delay, TTFT, TPOT,
+#     ITL; 10 data rows). This is deviation D2, power is stdout-only. See the
+#     row for why the prose TDPs cannot substitute.
 #  3. `link_bw`/`vendor_spec` needed r_min = the minimum measured/spec ratio in
-#     the repository. Exactly ONE like-for-like (measured, vendor_spec) pair is
-#     recorded; the RNGD side cannot form one because no PCIe generation is
-#     recorded for the RNGD card anywhere in the repo. See that row.
+#     the repository. NO SUCH RATIO CAN BE FORMED: not one link here has both a
+#     benchmarked throughput and a repo-recorded spec OF THE SAME QUANTITY.
+#     Honest answer: unbounded. The row records why the tempting pairing is a
+#     category error - it was made in the first draft of this file and is
+#     retracted here.
+#  4. `sim_error`/`measured` is the one row that is exactly what the work order
+#     says it is: profiles/calibration/*.yaml carry per-hardware, per-bucket
+#     p95 as fractions. Note these are END-TO-END TTFT/TPOT sim-vs-real errors,
+#     a different quantity from the operator-level `profile` rows, and cannot
+#     substitute for them.
 # ---------------------------------------------------------------------------
 
 rules:
@@ -43,53 +59,66 @@ rules:
     grade: measured
     rule: calibration_derived
     unit: fraction
-    source: profiles/calibration/*.yaml
+    source: >
+      profiles/calibration/*.yaml, hardware.<label>.errors.<bucket>.{ttft,tpot}
+      .p95_abs_error (fractions), with mean_error and worst_error alongside.
     note: >
       Width is the bucket's (p95_abs_error - |mean_error|) either side of the
       interpolated error, read from the calibration store at build time rather
       than from this table (§2.2). A bucket whose p95 equals its |mean| yields
-      no width and is recorded unbounded.
+      no width and is recorded unbounded. This is end-to-end TTFT/TPOT error,
+      not operator-level.
 
   # --- profile -------------------------------------------------------------
   - kind: profile
     grade: analytical
     rule: symmetric_fraction
-    value: 0.389
+    value: 0.38875811006420014
     unit: fraction
     source: >
-      docs/tier0_calibration.md, "Residual error of the adopted V3 (self-fit)"
-      table, overall row: A40 38.9 % MAPE, RTXPRO6000 33.0 % MAPE. The larger
-      of the two measured hardware figures is used.
+      outputs/tier_validation/e2/e2_budget_pareto.json, conditions[] entry
+      "A_tier0", key `mape_vs_tier2` (0 measured points, 10091 hold-out rows).
+      Fraction, so 0.3888 = 38.9 %.
     note: >
-      NOT the p95 the work order asked for, and NOT an end-to-end error: this
-      is the mean absolute percentage error of Tier 0's per-OPERATOR time
-      against the measured bundle. End-to-end latency sums many operators and
-      their errors partially cancel, so applying this as a multiplier on TTFT /
-      TPOT OVERSTATES the range - the conservative direction for a robustness
-      margin, but it must not be read as a measured end-to-end bound. For
-      context, the end-to-end cost of that error on the planner's own objective
-      is E1's rel.err for the tier0+sim leg: 0.4 % (llama31-8b) and 11.3 %
-      (llama31-8b-light), docs/tier0_calibration.md "E1 - plan agreement".
+      THREE things this is not. (a) NOT a p95 - MAPE is the MEAN of
+      |synth-measured|/measured (profiler/synth/diff.py:196), so it understates
+      the tail, and docs/tier0_calibration.md records that the spread is wide
+      even where the median ratio is pinned at 1.0. (b) NOT end-to-end - it is
+      a per-OPERATOR timing error. End-to-end latency sums many operators whose
+      errors partially cancel, so using it as a multiplier on TTFT / TPOT
+      OVERSTATES the range; that is the conservative direction for a robustness
+      margin, but it must not be read as a measured end-to-end bound. For the
+      end-to-end cost of this error on the planner's own objective, E1's
+      rel.err for the tier0+sim leg was 0.4 % (llama31-8b) and 11.3 %
+      (llama31-8b-light). (c) NOT per-hardware - E2 is hardcoded to A40 /
+      Llama-3.1-8B bf16 TP=1 (experiments/tier_validation/e2_budget_pareto.py
+      :44-46) and this row is applied to every hardware label. The only
+      per-hardware split that exists (docs/tier0_calibration.md "Residual error
+      of the adopted V3": A40 38.9 %, RTXPRO6000 33.0 %) is SELF-FIT, train ==
+      test, and therefore optimistic - the doc says so - and its RTXPRO6000
+      column carries an unclamped bound violation (elementwise efficiency
+      1.007). It is deliberately not used here.
 
   - kind: profile
     grade: calibrated
     rule: symmetric_fraction
-    value: 0.331
+    value: 0.2950592981449794
     unit: fraction
     source: >
-      docs/tier0_calibration.md, "Tier 1 hold-out curve (STEP 9)" table, the
-      1 % anchor-share row (33.1 % hold-out MAPE) - the worst point of that
-      systematic sweep, which runs 33.1 % down to 27.3 % at 20 % anchors.
-      Measured on A40 only.
+      outputs/tier_validation/e2/e2_budget_pareto.json, conditions[] entry
+      "B_attention_anchors", key `mape_vs_tier2` (200 anchors, all attention;
+      9891 hold-out rows). Fraction, so 0.2951 = 29.5 %.
     note: >
-      Same caveat as profile/analytical: operator-level MAPE, not a p95, not
-      end-to-end. Deliberately taken from the hold-out CURVE rather than from
-      E2, whose uniform-anchoring condition C reached 42.9 % - i.e. a badly
-      anchored Tier 1 can be worse than Tier 0 (docs/tier0_calibration.md,
-      "E2 - where should a measurement budget go?"). Condition C is not the
-      strategy `python -m profiler.synth calibrate` implements, so the curve is
-      the representative figure; raise this row to 0.429 if a bundle is known
-      to have been anchored uniformly.
+      Same three caveats as profile/analytical - mean not p95, operator-level
+      not end-to-end, A40-only. Condition B is the representative one because
+      attention-focused anchoring is what `python -m profiler.synth calibrate`
+      implements. Its sibling condition "C_uniform_anchors" reached 0.4288, i.e.
+      A BADLY ANCHORED TIER 1 IS WORSE THAN TIER 0 (0.3888); raise this row to
+      0.4288 for a bundle known to have been anchored uniformly. A second Tier 1
+      source exists in docs/tier0_calibration.md ("Tier 1 hold-out curve":
+      33.1 / 30.4 / 29.7 / 27.8 / 27.3 % at 1/2/5/10/20 % anchor share, A40
+      only) but has NO committed artifact behind it, so the artifact is
+      preferred here for §7's evidence mapping.
 
   - kind: profile
     grade: vendor_spec
@@ -123,29 +152,32 @@ rules:
   # --- link_bw -------------------------------------------------------------
   - kind: link_bw
     grade: vendor_spec
-    rule: ratio_floor
-    r_min: 0.803
+    rule: unbounded
     unit: gbps
-    source: >
-      A40 -> host sustained pinned D2H 25.71 GB/s (single stream, the sustained
-      figure composed into experiments/configs/clusters/pd-rngd-gpu.yaml's
-      fabric links; the 256 MB best-of-7 in experiments/results/
-      gpu_host_bandwidth.md "Single stream" is 25.77 GB/s) against the PCIe 4.0
-      x16 vendor_spec of 64.0 GB/s BIDIRECTIONAL declared on links
-      pcie-a40a-02 / pcie-a40b-02 in that same fixture, i.e. 32.0 GB/s in one
-      direction. 25.71 / 32.0 = 0.803.
     note: >
-      This is the ONLY like-for-like (measured, vendor_spec) pair the
-      repository records, so the "minimum over ratios" of §2.2 is a minimum
-      over one. The RNGD side cannot contribute one: host<->PE is measured at
-      26.27 GB/s across 8 streams (experiments/results/
-      rngd_parallel_bandwidth.md) but NO PCIe generation or link spec is
-      recorded for the RNGD card anywhere in the repo, so there is no
-      denominator. The bidirectional-to-unidirectional halving is a conversion
-      of the fixture's own recorded value, not a second source; the fixture
-      comment states the 64.0 is bidirectional. Note also that the "% of ideal"
-      figures in those results docs are measured-vs-LINEAR-SCALING ratios, not
-      measured-vs-spec, and are deliberately not used here.
+      RETRACTED r_min. An earlier draft of this file set r_min = 25.71 / 32.0 =
+      0.803 and called it the one like-for-like pair in the repo. IT IS NOT
+      LIKE-FOR-LIKE and the row is now unbounded. The numerator, 25.71 GB/s, is
+      a HOST<->DEVICE sustained pinned D2H measurement
+      (outputs/a40_profile/host_bandwidth.json, sustained[] where streams=1 and
+      host_memory=pinned, field d2h_aggregate_gbps). The denominator, 64.0 GB/s
+      `source: vendor_spec`, is attached to a GPU<->GPU host-bridge link
+      (experiments/configs/clusters/exp1-a40-tp-sweep.yaml:86-93, id
+      pcie-node0-gpu0-gpu2) whose own comment at :84 reads verbatim "NOT a
+      measured p2p bandwidth; it is the standard link rate". Dividing one by the
+      other crosses two different links AND a bidirectional spec by a
+      unidirectional measurement; halving 64.0 fixes only the second defect.
+      No per-direction PCIe spec is written down anywhere in the repo - the only
+      statements are qualitative ("Pinned saturates at ~25.77 GB/s, which is
+      PCIe 4.0 x16 line rate", experiments/results/gpu_host_bandwidth.md:53).
+      The RNGD side cannot supply a ratio either: host<->PE is measured at
+      26.27 GB/s across 8 streams (outputs/rngd_profile/parallel_bandwidth.json)
+      but no PCIe generation or host-interface bandwidth is recorded for the
+      card anywhere - not in docs/nodes/npu.md, not in the datasheet_source of
+      profiles/accelerators/furiosa_rngd_card.yaml.
+      TO CLOSE THIS ROW: write a per-direction PCIe spec into a repo file with a
+      citation and set r_min = 25.71 / that value, or measure a p2p bandwidth
+      (no p2p/NCCL measurement exists today).
 
   - kind: link_bw
     grade: placeholder
@@ -189,13 +221,29 @@ rules:
     rule: unbounded
     unit: fraction
     note: >
-      The work order sourced this to outputs/phase0_power_repro.csv, which
-      holds NO power data - it is a per-request latency CSV. No accelerator
-      profile sets `tdp_w`, so there is no vendor figure to compare a
-      measurement against either. Unbounded is the honest answer; closing this
-      needs a run that records measured accelerator power beside a datasheet
-      TDP (profiler/power/profile_gpu_power.sh samples power.draw but nothing
-      committed pairs it with a TDP).
+      Unbounded for four independent reasons, any one of which is sufficient.
+      (a) The file the work order cites, outputs/phase0_power_repro.csv, has no
+      power column at all - it is a per-request latency CSV (deviation D2).
+      (b) No accelerator profile populates `tdp_w`: the field is declared at
+      planner/inventory.py:318 and read at planner/optimizer/greedy.py:48, but
+      no YAML in the repo sets it, so it is always None (deviation D7 records
+      why the schema went this way). TDP survives only in prose comments.
+      (c) n = 3 hardware labels carry a TDP in prose - a p95 over three points
+      is not a statistic.
+      (d) Those three do not admit a common range. A40 300 W stated vs 297.83 W
+      measured (+0.73 %) and A5000 230 W vs 227.6 W (+1.05 %) would suggest
+      about ±1 %, but RNGD-CARD draws 290.93 W against its stated 180 W
+      (profiles/accelerators/furiosa_rngd_card.yaml:133 vs :178) - 1.62x TDP,
+      -38 % error, which a ±1 % range fitted on the two NVIDIA parts misses by
+      a factor of 38. If this row is ever closed it must be closed PER
+      HARDWARE; a single global power range is not defensible.
+      NOT USED, and why: 10 Hz nvidia-smi power.draw logs do exist
+      (experiments/results/{a40,a5000}_power/load_gpu*.csv) and a per-sample
+      |sample - TDP| / TDP p95 can be computed from them (A40 3.64 %, A5000
+      2.70 % over util >= 90 %). That measures within-run sample variance around
+      a TDP that happens to be right on two GPUs; it is not the error of TDP as
+      a power model, and it excludes the RNGD case, which is the one that
+      matters.
 
   - kind: power
     grade: placeholder
