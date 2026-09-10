@@ -11,8 +11,12 @@ reproduces 170.56.
 The rest guards the two ways an open-loop point can lie:
 
   - a saturated run reports a concurrency that is a fact about the queue, not
-    about the offered load. The committed point IS saturated (offered 10.3 rps,
-    completed 1.671) and must be flagged as such -- flagged, never dropped;
+    about the offered load. The committed point IS saturated and must be flagged
+    as such -- flagged, never dropped. The flag is the QUEUE DELAY SLOPE, and the
+    tests below pin both sides of it, because the first metric tried here was
+    wrong in the dangerous direction: completed-rps-against-offered divides by a
+    wall containing the drain tail, so a healthy 20-request point at 0.5 rps read
+    0.64 and looked saturated. Short runs are where low-load points live;
   - the bench window must exclude model loading. `python -m bench run` loads
     weights inside the same process, and a power mean that included a
     two-minute load phase would be an average of two different machines.
@@ -30,6 +34,10 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "experiments/scripts/measure_envelope_openloop.py"
 COMMITTED = ROOT / "outputs/phase0_bench/A40/vllm"
+#: A 20-request 0.5 rps run on the A40 node, kept as the unsaturated counterpart
+#: to the committed saturated one. Small (20 rows) and the only fixture that
+#: shows the drain-tail trap.
+SMOKE = ROOT / "outputs/a40_envelope_openloop/lowload_reference"
 
 
 def _load(name: str, path: Path):
@@ -81,19 +89,37 @@ def test_the_committed_point_is_correctly_flagged_as_saturated():
     meta, reqs = _committed()
     point = ol.summarise_openloop_point(meta, reqs, rows=[], offered_rps=10.3)
     assert point["saturated"] is True
+    # Queue delay gained ~4 s per second of arrivals: the backlog grew for the
+    # whole run. Two orders of magnitude above the threshold, not a close call.
+    assert point["queue_delay_slope_s_per_s"] == pytest.approx(4.15, abs=0.05)
     assert point["completed_rps"] == pytest.approx(1.671, abs=0.01)
-    assert any("saturated" in n or "queue grew" in n for n in point["notes"]), \
-        point["notes"]
+    assert any("queue grew" in n for n in point["notes"]), point["notes"]
 
 
 @pytest.mark.skipif(not COMMITTED.exists(), reason="A40 bench artifact absent")
+@pytest.mark.skipif(not SMOKE.exists(), reason="A40 low-load run absent")
 def test_an_unsaturated_point_is_not_flagged():
-    """The flag must discriminate, or it is decoration. Same requests, but told
-    they were offered at the rate they actually completed at."""
-    meta, reqs = _committed()
-    point = ol.summarise_openloop_point(meta, reqs, rows=[], offered_rps=1.671)
+    """The flag must discriminate, or it is decoration.
+
+    This is the case the FIRST version of the metric got wrong. A 20-request run
+    at 0.5 rps on this node completes every request with no waiting at all
+    (queue-delay slope -0.0000), but its wall is 62 s against a 38 s arrival span
+    because of the drain tail -- so completed-rps-against-offered read 0.643 and
+    would have marked a clean low-load point as saturated. The whole purpose of a
+    second accuracy-domain point is that it is at LOW load; a saturation test
+    that fires on short low-load runs would have refused every point worth
+    taking.
+    """
+    meta = json.loads((SMOKE / "meta.json").read_text())
+    reqs = [json.loads(line)
+            for line in (SMOKE / "requests.jsonl").read_text().splitlines() if line]
+    point = ol.summarise_openloop_point(meta, reqs, rows=[], offered_rps=0.5)
     assert point["saturated"] is False
+    assert point["queue_delay_slope_s_per_s"] == pytest.approx(0.0, abs=1e-3)
     assert point["notes"] == []
+    # ... and the metric that would have lied is still recorded, so the trap is
+    # visible in the artifact rather than only in this docstring.
+    assert point["completed_rps"] / 0.5 < 0.7
 
 
 def test_the_bench_window_comes_from_meta_not_from_wall_clock():

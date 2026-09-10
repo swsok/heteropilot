@@ -32,10 +32,20 @@ The A5 rules carry over in substance, with one that cannot:
   (e) every point runs the same workload, re-spaced.
 
   (b) is a closed-loop rule -- there is no pool to be 4x anything. Its purpose,
-      "did the point sustain the load it claims?", survives as `offered_sustained`:
-      completed requests per second against the offered rate. The committed 170.56
-      point fails it (offered 10.3 rps, completed 1.671) and SHOULD: that run was
-      saturated, which is precisely why its concurrency is 170 and not 10.
+      "did the point sustain the load it claims?", survives as the QUEUE DELAY
+      SLOPE: d(scheduled_ts - queued_ts)/d(arrival), in seconds of waiting per
+      second of elapsed arrival time. A queue that is keeping up has slope ~0; one
+      whose offered rate exceeds capacity grows without bound. Measured, the two
+      cases do not overlap: the committed 170.56 run reads **+4.15 s/s** and a
+      20-request run at 0.5 rps reads **-0.0000**.
+
+      The obvious metric -- completed requests per second against the offered rate
+      -- was tried first and is WRONG, in the direction that would have quietly
+      poisoned the domain. It divides by a wall that includes the drain tail, so a
+      perfectly healthy 20-request point at 0.5 rps reports 0.64 and looks
+      saturated. Short runs are exactly where a low-load calibration point lives.
+      `completed_rps` is still recorded, because it is worth seeing; it is no
+      longer what decides.
 
 Usage:
 
@@ -86,8 +96,24 @@ NS_PER_S = 1e9
 #: so no loaded-but-idle window exists to take. Recorded under its own name so the
 #: two are never averaged together.
 EMPTY_CARD_WINDOW_S = 60.0
-#: A5(b)'s surviving purpose: did the point sustain the rate it offered?
-SUSTAINED_FLOOR = 0.95
+#: A5(b)'s surviving purpose: did the point sustain the rate it offered? Slope of
+#: queue delay against arrival time, in s/s. Zero means the queue keeps up. The
+#: threshold sits two orders of magnitude below the saturated case measured on
+#: this node (+4.15) and above the healthy one (-0.0000), so it is not a close call.
+QUEUE_GROWTH_SLOPE = 0.05
+
+
+def _rel(p: Path) -> str:
+    """Repo-relative where possible, absolute otherwise.
+
+    `--out outputs/...` arrives relative, and `Path.relative_to` RAISES when one
+    side is relative and the other absolute -- so recording provenance crashed
+    the run AFTER the measurement had been taken. Both forms name the same file.
+    """
+    try:
+        return str(p.resolve().relative_to(REPO_ROOT))
+    except ValueError:
+        return str(p.resolve())
 
 
 def respace_trace(out: Path, dataset: Path, rps: float, n: int) -> Path:
@@ -109,6 +135,35 @@ def respace_trace(out: Path, dataset: Path, rps: float, n: int) -> Path:
             rows.append(rec)
     out.write_text("".join(json.dumps(r) + "\n" for r in rows))
     return out
+
+
+def queue_delay_slope(reqs: list[dict]) -> float | None:
+    """Seconds of queue delay gained per second of elapsed arrival time.
+
+    `queued_ts` is when the replayer handed the request to the engine -- its
+    arrival -- and `scheduled_ts` is when the engine started it, so the gap is
+    time spent waiting for capacity. Its trend is the definition of saturation:
+    an offered rate below capacity holds the gap flat, one above it accumulates.
+
+    Least squares rather than first-vs-last, so a single slow request cannot set
+    the verdict.
+    """
+    pairs = sorted(
+        (r["queued_ts"], r["scheduled_ts"] - r["queued_ts"])
+        for r in reqs
+        if r.get("queued_ts") is not None and r.get("scheduled_ts") is not None
+    )
+    if len(pairs) < 2:
+        return None
+    t0 = pairs[0][0]
+    xs = [t - t0 for t, _ in pairs]
+    ys = [d for _, d in pairs]
+    n = len(xs)
+    mx, my = sum(xs) / n, sum(ys) / n
+    denom = sum((x - mx) ** 2 for x in xs)
+    if denom == 0:
+        return None
+    return sum((x - mx) * (y - my) for x, y in zip(xs, ys, strict=True)) / denom
 
 
 def _epoch(iso: str) -> float:
@@ -136,15 +191,19 @@ def summarise_openloop_point(meta: dict, reqs: list[dict], rows: list,
     wall_s = (max(lasts) - min(anchors)) if (lasts and anchors) else 0.0
     served = (sum(lat_ms) / 1000.0 / wall_s) if wall_s else 0.0
     completed_rps = (len(lat_ms) / wall_s) if wall_s else 0.0
-    sustained = (completed_rps / offered_rps) if offered_rps else 0.0
+    slope = queue_delay_slope(reqs)
+    saturated = slope is not None and slope > QUEUE_GROWTH_SLOPE
 
     notes: list[str] = []
-    if sustained < SUSTAINED_FLOOR:
+    if saturated:
         notes.append(
-            f"completed {completed_rps:.3f} rps against an offered {offered_rps:.3f} "
-            f"({sustained:.3f} < {SUSTAINED_FLOOR}): the queue grew, so this point "
-            f"measures saturation and its concurrency is not the offered load"
+            f"queue delay grew at {slope:+.3f} s per second of arrivals "
+            f"(> {QUEUE_GROWTH_SLOPE}) against an offered {offered_rps:.3f} rps: "
+            f"the queue grew, so this point measures saturation and its "
+            f"concurrency is a backlog depth, not the offered load"
         )
+    if slope is None:
+        notes.append("no usable queued/scheduled timestamps: saturation unknown")
     missing = len(reqs) - len(lat_ms)
     if missing:
         notes.append(f"{missing} request(s) had no usable timestamps and are excluded")
@@ -155,10 +214,12 @@ def summarise_openloop_point(meta: dict, reqs: list[dict], rows: list,
     return {
         "offered_rps": offered_rps,
         "served_concurrency": served,
+        # Recorded because it is worth seeing, NOT because it decides: over a
+        # wall that includes the drain tail it reads low on any short run.
         "completed_rps": completed_rps,
-        "offered_sustained": sustained,
+        "queue_delay_slope_s_per_s": slope,
         # The open-loop analogue of `pool_binding`: reported, never dropped.
-        "saturated": sustained < SUSTAINED_FLOOR,
+        "saturated": saturated,
         "requests_ok": len(lat_ms),
         "requests_total": len(reqs),
         "wall_s": wall_s,
@@ -236,9 +297,9 @@ def run_point(args, rps: float, out_dir: Path, repeat: int = 0) -> dict | None:
     point = summarise_openloop_point(meta, reqs, rows, rps,
                                      device_sn=args.device_sn,
                                      empty_window=empty_window)
-    point["artifacts"] = {"run_dir": str(run_dir.relative_to(REPO_ROOT)),
-                          "sampler_csv": str(sampler_csv.relative_to(REPO_ROOT)),
-                          "trace": str(trace.relative_to(REPO_ROOT))}
+    point["artifacts"] = {"run_dir": _rel(run_dir),
+                          "sampler_csv": _rel(sampler_csv),
+                          "trace": _rel(trace)}
     return point
 
 
@@ -300,9 +361,10 @@ def main() -> int:
             pw = point["bench_window"].get("power_w")
             pstr = f" {pw['mean']:.1f} W" if pw else " (no power)"
             flag = "  SATURATED" if point["saturated"] else ""
+            slope = point["queue_delay_slope_s_per_s"]
+            sstr = f"{slope:+.3f}" if slope is not None else "n/a"
             print(f"{rps:g} rps rep{rep}: served {point['served_concurrency']:.2f} "
-                  f"(sustained {point['offered_sustained']:.3f}){pstr}{flag}",
-                  file=sys.stderr)
+                  f"(queue slope {sstr} s/s){pstr}{flag}", file=sys.stderr)
 
     (out_dir / "envelope_openloop.json").write_text(json.dumps({
         "run": {

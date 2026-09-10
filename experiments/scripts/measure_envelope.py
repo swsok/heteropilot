@@ -278,7 +278,9 @@ BACKENDS = {
 
 
 def server_command(backend: str, artifact: str, port: int,
-                   card: int, tp: int) -> tuple[list[str], dict[str, str]]:
+                   card: int, tp: int,
+                   engine: dict[str, str] | None = None,
+                   ) -> tuple[list[str], dict[str, str]]:
     """The launch line and the environment it needs, per backend.
 
     Returns the env OVERLAY, not a whole environment: the caller merges it, so a
@@ -299,11 +301,21 @@ def server_command(backend: str, artifact: str, port: int,
             "--devices", f"npu:{card}:*",
         ], {})
     if backend == "cuda":
-        return ([
+        cmd = [
             "vllm", "serve", artifact,
             "--host", "127.0.0.1", "--port", str(port),
             "--tensor-parallel-size", str(tp),
-        ], {"CUDA_VISIBLE_DEVICES": str(card)})
+        ]
+        # Engine knobs are passed through rather than left at vLLM's defaults,
+        # and that is load-bearing rather than tidy. The open-loop A40 points are
+        # measured by `python -m bench run` at max_num_seqs 128 /
+        # max_num_batched_tokens 2048 (the config that produced the 170.56 point).
+        # A closed-loop curve taken at vLLM's defaults would differ from it in the
+        # SCHEDULER as well as in the load generator, and the whole purpose of
+        # measuring both is to attribute the difference to the protocol.
+        for flag, value in sorted((engine or {}).items()):
+            cmd += [flag, str(value)]
+        return (cmd, {"CUDA_VISIBLE_DEVICES": str(card)})
     raise ValueError(f"unknown backend: {backend}")
 
 
@@ -356,7 +368,8 @@ def run_point(args, concurrency: int, out_dir: Path, repeat: int = 0) -> dict | 
     log_path = out_dir / f"serve_{tag}.log"
 
     cmd, env_overlay = server_command(
-        args.backend, str(args.artifact), args.port, args.card, args.tp)
+        args.backend, str(args.artifact), args.port, args.card, args.tp,
+        engine=args.engine)
     env = {**os.environ, **env_overlay}
     with log_path.open("w") as log:
         server = subprocess.Popen(
@@ -457,13 +470,30 @@ def main() -> int:
                          "if it falls below 4x the concurrency")
     ap.add_argument("--repeats", type=int, default=1,
                     help="independent processes per point (STEP 3.2 asks for 2)")
+    # Defaults are the engine config the A40's open-loop points were measured
+    # under (outputs/phase0_bench/A40/vllm/meta.json), so the closed-loop and
+    # open-loop halves differ ONLY in how load is offered. CUDA only; the
+    # FuriosaAI side takes these from the compiled artifact.
+    ap.add_argument("--max-num-seqs", type=int, default=128)
+    ap.add_argument("--max-num-batched-tokens", type=int, default=2048)
+    ap.add_argument("--dtype", default="bfloat16")
+    ap.add_argument("--kv-cache-dtype", default="auto")
+    ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--startup-timeout", type=float, default=1800.0)
     ap.add_argument("--bench-timeout", type=float, default=7200.0)
     args = ap.parse_args()
 
     if args.bench_python is None:
         args.bench_python = BACKENDS[args.backend]["bench_python"]
+    args.engine = {}
     if args.backend == "cuda":
+        args.engine = {
+            "--max-num-seqs": args.max_num_seqs,
+            "--max-num-batched-tokens": args.max_num_batched_tokens,
+            "--dtype": args.dtype,
+            "--kv-cache-dtype": args.kv_cache_dtype,
+            "--seed": args.seed,
+        }
         # Pin BOTH halves to the same physical card by default. Leaving the
         # sampler unfiltered on an 8-GPU node records seven idle cards beside the
         # one under test; leaving `--device-sn` unset then averages all eight, and
@@ -513,6 +543,7 @@ def main() -> int:
                 "device_sn": args.device_sn,
                 "sample_devices": args.sample_devices,
                 "bench_python": args.bench_python,
+                "engine": args.engine,
                 "closed_loop": True,
                 "repeats": args.repeats,
             },
