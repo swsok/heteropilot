@@ -15,6 +15,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from planner.spec import Objective
+from planner.uncertainty.registry import UncertainInputRegistry
 
 
 class _Strict(BaseModel):
@@ -308,6 +309,12 @@ class PlannerOutput(_Strict):
     profile_tier: str = "unknown"
     #: island_id -> tier for every island the search saw.
     profile_tiers: dict[str, str] = Field(default_factory=dict)
+
+    #: Every planner input that is not a measurement, with its sourced error
+    #: range (WORK_ORDER_uncertainty_planner.md §2.3). None unless the caller
+    #: opted in via `--accuracy-domain`; `_write_output` drops the key entirely
+    #: in that case, so the default path's YAML is byte-identical (rule A4).
+    uncertain_inputs: UncertainInputRegistry | None = None
 
     @property
     def prune_ratio(self) -> float:

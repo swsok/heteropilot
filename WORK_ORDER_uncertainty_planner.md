@@ -80,11 +80,12 @@
 |---|---|---|---|
 | `sim_error` | `measured` | 정확도 도메인의 보간값 ± (해당 bucket의 `p95_abs_error` − `|mean_error|`) | `profiles/calibration/<hw>.yaml` |
 | `sim_error` | (도메인 밖) | `unbounded` → 후보는 `unmeasured` | — |
-| `profile` | `imported`/`measured` | `sim_error` 항목에 흡수(별도 항목 만들지 않음) | — |
+| `profile` | `imported`/`measured` (번들 tier **와** 프로파일 `source` 둘 다) | `sim_error` 항목에 흡수(별도 항목 만들지 않음). `measured_count["profile"] += 1` | — |
 | `profile` | `calibrated` (Tier 1) | ±`calibration_report.operator_error_p95` | `experiments/tier_validation/` E2 결과 파일 (**조사 필요**: 실제 파일명·필드명 확인) |
 | `profile` | `analytical` (Tier 0) | ±`tier_validation` E1의 operator 오차 p95 | 같음 |
-| `profile` | `placeholder` | `unbounded` | — |
-| `link_bw` | `measured` | ±0 (범위 없음, 레지스트리에는 남기되 섭동 대상 아님) | — |
+| `profile` | `placeholder` — 번들이 없거나, **프로파일 yaml의 `source: placeholder`** (번들 tier와 무관. 예: `ascend-sim-proxy`는 RTXPRO6000 실측 번들을 빌려 쓰지만 프로파일 자체가 placeholder) | `unbounded` | — |
+| `profile` | `user_defined` | 사용자가 `range`를 함께 주지 않으면 `unbounded` | — |
+| `link_bw` | `measured` | 레지스트리 항목을 만들지 않음. `UncertainInputRegistry.measured_count["link_bw"]`에 개수만 집계 | — |
 | `link_bw` | `vendor_spec` | `[spec × r_min, spec]` 여기서 `r_min` = 저장소에 있는 실측/스펙 비율의 최솟값 | A40 D2H 25.71 GB/s vs PCIe Gen4 x16 스펙(**조사 필요**: 스펙값·측정 로그 `experiments/scripts/gpu_host_bandwidth.py` 출력 확인), RNGD host↔PE 26.27 GB/s vs 스펙 |
 | `link_bw` | `placeholder` | `unbounded` | — |
 | `link_bw` | `user_defined` | 사용자가 `range`를 함께 주지 않으면 `unbounded` | — |
@@ -119,7 +120,8 @@ class UncertainInput(_Strict):
     note: str = ""
 
 class UncertainInputRegistry(_Strict):
-    items: list[UncertainInput]
+    items: list[UncertainInput]                 # 불확실한 것만. measured 입력은 넣지 않는다
+    measured_count: dict[str, int]              # kind -> 실측이라 제외된 입력 수 (렌더러의 커버리지 한 줄용)
     grades_digest: str          # grades.yaml 해시 (provenance)
     def unbounded(self) -> list[UncertainInput]: ...
     def by_kind(self, kind) -> list[UncertainInput]: ...
@@ -127,8 +129,8 @@ class UncertainInputRegistry(_Strict):
 
 수집 함수 `build_registry(cluster, profiles, islands, calibration, grades) -> UncertainInputRegistry`는 다음에서 항목을 만든다.
 
-- `cluster.links`의 각 링크: `source`가 `measured`가 아니면 `LINK_BW`(및 `latency_ns`에 대해 `LINK_LAT`) 항목. `affects`는 `TopologyGraph.path()`로 그 링크를 지나는 island 쌍.
-- 각 island의 `ProfileTier`(`tier.resolve_bundle_tier`): `measured`/`imported`가 아니면 `PROFILE` 항목.
+- `cluster.links`의 각 링크: `source`가 `measured`가 아니면 `LINK_BW`(및 `latency_ns`에 대해 `LINK_LAT`) 항목. `measured`면 항목 없이 `measured_count["link_bw"] += 1`. **원칙: 레지스트리에는 폭이 0인 항목이 존재하지 않는다** — 섭동·정렬 코드가 폭 0을 특수 처리할 필요가 없어야 한다. `affects`는 `TopologyGraph.path()`로 그 링크를 지나는 island 쌍.
+- 각 island의 프로파일: **등급은 두 신호의 약한 쪽**으로 정한다 — (i) 번들 tier `tier.resolve_bundle_tier(sim_hardware, ...)`, (ii) 프로파일 yaml의 `AcceleratorProfile.source`. 순위 `placeholder = user_defined (0) < analytical (1) < calibrated (2) < vendor_spec (3) < measured = imported (4)`; `grade = 순위가 낮은 쪽`, 순위 4가 아니면 `PROFILE` 항목을 만든다. 번들 tier만 보면 `ascend-sim-proxy`(프로파일 `source: placeholder`, 번들은 RTXPRO6000 실측)가 `measured`로 통과해 **저장소에서 가장 오해를 부르는 입력이 레지스트리에서 빠진다** — 이것이 두 신호를 모두 보는 이유다. `note`에는 두 신호를 모두 적는다(`"profile source=placeholder; bundle RTXPRO6000 tier=measured"`). 추가로 `profile.model`(또는 `profile_id`)과 `sim_hardware` 라벨이 다르면 `note`에 `proxy: <model> simulated as <sim_hardware>`를 붙인다. `ascend_target`(프로파일 `vendor_spec`, 번들 `ASCEND_TARGET-t0` analytical)은 `analytical`이 된다. 전력 블록 `power.source`도 같은 규칙으로 `POWER` 항목을 만든다.
 - `CalibrationModel.hardware[hw]`가 있는 hw × bucket: `SIM_ERROR` 항목 하나. 도메인은 §2.4. **calibration이 없는 hw는 `SIM_ERROR` 항목을 `unbounded`로 만든다** — 지금까지는 마진 0으로 통과시켰지만(`CalibrationModel.margins()`의 `(0.0, 0.0)`), 이 지시서 이후 `--accuracy-domain` 모드에서는 그 hw의 후보가 `unmeasured`가 된다. 기본 모드는 A4에 따라 그대로 둔다.
 
 ### 2.4 정확도 도메인 — `profiles/calibration/*.yaml` 확장과 `accuracy_domain.py`
@@ -229,12 +231,13 @@ python -m planner measure-apply --plan out.yaml --input <id> --value V --source 
 - `profiles/uncertainty/grades.yaml` (§2.2), `profiles/uncertainty/costs.yaml` (§2.6). 조사 필요 항목은 조사 결과로 채우고, 못 채운 행은 `range: unbounded` / `cost: null`로 두고 `note`에 이유를 쓴다.
 - `planner/uncertainty/__init__.py`, `grades.py`(yaml 로더 + 스키마 검증, `extra="forbid"`), `registry.py`(§2.3).
 - `PlannerOutput.uncertain_inputs: UncertainInputRegistry | None = None` 필드 추가(기본 None → golden 불변).
-- `planner/render.py`에 "불확실 입력" 섹션: `--accuracy-domain`일 때만. 표 형식: id / 종류 / 등급 / 현재값 / 범위 / 영향 island. `unbounded` 항목은 맨 위, 굵게.
+- `planner/render.py`에 "불확실 입력" 섹션: `--accuracy-domain`일 때만. 첫 줄에 커버리지(`링크 26개 중 16개 불확실 (placeholder 14, vendor_spec 2); 프로파일 3개 중 1개; ...`), 이어서 표: id / 종류 / 등급 / 현재값 / 범위 / 영향 island. `unbounded` 항목은 맨 위, 굵게.
 
 **테스트** `tests/test_uncertainty_registry.py`
-- `experiments/configs/clusters/pd-rngd-gpu.yaml`(placeholder 링크 포함)로 레지스트리를 만들면 `LINK_BW` 항목이 링크 수만큼, `grade=placeholder`, `range unbounded`.
+- `experiments/configs/clusters/pd-rngd-gpu.yaml`(링크 26개: measured 10, placeholder 14, vendor_spec 2 — 테스트 안에서 yaml을 읽어 이 수를 다시 세고 하드코딩하지 않는다)로 레지스트리를 만들면 `LINK_BW` 항목 16개, `measured_count["link_bw"] == 10`. placeholder 14개는 `range unbounded`, vendor_spec 2개는 `grades.yaml`의 `r_min` 규칙으로 유한 범위(`r_min` 행이 아직 비어 있으면 unbounded — 어느 쪽인지 테스트가 grades.yaml을 읽어 판정). 폭 0인 항목은 0개(`all(i.range.lo != i.range.hi for i in items)`).
 - `a40x8.yaml` + `profiles/calibration/a40.yaml`로 만들면 `SIM_ERROR:A40/<bucket>` 항목 1개, 도메인 스칼라 모드.
-- `ascend-sim-proxy.yaml`(Tier 0/placeholder 프로파일)로 만들면 `PROFILE` 항목, 등급 문자열이 `tier.resolve_bundle_tier` 결과와 일치.
+- `ascend-sim-proxy.yaml`로 만들면 NPU island에 `PROFILE` 항목 1개, `grade == "placeholder"`, `range unbounded`, `note`에 `proxy:`와 `bundle RTXPRO6000 tier=measured`가 모두 포함. 같은 fixture의 GPU island(RTXPRO6000, 프로파일 `source: measured`)는 항목 없음, `measured_count["profile"] == GPU island 수`. **이 테스트가 "번들 tier만으로 판정하면 실패"하도록**, 테스트 안에서 `resolve_bundle_tier("RTXPRO6000", ...)`가 `MEASURED`임을 먼저 단언한다(회귀 방지용 문서화).
+- `ascend_target.yaml`(프로파일 `vendor_spec`, 번들 `-t0`)을 쓰는 fixture(없으면 테스트용 최소 cluster yaml을 `tests/fixtures/`에 추가)로 만들면 `grade == "analytical"` — 두 신호 중 약한 쪽이 선택됨을 확인.
 - `grades.yaml`에 없는 조합 → `unbounded`, 예외 없음. 숫자가 있는데 `source`가 비어 있으면 로더가 거부.
 - golden: `--accuracy-domain` 없이 기존 `tests/test_search.py` 전부 통과, `PlannerOutput` YAML 덤프에 `uncertain_inputs` 키가 **없어야** 한다(None은 덤프에서 제외 — **조사 필요**: `_write_output`의 직렬화 옵션 확인).
 
@@ -299,7 +302,7 @@ python -m planner measure-apply --plan out.yaml --input <id> --value V --source 
 - 기대(가설, 결과로 확인): (c)에서 저동시성 RNGD 후보 일부가 (b)의 일괄 거절에서 살아나고, 고동시성 후보는 `unmeasured` 또는 더 큰 마진으로 거절된다. 결과가 가설과 다르면 그대로 기록한다.
 
 **E-A2 — RNGD 정확도 도메인 채우기 (시뮬레이션만; 실측 JSON은 이미 커밋됨, 가속기 불필요)**
-- `outputs/rngd_envelope/edf/real_c{16,32,64,128}.json`에 대응하는 sim CSV 4개를 같은 워크로드로 생성(`serving/` 직접 실행, 기존 `envcheck` 절차 재사용).
+- `outputs/rngd_envelope/edf/real_c{16,32,64,128}.json`에 대응하는 sim CSV 4개를 같은 워크로드로 생성(`serving/` 직접 실행, CPU. 기존 `envcheck` 절차 재사용). **조사 필요**: `outputs/envcheck/rngd_verify_card_edf.csv`가 이 중 한 점인지 확인하고 있으면 재사용.
 - `fit-accuracy-domain`으로 `rngd_card_edf.domain.yaml` 생성, 4점의 (서빙 동시성, TTFT 오차, TPOT 오차) 표를 `experiments/uncertainty/results/ea2_rngd_domain.md`에 기록. 이 표가 **특허 도 3의 실측 대체 데이터**가 된다.
 - A40도 가능하면: `outputs/phase0_bench/A40/vllm/`의 validation 5점의 서빙 동시성을 계산해 `a40.domain.yaml` 생성. 5점이 거의 같은 동시성이면 도메인이 좁다는 사실 자체를 기록(A40에서 c-sweep 추가 측정은 Stage C 항목).
 

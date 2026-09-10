@@ -1,0 +1,71 @@
+# What it costs to replace an uncertain input with a measurement
+# (WORK_ORDER_uncertainty_planner.md §2.6).
+#
+# `hours` is wall-clock. A kind with no timestamped evidence gets `hours: null`
+# rather than an estimate; the measurement plan sorts such items last instead
+# of pretending to know (absolute rule A1). `exclusive: true` means the
+# measurement owns the device or the server for its duration, so a budget can
+# count occupancy separately from elapsed time.
+#
+# INVESTIGATION RESULT (work order §0.4): only two of the four rows could be
+# sourced. See each note.
+
+costs:
+  - kind: profile
+    method: python -m profiler profile
+    hours: 2.1
+    exclusive: true
+    source: >
+      WORK_ORDER_tiered_profiles.md §1.2 tier table, Tier 2 row: "전체 (~2.1h)"
+      for a full measured bundle.
+    note: >
+      Per (hardware, model, tp). Exclusive: the profiler loads the model and
+      sweeps kernel shapes on the device, so nothing else can use it.
+
+  - kind: sim_error
+    method: serve the model, then one bench run (bench_furiosa_endpoint.py or vLLM bench)
+    hours: 0.041
+    exclusive: true
+    source: >
+      outputs/rngd_envelope/edf/real_c{16,32,64,128}.json `wall_s` fields:
+      146.65 / 94.526 / 130.768 / 132.818 s. The largest, 146.65 s, is 0.041 h.
+    note: >
+      LOWER BOUND, not the full cost. This covers only the benchmark leg. The
+      serving-stack startup that must precede it is NOT timestamped: the
+      companion outputs/rngd_envelope/edf/serve_c*.log files carry uvicorn
+      INFO lines with no timestamps, so the compile-and-load time (which for a
+      furiosa-llm artifact is the larger half) cannot be recovered from what is
+      committed. Treat any ranking that depends on this figure as optimistic
+      about sim_error's cost, and re-derive it from a run that records its own
+      start and end.
+
+  - kind: link_bw
+    method: experiments/scripts/gpu_host_bandwidth.py / rngd_collective_probe.py
+    hours: null
+    exclusive: true
+    note: >
+      No sourced duration. gpu_host_bandwidth.py times each individual copy
+      with perf_counter but records no total runtime, and no committed artifact
+      under outputs/a40_profile/ or outputs/rngd_profile/ carries an elapsed
+      time for the probe as a whole. Exclusive because the probe saturates the
+      host PCIe path it is measuring.
+
+  - kind: link_lat
+    method: not implemented
+    hours: null
+    exclusive: false
+    note: >
+      No link latency in this repository has ever been measured (see
+      grades.yaml, link_lat rows), so there is no procedure to cost. This row
+      exists to say that explicitly rather than leave the kind unmentioned.
+
+  - kind: power
+    method: profiler/power/profile_gpu_power.sh
+    hours: null
+    exclusive: false
+    note: >
+      The script is an unbounded sampler - one nvidia-smi power.draw sample per
+      second until it is killed - so it has no intrinsic duration to record. Its
+      real cost is that of whatever workload it runs alongside, which makes it
+      close to free when attached to a run that was happening anyway. Not
+      exclusive: sampling power does not take the device.

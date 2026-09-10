@@ -1,0 +1,212 @@
+# Source grades -> error ranges (WORK_ORDER_uncertainty_planner.md §2.2).
+#
+# Every number in this file has a source, and a (kind, grade) combination that
+# is absent, or present with `rule: unbounded`, is UNBOUNDED - not a plausible
+# default (absolute rule A1). `planner/uncertainty/grades.py` rejects the table
+# if a row carries a number without a `source`, so the rule is enforced rather
+# than trusted. No number from this file is hardcoded in code; only the
+# formulas are.
+#
+# Rules:
+#   unbounded            no sourced width exists
+#   symmetric_fraction   [nominal*(1-value), nominal*(1+value)]
+#   ratio_floor          [nominal*r_min, nominal]  (a spec is an upper bound)
+#   calibration_derived  width comes from the calibration store, not this file
+#
+# ---------------------------------------------------------------------------
+# INVESTIGATION RESULT (work order §0.4) - what the work order asked for and
+# what the repository actually holds. Three of the four "조사 필요" rows could
+# not be filled as specified:
+#
+#  1. `profile`/`calibrated` and `profile`/`analytical` were specified as
+#     "±calibration_report.operator_error_p95" from experiments/tier_validation/
+#     E1/E2. THAT FIELD DOES NOT EXIST. The string `operator_error_p95` appears
+#     nowhere in the repository, `experiments/tier_validation/` holds only the
+#     four harness scripts (no committed result artifacts), and the tier
+#     validation numbers that DO exist are MAPE, not p95. The rows below use
+#     those MAPE figures and say so; they are operator-level (per-kernel)
+#     errors, not end-to-end, and not a 95th percentile.
+#  2. `power`/`vendor_spec` was specified as the TDP-vs-measured error p95 from
+#     outputs/phase0_power_repro.csv. THAT FILE HOLDS NO POWER DATA - it is a
+#     per-request latency CSV (columns: instance id, request id, model, input,
+#     output, arrival, end_time, latency, queuing_delay, TTFT, TPOT, ITL). No
+#     accelerator profile sets `tdp_w` either. Honest answer: unbounded.
+#  3. `link_bw`/`vendor_spec` needed r_min = the minimum measured/spec ratio in
+#     the repository. Exactly ONE like-for-like (measured, vendor_spec) pair is
+#     recorded; the RNGD side cannot form one because no PCIe generation is
+#     recorded for the RNGD card anywhere in the repo. See that row.
+# ---------------------------------------------------------------------------
+
+rules:
+  # --- sim_error -----------------------------------------------------------
+  - kind: sim_error
+    grade: measured
+    rule: calibration_derived
+    unit: fraction
+    source: profiles/calibration/*.yaml
+    note: >
+      Width is the bucket's (p95_abs_error - |mean_error|) either side of the
+      interpolated error, read from the calibration store at build time rather
+      than from this table (§2.2). A bucket whose p95 equals its |mean| yields
+      no width and is recorded unbounded.
+
+  # --- profile -------------------------------------------------------------
+  - kind: profile
+    grade: analytical
+    rule: symmetric_fraction
+    value: 0.389
+    unit: fraction
+    source: >
+      docs/tier0_calibration.md, "Residual error of the adopted V3 (self-fit)"
+      table, overall row: A40 38.9 % MAPE, RTXPRO6000 33.0 % MAPE. The larger
+      of the two measured hardware figures is used.
+    note: >
+      NOT the p95 the work order asked for, and NOT an end-to-end error: this
+      is the mean absolute percentage error of Tier 0's per-OPERATOR time
+      against the measured bundle. End-to-end latency sums many operators and
+      their errors partially cancel, so applying this as a multiplier on TTFT /
+      TPOT OVERSTATES the range - the conservative direction for a robustness
+      margin, but it must not be read as a measured end-to-end bound. For
+      context, the end-to-end cost of that error on the planner's own objective
+      is E1's rel.err for the tier0+sim leg: 0.4 % (llama31-8b) and 11.3 %
+      (llama31-8b-light), docs/tier0_calibration.md "E1 - plan agreement".
+
+  - kind: profile
+    grade: calibrated
+    rule: symmetric_fraction
+    value: 0.331
+    unit: fraction
+    source: >
+      docs/tier0_calibration.md, "Tier 1 hold-out curve (STEP 9)" table, the
+      1 % anchor-share row (33.1 % hold-out MAPE) - the worst point of that
+      systematic sweep, which runs 33.1 % down to 27.3 % at 20 % anchors.
+      Measured on A40 only.
+    note: >
+      Same caveat as profile/analytical: operator-level MAPE, not a p95, not
+      end-to-end. Deliberately taken from the hold-out CURVE rather than from
+      E2, whose uniform-anchoring condition C reached 42.9 % - i.e. a badly
+      anchored Tier 1 can be worse than Tier 0 (docs/tier0_calibration.md,
+      "E2 - where should a measurement budget go?"). Condition C is not the
+      strategy `python -m profiler.synth calibrate` implements, so the curve is
+      the representative figure; raise this row to 0.429 if a bundle is known
+      to have been anchored uniformly.
+
+  - kind: profile
+    grade: vendor_spec
+    rule: unbounded
+    unit: fraction
+    note: >
+      No row in the work order's §2.2 table, and no sourced width exists. Real
+      and reached in practice: profiles/accelerators/rtxpro6000.yaml declares
+      `source: vendor_spec` (its memory_gb / memory_bandwidth_gbps are copied
+      from upstream's cluster configs with no stated derivation) while its perf
+      bundle is measured, so the weaker-of-two-signals rule grades it
+      vendor_spec. Listed explicitly rather than left to the absent-row
+      fallback so the gap is documented, not silent.
+
+  - kind: profile
+    grade: placeholder
+    rule: unbounded
+    unit: fraction
+    note: >
+      No bundle, or the profile YAML itself is a placeholder. Includes the
+      proxy case the registry exists to catch: ascend-sim-proxy borrows the
+      measured RTXPRO6000 bundle while standing an NPU in for a GPU, so its
+      error against a real NPU is not merely large, it is unknown.
+
+  - kind: profile
+    grade: user_defined
+    rule: unbounded
+    unit: fraction
+    note: A deliberate what-if value. Unbounded unless the user supplies a range.
+
+  # --- link_bw -------------------------------------------------------------
+  - kind: link_bw
+    grade: vendor_spec
+    rule: ratio_floor
+    r_min: 0.803
+    unit: gbps
+    source: >
+      A40 -> host sustained pinned D2H 25.71 GB/s (single stream, the sustained
+      figure composed into experiments/configs/clusters/pd-rngd-gpu.yaml's
+      fabric links; the 256 MB best-of-7 in experiments/results/
+      gpu_host_bandwidth.md "Single stream" is 25.77 GB/s) against the PCIe 4.0
+      x16 vendor_spec of 64.0 GB/s BIDIRECTIONAL declared on links
+      pcie-a40a-02 / pcie-a40b-02 in that same fixture, i.e. 32.0 GB/s in one
+      direction. 25.71 / 32.0 = 0.803.
+    note: >
+      This is the ONLY like-for-like (measured, vendor_spec) pair the
+      repository records, so the "minimum over ratios" of §2.2 is a minimum
+      over one. The RNGD side cannot contribute one: host<->PE is measured at
+      26.27 GB/s across 8 streams (experiments/results/
+      rngd_parallel_bandwidth.md) but NO PCIe generation or link spec is
+      recorded for the RNGD card anywhere in the repo, so there is no
+      denominator. The bidirectional-to-unidirectional halving is a conversion
+      of the fixture's own recorded value, not a second source; the fixture
+      comment states the 64.0 is bidirectional. Note also that the "% of ideal"
+      figures in those results docs are measured-vs-LINEAR-SCALING ratios, not
+      measured-vs-spec, and are deliberately not used here.
+
+  - kind: link_bw
+    grade: placeholder
+    rule: unbounded
+    unit: gbps
+
+  - kind: link_bw
+    grade: user_defined
+    rule: unbounded
+    unit: gbps
+    note: A deliberate what-if value. Unbounded unless the user supplies a range.
+
+  # --- link_lat ------------------------------------------------------------
+  - kind: link_lat
+    grade: vendor_spec
+    rule: unbounded
+    unit: ns
+    note: >
+      No link latency in this repository is measured, so no measured/spec ratio
+      exists for latency and none can be borrowed from bandwidth.
+      experiments/configs/clusters/a40x8.yaml states the position outright: its
+      NVLink bandwidth is measured while "latency_ns: placeholder - NVLink
+      latency was not measured; 1000 ns is a representative value". The Link
+      schema carries ONE `source` field for both quantities, so a link graded
+      measured credits its latency as measured too - the registry inherits that
+      overstatement and cannot correct it without a schema change.
+
+  - kind: link_lat
+    grade: placeholder
+    rule: unbounded
+    unit: ns
+
+  - kind: link_lat
+    grade: user_defined
+    rule: unbounded
+    unit: ns
+
+  # --- power ---------------------------------------------------------------
+  - kind: power
+    grade: vendor_spec
+    rule: unbounded
+    unit: fraction
+    note: >
+      The work order sourced this to outputs/phase0_power_repro.csv, which
+      holds NO power data - it is a per-request latency CSV. No accelerator
+      profile sets `tdp_w`, so there is no vendor figure to compare a
+      measurement against either. Unbounded is the honest answer; closing this
+      needs a run that records measured accelerator power beside a datasheet
+      TDP (profiler/power/profile_gpu_power.sh samples power.draw but nothing
+      committed pairs it with a TDP).
+
+  - kind: power
+    grade: placeholder
+    rule: unbounded
+    unit: fraction
+    note: >
+      Reached by every profile whose power block is copied verbatim from
+      upstream's single_node_power_instance.json (rtxpro6000, ascend-sim-proxy):
+      upstream documents no derivation for those watt figures.
+
+  - kind: power
+    grade: user_defined
+    rule: unbounded
+    unit: fraction
