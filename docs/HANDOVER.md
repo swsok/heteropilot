@@ -1,9 +1,18 @@
 # HeteroPilot — current state and what to do next
 
-> **This is the live handover.** Rewritten 2026-09-10 on branch
-> `feat/rps-step6-docs` (`c78ff16`), at the end of `WORK_ORDER_rps_aware.md` rev 2
-> (STEP 0–6, PRs #60–#70). `main` is `b5c5d53`; that stack is not merged yet, so
-> read the PR list before assuming what is on `main`. It is **node-agnostic**:
+> **This is the live handover.** Rewritten 2026-09-10 at the end of
+> `WORK_ORDER_rps_aware.md` rev 2 (STEP 0–6, PRs #60–#72). **The whole stack is on
+> `main` as of `3aadc2b`** and every `feat/rps-step*` branch, plus
+> `spike/d14-asym-tp`, has been deleted — `origin` holds `main` and nothing else.
+>
+> That took a second merge. PRs #64–#71 each merged into their *parent feature
+> branch* rather than into `main`, and the parent had already reached `main`
+> sixteen seconds earlier, so thirteen commits — STEP 2 through STEP 6 — read as
+> MERGED on GitHub while being absent from `main`. PR #72 landed them. If a future
+> stack is merged bottom-up again, check
+> `git rev-list --count origin/main..<tip>` before believing the PR list.
+>
+> It is **node-agnostic**:
 > every open item says which machine it needs. Earlier handovers are historical
 > and must not be read as status:
 > `docs/HANDOVER_2026-08-31.md` (→ NPU, the previous live one),
@@ -161,6 +170,14 @@ Delivered, in the order it binds:
 | 5 | **E5** the planner self-rejects D22's winner; **E6** there is a crossover; **E7** it survives losing any one calibration point but not the domain |
 | 6 | This rewrite, plus `docs/PAPER_OUTLINE.md` |
 
+**The regression ladder is now committed** (`outputs/d23fix/anchor/`, PR #72).
+Absolute rule 1 requires a byte-identical proof for every sanctioned `serving/`
+edit; before that PR only D25 and D26 had a committed artifact, and D27's and
+D28's runs existed as untracked files on the NPU node alone. Read
+`outputs/d23fix/anchor/README.md` before reading the hashes — a `SHA256SUMS` with
+three lines instead of four is a *failed* anchor, not an agreeing one, and
+`anchors.log` beside it is what says which.
+
 **The one-sentence state of the science:** the planner can now price its own
 predictor and finds a crossover on the RPS axis — and **one of sixteen E6 cells
 rests on a measured accuracy domain**, which §2.2 is about.
@@ -181,10 +198,34 @@ and **fifteen of sixteen switchover cells read `extrapolated`**. A single point
 carries no slope, so `widen_error_bars` cannot even widen it honestly.
 
 What is needed is one more A40 measurement at a load the plans actually sit at —
-served concurrency roughly 3 to 15 — following STEP 3's protocol
-(`experiments/scripts/measure_envelope.py`, which is vendor-agnostic and already
-written). `nvidia-smi --query-gpu=power.draw,utilization.gpu` at 1 Hz replaces the
-`furiosa-smi` pair. **This node has no NVIDIA GPU**, so it cannot be done here.
+served concurrency roughly 3 to 15 — following STEP 3's protocol.
+
+**Only half of `measure_envelope.py` is vendor-agnostic, and an earlier draft of
+this section said otherwise.** The *analysis* half is: `summarise_point` already
+enforces A5 (served concurrency by Little's law, the pool floor, power recorded
+with utilisation from the same samples), and `read_sampler_csv` cares about a CSV
+schema, not a vendor. The *execution* half is hardcoded to FuriosaAI in three
+places, and all three need a CUDA path before any A40 point can be taken:
+
+| what | today | needed |
+| --- | --- | --- |
+| server launch | `furiosa-llm serve --devices npu:N:*` | `vllm serve` with `CUDA_VISIBLE_DEVICES` pinned to one card |
+| sampler | `power_sampler.sh` (`furiosa-smi info` + `status`) | a twin emitting the same columns from `nvidia-smi --query-gpu=power.draw,utilization.gpu,memory.used` at 1 Hz |
+| `--bench-python` | `/usr/bin/python3` | `.venv-vllm/bin/python`, which has `openai` |
+
+What does carry over unchanged is the bench client: `bench_furiosa_endpoint.py` is
+named for the node it was written on but is a plain `AsyncOpenAI` client, so it
+drives a vLLM OpenAI server as-is. Note D19 while doing it — that client fires
+everything at once, so the simulator side needs a burst trace, not the arrival
+process.
+
+`experiments/scripts/lowload_sim_error.py` is the other half of the point (the
+predictor's error at that load) and is pinned to RNGD by three module constants —
+`ENV`, `CLUSTER`, `DATASET`. Lifting them into arguments is the whole change; the
+A40 materials already exist (`experiments/configs/clusters/a40-llama31-8b-tp1.json`,
+`profiler/perf/A40/`).
+
+**The NPU node has no NVIDIA GPU**, so none of this can be done there.
 
 The same run would give the A40 half of E6b, which is currently simulation only —
 so every crossover sentence has to read "RNGD **measured** against A40
@@ -233,10 +274,16 @@ D23 and D14 are **closed** (D26 and D28 respectively); what remains is narrower:
 
 - **PR #13** (`docs/slide-deck-ko`) — dispositioned by the consolidation sprint's
   STEP 4.3; see that PR for what was decided.
-- **Remote branches are clean.** `origin` holds `main` and nothing else that is
-  merged. The 17 already-merged branches turned out to have been deleted already;
-  the D22 chain and the ScenarioLab workspace branches were deleted during the
-  sprint, the latter after verifying their content reached the split repo.
+- **Remote branches are clean.** `origin` holds `main` and nothing else. The 17
+  already-merged branches turned out to have been deleted already; the D22 chain
+  and the ScenarioLab workspace branches went during the consolidation sprint, the
+  latter after verifying their content reached the split repo; the twelve
+  `feat/rps-step*` branches and `spike/d14-asym-tp` went after PR #72, once
+  `git rev-list --count origin/main..<tip>` was 0 for each. Nothing on the spike
+  branch was unique except its throwaway `serving/` edits, which A3 forbids
+  merging — its findings live in `docs/d14_spike.md`,
+  `docs/upstream_issues/llmservingsim-trace-column-overflow.md`,
+  `outputs/d14/evidence/` and D28.
 - **`docs/nodes/a5000.md` is thin and says so** — written from committed artifacts,
   not from the node. Fill it in from `scripts/whichnode.sh` when next on that
   machine.
@@ -301,9 +348,13 @@ Recorded because they are not discoverable from the code.
   same file compares a burst against a spread arrival process; the difference lands
   entirely in TTFT. That is D19. Use `outputs/envcheck/rngd20_burst.jsonl` on the
   simulator side.
-- **`python -m serving` shells out to a bare `python -m chakra`**, so the venv must
-  be on `PATH`, not merely invoked by full path:
-  `export PYTHONPATH=$PWD && export PATH="$PWD/.venv/bin:$PATH"`.
+- **The Chakra converter no longer cares about `PATH` — it cares which venv you
+  launch.** Until D27 `python -m serving` shelled out to a bare `python -m chakra`,
+  so the venv had to be *on* `PATH` and not merely invoked by full path; that is
+  what D23 turned out to be. Since D27 the frontend converts in-process, so there
+  is no second interpreter to resolve and no `PATH` export to forget — but a venv
+  without a chakra at `protobuf>=7.35.1` now raises at the first conversion instead
+  of silently converting wrongly.
 - **Run a multi-hour sweep detached** (`setsid`/`nohup`/`tmux`), not as a job owned
   by an interactive session. One was killed 30 minutes into its second fixture and
   lost 84 completed simulations.
