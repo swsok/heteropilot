@@ -25,7 +25,7 @@
 **Gates at this commit**, on the NPU node in `.venv`:
 
 ```
-pytest -q     653 passed in 86.64s          # A40 node, 2026-09-11
+pytest -q     668 passed in 151.15s         # NPU node, 2026-09-11
 ruff check .  All checks passed!
 mypy          Success: no issues found in 38 source files
 ```
@@ -190,11 +190,12 @@ three lines instead of four is a *failed* anchor, not an agreeing one, and
 `anchors.log` beside it is what says which.
 
 **The one-sentence state of the science:** the planner can now price its own
-predictor and finds a crossover on the RPS axis — and since 2026-09-11 **nine of
-sixteen E6 cells rest on a measured accuracy domain**, up from one, with every
-winner unchanged (§2.2). Of the seven that do not, five need a per-PE RNGD
-domain and two rest on an A40 prefill leg at served concurrency 0.499, which no
-bench can hold.
+predictor and finds a crossover on the RPS axis — and since 2026-09-11 **thirteen
+of sixteen E6 cells rest on a measured accuracy domain**, up from one, with every
+winner unchanged except the one the new domain rejects (§2.2, §2.3). Of the three
+that do not, two rest on an A40 prefill leg at served concurrency 0.499 — costly
+to measure, not impossible — and one runs at an RNGD concurrency of 139.4, above
+anything the hardware envelope reaches.
 
 Not delivered, deliberately: a third E6 fixture. The work order names
 `pd-rngd-gpu-card`, `pd-rngd-gpu` and "STEP 2's asymmetric fixture", but
@@ -234,9 +235,11 @@ below the domain's new floor of 4.043. **This is closable and an earlier draft o
 this section said it was not** — see the correction in
 `experiments/results/e6_rps_sweep.md`. An open-loop point at 0.0254 rps reaches
 it: ~1.1 h per repeat at 100 requests, ~3.3 h at 300, on an otherwise idle A40.
-Expensive, not impossible. The five `unknown` cells are the ones that genuinely
+Expensive, not impossible. ~~The five `unknown` cells are the ones that genuinely
 cannot be reached from an NVIDIA node — they need a per-PE RNGD accuracy domain,
-which needs the NPU node.
+which needs the NPU node.~~ **Wrong on the second half, corrected 2026-09-11:**
+they could not be reached from an NVIDIA node, but the per-PE domain needed no
+node at all — §2.3.
 
 **A method correction came out of it — `docs/deviations.md` D32.** The simulator
 side must run the same number of requests as the hardware. At the script's
@@ -306,7 +309,64 @@ closed-loop run at its first point.
 
 </details>
 
-### 2.3 ATOM layerwise bundle (D20) — **needs the NPU node**, and probably the vendor
+### 2.3 The per-PE RNGD accuracy domain — **DONE 2026-09-11, and it needed no device**
+
+**Closed, and the closure is a result.** `profiles/calibration/rngd_perpe.yaml`
+is nine points from served concurrency 1.832 to 79.028. Write-up:
+`experiments/results/rngd_perpe_accuracy_domain.md`.
+
+**The premise this section used to rest on was wrong.** §2.2 and `docs/CLAIMS.md`
+said the five `unknown` cells "need a per-PE RNGD domain, which needs the NPU
+node". Per-PE and card are not two devices — they are two *simulator models* of
+one physical card at TP=8, which is what
+`experiments/results/rngd_card_vs_pe_model.md` does when it fits both to a single
+real furiosa-llm run. So the measured curve was already committed (the RNGD-CARD
+envelope, nine points, 1.00 to 107.2) and only the **simulator** side under the
+per-PE fixture was missing. That is `python -m serving`, and it runs on any node.
+
+The old recipe could not be used. RNGD-CARD and A40 offered each envelope point's
+arrival rate to both sides and checked they landed at the same served
+concurrency; here the model is slow enough to back up — at the rate that puts the
+hardware at 1.00 it sits at 1.83 — so every point fails the ±20 % guard.
+`lowload_sim_error.py --match served` pairs against the measured curve
+interpolated at the *simulator's own* served concurrency, which is also the axis
+`planner/util/operating_point.py` indexes the domain by.
+
+| | |
+| --- | --- |
+| error sign | **pessimistic at every load** — so the one-sided margin charges it nothing |
+| magnitude | +63.16 % at served 1.832 → +26.34 % at 19.885 → +32.70 % at 79.028 |
+| cells `unknown` → `measured` | **4** (at conc 19.634 and 73.679), plans unchanged |
+| cells whose winner changed | **1** |
+
+**The one that changed is the point.** E6's per-PE winner at 10 rps is
+`agg[furiosa:tp8]` at **4.956 tok/J** — D22's retracted headline reproduced
+exactly. Its leg runs at served concurrency 139.4, above the 79.03 the domain
+reaches, so `widen_error_bars` charges 42.12 %: 48.355 × 1.4212 = 68.7 ms against
+a 50 ms p99 TPOT SLO. Re-ranked, the winner is `agg[cuda:tp4]` at 2.595 tok/J,
+validity `measured`. The planner now rejects the headline on its own calibration.
+
+The other four cells were **not** re-simulated and do not need to be: their
+margin is 0, and a margin can only inflate a predicted TPOT, so it removes
+candidates and never promotes one — with the recommended plan untouched the
+ranking cannot move. That argument is load-bearing because of the next trap.
+
+**Trap: the replay cache does not cost seconds.** `outputs/e6_rerun_cache_backup/
+README.md`, D32 and PR #74 all say re-ranking under a changed domain is "a replay
+costing seconds". The cache stores only the simulations that **succeeded**; every
+candidate that dies in the KV allocator is re-run every time, and there are 114 of
+those per point at 10 rps and **291** at 1 rps. Measured: the 10 rps row replayed
+in 2.7 min (243 of 357 from cache); the 1 rps row was still going after 10 min
+against 150 min originally. Read it as *minutes to hours*. All three documents
+now carry the correction.
+
+**What remains, and it needs the NPU node or nothing.** The 10 rps cell's 139.4
+is above the hardware envelope's own ceiling (107.2, `pool_binding_above`), so no
+simulated point up there can be given a measured reference at all. Extending the
+domain would need the card measured above 107.2, which the envelope says is
+pool-bound. This is a real ceiling, not pending work.
+
+### 2.4 ATOM layerwise bundle (D20) — **needs the NPU node**, and probably the vendor
 
 Unchanged. Host I/O exceeds the kernels and the device tracer's `.pb` schema is
 undocumented, so no bundle ships and ATOM stays out of candidate generation and
@@ -314,7 +374,7 @@ Exp 4. Memory and power *are* measured. Resolution paths, in order of expected
 effort: the trace schema from Rebellions; a torch backend registering device
 `rbln`; a llama entry in vllm-rbln's native model registry.
 
-### 2.4 A surrogate that can rank P/D — **any node** (simulation only)
+### 2.5 A surrogate that can rank P/D — **any node** (simulation only)
 
 **D30.** `--top-k` is currently unusable on any P/D or heterogeneous corpus, so
 E6 ran without it. The cause is structural: the roofline proxy's tok/J is
@@ -329,7 +389,7 @@ retracted. Any replacement needs its regret measured across all three corpora
 before it is switched on; `exp_surrogate.py --cache-dir --rankers` replays them
 without re-simulating.
 
-### 2.5 The rest of the tight-TTFT and asymmetric-P/D story — **any node**
+### 2.6 The rest of the tight-TTFT and asymmetric-P/D story — **any node**
 
 D23 and D14 are **closed** (D26 and D28 respectively); what remains is narrower:
 
@@ -345,7 +405,7 @@ D23 and D14 are **closed** (D26 and D28 respectively); what remains is narrower:
   in E6 is the best of what evaluated. Reconciling the two memory models is
   D10-adjacent and unstarted.
 
-### 2.6 Smaller, any node
+### 2.7 Smaller, any node
 
 - **PR #13** (`docs/slide-deck-ko`) — dispositioned by the consolidation sprint's
   STEP 4.3; see that PR for what was decided.

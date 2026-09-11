@@ -147,11 +147,23 @@ out to be right, which is a stronger result than the labels alone.
 
 Seven cells still are not measured, and neither group is waiting on effort:
 
-  - **five are `unknown`** on the per-PE `pd-rngd-gpu` fixture, whose RNGD rows
-    carry margin **0.00 %** for want of any domain at all — including a 4.956
-    tok/J at 10 rps, which is D22's retracted headline reproduced exactly and is
-    **not** rehabilitated by appearing here. Only a per-PE RNGD domain fixes
-    these, and that needs the NPU node.
+  - ~~**five are `unknown`**~~ **CLOSED 2026-09-11.** They were `unknown` on the
+    per-PE `pd-rngd-gpu` fixture, whose RNGD rows carried margin **0.00 %** for
+    want of any domain at all. `profiles/calibration/rngd_perpe.yaml` now exists
+    and **needed no NPU access** — per-PE and card are two simulator models of one
+    physical card at TP=8, so the measured curve was already committed and only
+    the simulated side was missing
+    (`experiments/results/rngd_perpe_accuracy_domain.md`). Four cells become
+    `measured` with plans unchanged: the model is *pessimistic* at every measured
+    load, +63 % at served 1.83 falling to +26 % at 19.9, and the one-sided margin
+    charges a conservative predictor nothing. **The fifth — the 4.956 tok/J cell
+    at 10 rps, D22's retracted headline reproduced exactly — is now rejected by
+    the planner**: its leg runs at served concurrency 139.4 against a domain
+    measured to 79.03, earns a 42.12 % margin, and 48.355 × 1.4212 = 68.7 ms
+    fails the 50 ms TPOT SLO. That cell's winner is `agg[cuda:tp4]` at 2.595
+    tok/J. The retraction in §3 is unaffected and is now made by the pipeline as
+    well as by hand; the new domain covers **TPOT only** and says nothing about
+    the energy axis in either direction.
   - **two are `extrapolated`** on the card fixture at 3.3 rps, whose winner's A40
     leg is a *prefill role at served concurrency 0.499*, below the domain's floor
     of 4.043. These are **not yet measured** rather than unmeasurable: an

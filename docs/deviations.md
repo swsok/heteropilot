@@ -2096,7 +2096,25 @@ this file appearing.
 
 ---
 
-## D32 — a 20-request simulation is not at the same operating point as a 300-request measurement · Open (measured on A40, RNGD side unchecked)
+## D32 — a 20-request simulation is not at the same operating point as a 300-request measurement · Open (measured on A40 and on the RNGD per-PE fixture; the two discarded CARD points remain untested)
+
+> **Update 2026-09-11 — the RNGD half is no longer unchecked.** Building the
+> per-PE accuracy domain ran the same sweep both ways on RNGD hardware's
+> simulated counterpart. At the two top low-load points the 20-request runs
+> report served concurrency **10.82 and 10.92**; at 300 requests the same
+> points report **19.47 and 19.88** — a factor of 1.8, with nothing physical
+> between the columns. At 0.9 rps a 20-request run spans 22 s against a ~20 s
+> mean latency, so the drain tail is half the wall: the A40's −31.7 % is worth
+> −45 % here. Every point in `profiles/calibration/rngd_perpe.yaml` is from the
+> 300-request runs, and `outputs/perpe_lowload_shape/` keeps the 20-request
+> sweep as the evidence. Write-up:
+> `experiments/results/rngd_perpe_accuracy_domain.md`.
+>
+> **What this still does not settle** is the part below about the two points
+> `rngd_card_edf.yaml` discards at "40 % below the hardware". Those are on the
+> CARD fixture and were not re-run. The artifact is now shown to be large
+> enough to explain them, which removes the last reason to doubt the
+> suspicion — it does not replace the measurement.
 
 **What the code does.** `experiments/scripts/lowload_sim_error.py` compares the
 simulator against a measured envelope point by offering the same arrival rate to

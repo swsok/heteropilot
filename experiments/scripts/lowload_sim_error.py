@@ -47,7 +47,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from planner.perf_envelope import load_envelope  # noqa: E402
+from planner.perf_envelope import EnvelopeError, load_envelope  # noqa: E402
 from planner.util.percentile import percentile  # noqa: E402
 
 #: Defaults, not constants. Keeping them here means the RNGD invocation in
@@ -95,6 +95,67 @@ def write_trace(out: Path, dataset: Path, rps: float, n: int) -> Path:
     return out
 
 
+def score(env, raw: dict, match: str) -> dict:
+    """Pair one simulated run with the measured curve and score its TPOT error.
+
+    There are two defensible pairings and which one is right depends on how
+    wrong the model is.
+
+    `offered` compares against the envelope point whose arrival rate was
+    offered, so both sides sit at the same OFFERED load, and the +/-20 % guard
+    then checks that they also landed at the same SERVED one. If they did not,
+    the simulator's TPOT belongs to a different operating point and the pair is
+    refused rather than reported. The RNGD-CARD and A40 domains were built this
+    way and the guard passed there (gaps -0.8 % to -19 %).
+
+    `served` compares against the measured curve INTERPOLATED at the simulator's
+    own served concurrency. It is needed when the model is wrong enough that
+    matching the offered rate cannot also match the operating point: the per-PE
+    RNGD fixture sits at served 1.86 where the hardware sits at 1.00, so
+    `offered` refuses the point and measures nothing. This pairing also asks the
+    question the accuracy domain is indexed by -- `planner/util/operating_point.py`
+    keys it on the concurrency the SIMULATION reports, not on the one the
+    hardware would have reached -- and it charges the model for its TPOT error
+    alone instead of summing that with its throughput error.
+
+    Either way the x axis of the resulting domain point is `conc_sim`.
+    """
+    conc_gap = ((raw["conc_sim"] - raw["conc_measured"])
+                / raw["conc_measured"] * 100)
+    out = {
+        "conc_measured": raw["conc_measured"], "conc_sim": raw["conc_sim"],
+        "conc_gap_pct": conc_gap, "offered_rps": raw["offered_rps"],
+        "tpot_measured_ms": raw["tpot_measured_ms"],
+        "tpot_sim_ms": raw["tpot_sim_ms"],
+    }
+    refused = None
+    if match == "offered":
+        ref: float | None = raw["tpot_measured_ms"]
+        comparable = abs(conc_gap) <= 20.0
+    else:
+        try:
+            ref = env.metric_at(raw["conc_sim"], "tpot_p50")
+        except EnvelopeError as exc:
+            # `extrapolation: refuse` reaching up through the envelope. A sim
+            # operating point outside the measured range has no reference TPOT
+            # and inventing one is what the policy exists to prevent.
+            ref, refused = None, str(exc)
+        if ref is None and refused is None:
+            refused = "tpot_p50 is unmeasured at an end of the bracketing interval"
+        comparable = ref is not None
+    out["tpot_err_pct"] = (None if not ref
+                           else (raw["tpot_sim_ms"] - ref) / ref * 100)
+    out["requests"] = raw["requests"]
+    out["rc"] = raw["rc"]
+    out["comparable"] = comparable
+    if match != "offered":
+        out["tpot_ref_ms"] = ref
+        out["match"] = match
+        if refused:
+            out["refused"] = refused
+    return out
+
+
 def sim_metrics(csv: Path) -> dict:
     """Served concurrency (Little's law) and TPOT p50 from the simulator CSV."""
     lines = csv.read_text().splitlines()
@@ -120,6 +181,39 @@ def sim_metrics(csv: Path) -> dict:
     }
 
 
+def _write(args, results: list[dict]) -> None:
+    (args.out / "lowload_sim_error.json").write_text(
+        json.dumps(results, indent=2) + "\n")
+    # Beside it, not inside it: `e6b_measured_curve.py` reads the file above as a
+    # bare list, and now that the inputs vary the artifact has to say which device
+    # it describes -- an A40 file and an RNGD one are otherwise indistinguishable.
+    run = {
+        "envelope": _arg_path(args.envelope),
+        "cluster": _arg_path(args.cluster),
+        "dataset": _arg_path(args.dataset),
+        "num_reqs": args.num_reqs,
+        "max_conc": args.max_conc,
+        **({"min_conc": args.min_conc} if args.min_conc else {}),
+        "run_prefix": args.run_prefix,
+        "compared_metric": "tpot_p50",
+        "note": "TPOT only. The bench side is closed-loop and the simulator "
+                "replays an arrival process, so TTFT is not comparable (D19).",
+    }
+    # Only when it is not the default, so a re-run of a committed invocation
+    # writes the same run.json it wrote before.
+    if args.match != "offered":
+        run["match"] = args.match
+        run["match_note"] = (
+            "tpot_err_pct is against the measured curve interpolated at the "
+            "SIMULATOR's served concurrency, not against the envelope point whose "
+            "rate was offered. See score() in this script."
+        )
+    if args.from_raw:
+        run["rescored_from"] = _arg_path(args.from_raw)
+    (args.out / "run.json").write_text(json.dumps(run, indent=2) + "\n")
+    print(f"\nwrote {args.out/'lowload_sim_error.json'}", file=sys.stderr)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -131,9 +225,24 @@ def main() -> int:
     ap.add_argument("--timeout", type=float, default=5400)
     ap.add_argument("--max-conc", type=float, default=20.0,
                     help="only the envelope points at or below this concurrency")
+    ap.add_argument("--min-conc", type=float, default=0.0,
+                    help="and at or above this one. Extending a sweep upwards "
+                         "costs a re-run of everything below it otherwise, which "
+                         "on the per-PE fixture was 1 h 52 m of settled results.")
     ap.add_argument("--run-prefix", default="lowload",
                     help="--run-id prefix, so two devices' runs cannot collide in "
                          "one ASTRA-Sim input root")
+    ap.add_argument("--match", choices=("offered", "served"), default="offered",
+                    help="how a simulated run is paired with the measured curve; "
+                         "see score(). The default is what the committed RNGD and "
+                         "A40 invocations were built with, so they still run "
+                         "verbatim.")
+    ap.add_argument("--from-raw", type=Path, default=None,
+                    help="re-score a previous run's lowload_sim_error.json instead "
+                         "of simulating. The pairing is arithmetic on facts the "
+                         "artifact already records, so changing --match costs "
+                         "nothing and re-running the simulator to get it would be "
+                         "hours of compute for the same answer.")
     args = ap.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
 
@@ -154,9 +263,26 @@ def main() -> int:
             f"sit at different loads. Pass the measured dataset."
         )
 
+    if args.from_raw:
+        prior = json.loads(args.from_raw.read_text())
+        # A record without `conc_sim` is a failed run, kept verbatim: it has no
+        # facts to re-score and dropping it would silently shorten the sweep.
+        results = [score(env, r, args.match) if "conc_sim" in r else r
+                   for r in prior]
+        for r in results:
+            if "conc_sim" not in r:
+                continue
+            err = r["tpot_err_pct"]
+            print(f"  sim conc {r['conc_sim']:.2f}: tpot {r['tpot_sim_ms']:.2f} vs "
+                  f"{r['tpot_ref_ms'] if r.get('tpot_ref_ms') else r['tpot_measured_ms']}"
+                  f"  err {'refused' if err is None else f'{err:+.2f}%'}",
+                  file=sys.stderr)
+        _write(args, results)
+        return 0
+
     results = []
     for pt in env.points:
-        if pt.conc > args.max_conc or pt.tpot_p50 is None:
+        if not (args.min_conc <= pt.conc <= args.max_conc) or pt.tpot_p50 is None:
             continue
         rps = pt.tput_tok_s / mean_out
         tag = f"c{pt.conc}".replace(".", "p")
@@ -186,36 +312,21 @@ def main() -> int:
             print(f"    exit {rc}", file=sys.stderr)
             continue
         m = sim_metrics(csv)
-        err = (m["tpot_p50_ms"] - pt.tpot_p50) / pt.tpot_p50 * 100
-        conc_gap = (m["served_conc"] - pt.conc) / pt.conc * 100
-        results.append({
+        rec = score(env, {
             "conc_measured": pt.conc, "conc_sim": m["served_conc"],
-            "conc_gap_pct": conc_gap, "offered_rps": rps,
-            "tpot_measured_ms": pt.tpot_p50, "tpot_sim_ms": m["tpot_p50_ms"],
-            "tpot_err_pct": err, "requests": m["n"], "rc": rc,
-            "comparable": abs(conc_gap) <= 20.0,
-        })
-        print(f"    sim served {m['served_conc']:.2f} (gap {conc_gap:+.1f}%)  "
-              f"tpot {m['tpot_p50_ms']:.2f} vs {pt.tpot_p50:.2f}  err {err:+.2f}%",
+            "offered_rps": rps, "tpot_measured_ms": pt.tpot_p50,
+            "tpot_sim_ms": m["tpot_p50_ms"], "requests": m["n"], "rc": rc,
+        }, args.match)
+        results.append(rec)
+        ref = rec.get("tpot_ref_ms") or pt.tpot_p50
+        err = rec["tpot_err_pct"]
+        print(f"    sim served {m['served_conc']:.2f} "
+              f"(gap {rec['conc_gap_pct']:+.1f}%)  "
+              f"tpot {m['tpot_p50_ms']:.2f} vs {ref:.2f}  "
+              f"err {'refused' if err is None else f'{err:+.2f}%'}",
               file=sys.stderr)
 
-    (args.out / "lowload_sim_error.json").write_text(
-        json.dumps(results, indent=2) + "\n")
-    # Beside it, not inside it: `e6b_measured_curve.py` reads the file above as a
-    # bare list, and now that the inputs vary the artifact has to say which device
-    # it describes -- an A40 file and an RNGD one are otherwise indistinguishable.
-    (args.out / "run.json").write_text(json.dumps({
-        "envelope": _arg_path(args.envelope),
-        "cluster": _arg_path(args.cluster),
-        "dataset": _arg_path(args.dataset),
-        "num_reqs": args.num_reqs,
-        "max_conc": args.max_conc,
-        "run_prefix": args.run_prefix,
-        "compared_metric": "tpot_p50",
-        "note": "TPOT only. The bench side is closed-loop and the simulator "
-                "replays an arrival process, so TTFT is not comparable (D19).",
-    }, indent=2) + "\n")
-    print(f"\nwrote {args.out/'lowload_sim_error.json'}", file=sys.stderr)
+    _write(args, results)
     return 0
 
 
