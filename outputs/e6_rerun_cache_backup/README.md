@@ -18,10 +18,15 @@ costs **13.6 h** (4.18 h + 9.39 h measured, on 64 cores).
 > per point at 10 rps and **291** at 1 rps. Measured: the 10 rps row replayed in
 > **2.7 minutes** with 243 of 357 served from cache; the 1 rps row was still
 > simulating after 10 minutes, against 150 minutes for its original run. Read the
-> claim as *minutes to hours, not seconds*. A full eight-row re-rank of one
-> fixture is a multi-hour job, which is why
+> claim as *seconds to hours, depending on how complete the corpus is*. Both ends
+> were measured on 2026-09-11 while re-ranking the card fixture
+> (`experiments/results/d32_card_recheck.md`): the 3.3 rps rows, where the cache
+> covered **318 of 318** candidates, replayed in **0.0 min**; the 1 rps rows, where
+> 36 and 34 candidates still had to be simulated and fail, took **44.3** and
+> **30.0 min**, because a failure at a low arrival rate is a long simulated span
+> before it fails. A full eight-row re-rank of one fixture came to **1.26 h**.
 > `experiments/results/rngd_perpe_accuracy_domain.md` re-ranked one cell and
-> argued the other four could not move.
+> argued the other four could not move for the same reason.
 
 787 entries, 217 KB compressed. Restore with:
 

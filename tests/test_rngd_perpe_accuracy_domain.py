@@ -134,7 +134,7 @@ def test_it_did_not_disturb_the_card_domain(rngd):
     error in a new place."""
     domains = load_accuracy_domains(ROOT)
     card = domains["RNGD-CARD"]
-    assert card.conc_min == 1.09 and card.conc_max == 76.0
+    assert card.conc_min == 1.020 and card.conc_max == 76.0
     assert card.tpot_error_at(16.6) == pytest.approx(-3.1, abs=0.01)
     # Pessimistic per-PE against optimistic card at a concurrency both cover.
     assert rngd.tpot_error_at(16.6) > 0 > card.tpot_error_at(16.6)

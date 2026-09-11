@@ -1,0 +1,124 @@
+{
+  "service": "examples/service_specs/llama31-8b.yaml",
+  "cluster": "experiments/configs/clusters/pd-rngd-gpu-card.yaml",
+  "num_requests": 300,
+  "seed": 42,
+  "islands": [
+    {
+      "id": "furiosa-rngd-card-node_rngd0",
+      "backend": "furiosa",
+      "size": 1
+    },
+    {
+      "id": "furiosa-rngd-card-node_rngd1",
+      "backend": "furiosa",
+      "size": 1
+    },
+    {
+      "id": "cuda-a40-node_a40a",
+      "backend": "cuda",
+      "size": 4
+    },
+    {
+      "id": "cuda-a40-node_a40b",
+      "backend": "cuda",
+      "size": 4
+    }
+  ],
+  "sweep": [
+    {
+      "rps": 3.3,
+      "wall_seconds": 0.1,
+      "knob_policy": "fixed@10rps",
+      "ttft_slo_max_ms": 64000.0,
+      "feasible": true,
+      "generated": 528,
+      "evaluated": 318,
+      "rejected_summary": {
+        "slo_violated": 102
+      },
+      "cache_hits": 318,
+      "recommended": {
+        "plan_id": "hp-00192",
+        "arch": "pd_split",
+        "backend_mix": "P[cuda:tp1] D[furiosa:tp1]",
+        "accelerators": 2,
+        "tokens_per_joule": 1.8329493087557605,
+        "slo_goodput_rps": 2.6967478808860115,
+        "p99_ttft_ms": 620.251328806923,
+        "p99_tpot_ms": 32.64730248,
+        "average_power_w": 935.7139639639645,
+        "slo_attainment": 1.0
+      },
+      "reason": "",
+      "validity": "extrapolated",
+      "applied_tpot_margin_pct": 11.675182873256974,
+      "margin_source": "accuracy_domain",
+      "operating_point": [
+        {
+          "hardware": "A40",
+          "concurrency": 0.49915257456166784,
+          "phase": "prefill",
+          "tpot_error_pct": 0.1127318103967912,
+          "ttft_error_pct": -19.451950512418513,
+          "in_calibration_domain": false
+        },
+        {
+          "hardware": "RNGD-CARD",
+          "concurrency": 54.16434228505749,
+          "phase": "decode",
+          "tpot_error_pct": -11.675182873256974,
+          "ttft_error_pct": null,
+          "in_calibration_domain": true
+        }
+      ]
+    },
+    {
+      "rps": 3.3,
+      "wall_seconds": 0.1,
+      "knob_policy": "fixed@10rps",
+      "ttft_slo_max_ms": 8000.0,
+      "feasible": true,
+      "generated": 528,
+      "evaluated": 318,
+      "rejected_summary": {
+        "slo_violated": 111
+      },
+      "cache_hits": 318,
+      "recommended": {
+        "plan_id": "hp-00192",
+        "arch": "pd_split",
+        "backend_mix": "P[cuda:tp1] D[furiosa:tp1]",
+        "accelerators": 2,
+        "tokens_per_joule": 1.8329493087557605,
+        "slo_goodput_rps": 2.6967478808860115,
+        "p99_ttft_ms": 620.251328806923,
+        "p99_tpot_ms": 32.64730248,
+        "average_power_w": 935.7139639639645,
+        "slo_attainment": 1.0
+      },
+      "reason": "",
+      "validity": "extrapolated",
+      "applied_tpot_margin_pct": 11.675182873256974,
+      "margin_source": "accuracy_domain",
+      "operating_point": [
+        {
+          "hardware": "A40",
+          "concurrency": 0.49915257456166784,
+          "phase": "prefill",
+          "tpot_error_pct": 0.1127318103967912,
+          "ttft_error_pct": -19.451950512418513,
+          "in_calibration_domain": false
+        },
+        {
+          "hardware": "RNGD-CARD",
+          "concurrency": 54.16434228505749,
+          "phase": "decode",
+          "tpot_error_pct": -11.675182873256974,
+          "ttft_error_pct": null,
+          "in_calibration_domain": true
+        }
+      ]
+    }
+  ]
+}

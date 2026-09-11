@@ -25,7 +25,7 @@
 **Gates at this commit**, on the NPU node in `.venv`:
 
 ```
-pytest -q     679 passed in 145.62s         # NPU node, 2026-09-11
+pytest -q     681 passed in 183.17s         # NPU node, 2026-09-11
 ruff check .  All checks passed!
 mypy          Success: no issues found in 38 source files
 ```
@@ -366,7 +366,42 @@ simulated point up there can be given a measured reference at all. Extending the
 domain would need the card measured above 107.2, which the envelope says is
 pool-bound. This is a real ceiling, not pending work.
 
-### 2.4 ATOM layerwise bundle (D20) — **needs the NPU node**, and probably the vendor
+### 2.4 D32 on the card fixture — **DONE 2026-09-11**, any node
+
+**D32 is closed.** `profiles/calibration/rngd_card_edf.yaml` is rebuilt at 300
+requests: nine points from served concurrency 1.020 to 76.0, up from six from
+1.09. Write-up: `experiments/results/d32_card_recheck.md`.
+
+**The two points the file discarded were discarded for the wrong reason.** It
+dropped them at a "40 % below the hardware" gap it attributed to throughput
+error. Changing only `--num-reqs` from 20 to 300 moves them to **−3.1 %** and
+**−2.4 %**; the gap was the drain tail. Their error changes sign too, −1.22 /
+−1.97 % to +3.26 / +2.47 %, so readmitting them **removes** a margin near c15
+rather than adding one.
+
+**The split D32 asked for is measured.** Above 29.3 the artifact stops explaining
+everything: at the rates matching c59.2 and c107.2 the simulator is still −36.4 %
+and −58.5 % low at 300 requests, having moved 2.9× and 3.3×. Those stay refused.
+The residual is the card model's real throughput ceiling — it saturates near
+served 44 and 35 ms TPOT where the card reaches 107.2 and 67.88 ms.
+
+**E6 is unchanged: 0 of 8 card rows moved**, every winner and tok/J identical,
+margins 3.05 → 2.88 % and 12.52 → 11.68 %.
+
+**The lesson worth carrying is why that had to be re-run.** A margin that RISES
+can only remove candidates, so if the recommended plan survives the ranking
+cannot move — that is how §2.3 avoided re-ranking four cells. A margin that
+FALLS readmits candidates, and three did flip to feasible here. Check the
+direction before reusing the argument.
+
+**And the "replay costs seconds" claim now has both ends measured.** With the
+corpus covering every candidate (3.3 rps, 318/318) a row really does replay in
+**seconds**; the cost is entirely the candidates that die in the simulator and are
+never cached — 36 of them at 1 rps cost **44 minutes**, because a failure at a low
+arrival rate is a long simulated span before it fails. Whole eight-row re-rank:
+1.26 h.
+
+### 2.5 ATOM layerwise bundle (D20) — **needs the NPU node**, and probably the vendor
 
 Unchanged. Host I/O exceeds the kernels and the device tracer's `.pb` schema is
 undocumented, so no bundle ships and ATOM stays out of candidate generation and
@@ -374,7 +409,7 @@ Exp 4. Memory and power *are* measured. Resolution paths, in order of expected
 effort: the trace schema from Rebellions; a torch backend registering device
 `rbln`; a llama entry in vllm-rbln's native model registry.
 
-### 2.5 A surrogate that can rank P/D — **MOSTLY DONE 2026-09-11**, any node
+### 2.6 A surrogate that can rank P/D — **MOSTLY DONE 2026-09-11**, any node
 
 **D30 is resolved for K≥20.** `plan --surrogate` now defaults to
 `BinnedRooflineRanker`. Write-up: `docs/surrogate_topk_regret.md`.
@@ -418,7 +453,7 @@ sorted last — four rates silently mixed into one ranking. That is now refused,
 and `--cache-rps` resolves such a corpus properly through the planner's own cache
 key.
 
-### 2.6 The rest of the tight-TTFT and asymmetric-P/D story — **any node**
+### 2.7 The rest of the tight-TTFT and asymmetric-P/D story — **any node**
 
 D23 and D14 are **closed** (D26 and D28 respectively); what remains is narrower:
 
@@ -434,7 +469,7 @@ D23 and D14 are **closed** (D26 and D28 respectively); what remains is narrower:
   in E6 is the best of what evaluated. Reconciling the two memory models is
   D10-adjacent and unstarted.
 
-### 2.7 Smaller, any node
+### 2.8 Smaller, any node
 
 - **PR #13** (`docs/slide-deck-ko`) — dispositioned by the consolidation sprint's
   STEP 4.3; see that PR for what was decided.

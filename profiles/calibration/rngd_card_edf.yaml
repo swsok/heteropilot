@@ -46,33 +46,58 @@ hardware:
       #
       # The x axis is the operating point AS COMPUTED FROM THE SIMULATION
       # (planner/util/operating_point.py), because that is what the planner knows
-      # when it consults this table.
+      # when it consults this table. Pairing is `--match offered`: the envelope
+      # point's own arrival rate is offered to both sides and the +/-20 % guard
+      # then checks they landed at the same served concurrency. Every point below
+      # passes that guard.
       #
-      # The four low-load points were measured 2026-09-09 against the STEP 3
-      # hardware curve (outputs/lowload_sim_error/). They carry the opposite SIGN
-      # from the high-load pair: below concurrency ~7 the simulator is
-      # PESSIMISTIC, predicting a longer TPOT than the card delivers. Before they
-      # existed, widen_error_bars extrapolated the 16.6 point downwards and
-      # produced a 4.8 % optimistic-side margin at concurrency 10 -- the wrong
-      # sign as well as the wrong size. Measuring replaced a guess that was
-      # backwards.
+      # Sign: (sim - measured) / measured. Negative TPOT = the simulator is
+      # optimistic, which is the direction that produced the D22 retraction.
       #
-      # Two further points were run and are NOT here. At offered rates matching
-      # the measured c15.3 and c15.59 the simulator settled at served concurrency
-      # 9.1 and 9.3 -- 40 % below the hardware -- so its TPOT is a different
-      # operating point's TPOT and the pair is not comparable. That divergence is
-      # itself the throughput error the 76 point records; both runs are kept in
-      # the raw artifact with `comparable: false`.
+      # REBUILT 2026-09-11 AT 300 REQUESTS -- deviations D32. The six low-load
+      # points were previously taken at `lowload_sim_error.py`'s 20-request
+      # default, and two of them were DISCARDED at a 40 % concurrency gap that
+      # this file attributed to throughput error. That attribution was wrong. At
+      # 300 requests, changing nothing else, the same two points land at -3.1 %
+      # and -2.4 %: the gap was the drain-tail artifact D32 measured at -31.7 %
+      # on the A40, and both points are now comparable and included. Their error
+      # also changes SIGN, from -1.22 / -1.97 % to +3.26 / +2.47 %, which matters
+      # because only a negative error earns a margin.
+      #
+      #   16.6  the concurrency the EDF-rebuilt bundle was fitted at
+      #         (PROJECT_REPORT §4.8.4: TPOT -3.1 %, was +25.7 % before the rebuild)
+      #   76    interpolated from the c64/c128 envelope points to the load the card
+      #         fixture's winner implies (experiments/results/rngd_concurrency_envelope.md:
+      #         throughput 1.31x optimistic, TPOT 18 % optimistic)
+      #
+      # Both anchors are kept and neither was re-measured here. 25.181 is new and
+      # is the first MEASURED point between them -- the 16.6-to-76 interval had
+      # nothing in it, and 76 is itself an interpolation. It lands at -3.28 %
+      # against the EDF anchor's -3.1 % at a different concurrency and by a
+      # different method, which is a cross-check rather than a fit.
       points:
-        - {conc: 1.09, tpot_err_pct: 3.88, note: "20-req sim at 0.0967 rps vs measured c1.0"}
-        - {conc: 2.19, tpot_err_pct: 11.71, note: "20-req sim at 0.1687 rps vs measured c1.99"}
-        - {conc: 3.92, tpot_err_pct: 11.56, note: "20-req sim at 0.3079 rps vs measured c3.98"}
-        - {conc: 6.41, tpot_err_pct: 6.37, note: "20-req sim at 0.5468 rps vs measured c7.88"}
-        - {conc: 16.6, tpot_err_pct: -3.1, tput_err_pct: -3.1, note: "EDF-rebuilt bundle fit, PROJECT_REPORT §4.8.4"}
-        - {conc: 76.0, tpot_err_pct: -18.0, tput_err_pct: 31.0, note: "interpolated c64/c128, rngd_concurrency_envelope.md"}
+        - {conc: 1.020, tpot_err_pct: 2.25, note: "300-req sim at 0.0967 rps vs measured c1.0; conc gap +2.0%"}
+        - {conc: 2.194, tpot_err_pct: 11.00, note: "300-req sim at 0.1687 rps vs measured c1.99; conc gap +10.3%"}
+        - {conc: 4.311, tpot_err_pct: 10.79, note: "300-req sim at 0.3079 rps vs measured c3.98; conc gap +8.3%"}
+        - {conc: 8.211, tpot_err_pct: 7.33, note: "300-req sim at 0.5468 rps vs measured c7.88; conc gap +4.2%"}
+        - {conc: 14.832, tpot_err_pct: 3.26, note: "300-req sim at 0.8978 rps vs measured c15.3; conc gap -3.1%. DISCARDED before D32 at a -40.2% gap on a 20-req run"}
+        - {conc: 15.212, tpot_err_pct: 2.47, note: "300-req sim at 0.9168 rps vs measured c15.59; conc gap -2.4%. DISCARDED before D32 at a -40.6% gap on a 20-req run"}
+        - {conc: 16.6, tpot_err_pct: -3.1, tput_err_pct: -3.1, note: "EDF-rebuilt bundle fit, PROJECT_REPORT §4.8.4. Not re-measured here"}
+        - {conc: 25.181, tpot_err_pct: -3.28, note: "300-req sim at 1.3925 rps vs measured c29.3; conc gap -14.1%. First measured point between the two anchors"}
+        - {conc: 76.0, tpot_err_pct: -18.0, tput_err_pct: 31.0, note: "interpolated c64/c128, rngd_concurrency_envelope.md. Not re-measured here"}
       note: >
-        Measured from served concurrency 1.09 to 76. Above and below that,
-        widen_error_bars extrapolates and the margin grows with distance.
+        Measured from served concurrency 1.020 to 76. The error falls
+        monotonically from +11 % at c2.2 to -18 % at c76, crossing zero between
+        15.212 and 16.6 -- so the one-sided margin charges nothing below about
+        16 and grows above it. Two envelope points above 29.3 are NOT here and
+        must not be added: at the rates matching measured c59.2 and c107.2 the
+        simulator settles at served 37.67 and 44.47 even at 300 requests, gaps of
+        -36.4 % and -58.5 %, so its TPOT is a different operating point's TPOT.
+        That residual is the card model's real throughput ceiling -- it saturates
+        near 44 served where the hardware reaches 107 -- and is exactly what the
+        20-request runs could not separate from the drain tail. Above and below
+        the measured range, widen_error_bars extrapolates and the margin grows
+        with distance.
 provenance:
   fitted_from:
     RNGD-CARD:

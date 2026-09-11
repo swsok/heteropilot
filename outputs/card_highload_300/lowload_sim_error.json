@@ -1,0 +1,38 @@
+[
+  {
+    "conc_measured": 29.3,
+    "conc_sim": 25.180728421100746,
+    "conc_gap_pct": -14.058947368256844,
+    "offered_rps": 1.3924690809336255,
+    "tpot_measured_ms": 31.18,
+    "tpot_sim_ms": 30.157721000000002,
+    "tpot_err_pct": -3.2786369467607357,
+    "requests": 300,
+    "rc": 0,
+    "comparable": true
+  },
+  {
+    "conc_measured": 59.2,
+    "conc_sim": 37.66716719741484,
+    "conc_gap_pct": -36.373028382745204,
+    "offered_rps": 1.9570581293773275,
+    "tpot_measured_ms": 44.54,
+    "tpot_sim_ms": 33.327901,
+    "tpot_err_pct": -25.173100583744954,
+    "requests": 300,
+    "rc": 0,
+    "comparable": false
+  },
+  {
+    "conc_measured": 107.2,
+    "conc_sim": 44.47077785089424,
+    "conc_gap_pct": -58.51606543759866,
+    "offered_rps": 2.257896430706043,
+    "tpot_measured_ms": 67.88,
+    "tpot_sim_ms": 34.897927499999994,
+    "tpot_err_pct": -48.58879272245139,
+    "requests": 300,
+    "rc": 0,
+    "comparable": false
+  }
+]

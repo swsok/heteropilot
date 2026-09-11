@@ -2132,7 +2132,41 @@ this file appearing.
 
 ---
 
-## D32 — a 20-request simulation is not at the same operating point as a 300-request measurement · Open (measured on A40 and on the RNGD per-PE fixture; the two discarded CARD points remain untested)
+## D32 — a 20-request simulation is not at the same operating point as a 300-request measurement · Resolved 2026-09-11
+
+> **Closed on the card fixture too, and the suspicion was right.** This entry
+> ended by noting that `rngd_card_edf.yaml` discards two points at a "40 %
+> below the hardware" gap it attributes to throughput error, that a -40 % gap
+> is also the signature of the tail artifact, and that **the split between
+> them has not been measured**. It is now.
+>
+> Same rates, same trace, only `--num-reqs` 20 -> 300: the two discarded
+> points move from **-40.2 % and -40.6 %** to **-3.1 % and -2.4 %**. They were
+> discarded for the wrong reason and are back in the domain. Their TPOT error
+> also changes SIGN, -1.22 / -1.97 % to +3.26 / +2.47 %, and only a negative
+> error earns a margin -- so readmitting them REMOVES a margin near served
+> concurrency 15 rather than adding one.
+>
+> **The artifact is not the whole story above 29.3, and that is the other half
+> of the split.** At the rates matching measured c59.2 and c107.2 the
+> simulator still sits **-36.4 %** and **-58.5 %** low at 300 requests, having
+> moved 2.9x and 3.3x from its 20-request values. Those two stay refused. The
+> residual is the card model's real throughput ceiling: it saturates near
+> served 44 and 35 ms TPOT where the hardware reaches 107.2 and 67.88 ms. So
+> the answer is artifact-only at 29.3 and artifact-plus-ceiling above it.
+>
+> The domain is rebuilt at 300 requests, nine points from 1.020 to 76.0,
+> including a new **25.181** -- the first measured point between the 16.6 and
+> 76.0 anchors, an interval that previously held nothing and whose upper end is
+> itself an interpolation. It reads -3.28 % against the EDF anchor's -3.1 % by
+> a different method.
+>
+> **All eight E6 card rows were re-ranked and none changed** -- every winner
+> and every tok/J identical to full precision, margins 3.05 -> 2.88 % and
+> 12.52 -> 11.68 %. The re-rank was necessary rather than precautionary: a
+> FALLING margin readmits candidates, so the argument used for the per-PE
+> domain does not apply, and three candidates did flip to feasible.
+> `experiments/results/d32_card_recheck.md`.
 
 > **Update 2026-09-11 — the RNGD half is no longer unchecked.** Building the
 > per-PE accuracy domain ran the same sweep both ways on RNGD hardware's
