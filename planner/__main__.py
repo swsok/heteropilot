@@ -163,6 +163,7 @@ def cmd_inspect_cluster(args: argparse.Namespace) -> int:
 #: in output that must not change.
 _UNCERTAINTY_FIELDS: tuple[tuple[str, str], ...] = (
     ("p50_ttft_ms", "served_concurrency"),   # PredictedMetrics
+    ("p50_ttft_ms", "served_concurrency_per_island"),
     ("plan_id", "margin_basis"),             # DeploymentPlan
 )
 
@@ -183,6 +184,8 @@ def _strip_uncertainty_fields(node: object) -> None:
 def _write_output(output: PlannerOutput, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     data = output.model_dump(mode="json")
+    if output.measurement_plan is None:
+        data.pop("measurement_plan", None)
     if output.uncertain_inputs is None:
         # Dropped rather than emitted as `uncertain_inputs: null`. The dump has
         # no exclude_none (other optional fields DO appear as null and the
@@ -255,11 +258,48 @@ def _build_uncertainty(args, spec, cluster, profiles, islands, provenance):
     if override is not None:
         provenance["uncertainty"]["bucket_override"] = override
 
+    from planner.util.tier import resolve_variant
+
     policy = AccuracyDomainMargin(
-        domains, shape=shape, calibration=calibration, bucket=bucket,
+        domains, shape=shape,
+        model=spec.model,
+        variant=resolve_variant(spec.service.dtype, spec.service.kv_cache_dtype),
+        calibration=calibration, bucket=bucket,
         ttft_floor=args.ttft_margin_percent, tpot_floor=args.tpot_margin_percent,
     )
     return domains, policy, registry
+
+
+def _attach_measurement_plan(
+    output, registry, margin_policy, spec, cluster, islands, profiles, evaluation,
+    candidates, args,
+) -> None:
+    """Sweep every uncertain input and attach the ranked measurement plan (B3).
+
+    Uses the evaluation `search` already produced - the metrics AS JUDGED, after
+    `apply_pd_transfer_cost`, for every candidate including the rejected ones,
+    and each candidate's recorded operating point. Re-running
+    `evaluate_candidates` here would be wasteful with a cache and would
+    RE-SIMULATE without one.
+    """
+    from planner.optimizer.exhaustive import _profile_tiers
+    from planner.uncertainty import measurement_plan as mplan
+    from planner.uncertainty.grades import load_costs
+    from planner.uncertainty.perturb import PerturbContext, judged_metrics
+    from planner.uncertainty.sensitivity import analyze
+
+    by_id = {i.id: i for i in islands}
+    _tiers, island_hw, _warnings = _profile_tiers(spec, islands, profiles)
+    sensitivities = analyze(
+        output, registry, judged_metrics(evaluation), margin_policy, spec,
+        PerturbContext.build(spec, cluster, by_id, {c.id: c for c in candidates},
+                             evaluation.operating_points),
+        island_hw,
+        grid=args.grid, slo_penalty=args.slo_penalty, provenance=output.provenance,
+    )
+    output.measurement_plan = mplan.build(
+        sensitivities, load_costs(), budget_hours=args.budget_hours
+    )
 
 
 def _load_envelopes(
@@ -375,6 +415,12 @@ def _plan_once(args: argparse.Namespace, return_output: bool = False):
     if args.oracle and args.top_k is not None:
         print("error: --oracle simulates everything; --top-k is a heuristic subset - "
               "they are mutually exclusive", file=sys.stderr)
+        return 1
+    if args.measurement_plan and args.accuracy_domain is None:
+        print("error: --measurement-plan needs --accuracy-domain: a measurement plan "
+              "ranks uncertain inputs by the regret they remove, and without the "
+              "accuracy domain there is no margin policy to compute it against",
+              file=sys.stderr)
         return 1
     if args.calibration_bucket and args.accuracy_domain is None:
         print("error: --calibration-bucket only means something with --accuracy-domain",
@@ -494,6 +540,12 @@ def _plan_once(args: argparse.Namespace, return_output: bool = False):
         "ttft": args.ttft_margin_percent, "tpot": args.tpot_margin_percent,
     }
 
+    captured: dict[str, object] = {}
+
+    def _capture(evaluation, candidates) -> None:
+        captured["evaluation"] = evaluation
+        captured["candidates"] = candidates
+
     try:
         runner = exhaustive.oracle if args.oracle else exhaustive.search
         output = runner(
@@ -512,9 +564,15 @@ def _plan_once(args: argparse.Namespace, return_output: bool = False):
             max_workers=args.workers,
             provenance=provenance,
             progress=progress,
+            on_evaluation=_capture,
         )
         if registry is not None:
             output.uncertain_inputs = registry
+        if args.measurement_plan and registry is not None and "evaluation" in captured:
+            _attach_measurement_plan(
+                output, registry, margin_policy, spec, cluster, islands, profiles,
+                captured["evaluation"], captured["candidates"], args,
+            )
     finally:
         predictor.close()
 
@@ -665,7 +723,18 @@ def cmd_fit_accuracy_domain(args: argparse.Namespace) -> int:
     if args.service and args.shape:
         print("error: give at most one of --service and --shape", file=sys.stderr)
         return 1
-    shape = workload_shape(load_service_spec(args.service)) if args.service else (args.shape or "")
+    scope_model = args.model or ""
+    scope_variant = args.dtype or ""
+    shape = args.shape or ""
+    if args.service:
+        from planner.util.tier import resolve_variant
+
+        service = load_service_spec(args.service)
+        shape = workload_shape(service)
+        scope_model = args.model or service.model
+        scope_variant = resolve_variant(
+            args.dtype or service.service.dtype, service.service.kv_cache_dtype
+        )
     if shape and not is_canonical_shape(shape):
         print(f"error: --shape {shape!r} is not a canonical shape; it must look like "
               f"'in_lt1024-out_ge512'", file=sys.stderr)
@@ -753,6 +822,8 @@ def cmd_fit_accuracy_domain(args: argparse.Namespace) -> int:
         source=args.source,
         note=args.note,
         workload_shape=shape,
+        model=scope_model,
+        variant=scope_variant,
         arrival_process=args.arrival_process,
     )
     model.hardware[args.hardware] = cal
@@ -763,6 +834,8 @@ def cmd_fit_accuracy_domain(args: argparse.Namespace) -> int:
         "concurrency": "served, sum(latency)/wall of the REAL run (D22)",
         "metrics_recorded": args.metric,
         "shape": shape or None,
+        "model": scope_model or None,
+        "variant": scope_variant or None,
         "arrival_process": args.arrival_process,
         "error_convention": (
             "(sim - real) / real * 100 over write_summary's stat rows; negative = "
@@ -773,9 +846,9 @@ def cmd_fit_accuracy_domain(args: argparse.Namespace) -> int:
     save_calibration(model, out)
     lo, hi = points[0].conc, points[-1].conc
     print(f"\nwrote {out}")
+    scope = ", ".join(x for x in (shape, scope_model, scope_variant) if x) or "unscoped"
     print(f"  {args.hardware}: {len(points)} point(s), domain [{lo:.4g}, {hi:.4g}], "
-          f"outside_domain={args.outside_domain}"
-          + (f", shape {shape}" if shape else ", unscoped"))
+          f"outside_domain={args.outside_domain}, scope: {scope}")
     if len(points) == 1:
         print("  NOTE: one point is a domain of zero width - every other concurrency "
               "is unmeasured under `refuse`. Add points before relying on this.")
@@ -953,6 +1026,119 @@ def cmd_stop(args: argparse.Namespace) -> int:
 
 # --------------------------------------------------------------------------
 
+def cmd_measure_apply(args: argparse.Namespace) -> int:
+    """Fold a measurement back in and re-plan (§2.8, STEP B3).
+
+    Absolute rule A3 governs the whole command: a measured artefact under
+    `profiles/` is read-only. Every write goes to a COPY beside the original -
+    `<name>.measured.yaml` - and the re-plan reads the copy. Nothing here can
+    destroy the input it was given.
+
+    A `sim_error` measurement is an `AccuracyPoint` - the simulator's signed
+    error, `(sim - measured) / measured * 100`, at a served concurrency - added
+    to the hardware's `accuracy_domain` (created under `refuse` when the
+    calibration has none).
+    """
+    import subprocess
+
+    from planner.predictor.calibration import (
+        AccuracyDomain,
+        AccuracyPoint,
+        HardwareCalibration,
+        load_calibration,
+        save_calibration,
+    )
+
+    plan_path = Path(args.plan)
+    if not plan_path.is_file():
+        print(f"error: no plan at {plan_path}", file=sys.stderr)
+        return 1
+    yaml.safe_load(plan_path.read_text())   # a PlannerOutput; only its existence matters
+
+    kind = args.input.split(":", 1)[0]
+    written: list[Path] = []
+
+    if kind in ("link_bw", "link_lat"):
+        source = Path(args.cluster) if args.cluster else None
+        if source is None:
+            print("error: --cluster is needed to apply a link measurement",
+                  file=sys.stderr)
+            return 1
+        target = source.with_suffix(".measured.yaml")
+        raw = yaml.safe_load(source.read_text())
+        link_id = args.input.split(":", 1)[1]
+        field = "bandwidth_gbps" if kind == "link_bw" else "latency_ns"
+        hit = False
+        for link in raw.get("links", []):
+            if link.get("id") == link_id:
+                link[field] = args.value
+                link["source"] = args.source
+                hit = True
+        if not hit:
+            print(f"error: no link {link_id!r} in {source}", file=sys.stderr)
+            return 1
+        target.write_text(yaml.safe_dump(raw, sort_keys=False))
+        written.append(target)
+
+    elif kind == "sim_error":
+        if not args.calibration:
+            print("error: --calibration is needed to apply a sim_error measurement",
+                  file=sys.stderr)
+            return 1
+        if args.concurrency is None:
+            print("error: --concurrency is needed: an operating point is an error AT a "
+                  "served concurrency, and one without it cannot be placed",
+                  file=sys.stderr)
+            return 1
+        source = Path(args.calibration)
+        target = source.with_suffix(".measured.yaml")
+        model = load_calibration(source)
+        hardware = args.input.split(":", 1)[1].split("/", 1)[0]
+        cal = model.hardware.get(hardware)
+        if cal is None:
+            print(f"error: {source} has no calibration for {hardware}", file=sys.stderr)
+            return 1
+        point = AccuracyPoint(
+            conc=args.concurrency, tpot_err_pct=args.value,
+            note=args.evidence or f"measure-apply {args.input}",
+        )
+        if cal.accuracy_domain is None:
+            domain = AccuracyDomain(fitted_at_concurrency=args.concurrency, points=[point])
+        else:
+            if any(abs(p.conc - point.conc) < 1e-9 for p in cal.accuracy_domain.points):
+                print(f"error: {hardware} already carries a point at served concurrency "
+                      f"{point.conc:.4g}; a domain cannot hold two errors for one "
+                      f"operating point", file=sys.stderr)
+                return 1
+            domain = cal.accuracy_domain.model_copy(update={
+                "points": sorted([*cal.accuracy_domain.points, point], key=lambda p: p.conc),
+            })
+        model.hardware[hardware] = HardwareCalibration(
+            **{**cal.model_dump(), "accuracy_domain": domain.model_dump()}
+        )
+        save_calibration(model, target)
+        written.append(target)
+
+    else:
+        print(f"error: measure-apply does not know how to apply a {kind!r} measurement "
+              f"yet; link_bw, link_lat and sim_error are supported", file=sys.stderr)
+        return 1
+
+    print("wrote (originals untouched, absolute rule A3):")
+    for path in written:
+        print(f"  {path}")
+
+    if args.no_replan:
+        return 0
+    if not args.replan_command:
+        print("\nno --replan-command given; re-run `plan` against the copy above "
+              "with the same --cache-dir to reuse every simulation that did not change")
+        return 0
+    print(f"\nre-planning: {args.replan_command}")
+    completed = subprocess.run(args.replan_command, shell=True, check=False)
+    return completed.returncode
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m planner",
@@ -1015,6 +1201,24 @@ def build_parser() -> argparse.ArgumentParser:
                            "capped 32). Each candidate is an isolated subprocess, so this "
                            "only speeds the search up - the result is byte-identical. Use "
                            "--workers 1 to force sequential.")
+    plan.add_argument("--measurement-plan", action="store_true",
+                      help="Also emit what to measure next and what it buys (uncertainty "
+                           "work order §2.5): each uncertain input swept across its "
+                           "sourced range, ranked by regret removed per hour. Requires "
+                           "--accuracy-domain.")
+    plan.add_argument("--budget-hours", type=float, default=None,
+                      help="Measurement budget for --measurement-plan. Items that do "
+                           "not fit are listed separately, keeping the rank they "
+                           "would have had.")
+    plan.add_argument("--grid", type=int, default=5,
+                      help="Grid points per uncertain input (§2.5 default 5: lo, "
+                           "lo+w/4, nominal, hi-w/4, hi).")
+    plan.add_argument("--slo-penalty", type=float, default=None,
+                      help="Objective cost of one unit of SLO overshoot when the "
+                           "current recommendation stops being feasible at a grid "
+                           "point. Default: the largest objective value observed "
+                           "across the sweep. Recorded in provenance - it dominates "
+                           "the ranking.")
     plan.add_argument("--quiet", action="store_true")
     plan.add_argument("--accuracy-domain", nargs="*", metavar="CALIBRATION_YAML",
                       default=None,
@@ -1070,6 +1274,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="The shape directly, instead of --service. Omit both for a domain that "
              "applies to any workload on this hardware.")
     fit_domain.add_argument(
+        "--model", default=None,
+        help="Model the SIMULATOR predicted, to scope the domain. Defaults to the "
+             "spec's with --service; give it when the real side ran a mirror or "
+             "vendor build of the same architecture - the scope names what was "
+             "simulated. Omit for an unscoped domain.")
+    fit_domain.add_argument(
+        "--dtype", default=None,
+        help="Precision to scope the domain (resolved to a variant such as bf16). "
+             "Defaults to the spec's with --service.")
+    fit_domain.add_argument(
         "--arrival-process", choices=["open_loop", "closed_loop", "unknown"],
         default="unknown",
         help="How load was offered when the REAL side was measured. `closed_loop` (a "
@@ -1101,6 +1315,34 @@ def build_parser() -> argparse.ArgumentParser:
     fit_domain.add_argument("--overwrite", action="store_true",
                             help="allow --out to replace an existing file")
     fit_domain.set_defaults(func=cmd_fit_accuracy_domain)
+
+    measure = sub.add_parser(
+        "measure-apply",
+        help="Fold a measurement back into a COPY of its spec and re-plan (§2.8).",
+    )
+    measure.add_argument("--plan", required=True, help="a PlannerOutput YAML")
+    measure.add_argument("--input", required=True, metavar="INPUT_ID",
+                         help="registry id, e.g. link_bw:fabric-rngd0-a40a")
+    measure.add_argument("--value", required=True, type=float,
+                         help="the measured value: GB/s or ns for a link; for sim_error "
+                              "the simulator's signed TPOT error in percent, "
+                              "(sim - measured) / measured * 100, negative = optimistic")
+    measure.add_argument("--source", default="measured",
+                         choices=["measured", "vendor_spec", "user_defined"])
+    measure.add_argument("--cluster", default=None,
+                         help="cluster YAML for a link measurement; a copy is written")
+    measure.add_argument("--calibration", default=None,
+                         help="calibration YAML for a sim_error measurement; a copy "
+                              "is written")
+    measure.add_argument("--concurrency", type=float, default=None,
+                         help="served concurrency the sim_error was measured at")
+    measure.add_argument("--evidence", default=None,
+                         help="what the number came from; stored as the point's note")
+    measure.add_argument("--replan-command", default=None,
+                         help="shell command to re-run afterwards, normally the same "
+                              "`plan` invocation with the copy and the same --cache-dir")
+    measure.add_argument("--no-replan", action="store_true")
+    measure.set_defaults(func=cmd_measure_apply)
 
     validate = sub.add_parser("validate-plan",
                               help="Re-simulate a saved plan against a specific dataset.")

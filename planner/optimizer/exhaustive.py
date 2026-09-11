@@ -12,6 +12,7 @@ never prune an achievable configuration (§9).
 
 from __future__ import annotations
 
+import enum
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
@@ -36,6 +37,7 @@ from planner.plan import (
     RejectionStage,
     Role,
     RoutingPolicy,
+    ScoredPlan,
     ServingArch,
     UnscoredPlan,
     summarize_rejections,
@@ -106,6 +108,11 @@ class SearchResult:
     #: measurement would settle the strongest of them.
     unmeasured: list[tuple[str, MarginDecision]] = field(default_factory=list)
     unmeasured_metrics: dict[str, PredictedMetrics] = field(default_factory=dict)
+    #: candidate id -> the run's per-hardware operating point (`SimResult.
+    #: operating_point`), for every candidate that produced metrics. Stage B
+    #: re-judges perturbed metrics through the same margin policy, and the
+    #: policy reads the operating point off the run, not off the metrics.
+    operating_points: dict[str, dict] = field(default_factory=dict)
 
 
 def _plan_id(index: int) -> str:
@@ -185,7 +192,9 @@ def apply_pd_transfer_cost(
     )
 
     def _xfer_ms(prompt_tokens: int) -> float:
-        return latency_ns / 1e6 + (kv_per_token * prompt_tokens / (bw_gbps * 1e9)) * 1e3
+        return kv_transfer.transfer_ms(
+            kv_per_token * prompt_tokens, bandwidth_gbps=bw_gbps, latency_ns=latency_ns
+        )
 
     tok = spec.traffic.input_tokens
     p50_tok = tok.p50
@@ -467,6 +476,7 @@ def evaluate_candidates(
         # 76, where the simulator is 3.1 % and 18 % optimistic respectively; the
         # policy reads it off the run, and when a manual floor is also given the
         # LARGER wins, because a floor is an explicit instruction not to go below.
+        result.operating_points[candidate.id] = dict(sim.operating_point)
         decision = policy.decide(candidate, sim, metrics, hw_labels)
         for _hw, _conc in decision.extrapolated.items():
             _extrapolated.setdefault(_hw, []).append(_conc)
@@ -474,23 +484,6 @@ def evaluate_candidates(
             _no_domain[_hw] = _no_domain.get(_hw, 0) + 1
         if decision.unreadable:
             _unreadable += 1
-        if decision.is_unmeasured:
-            # No verdict is possible, so none is given. Deliberately BEFORE the
-            # SLO check and never added to infeasible_plans: an undecidable
-            # candidate must not surface as `closest_plan`, which is a claim
-            # about how narrowly something missed. Charged to the same epistemic
-            # stage as a slab3d refusal (D33): unmeasured, not infeasible.
-            result.unmeasured.append((candidate.id, decision))
-            result.unmeasured_metrics[candidate.id] = metrics
-            result.rejections.append(
-                Rejection(
-                    candidate_id=candidate.id,
-                    stage=RejectionStage.OUTSIDE_CALIBRATION_DOMAIN,
-                    reason=f"unmeasured: {decision.basis}",
-                )
-            )
-            continue
-
         plan = DeploymentPlan(
             plan_id=_plan_id(index),
             model=spec.model,
@@ -503,18 +496,28 @@ def evaluate_candidates(
             margin_source=decision.source,
             margin_basis=decision.basis if basis_recorded else None,
         )
-        if cached:
+        judgement = judge(plan, spec, decision)
+        if judgement.report is not None:
+            result.notes.extend(judgement.report.notes)
+        if cached and judgement.verdict is not Verdict.UNMEASURED:
             result.cache_hits.append(candidate.id)
 
-        report = feasibility.evaluate(
-            plan,
-            spec,
-            ttft_margin_percent=decision.ttft_percent,
-            tpot_margin_percent=decision.tpot_percent,
-        )
-        result.notes.extend(report.notes)
-
-        if report.passed:
+        if judgement.verdict is Verdict.UNMEASURED:
+            # No verdict is possible, so none is given, and never added to
+            # infeasible_plans: an undecidable candidate must not surface as
+            # `closest_plan`, which is a claim about how narrowly something
+            # missed. Charged to the same epistemic stage as a slab3d refusal
+            # (D33): unmeasured, not infeasible.
+            result.unmeasured.append((candidate.id, decision))
+            result.unmeasured_metrics[candidate.id] = metrics
+            result.rejections.append(
+                Rejection(
+                    candidate_id=candidate.id,
+                    stage=RejectionStage.OUTSIDE_CALIBRATION_DOMAIN,
+                    reason=judgement.reason,
+                )
+            )
+        elif judgement.verdict is Verdict.FEASIBLE:
             if decision.unmeasured_metrics:
                 # It PASSED, but a metric it owns has no measured margin here (a
                 # TPOT-only domain, D19). A margin only ever inflates, so any
@@ -526,15 +529,13 @@ def evaluate_candidates(
                     _partial[_m] = _partial.get(_m, 0) + 1
             result.feasible_plans.append(plan)
         else:
-            result.infeasible_plans.append((plan, report))
+            assert judgement.report is not None
+            result.infeasible_plans.append((plan, judgement.report))
             result.rejections.append(
                 Rejection(
                     candidate_id=candidate.id,
-                    stage=report.stage or RejectionStage.SLO_VIOLATED,
-                    reason="; ".join(
-                        f"{v.metric}={v.predicted:.1f} vs target {v.target:.1f}"
-                        for v in report.violations
-                    ),
+                    stage=judgement.report.stage or RejectionStage.SLO_VIOLATED,
+                    reason=judgement.reason,
                 )
             )
     for _hw, _concs in sorted(_extrapolated.items()):
@@ -762,6 +763,115 @@ def _islands_of_plans(plans) -> set[str]:
     return out
 
 
+class Verdict(str, enum.Enum):
+    """What one candidate's evidence supports, once a margin has been decided."""
+
+    FEASIBLE = "feasible"
+    #: No verdict is possible. Never an infeasibility - see `judge`.
+    UNMEASURED = "unmeasured"
+    REJECTED = "rejected"
+
+
+@dataclass(frozen=True)
+class Judgement:
+    verdict: Verdict
+    reason: str
+    #: None only when the margin decision made the SLO check pointless.
+    report: feasibility.FeasibilityReport | None = None
+
+
+def judge(
+    plan: DeploymentPlan, spec: ServiceSpec, decision: MarginDecision
+) -> Judgement:
+    """Turn (plan, margin decision) into a verdict. Pure.
+
+    Extracted so STEP B2 can re-judge a perturbed metric set through the same
+    rule that produced the original recommendation: a sensitivity analysis run
+    against a COPY of this rule would report flips that came from the copy.
+
+    The rule (uncertainty §2.4.2 as amended by D33):
+      1. nothing could be margined at all -> UNMEASURED, before the SLO check is
+         even run, and never entered as an infeasibility: an undecidable
+         candidate must not surface as `closest_plan`, which is a claim about
+         how narrowly something missed;
+      2. otherwise the feasibility report decides. A pass that rests on a metric
+         with no measured margin is still a pass - a margin only ever inflates,
+         so any violation is real whatever the coverage - and the caller carries
+         the gap as a caveat (`decision.unmeasured_metrics`).
+    """
+    if decision.is_unmeasured:
+        return Judgement(Verdict.UNMEASURED, f"unmeasured: {decision.basis}")
+
+    report = feasibility.evaluate(
+        plan, spec,
+        ttft_margin_percent=decision.ttft_percent,
+        tpot_margin_percent=decision.tpot_percent,
+    )
+    if report.passed:
+        return Judgement(Verdict.FEASIBLE, "", report)
+    return Judgement(
+        Verdict.REJECTED,
+        "; ".join(
+            f"{v.metric}={v.predicted:.1f} vs target {v.target:.1f}"
+            for v in report.violations
+        ),
+        report,
+    )
+
+
+@dataclass(frozen=True)
+class RankedPlans:
+    """The outcome of ranking one set of feasible plans.
+
+    Extracted from `search` so Stage B can re-rank a perturbed metric set
+    through exactly the code that produced the original recommendation (§2.5
+    forbids duplicating it). `best` is None when nothing was scorable, which is
+    the same condition `search` used to express with `if scorable:`.
+    """
+
+    best: ScoredPlan | None
+    alternatives: list[ScoredPlan] = field(default_factory=list)
+    unscored: list[UnscoredPlan] = field(default_factory=list)
+
+
+def rank_plans(feasible: list[DeploymentPlan], spec: ServiceSpec) -> RankedPlans:
+    """Rank feasible plans into (recommendation, alternatives, unscorable).
+
+    Pure: it reads plans and the spec's objectives and returns new objects.
+    """
+    # Split before ranking: a plan the objective cannot score must be surfaced,
+    # not sorted to the bottom where it silently disappears.
+    scorable: list[DeploymentPlan] = []
+    unscored: list[UnscoredPlan] = []
+    for plan in feasible:
+        ok, why = pareto.can_score(plan, spec.objective.primary)
+        (scorable.append(plan) if ok else unscored.append(UnscoredPlan(plan=plan, reason=why)))
+
+    if not scorable:
+        return RankedPlans(best=None, alternatives=[], unscored=unscored)
+
+    ranked = pareto.rank(scorable, spec.objective.primary, spec.objective.secondary)
+    front_ids = {p.plan_id for p in pareto.frontier(scorable)}
+    scored_by_plan_id = {s.plan.plan_id: s for s in ranked}
+
+    # Collapse identical outcomes across the recommendation *and* the
+    # alternatives. Grouping only within the alternatives would still leave
+    # an "alternative" that predicts exactly what the recommendation does,
+    # which is the opposite of an alternative. Ranked order is preserved, so
+    # the first group's representative is still the best plan.
+    shown = [ranked[0]] + [s for s in ranked[1:] if s.plan.plan_id in front_ids]
+    collapsed = pareto.collapse_equivalent([s.plan for s in shown])
+
+    best = scored_by_plan_id[collapsed[0][0].plan_id].model_copy(
+        update={"equivalent_candidates": collapsed[0][1]}
+    )
+    alternatives = [
+        scored_by_plan_id[rep.plan_id].model_copy(update={"equivalent_candidates": dupes})
+        for rep, dupes in collapsed[1:]
+    ]
+    return RankedPlans(best=best, alternatives=alternatives, unscored=unscored)
+
+
 def search(
     spec: ServiceSpec,
     cluster: ClusterSpecV2,
@@ -786,8 +896,17 @@ def search(
     max_workers: int | None = None,
     provenance: dict | None = None,
     progress: Callable[[int, int, CandidateConfig], None] | None = None,
+    on_evaluation: Callable[[SearchResult, list[CandidateConfig]], None] | None = None,
 ) -> PlannerOutput:
-    """Generate, simulate, filter, rank. `enable_bound_pruning=False` is oracle mode."""
+    """Generate, simulate, filter, rank. `enable_bound_pruning=False` is oracle mode.
+
+    `on_evaluation` hands the caller the raw `SearchResult` and the candidate list
+    the moment they exist. STEP B3's measurement plan needs the metrics AS JUDGED
+    - after `apply_pd_transfer_cost` - for every candidate including the rejected
+    ones, and `PlannerOutput` carries only the survivors. Without this the caller
+    has to run `evaluate_candidates` a second time, which is both wasteful and a
+    trap: with no cache it would RE-SIMULATE.
+    """
     generator = CandidateGenerator(
         spec,
         cluster,
@@ -872,6 +991,8 @@ def search(
         max_workers=max_workers,
         progress=progress,
     )
+    if on_evaluation is not None:
+        on_evaluation(evaluation, candidates)
 
     all_rejections = (generation.rejections + envelope_rejections
                       + surrogate_rejections + evaluation.rejections)
@@ -927,36 +1048,11 @@ def search(
             "candidates": evaluation.pd_transfers,
         }
 
-    # Split before ranking: a plan the objective cannot score must be surfaced,
-    # not sorted to the bottom where it silently disappears.
-    scorable: list[DeploymentPlan] = []
-    unscored: list[UnscoredPlan] = []
-    for plan in evaluation.feasible_plans:
-        ok, why = pareto.can_score(plan, spec.objective.primary)
-        (scorable.append(plan) if ok else unscored.append(UnscoredPlan(plan=plan, reason=why)))
+    ranking = rank_plans(evaluation.feasible_plans, spec)
+    unscored = ranking.unscored
 
-    if scorable:
-        ranked = pareto.rank(scorable, spec.objective.primary, spec.objective.secondary)
-        front_ids = {p.plan_id for p in pareto.frontier(scorable)}
-        scored_by_plan_id = {s.plan.plan_id: s for s in ranked}
-
-        # Collapse identical outcomes across the recommendation *and* the
-        # alternatives. Grouping only within the alternatives would still leave
-        # an "alternative" that predicts exactly what the recommendation does,
-        # which is the opposite of an alternative. Ranked order is preserved, so
-        # the first group's representative is still the best plan.
-        shown = [ranked[0]] + [s for s in ranked[1:] if s.plan.plan_id in front_ids]
-        collapsed = pareto.collapse_equivalent([s.plan for s in shown])
-
-        best = scored_by_plan_id[collapsed[0][0].plan_id].model_copy(
-            update={"equivalent_candidates": collapsed[0][1]}
-        )
-        alternatives = [
-            scored_by_plan_id[rep.plan_id].model_copy(
-                update={"equivalent_candidates": dupes}
-            )
-            for rep, dupes in collapsed[1:]
-        ]
+    if ranking.best is not None:
+        best, alternatives = ranking.best, ranking.alternatives
 
         # If the recommendation's KV transfer was priced on a class-default (no
         # declared link) rather than a real path, surface that prominently - it is

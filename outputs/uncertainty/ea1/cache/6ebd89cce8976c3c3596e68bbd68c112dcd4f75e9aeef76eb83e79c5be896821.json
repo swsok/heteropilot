@@ -19,18 +19,23 @@
     "p99_tpot_ms": 95.37920838,
     "p99_ttft_ms": 30292.32674493,
     "peak_power_w": 1207.76,
-    "served_concurrency": 132.04594428924483,
-    "sim_wall_seconds": 27.5,
+    "served_concurrency": 87.32314985420841,
+    "served_concurrency_per_island": {
+      "cuda-a40-node_a40a": 87.32314985420841,
+      "furiosa-rngd-card-node_rngd0": 44.722794435036434
+    },
+    "sim_wall_seconds": 27.12,
     "slo_attainment": 0.51,
     "slo_goodput_rps": 1.6365983912271276,
     "throughput_tps": 4851.358984065214,
     "tokens_per_joule": 2.065339679792298,
     "total_energy_j": 92440.0
   },
+  "metrics_schema": "44b33e454ef8d016",
   "provenance": {
-    "git_commit": "528c6f5b6a300131163599117e53e56f5ca7681e",
+    "git_commit": "a21245c82917ce38ecaf820c7bd07c0555bbb4fd",
     "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
-    "timestamp": "2026-09-10T09:03:18.944886+00:00"
+    "timestamp": "2026-09-11T02:55:07.374767+00:00"
   },
   "trace_digest": "e9dd5a8476087bdbeb6cdcfb0cfa762092abea25b417e13cd158e0bded37d540"
 }

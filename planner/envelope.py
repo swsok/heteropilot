@@ -162,6 +162,30 @@ def key_for(
     )
 
 
+def _metrics_schema_digest() -> str:
+    """Digest of `PredictedMetrics`' field set, stored inside every new entry.
+
+    An entry written before a field existed still VALIDATES - a new optional
+    field just defaults to None - so without this a schema change is served
+    silently from a stale cache. That happened (uncertainty STEP B2): E-A1
+    re-ran to byte-identical numbers off entries that predated
+    `served_concurrency_per_island`, which reads as "the change had no effect"
+    when it means "the change was never applied". An entry whose stored digest
+    differs from the running schema is a miss and re-simulates.
+
+    Stored IN the payload rather than folded into the file name so the committed
+    replay caches (`outputs/perf/topk/cache_*`, E6) keep their names and their
+    consumers keep working; an entry with no digest at all predates this and is
+    served with a warning that says so.
+    """
+    from planner.plan import PredictedMetrics
+
+    return prov.hash_object(sorted(PredictedMetrics.model_fields))[:16]
+
+
+_METRICS_SCHEMA = _metrics_schema_digest()
+
+
 class EnvelopeCache:
     """One JSON file per entry, under `root`.
 
@@ -234,17 +258,30 @@ class EnvelopeCache:
             # Unreadable entry: treat as a miss and let it be overwritten.
             self.misses += 1
             return None
+        stored_schema = payload.get("metrics_schema")
+        if stored_schema is not None and stored_schema != _METRICS_SCHEMA:
+            # Written under a different PredictedMetrics field set: a stale
+            # entry that would validate anyway. A miss, so it re-simulates.
+            self.misses += 1
+            return None
         self.hits += 1
         op = payload.get("operating_point") or {}
+        warnings = ["metrics served from the envelope cache"]
+        if stored_schema is None:
+            warnings.append(
+                "this cache entry carries no metrics-schema digest, so a field added "
+                "since it was written would read as absent rather than as stale"
+            )
+        if not op:
+            warnings.append(
+                "this cache entry predates operating-point caching, so no "
+                "accuracy-domain margin can be applied to it"
+            )
         return SimResult(
             candidate_id=candidate.id,
             outcome=SimOutcome.OK,
             metrics=metrics,
-            warnings=["metrics served from the envelope cache"] + (
-                [] if op else
-                ["this cache entry predates operating-point caching, so no "
-                 "accuracy-domain margin can be applied to it"]
-            ),
+            warnings=warnings,
             operating_point=op,
         )
 
@@ -264,6 +301,7 @@ class EnvelopeCache:
             "candidate_id": candidate.id,
             "trace_digest": self.trace_digest,
             "metrics": result.metrics.model_dump(),
+            "metrics_schema": _METRICS_SCHEMA,
             # Cached with the metrics because it is the same kind of thing: a
             # property of the run. Leaving it out meant a warm cache silently
             # dropped the accuracy-domain margin to zero (STEP 4.3).

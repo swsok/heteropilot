@@ -47,6 +47,25 @@ def _kv_bytes_per_token(model: str, dtype: str, kv_cache_dtype: str) -> int:
     return report.kv_bytes_per_token
 
 
+def transfer_ms(
+    kv_bytes: float, *, bandwidth_gbps: float, latency_ns: float
+) -> float:
+    """Wire time for `kv_bytes` over a path of this bandwidth and latency.
+
+    THE one place this arithmetic lives. `kv_transfer_cost` below and
+    `exhaustive.apply_pd_transfer_cost` both call it, and so does the LINK_BW /
+    LINK_LAT perturbation in `planner/uncertainty/perturb.py` - which is the
+    point: a perturbation that priced the transfer differently from the term it
+    perturbs would report a change the planner would never make.
+
+    An infinite bandwidth (an empty path, i.e. same endpoint) contributes no
+    transfer term, leaving only latency.
+    """
+    if bandwidth_gbps == float("inf"):
+        return latency_ns / 1e6
+    return latency_ns / 1e6 + (kv_bytes / (bandwidth_gbps * 1e9)) * 1e3
+
+
 def kv_transfer_cost(
     model: str,
     dtype: str,
@@ -71,10 +90,11 @@ def kv_transfer_cost(
 
     kv_bytes = _kv_bytes_per_token(model, dtype, kv_cache_dtype) * prompt_tokens
 
-    latency_ms = TopologyGraph.path_latency_ns(path) / 1e6
-    bw_gbps = TopologyGraph.effective_bandwidth_gbps(path)
-    # bw == inf for an empty path -> the division is 0.0, leaving only latency.
-    xfer_ms = latency_ms + (kv_bytes / (bw_gbps * 1e9)) * 1e3
+    xfer_ms = transfer_ms(
+        kv_bytes,
+        bandwidth_gbps=TopologyGraph.effective_bandwidth_gbps(path),
+        latency_ns=TopologyGraph.path_latency_ns(path),
+    )
 
     energy_per_bit_pj = sum(
         link.energy_per_bit_pj for link in path if link.energy_per_bit_pj is not None
