@@ -46,7 +46,7 @@ from planner.uncertainty.registry import (
 )
 
 if TYPE_CHECKING:
-    from planner.optimizer.margin import MarginPolicy
+    from planner.optimizer.margin import MarginDecision, MarginPolicy
     from planner.plan import PlannerOutput
     from planner.spec import ServiceSpec
 
@@ -83,6 +83,8 @@ class Sensitivity(_Strict):
     delta_regret: float | None
     grid: list[GridPoint] = Field(default_factory=list)
     approximation: bool = False
+    #: Set when --resimulate-top replaced this item's closed-form dR.
+    resimulated: bool = False
     #: Hours from costs.yaml, for B3's dR/cost ordering. None sorts last.
     cost_hours: float | None = None
     note: str = ""
@@ -140,15 +142,22 @@ def _plans_at(
     policy: MarginPolicy,
     island_hw: dict[str, str],
     sim_error_override: float | None,
-) -> tuple[list[DeploymentPlan], dict[str, DeploymentPlan]]:
-    """(feasible plans, every judged plan by candidate id) for one metric set.
+) -> tuple[list[DeploymentPlan], dict[str, DeploymentPlan], dict[str, MarginDecision]]:
+    """(feasible plans, every judged plan, the decision each was judged under).
 
     `sim_error_override` replaces the margin the policy would have derived,
     which is how a SIM_ERROR item perturbs: the prediction does not move, the
     margin does (§2.7).
+
+    The decisions come back because the caller needs the SAME one to ask how
+    badly a plan missed. Re-deriving it from the policy drops the override and
+    silently re-judges the plan under the margin it was NOT rejected with --
+    which reported `worst_overshoot` 0.0 for a plan the sweep had just found
+    infeasible, and so gave every SIM_ERROR item a regret of exactly zero.
     """
     feasible: list[DeploymentPlan] = []
     everything: dict[str, DeploymentPlan] = {}
+    decisions: dict[str, MarginDecision] = {}
     for cid in sorted(metrics):
         candidate = context.candidates.get(cid)
         if candidate is None:
@@ -172,9 +181,10 @@ def _plans_at(
             margin_source=decision.source,
         )
         everything[cid] = plan
+        decisions[cid] = decision
         if judge(plan, spec, decision).verdict is Verdict.FEASIBLE:
             feasible.append(plan)
-    return feasible, everything
+    return feasible, everything, decisions
 
 
 def _value_of(plan: DeploymentPlan, spec: ServiceSpec) -> float:
@@ -211,8 +221,31 @@ def _sweep_point(
     incumbent_id: str,
 ) -> _Swept:
     result = perturb(item, value, metrics, context)
-    feasible, plans = _plans_at(
-        result.metrics, context, spec, policy, island_hw, result.sim_error_override
+    return _swept_from(
+        value, result.metrics, result.approximation, result.sim_error_override,
+        context, spec, policy, island_hw, incumbent_id,
+    )
+
+
+def _swept_from(
+    value: float,
+    metrics: dict[str, PredictedMetrics],
+    approximation: bool,
+    sim_error_override: float | None,
+    context: PerturbContext,
+    spec: ServiceSpec,
+    policy: MarginPolicy,
+    island_hw: dict[str, str],
+    incumbent_id: str,
+) -> _Swept:
+    """Judge one already-computed metric set.
+
+    Split out of `_sweep_point` so `--resimulate-top` can score REAL predictions
+    with the same arithmetic the closed form is scored with. If the two paths
+    scored differently, E-B3 would be measuring its own harness.
+    """
+    feasible, plans, decisions = _plans_at(
+        metrics, context, spec, policy, island_hw, sim_error_override
     )
     ranking = rank_plans(feasible, spec)
     feasible_ids = {p.candidate.id for p in feasible}
@@ -230,20 +263,20 @@ def _sweep_point(
     elif incumbent.candidate.id in feasible_ids:
         incumbent_value = _value_of(incumbent, spec)
     else:
-        judgement = judge(
-            incumbent, spec,
-            policy.decide(
-                incumbent.candidate,
-                context.sim_for(incumbent.candidate.id, incumbent.predicted),
-                incumbent.predicted, island_hw,
-            ),
-        )
+        # The decision this plan was actually judged under, override included.
+        judgement = judge(incumbent, spec, decisions[incumbent.candidate.id])
         overshoot = judgement.report.worst_overshoot if judgement.report else 1.0
+        if judgement.verdict is Verdict.UNMEASURED:
+            # An undecidable plan has no "how narrowly it missed" -- `judge` says
+            # so itself when it refuses to let one surface as `closest_plan` --
+            # and a passing report's overshoot of 0.0 would price an
+            # unverifiable recommendation at no regret at all.
+            overshoot = 1.0
 
     return _Swept(
         value=value, best_plan_id=best_id, best_value=best_value,
         incumbent_value=incumbent_value, overshoot=overshoot,
-        approximation=result.approximation,
+        approximation=approximation,
         flip=bool(best_id) and best_id != incumbent_id,
         values=[_value_of(p, spec) for p in feasible],
     )
@@ -413,3 +446,119 @@ def unbounded(sensitivities: list[Sensitivity]) -> list[Sensitivity]:
 def worth_measuring(sensitivities: list[Sensitivity]) -> list[Sensitivity]:
     """§2.5: only `dR_i > 0` entries are measurement-plan candidates."""
     return [s for s in sensitivities if s.delta_regret is not None and s.delta_regret > 0]
+
+
+class Refinement(_Strict):
+    """One item's closed-form ΔR beside the ΔR real simulation gives it.
+
+    Both are computed on the two-point grid `{lo, hi}`, because that is all a
+    resimulation buys; the closed form's own five-point figure stays in
+    `Sensitivity.delta_regret` until it is replaced, and `closed_form` here is
+    the like-for-like comparison E-B3 reports.
+    """
+
+    input_id: str
+    kind: str
+    closed_form: float
+    resimulated: float
+    #: Wall seconds the two simulations took, and how many candidates they ran.
+    seconds: float = 0.0
+    simulated: int = 0
+    #: Set when this item could not be resimulated at all, with the reason.
+    skipped: str = ""
+
+
+def refine(
+    sensitivities: list[Sensitivity],
+    registry: UncertainInputRegistry,
+    resimulate,
+    metrics_by_candidate: JudgedMetrics,
+    policy: MarginPolicy,
+    spec: ServiceSpec,
+    context: PerturbContext,
+    island_hw: dict[str, str],
+    incumbent_id: str,
+    *,
+    top: int,
+    slo_penalty: float,
+) -> tuple[list[Sensitivity], list[Refinement]]:
+    """Replace the top `top` items' ΔR with one computed from real simulation.
+
+    `resimulate(item)` returns an object with `.lo` and `.hi`, each carrying
+    `.value`, `.metrics`, `.seconds` and `.simulated`; it raises to say an item
+    has no simulator input to move. Passing it in rather than importing it keeps
+    this module free of the predictor, which every one of its tests depends on.
+
+    Items are taken in the order given - already `ΔR/cost` order out of
+    `analyze` - and an item that cannot be resimulated is RECORDED and skipped
+    without consuming one of the `top` slots, because refusing to check
+    something is not the same as checking it.
+    """
+    items = {item.id: item for item in registry.items}
+    refinements: list[Refinement] = []
+    replaced: dict[str, Sensitivity] = {}
+    done = 0
+    for sensitivity in sensitivities:
+        if done >= top:
+            break
+        item = items.get(sensitivity.input_id)
+        if item is None or sensitivity.delta_regret is None:
+            continue
+        try:
+            result = resimulate(item)
+        except Exception as error:  # the reason IS the result, so it is recorded
+            refinements.append(Refinement(
+                input_id=sensitivity.input_id, kind=sensitivity.kind,
+                closed_form=sensitivity.delta_regret,
+                resimulated=sensitivity.delta_regret,
+                skipped=str(error),
+            ))
+            continue
+
+        exact_points = [
+            _swept_from(
+                endpoint.value, endpoint.metrics, False, None, context, spec,
+                policy, island_hw, incumbent_id,
+            )
+            for endpoint in (result.lo, result.hi)
+        ]
+        closed_points = [
+            _sweep_point(item, endpoint.value, metrics_by_candidate, context,
+                         spec, policy, island_hw, incumbent_id)
+            for endpoint in (result.lo, result.hi)
+        ]
+        exact = _analyze_one(item, exact_points, slo_penalty)
+        closed = _analyze_one(item, closed_points, slo_penalty)
+        refinements.append(Refinement(
+            input_id=sensitivity.input_id, kind=sensitivity.kind,
+            closed_form=closed.delta_regret or 0.0,
+            resimulated=exact.delta_regret or 0.0,
+            seconds=result.lo.seconds + result.hi.seconds,
+            simulated=result.lo.simulated + result.hi.simulated,
+        ))
+        replaced[sensitivity.input_id] = sensitivity.model_copy(update={
+            "delta_regret": exact.delta_regret,
+            "flip": exact.flip,
+            "approximation": False,
+            "resimulated": True,
+            "grid": exact.grid,
+            "note": (
+                f"{sensitivity.note} | RESIMULATED at both endpoints: closed form "
+                f"said {closed.delta_regret:,.4g}, simulation says "
+                f"{exact.delta_regret:,.4g} over {result.lo.simulated + result.hi.simulated} "
+                f"candidate run(s) in {result.lo.seconds + result.hi.seconds:.1f} s"
+            ),
+        })
+        done += 1
+
+    out = [replaced.get(s.input_id, s) for s in sensitivities]
+
+    def sort_key(s: Sensitivity) -> tuple:
+        if s.delta_regret is None:
+            return (2, 0.0, 0.0, s.input_id)
+        per_hour = s.regret_per_hour
+        if per_hour is None:
+            return (1, -s.delta_regret, 0.0, s.input_id)
+        return (0, -per_hour, -s.delta_regret, s.input_id)
+
+    return sorted(out, key=sort_key), refinements

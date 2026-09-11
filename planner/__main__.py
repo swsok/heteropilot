@@ -272,7 +272,7 @@ def _build_uncertainty(args, spec, cluster, profiles, islands, provenance):
 
 def _attach_measurement_plan(
     output, registry, margin_policy, spec, cluster, islands, profiles, evaluation,
-    candidates, args,
+    candidates, args, predictor=None,
 ) -> None:
     """Sweep every uncertain input and attach the ranked measurement plan (B3).
 
@@ -297,6 +297,15 @@ def _attach_measurement_plan(
         island_hw,
         grid=args.grid, slo_penalty=args.slo_penalty, provenance=output.provenance,
     )
+    top = getattr(args, "resimulate_top", 0) or 0
+    if top and output.recommended is not None and predictor is not None:
+        sensitivities = _resimulate_top(
+            sensitivities, registry, output, spec, cluster, by_id, profiles,
+            candidates, predictor, island_hw, judged_metrics(evaluation),
+            margin_policy, PerturbContext.build(
+                spec, cluster, by_id, {c.id: c for c in candidates}),
+            args, top,
+        )
     output.measurement_plan = mplan.build(
         sensitivities, load_costs(), budget_hours=args.budget_hours
     )
@@ -325,6 +334,39 @@ def _load_envelopes(
             if env is not None:
                 out[hw] = env
     return out
+
+
+def _resimulate_top(
+    sensitivities, registry, output, spec, cluster, by_id, profiles, candidates,
+    predictor, island_hw, metrics, margin_policy, context, args, top,
+):
+    """§2.7's escape hatch: check the top N items by actually simulating them.
+
+    Expensive on purpose - each item costs two corpus runs with the cache
+    bypassed - so it is opt-in and the provenance records what it cost as well
+    as what it changed.
+    """
+    from functools import partial
+
+    from planner.uncertainty import resimulate as resim
+    from planner.uncertainty.sensitivity import refine
+
+    runner = partial(
+        resim.resimulate, spec=spec, cluster=cluster, islands=by_id,
+        profiles=profiles, candidates=candidates, predictor=predictor,
+        island_hw=island_hw, max_workers=args.workers,
+    )
+    penalty = output.provenance.get("uncertainty", {}).get("slo_penalty", 1.0)
+    refined, records = refine(
+        sensitivities, registry, runner, metrics, margin_policy, spec, context,
+        island_hw, output.recommended.plan.candidate.id,
+        top=top, slo_penalty=penalty,
+    )
+    output.provenance.setdefault("uncertainty", {})["resimulate_top"] = {
+        "requested": top,
+        "refined": [r.model_dump() for r in records],
+    }
+    return refined
 
 def cmd_plan(args: argparse.Namespace) -> int:
     """One plan, or one per rate when --rps is given."""
@@ -415,6 +457,10 @@ def _plan_once(args: argparse.Namespace, return_output: bool = False):
     if args.oracle and args.top_k is not None:
         print("error: --oracle simulates everything; --top-k is a heuristic subset - "
               "they are mutually exclusive", file=sys.stderr)
+        return 1
+    if args.resimulate_top and not args.measurement_plan:
+        print("error: --resimulate-top refines the ranking --measurement-plan "
+              "produces; without it there is no ranking to refine", file=sys.stderr)
         return 1
     if args.measurement_plan and args.accuracy_domain is None:
         print("error: --measurement-plan needs --accuracy-domain: a measurement plan "
@@ -571,7 +617,7 @@ def _plan_once(args: argparse.Namespace, return_output: bool = False):
         if args.measurement_plan and registry is not None and "evaluation" in captured:
             _attach_measurement_plan(
                 output, registry, margin_policy, spec, cluster, islands, profiles,
-                captured["evaluation"], captured["candidates"], args,
+                captured["evaluation"], captured["candidates"], args, predictor,
             )
     finally:
         predictor.close()
@@ -1213,6 +1259,15 @@ def build_parser() -> argparse.ArgumentParser:
     plan.add_argument("--grid", type=int, default=5,
                       help="Grid points per uncertain input (§2.5 default 5: lo, "
                            "lo+w/4, nominal, hi-w/4, hi).")
+    plan.add_argument("--resimulate-top", type=int, default=0, metavar="N",
+                      help="Check the top N items of the measurement plan by "
+                           "SIMULATING both endpoints of their range instead of "
+                           "perturbing the cached prediction (§2.7). Exact where "
+                           "the closed form is first-order, and expensive: two "
+                           "full corpus runs per item, cache bypassed. An item "
+                           "with no simulator input to move - a sim_error, whose "
+                           "closed form is exact anyway - is reported as skipped "
+                           "and does not use up a slot.")
     plan.add_argument("--slo-penalty", type=float, default=None,
                       help="Objective cost of one unit of SLO overshoot when the "
                            "current recommendation stops being feasible at a grid "

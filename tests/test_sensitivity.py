@@ -463,3 +463,60 @@ def test_a_profile_earns_regret_through_energy_alone(world) -> None:
     # Nothing crossed an SLO: every grid point still has a feasible plan, so the
     # regret is the objective gap and not a penalty term.
     assert all(p.best_value > float("-inf") for p in out[0].grid)
+
+# --- SIM_ERROR: the margin moves, and the overshoot must move with it ------
+
+def test_a_sim_error_that_rejects_the_incumbent_has_positive_regret(world) -> None:
+    """Regression: the overshoot was measured under the WRONG margin.
+
+    A SIM_ERROR grid point does not change the prediction, it replaces the
+    margin (§2.7), and `_plans_at` applies that override when it judges. The
+    sweep then asked "how badly did the incumbent miss?" by re-deriving the
+    decision from the policy - WITHOUT the override - under which the incumbent
+    was still feasible and its report's `worst_overshoot` was 0.0. Every
+    SIM_ERROR item therefore came out at exactly `delta_regret == 0.0` however
+    decisively the margin rejected the plan, so a measurement plan ranked the
+    accuracy domain below inputs it had priced at zero and E-B1's `ours`
+    strategy bought two inert links before the one measurement that mattered.
+
+    Here B, the incumbent, has a TPOT p99 of 14 ms against the spec's 50 ms SLO,
+    so a margin above ~257 % rejects it; the range reaches 400 %.
+    """
+    item = _item(UncertainKind.SIM_ERROR, "sim_error:x", 0.0,
+                 Range(lo=0.0, hi=4.0, unit="fraction", source="tests"), hours=0.041)
+    out = analyze(
+        _output("B", world.spec, world.candidates, world.metrics), _registry(item),
+        world.metrics, GlobalMargin(), world.spec, world.context, world.island_hw,
+        slo_penalty=2000.0,
+    )
+    assert out[0].flip is True
+    assert out[0].delta_regret is not None and out[0].delta_regret > 0.0
+
+
+def test_an_unmeasured_incumbent_is_charged_in_full(world) -> None:
+    """No "how narrowly it missed" exists for a plan nobody can verify.
+
+    A margin decision covering only one metric makes a PASS `UNMEASURED`
+    (§2.4.2), and such a judgement still carries a report whose
+    `worst_overshoot` is 0.0 because nothing was violated. Charging that would
+    price an unverifiable recommendation at zero regret.
+    """
+    from planner.optimizer.margin import MarginDecision
+    from planner.uncertainty.sensitivity import _swept_from
+
+    class _PartialPolicy:
+        def decide(self, candidate, metrics, island_hw):
+            return MarginDecision(
+                ttft_percent=0.0, tpot_percent=0.0, status="in_domain",
+                ttft_status="unmeasured", tpot_status="in_domain",
+                unmeasured_metrics=["ttft"], concurrency=42.0, basis="test",
+            )
+
+    swept = _swept_from(
+        0.0, dict(world.metrics), False, None, world.context, world.spec,
+        _PartialPolicy(), world.island_hw, "B",
+    )
+    # B passes every constraint but only on a margined TPOT, so it is UNMEASURED
+    # and not in the feasible set - and the miss is charged a whole unit.
+    assert swept.incumbent_value is None
+    assert swept.overshoot == 1.0
