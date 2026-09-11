@@ -233,11 +233,23 @@ def test_the_backend_table_covers_exactly_the_three_vendor_specific_places():
     for backend, entry in me.BACKENDS.items():
         assert set(entry) == {"server_bin", "sampler", "bench_python"}, backend
         assert (ROOT / entry["sampler"]).exists(), entry["sampler"]
-        # A repo-relative server binary must actually be there. `vllm` is NOT on
-        # PATH -- it lives in .venv-vllm -- and a bare name meant the server
-        # never started and the whole closed-loop run died at the first point.
-        if entry["server_bin"].startswith("."):
-            assert (ROOT / entry["server_bin"]).exists(), entry["server_bin"]
+        # The bug this guards: `vllm` as a bare name resolved to nothing -- it
+        # lives in .venv-vllm, not on PATH -- so the server never started and the
+        # whole closed-loop run died at the first point. The load-bearing
+        # property is that the launcher names a path INSIDE the repo, and that
+        # holds on every node; whether that vendor's venv is installed on THIS
+        # one does not. .venv-vllm exists on the A40 node alone, so asserting its
+        # presence unconditionally made this test pass on one machine of three --
+        # the same mistake as test_there_is_no_user_site_fallback.
+        binary = entry["server_bin"]
+        if binary.startswith("."):
+            assert "/" in binary, binary          # a path, never a bare name
+            resolved = (ROOT / binary).resolve()
+            assert resolved.is_relative_to(ROOT), binary
+            assert me._server_bin(backend) == str(ROOT / binary), backend
+            # Where the venv IS installed, the file itself must be there.
+            if (ROOT / binary).parent.parent.exists():
+                assert (ROOT / binary).exists(), binary
 
 
 def test_the_furiosa_defaults_are_byte_for_byte_what_they_were():
