@@ -5,6 +5,16 @@
 > 작성일: 2026-09-09 · 작업 도구: Claude Code
 > 선행 문서: `docs/patent_review.md`, `docs/patent_future_ideas.md`, `WORK_ORDER_tiered_profiles.md`, `WORK_ORDER_pipeline_domain.md`, `docs/deviations.md` (특히 D22, D23)
 
+> **착륙 시 조정 (2026-09-11, `docs/deviations.md` D33).** 이 지시서의 §2.4 정확도 도메인은 `WORK_ORDER_rps_aware.md` STEP 4의
+> `calibration.AccuracyDomain`(PR #72–#77)과 같은 기점(`108e48a`)에서 병렬로 구현되었다. main에는 rps 쪽 곡선이 남고, 이 지시서의
+> A2–A4는 그 위에 다시 세웠다: 곡선·부호 규약(`(sim − measured)/measured × 100`, 음수 = 낙관)·yaml 위치(`HardwareCalibration.accuracy_domain`)는
+> main 것, 후보별 `MarginPolicy`·`unmeasured` 판정·정규 버킷 키(§2.4.1)·shape 매칭(§2.4.2)·`arrival_process`는 이 지시서 것.
+> `outside_domain` 기본값은 규칙 A2대로 `refuse`이되, 커밋된 세 도메인은 명시적 `widen_error_bars`를 유지한다(E5/E6 불변).
+> `UNMEASURED` 단계는 `outside_calibration_domain`에 흡수되었고, 부분 커버리지(§2.4.2의 3분기 규칙 중 "미측정 지표에 기댄 통과")는
+> 거절이 아니라 caveat로 낮췄다 — 커밋된 RNGD 도메인이 모두 TPOT 전용이어서 거절 규칙으로는 모든 탐색이 비기 때문이다.
+> E-A2의 `rngd_card_edf.domain.yaml`은 D32 오매칭(sim 측 서빙 동시성 71–189 vs 실측 15–107)으로 판명되어 폐기, main의 9점 D32 도메인이 대신한다.
+> 아래 §2.4·A2–A5 본문은 원문 그대로이며, 구현과 다른 곳은 D33이 우선한다.
+
 ---
 
 ## 0. 이 문서의 사용법
