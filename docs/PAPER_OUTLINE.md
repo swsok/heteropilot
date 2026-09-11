@@ -140,12 +140,22 @@ subsection; most systems papers cannot show the negative half of their own recor
 
 **Artifacts:** `docs/CLAIMS.md` §2 · `docs/HANDOVER.md` §2
 
-1. **The A40 accuracy domain has one point**, at served concurrency 170.56, and
-   every plan in E6 runs far below it. That single fact is why fifteen of sixteen
-   cells read `extrapolated`. It needs an NVIDIA node; the measurement node has no
-   GPU.
-2. **The A40 side of E6b is simulation only.** Every crossover sentence must read
-   "RNGD **measured** against A40 **simulated**".
+1. ~~**The A40 accuracy domain has one point**~~ — **resolved 2026-09-11**
+   (`experiments/results/a40_lowload_envelope.md`). It has three, measured on the
+   A40 node, and nine of sixteen cells now read `measured`. Two residual limits
+   replace it, and both are structural rather than pending: five cells need a
+   **per-PE RNGD** accuracy domain that does not exist, and two rest on an A40
+   **prefill leg at served concurrency 0.499** — an almost-idle server, which is
+   not an operating point a bench can hold.
+   The correction that came with it belongs in this section: the simulator is
+   **~18 % optimistic on TTFT at low load**, against the 1.97 % the single
+   saturated point declared. It changes no E6 outcome because TPOT binds first
+   there, but any tight-TTFT claim inherits it.
+2. ~~**The A40 side of E6b is simulation only.**~~ — **resolved**, but replaced by
+   a narrower caveat: the A40 curve is **open-loop** and the RNGD curve is
+   **closed-loop**, so a sentence putting both on one axis must say which
+   protocol each side was measured under. `closed_loop` is carried in every row
+   of the artifact for that reason.
 3. **One workload.** The envelope is conditional on a token distribution
    (`measured_on_workload`), and everything here uses one sharegpt trace at
    input p50 732 / output mean 652.5.

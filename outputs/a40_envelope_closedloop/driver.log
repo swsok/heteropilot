@@ -1,0 +1,185 @@
+=== c4,8,16 pool 300  2026-09-10T19:34:18Z ===
+c4: settling 45 s
+c4: benching pool=300
+requests 300 ok / 0 failed in 1547.1s
+generated chunks 194175 vs requested 195753 output tokens
+wrote outputs/a40_envelope_closedloop/main/bench_c4.json
+c4: trailing idle 60 s
+c4 r0: served 3.98 (ratio 0.994) 290.9 W
+c4: settling 45 s
+c4: benching pool=300
+requests 300 ok / 0 failed in 1546.7s
+generated chunks 194163 vs requested 195753 output tokens
+wrote outputs/a40_envelope_closedloop/main/bench_c4_r1.json
+c4: trailing idle 60 s
+c4 r1: served 3.98 (ratio 0.994) 289.6 W
+c8: settling 45 s
+c8: benching pool=300
+requests 300 ok / 0 failed in 828.1s
+generated chunks 194282 vs requested 195753 output tokens
+wrote outputs/a40_envelope_closedloop/main/bench_c8.json
+c8: trailing idle 60 s
+c8 r0: served 7.88 (ratio 0.985) 292.5 W
+c8: settling 45 s
+c8: benching pool=300
+an error occurred during closing of asynchronous generator <async_generator object PoolByteStream.__aiter__ at 0x7fa4f8167f10>
+asyncgen: <async_generator object PoolByteStream.__aiter__ at 0x7fa4f8167f10>
+Traceback (most recent call last):
+  File "/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/httpcore2/_async/connection_pool.py", line 427, in __aiter__
+    yield chunk
+GeneratorExit
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/httpcore2/_async/connection_pool.py", line 425, in __aiter__
+    async with safe_async_iterate(self._stream) as iterator:
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/swsok/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/contextlib.py", line 267, in __aexit__
+    raise RuntimeError("generator didn't stop after athrow()")
+RuntimeError: generator didn't stop after athrow()
+requests 300 ok / 0 failed in 828.8s
+generated chunks 194331 vs requested 195753 output tokens
+wrote outputs/a40_envelope_closedloop/main/bench_c8_r1.json
+c8: trailing idle 60 s
+c8 r1: served 7.88 (ratio 0.985) 292.2 W
+c16: settling 45 s
+c16: benching pool=300
+an error occurred during closing of asynchronous generator <async_generator object PoolByteStream.__aiter__ at 0x7f30f86524d0>
+asyncgen: <async_generator object PoolByteStream.__aiter__ at 0x7f30f86524d0>
+Traceback (most recent call last):
+  File "/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/httpcore2/_async/connection_pool.py", line 427, in __aiter__
+    yield chunk
+GeneratorExit
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/httpcore2/_async/connection_pool.py", line 425, in __aiter__
+    async with safe_async_iterate(self._stream) as iterator:
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/swsok/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/contextlib.py", line 267, in __aexit__
+    raise RuntimeError("generator didn't stop after athrow()")
+RuntimeError: generator didn't stop after athrow()
+requests 300 ok / 0 failed in 474.7s
+generated chunks 194049 vs requested 195753 output tokens
+wrote outputs/a40_envelope_closedloop/main/bench_c16.json
+c16: trailing idle 60 s
+c16 r0: served 15.57 (ratio 0.973) 290.7 W
+c16: settling 45 s
+c16: benching pool=300
+an error occurred during closing of asynchronous generator <async_generator object PoolByteStream.__aiter__ at 0x7f445077a980>
+asyncgen: <async_generator object PoolByteStream.__aiter__ at 0x7f445077a980>
+Traceback (most recent call last):
+  File "/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/httpcore2/_async/connection_pool.py", line 427, in __aiter__
+    yield chunk
+GeneratorExit
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/httpcore2/_async/connection_pool.py", line 425, in __aiter__
+    async with safe_async_iterate(self._stream) as iterator:
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/swsok/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/contextlib.py", line 267, in __aexit__
+    raise RuntimeError("generator didn't stop after athrow()")
+RuntimeError: generator didn't stop after athrow()
+requests 300 ok / 0 failed in 474.7s
+generated chunks 194023 vs requested 195753 output tokens
+wrote outputs/a40_envelope_closedloop/main/bench_c16_r1.json
+c16: trailing idle 60 s
+c16 r1: served 15.57 (ratio 0.973) 290.9 W
+wrote outputs/a40_envelope_closedloop/main/envelope.json
+=== c4,8,16 exit 0  2026-09-10T21:28:52Z ===
+=== c1 pool 60  2026-09-10T21:28:52Z ===
+c1: settling 45 s
+c1: benching pool=60
+an error occurred during closing of asynchronous generator <async_generator object PoolByteStream.__aiter__ at 0x7f7ddc15b4c0>
+asyncgen: <async_generator object PoolByteStream.__aiter__ at 0x7f7ddc15b4c0>
+Traceback (most recent call last):
+  File "/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/httpcore2/_async/connection_pool.py", line 427, in __aiter__
+    yield chunk
+GeneratorExit
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/httpcore2/_async/connection_pool.py", line 425, in __aiter__
+    async with safe_async_iterate(self._stream) as iterator:
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/swsok/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/contextlib.py", line 267, in __aexit__
+    raise RuntimeError("generator didn't stop after athrow()")
+RuntimeError: generator didn't stop after athrow()
+requests 60 ok / 0 failed in 1179.4s
+generated chunks 41104 vs requested 41393 output tokens
+wrote outputs/a40_envelope_closedloop/c1/bench_c1.json
+c1: trailing idle 60 s
+c1 r0: served 1.00 (ratio 1.000) 284.4 W
+c1: settling 45 s
+c1: benching pool=60
+an error occurred during closing of asynchronous generator <async_generator object PoolByteStream.__aiter__ at 0x7fa86b0674c0>
+asyncgen: <async_generator object PoolByteStream.__aiter__ at 0x7fa86b0674c0>
+Traceback (most recent call last):
+  File "/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/httpcore2/_async/connection_pool.py", line 427, in __aiter__
+    yield chunk
+GeneratorExit
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/httpcore2/_async/connection_pool.py", line 425, in __aiter__
+    async with safe_async_iterate(self._stream) as iterator:
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/swsok/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/contextlib.py", line 267, in __aexit__
+    raise RuntimeError("generator didn't stop after athrow()")
+RuntimeError: generator didn't stop after athrow()
+requests 60 ok / 0 failed in 1179.5s
+generated chunks 41104 vs requested 41393 output tokens
+wrote outputs/a40_envelope_closedloop/c1/bench_c1_r1.json
+c1: trailing idle 60 s
+c1 r1: served 1.00 (ratio 1.000) 283.9 W
+wrote outputs/a40_envelope_closedloop/c1/envelope.json
+=== c1 exit 0  2026-09-10T22:14:40Z ===
+=== c2 pool 120  2026-09-10T22:14:40Z ===
+c2: settling 45 s
+c2: benching pool=120
+an error occurred during closing of asynchronous generator <async_generator object PoolByteStream.__aiter__ at 0x7f0f1862b2e0>
+asyncgen: <async_generator object PoolByteStream.__aiter__ at 0x7f0f1862b2e0>
+Traceback (most recent call last):
+  File "/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/httpcore2/_async/http11.py", line 313, in __aiter__
+    yield chunk
+GeneratorExit
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/httpcore2/_async/connection_pool.py", line 425, in __aiter__
+    async with safe_async_iterate(self._stream) as iterator:
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/swsok/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/contextlib.py", line 231, in __aexit__
+    await self.gen.athrow(value)
+  File "/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/httpcore2/_utils.py", line 62, in safe_async_iterate
+    await iterator.aclose()
+  File "/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/httpcore2/_async/http11.py", line 320, in __aiter__
+    raise exc
+  File "/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/httpcore2/_async/http11.py", line 311, in __aiter__
+    async with safe_async_iterate(self._connection._receive_response_body(**kwargs)) as iterator:
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/swsok/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/contextlib.py", line 267, in __aexit__
+    raise RuntimeError("generator didn't stop after athrow()")
+RuntimeError: generator didn't stop after athrow()
+requests 120 ok / 0 failed in 1238.8s
+generated chunks 80491 vs requested 81087 output tokens
+wrote outputs/a40_envelope_closedloop/c2/bench_c2.json
+c2: trailing idle 60 s
+c2 r0: served 1.99 (ratio 0.996) 284.8 W
+c2: settling 45 s
+c2: benching pool=120
+requests 120 ok / 0 failed in 1239.0s
+generated chunks 80491 vs requested 81087 output tokens
+wrote outputs/a40_envelope_closedloop/c2/bench_c2_r1.json
+c2: trailing idle 60 s
+c2 r1: served 1.99 (ratio 0.996) 284.9 W
+wrote outputs/a40_envelope_closedloop/c2/envelope.json
+=== c2 exit 0  2026-09-10T23:02:30Z ===
+ALL DONE 2026-09-10T23:02:30Z

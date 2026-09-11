@@ -1,0 +1,137 @@
+{
+  "run": {
+    "backend": "cuda",
+    "artifact": "NousResearch/Meta-Llama-3.1-8B",
+    "dataset": "workloads/sharegpt-llama-3.1-8b-300-sps10.jsonl",
+    "card": 0,
+    "tp": 1,
+    "device_sn": "GPU-6e0d82b1-edc3-40ba-8f19-0f0a4b535efb",
+    "sample_devices": "0",
+    "bench_python": ".venv-vllm/bin/python",
+    "engine": {
+      "--max-num-seqs": 128,
+      "--max-num-batched-tokens": 2048,
+      "--dtype": "bfloat16",
+      "--kv-cache-dtype": "auto",
+      "--seed": 42
+    },
+    "closed_loop": true,
+    "repeats": 2
+  },
+  "points": [
+    {
+      "requested_concurrency": 1,
+      "served_concurrency": 0.9999914230450301,
+      "served_ratio": 0.9999914230450301,
+      "pool_binding": false,
+      "pool_size": 60,
+      "requests_ok": 60,
+      "requests_failed": 0,
+      "wall_s": 1179.43,
+      "throughput_tok_s": 34.85073298118583,
+      "ttft_ms": {
+        "p50": 160.230455,
+        "p95": 402.19854974999976,
+        "p99": 633.5374193999999
+      },
+      "tpot_ms": {
+        "p50": 28.318165741996673,
+        "p95": 28.896614835011114,
+        "p99": 31.4480759739723
+      },
+      "bench_window": {
+        "samples": 1180,
+        "dropped_samples": 0,
+        "duration_s": 1180.165,
+        "power_w": {
+          "mean": 284.4498220338984,
+          "p5": 264.26,
+          "p95": 289.27049999999997,
+          "min": 98.23,
+          "max": 296.43
+        },
+        "util_pct": {
+          "mean": 99.82457627118644,
+          "max_of_per_pe_max": 100.0
+        },
+        "dram_used_ratio_mean": 0.9085049627118619
+      },
+      "idle_window": {
+        "samples": 61,
+        "dropped_samples": 0,
+        "duration_s": 60.059,
+        "power_w": {
+          "mean": 81.32491803278687,
+          "p5": 80.73,
+          "p95": 81.86,
+          "min": 80.68,
+          "max": 82.0
+        },
+        "util_pct": {
+          "mean": 0.0,
+          "max_of_per_pe_max": 0.0
+        },
+        "dram_used_ratio_mean": 0.9060300000000008
+      },
+      "notes": [],
+      "repeat": 0
+    },
+    {
+      "requested_concurrency": 1,
+      "served_concurrency": 0.9999890917248637,
+      "served_ratio": 0.9999890917248637,
+      "pool_binding": false,
+      "pool_size": 60,
+      "requests_ok": 60,
+      "requests_failed": 0,
+      "wall_s": 1179.473,
+      "throughput_tok_s": 34.84946242940703,
+      "ttft_ms": {
+        "p50": 160.0611465,
+        "p95": 405.5423809999998,
+        "p99": 638.0326679599999
+      },
+      "tpot_ms": {
+        "p50": 28.320244522804494,
+        "p95": 28.893290434230423,
+        "p99": 31.44748326504281
+      },
+      "bench_window": {
+        "samples": 1181,
+        "dropped_samples": 0,
+        "duration_s": 1180.291,
+        "power_w": {
+          "mean": 283.88555461473334,
+          "p5": 261.54,
+          "p95": 288.94,
+          "min": 83.46,
+          "max": 296.98
+        },
+        "util_pct": {
+          "mean": 99.7866215071973,
+          "max_of_per_pe_max": 100.0
+        },
+        "dram_used_ratio_mean": 0.9085029043183718
+      },
+      "idle_window": {
+        "samples": 60,
+        "dropped_samples": 0,
+        "duration_s": 60.06,
+        "power_w": {
+          "mean": 82.89766666666664,
+          "p5": 82.468,
+          "p95": 83.577,
+          "min": 82.37,
+          "max": 84.22
+        },
+        "util_pct": {
+          "mean": 0.0,
+          "max_of_per_pe_max": 0.0
+        },
+        "dram_used_ratio_mean": 0.9060300000000008
+      },
+      "notes": [],
+      "repeat": 1
+    }
+  ]
+}

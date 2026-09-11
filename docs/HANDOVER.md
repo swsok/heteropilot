@@ -25,10 +25,21 @@
 **Gates at this commit**, on the NPU node in `.venv`:
 
 ```
-pytest -q     622 passed in 140.45s
+pytest -q     653 passed in 86.64s          # A40 node, 2026-09-11
 ruff check .  All checks passed!
 mypy          Success: no issues found in 38 source files
 ```
+
+622 of those are the count this handover was written at, on the NPU node. One of
+them **failed on the A40 node** before any new work:
+`test_there_is_no_user_site_fallback` asserted `any('.local' in p for p in
+sys.path)`, which matches uv's *interpreter* prefix
+(`~/.local/share/uv/python/.../lib/python3.10`) — the standard library, not a
+user-site directory a stray `pip install --user` could poison. The property it
+cared about held on the node where it failed; it passed on the NPU node only
+because that interpreter lives elsewhere. It now asserts the two load-bearing
+facts instead: the user site directory is not importable, and the chakra this
+interpreter resolves lives under its own prefix.
 
 622, up from 440 at the last handover: the rps-aware sprint added ~180, most of
 them holding a refusal in place (an envelope that will not be read past its ends,
@@ -179,8 +190,11 @@ three lines instead of four is a *failed* anchor, not an agreeing one, and
 `anchors.log` beside it is what says which.
 
 **The one-sentence state of the science:** the planner can now price its own
-predictor and finds a crossover on the RPS axis — and **one of sixteen E6 cells
-rests on a measured accuracy domain**, which §2.2 is about.
+predictor and finds a crossover on the RPS axis — and since 2026-09-11 **nine of
+sixteen E6 cells rest on a measured accuracy domain**, up from one, with every
+winner unchanged (§2.2). Of the seven that do not, five need a per-PE RNGD
+domain and two rest on an A40 prefill leg at served concurrency 0.499, which no
+bench can hold.
 
 Not delivered, deliberately: a third E6 fixture. The work order names
 `pd-rngd-gpu-card`, `pd-rngd-gpu` and "STEP 2's asymmetric fixture", but
@@ -188,48 +202,109 @@ Not delivered, deliberately: a third E6 fixture. The work order names
 `--enable-pd` is on, so a separate ClusterSpecV2 would have duplicated it. Recorded
 here rather than silently dropped.
 
-### 2.2 A second A40 accuracy-domain point — **needs an NVIDIA node**
+### 2.2 A second A40 accuracy-domain point — **DONE 2026-09-10/11 on the A40 node**
 
-**The single largest thing standing between E6 and a quotable result.** The A40
-accuracy domain has exactly one point, at served concurrency **170.56**, taken
-from a validation run that offered ~10.3 rps to one card and queued most of it.
-Every plan E6 recommends runs far below that, so the 1.42 % margin is held flat
-and **fifteen of sixteen switchover cells read `extrapolated`**. A single point
-carries no slope, so `widen_error_bars` cannot even widen it honestly.
+**Closed.** The domain has three points, the E6 sweep was re-run on them, and
+**seven of sixteen switchover cells moved from `extrapolated` to `measured`**
+with every winner and every tok/J unchanged. Full write-ups:
+`experiments/results/a40_lowload_envelope.md` and the re-run section appended to
+`experiments/results/e6_rps_sweep.md`.
 
-What is needed is one more A40 measurement at a load the plans actually sit at —
-served concurrency roughly 3 to 15 — following STEP 3's protocol.
+| | before | after |
+| --- | ---: | ---: |
+| domain points | 1 (conc 170.56) | **3** (4.043, 10.800, 170.56) |
+| `measured` cells | 2 | **9** |
+| `extrapolated` cells | 9 | **2** |
+| `unknown` cells | 5 | 5 |
 
-**Only half of `measure_envelope.py` is vendor-agnostic, and an earlier draft of
-this section said otherwise.** The *analysis* half is: `summarise_point` already
-enforces A5 (served concurrency by Little's law, the pool floor, power recorded
-with utilisation from the same samples), and `read_sampler_csv` cares about a CSV
-schema, not a vendor. The *execution* half is hardcoded to FuriosaAI in three
-places, and all three need a CUDA path before any A40 point can be taken:
+**The finding is TTFT, and it was not the one this section predicted.** Held
+flat, the one point declared the simulator 1.97 % optimistic on TTFT everywhere.
+Measured at served concurrency 4 and 11 it is optimistic by **~18 %** — a factor
+of nine. Both are right about their own regime: at saturation TTFT is 40 s of
+queueing, which the simulator models well; at low load it is ~150 ms of nearly
+pure prefill, which it does not. It changes no E6 outcome, because no
+recommended plan comes within 25 % of its TTFT SLO in this regime — but it would
+in the tight-TTFT regime §2.5 still records as not quotable. TPOT, by contrast,
+is nearly exact at low load and **changes sign** across the range (+0.59 % to
+−1.42 %), so the one-sided margin correctly charges nothing at the bottom.
 
-| what | today | needed |
-| --- | --- | --- |
-| server launch | `furiosa-llm serve --devices npu:N:*` | `vllm serve` with `CUDA_VISIBLE_DEVICES` pinned to one card |
-| sampler | `power_sampler.sh` (`furiosa-smi info` + `status`) | a twin emitting the same columns from `nvidia-smi --query-gpu=power.draw,utilization.gpu,memory.used` at 1 Hz |
-| `--bench-python` | `/usr/bin/python3` | `.venv-vllm/bin/python`, which has `openai` |
+**What remains.** The two cells still `extrapolated` are the card fixture at
+3.3 rps, whose winner's A40 leg is a *prefill role at served concurrency 0.499*,
+below the domain's new floor of 4.043. **This is closable and an earlier draft of
+this section said it was not** — see the correction in
+`experiments/results/e6_rps_sweep.md`. An open-loop point at 0.0254 rps reaches
+it: ~1.1 h per repeat at 100 requests, ~3.3 h at 300, on an otherwise idle A40.
+Expensive, not impossible. The five `unknown` cells are the ones that genuinely
+cannot be reached from an NVIDIA node — they need a per-PE RNGD accuracy domain,
+which needs the NPU node.
 
-What does carry over unchanged is the bench client: `bench_furiosa_endpoint.py` is
-named for the node it was written on but is a plain `AsyncOpenAI` client, so it
-drives a vLLM OpenAI server as-is. Note D19 while doing it — that client fires
-everything at once, so the simulator side needs a burst trace, not the arrival
-process.
+**A method correction came out of it — `docs/deviations.md` D32.** The simulator
+side must run the same number of requests as the hardware. At the script's
+20-request default the sim's served concurrency lands −8.2 % and −31.7 % from the
+measured points purely because the drain tail dominates a short run's wall; at
+300 it is −0.8 % and −4.2 %. The four RNGD low-load domain points were taken at
+the default, and `rngd_card_edf.yaml` discards two further points at a "40 %
+below the hardware" gap that has the same signature. Unverified on that side and
+testable with no NPU hardware, since the RNGD envelope is committed.
 
-`experiments/scripts/lowload_sim_error.py` is the other half of the point (the
-predictor's error at that load) and is pinned to RNGD by three module constants —
-`ENV`, `CLUSTER`, `DATASET`. Lifting them into arguments is the whole change; the
-A40 materials already exist (`experiments/configs/clusters/a40-llama31-8b-tp1.json`,
-`profiler/perf/A40/`).
+**Also delivered:** the A40 half of E6b now exists
+(`e6b_measured_curve.py --hardware A40`), so a crossover sentence no longer has
+to read "RNGD measured against A40 simulated" — but it must now say which
+*protocol* each side was measured under, because they differ (below).
 
-**The NPU node has no NVIDIA GPU**, so none of this can be done there.
+<details>
+<summary>Superseded planning text, kept because it records what was expected</summary>
 
-The same run would give the A40 half of E6b, which is currently simulation only —
-so every crossover sentence has to read "RNGD **measured** against A40
-**simulated**".
+Two things in it turned out wrong, and both are worth knowing:
+
+**"Every plan E6 recommends runs far below [170.56]."** They do not. The A40
+operating points in the E6 winners are 90.8, 121.8, 125.3, 138.1, 157.1 and
+169.9 — just *below* the fitted point, not far below it. Only the 3.3 rps prefill
+leg at 0.499 is far below. The prescribed fix was still the right one, but the
+mechanism is bracketing those points from underneath, not reaching down to them,
+and the reachable ceiling was **seven** cells rather than fifteen. That ceiling
+was computed from the committed operating points before the measurement and the
+run hit it exactly.
+
+**The prescribed route was closed-loop, and taking it would have been a mistake.**
+The table below asks for `vllm serve` plus the closed-loop bench client. But the
+existing 170.56 point came from `python -m bench run`, an *arrival-trace replay*,
+and adding a closed-loop point to that domain puts two definitions of "served
+concurrency 8" on one interpolation axis — the class of error D22 was. The A40
+points were therefore measured **open-loop**, by
+`experiments/scripts/measure_envelope_openloop.py`, whose reproduction of
+170.5619 from the committed artifact is the check that all three points share an
+axis. That choice is also what made the TTFT finding visible at all: both sides
+replay the same arrival process, so **D19 does not apply** and TTFT is
+comparable, which on the closed-loop route it would not have been.
+
+The CUDA execution half described below was built anyway and is committed —
+`measure_envelope.py --backend cuda`, `power_sampler_nvidia.sh` — because the
+closed-loop curve is what makes the two protocols comparable to each other. Its
+original text:
+
+> **Only half of `measure_envelope.py` is vendor-agnostic, and an earlier draft of
+> this section said otherwise.** The *analysis* half is: `summarise_point` already
+> enforces A5 (served concurrency by Little's law, the pool floor, power recorded
+> with utilisation from the same samples), and `read_sampler_csv` cares about a CSV
+> schema, not a vendor. The *execution* half is hardcoded to FuriosaAI in three
+> places, and all three need a CUDA path before any A40 point can be taken:
+>
+> | what | today | needed |
+> | --- | --- | --- |
+> | server launch | `furiosa-llm serve --devices npu:N:*` | `vllm serve` with `CUDA_VISIBLE_DEVICES` pinned to one card |
+> | sampler | `power_sampler.sh` | a twin emitting the same columns from `nvidia-smi` at 1 Hz |
+> | `--bench-python` | `/usr/bin/python3` | `.venv-vllm/bin/python`, which has `openai` |
+>
+> `experiments/scripts/lowload_sim_error.py` is the other half of the point and is
+> pinned to RNGD by three module constants — `ENV`, `CLUSTER`, `DATASET`. Lifting
+> them into arguments is the whole change.
+
+All three were done. One correction to the table itself: `vllm` is **not on
+PATH** — it lives in `.venv-vllm/bin/vllm`, and a bare `vllm` killed the first
+closed-loop run at its first point.
+
+</details>
 
 ### 2.3 ATOM layerwise bundle (D20) — **needs the NPU node**, and probably the vendor
 

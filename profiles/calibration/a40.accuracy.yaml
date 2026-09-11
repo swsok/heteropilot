@@ -8,22 +8,96 @@
 #
 # Sign: (sim - measured) / measured. Negative = the simulator is optimistic.
 #
-# ONE point, and it is at high load. The validation run offered ~10.3 rps to a
-# single A40 and the card could not keep up: mean TTFT 40.6 s, so requests spent
-# most of their life queued. Served concurrency by Little's law
-# (`sum(latency)/wall`) is 170.56 over a 179.6 s wall — computed here from
-# `outputs/phase0_bench/A40/vllm/requests.jsonl`, whose mean latency, TTFT and
-# TPOT reproduce `validation-nominal/summary.txt` exactly.
+# =====================================================================
+# UPDATED 2026-09-10 — two measured points added, on the A40 node.
+# =====================================================================
 #
-# That figure counts requests IN THE SYSTEM, queued as well as running, and the
-# engine's `max_num_seqs` was 128. It is the same definition the RNGD envelope
-# uses, but on that side the bench was closed-loop so in-system and running
-# nearly coincide. Comparing the two domains' concurrency axes therefore needs
-# care, and this note is the warning.
+# `docs/HANDOVER.md` §2.2 asked for a second point because fifteen of E6's
+# sixteen switchover cells read `extrapolated` off a domain with no slope. There
+# are now THREE points, and the two new ones change what this file says about
+# TTFT rather than merely widening it.
 #
-# Magnitudes are the p95 absolute errors from the fitted bucket, signed by the
-# direction of the mean difference (TTFT -1.9 %, TPOT -0.9 %): "up to this
-# optimistic at the 95th percentile" is the conservative reading of the pair.
+#   served conc   TPOT err    TTFT err
+#         4.043     +0.59 %    -18.66 %
+#        10.800     -0.32 %    -17.15 %
+#        170.56     -1.42 %     -1.97 %   (the original point, unchanged)
+#
+# **The TTFT error at low load is an order of magnitude larger than the one point
+# said.** Held flat, this domain declared -1.97 % everywhere; measured at served
+# concurrency 4 and 11 the simulator is optimistic by ~18 %. That is not a
+# contradiction of the 170.56 point — it is what a single point could not show.
+# At saturation TTFT is 40 s of queueing, which the simulator models well; at low
+# load TTFT is ~150 ms of almost pure prefill, and the simulator's prefill is
+# fast. Decomposed: the simulator charges ~16 ms of queueing at these loads where
+# the real engine measures 8 microseconds, so its prefill alone is optimistic by
+# about 30 % and the queueing it invents partly hides that.
+#
+# **TPOT, in contrast, is nearly exact at low load** — +0.59 % and -0.32 %, i.e.
+# it changes SIGN across the range and passes through zero somewhere between
+# concurrency 11 and 170. The margin machinery is one-sided by construction
+# (`margin_from_error` returns 0 for a pessimistic predictor), so the +0.59 %
+# point earns no TPOT margin at all. That is correct and it is the point of the
+# one-sidedness.
+#
+# ---- How the new points were measured, and the two seams that remain ----
+#
+# OPEN-LOOP, deliberately. The 170.56 point came from `python -m bench run`, an
+# arrival-trace replay; the new points use the same harness at lower offered
+# rates (`experiments/scripts/measure_envelope_openloop.py`, which reproduces
+# 170.5619 from the committed artifact — that reproduction is the check that all
+# three points are on one axis). A closed-loop measurement would have put two
+# different definitions of "served concurrency 8" on one interpolation axis.
+# Because both sides replay the same arrival process, D19 does NOT apply and the
+# TTFT column above is comparable; on a closed-loop route it would not be.
+#
+# SEAM 1 — the x axis. `rngd_card_edf.yaml` records the SIMULATED served
+# concurrency, "because that is what the planner knows when it consults this
+# table", and `_auto_margins` does query with the simulated value. The two new
+# points follow that convention (4.043 and 10.800 are simulated; the hardware
+# measured 4.076 and 11.272, gaps of -0.8 % and -4.2 %). The 170.56 point is left
+# at its committed value, which is the MEASURED one — its simulated counterpart
+# is 170.039, computed from `outputs/phase0_bench/A40-nominal/sim.csv`. The two
+# differ by 0.3 %, they bracket nothing differently, and no E6 operating point
+# lies between them, so the mixed axis is immaterial here. It is recorded rather
+# than silently unified because on RNGD the same two axes diverged by 40 %.
+#
+# SEAM 2 — the 170.56 run is SATURATED and the new ones are not. It offered 10.3
+# rps and completed 1.671, with queue delay growing at +4.15 s per second of
+# arrivals; the new points sit at ~1e-9 s/s. Its concurrency is therefore a
+# backlog depth while theirs is an occupancy, and the interpolation between
+# concurrency 11 and 170 crosses that change of regime with nothing measured
+# inside it. Any margin read in that interval is carrying this assumption.
+#
+# ---- Superseded text, kept because it records what was reasonable to believe --
+#
+# The original file said, correctly for its time:
+#
+#   "ONE point, and it is at high load. [...] That figure counts requests IN THE
+#    SYSTEM, queued as well as running, and the engine's `max_num_seqs` was 128."
+#
+#   "A single point carries no slope, so widen_error_bars cannot widen: the error
+#    is held flat everywhere and `in_domain` is what tells a caller the value is
+#    being reused outside where it was fitted. A second A40 point at a different
+#    load would fix that and none exists."
+#
+# Both sentences are now false in their last clause and true in everything else.
+# The 170.56 point's own description is unchanged and still applies to it:
+#
+#   The validation run offered ~10.3 rps to a single A40 and the card could not
+#   keep up: mean TTFT 40.6 s, so requests spent most of their life queued.
+#   Served concurrency by Little's law (`sum(latency)/wall`) is 170.56 over a
+#   179.6 s wall — computed from `outputs/phase0_bench/A40/vllm/requests.jsonl`,
+#   whose mean latency, TTFT and TPOT reproduce `validation-nominal/summary.txt`
+#   exactly. Magnitudes are the p95 absolute errors from the fitted bucket,
+#   signed by the direction of the mean difference (TTFT -1.9 %, TPOT -0.9 %).
+#
+# METHODOLOGY SEAM, stated because it is a third one: that point's magnitudes are
+# p95 absolute errors signed by the mean; the new points are p50 errors, which is
+# what `lowload_sim_error.py` produces and what the four RNGD low-load points in
+# `rngd_card_edf.yaml` also use. Under the p50 method the 170.56 point would read
+# -1.32 % on TPOT instead of -1.42 % (sim 96.815 ms against measured 98.113 ms).
+# The committed value is left alone rather than restated under a new method; the
+# difference is 0.1 pp and this note is where a reader learns it exists.
 hardware:
   A40:
     hardware: A40
@@ -32,18 +106,43 @@ hardware:
       outside_domain: widen_error_bars
       source: measured
       points:
+        - {conc: 4.043, tpot_err_pct: 0.59, ttft_err_pct: -18.66,
+           note: "300-req sim at 0.1976 rps vs measured c4.076; conc gap -0.8%"}
+        - {conc: 10.800, tpot_err_pct: -0.32, ttft_err_pct: -17.15,
+           note: "300-req sim at 0.4818 rps vs measured c11.272; conc gap -4.2%"}
         - {conc: 170.56, tpot_err_pct: -1.42, ttft_err_pct: -1.97,
            note: "p95 abs error, signed by the mean diff; 300-req sharegpt validation"}
       note: >
-        A single point carries no slope, so widen_error_bars cannot widen: the
-        error is held flat everywhere and `in_domain` is what tells a caller the
-        value is being reused outside where it was fitted. A second A40 point at
-        a different load would fix that and none exists.
+        Three points, so the domain has a slope and one interior interval. The
+        TPOT error changes sign inside the range and the TTFT error does not,
+        which is why the two metrics must be interpolated separately rather than
+        summarised as one accuracy figure. Outside [4.043, 170.56]
+        `widen_error_bars` still applies and still never caps; the interval
+        between 10.8 and 170.56 is interpolated across a change of regime
+        (unsaturated to saturated) with nothing measured inside it.
 provenance:
   fitted_from:
     A40:
       - outputs/phase0_bench/A40/vllm/validation-nominal/summary.txt
       - outputs/phase0_bench/A40/vllm/requests.jsonl
+      - outputs/phase0_bench/A40-nominal/sim.csv
+      - outputs/a40_envelope_openloop/envelope_openloop.json
+      - outputs/a40_lowload_sim_error/lowload_sim_error.json
+      - profiles/envelopes/A40/meta-llama/Llama-3.1-8B/bf16/tp1.yaml
   served_concurrency_note: >
     170.56 = sum(latency)/wall over 300 requests, 179.6 s wall, computed
-    2026-09-09. Offered ~10.3 rps; completed 1.671 rps.
+    2026-09-09. Offered ~10.3 rps; completed 1.671 rps. Its simulated
+    counterpart is 170.039.
+  low_load_points_note: >
+    Measured 2026-09-10 on the A40 node (scripts/whichnode.sh: a40), card 0,
+    Llama-3.1-8B bf16 TP=1, 300 requests, two independent processes per point,
+    zero failures in 1200. Hardware: served 4.076 and 11.272, TPOT p50 31.334
+    and 35.494 ms, TTFT p50 144.42 and 154.85 ms. Simulator, same offered rates
+    and same 300-request trace: served 4.043 and 10.800, TPOT p50 31.520 and
+    35.379 ms, TTFT p50 117.48 and 128.29 ms.
+  request_count_note: >
+    The simulator side uses 300 requests, matching the hardware. At the script's
+    default of 20 it under-reports served concurrency badly at these rates --
+    -8.2 % and -31.7 % against the measured points, against -0.8 % and -4.2 % at
+    300 -- because the drain tail is then a large fraction of the wall. The
+    20-request runs are NOT the basis of any point here.

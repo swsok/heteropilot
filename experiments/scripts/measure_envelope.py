@@ -26,6 +26,25 @@ planner and the simulator rather than introducing a third interpolation.
     experiments/scripts/measure_envelope.py \
         --artifact <path> --dataset <sharegpt.jsonl> --card 0 \
         --concurrency 1,2,4,8,16 --out outputs/rngd_envelope_lowload
+
+**Two backends since 2026-09-10** (`docs/HANDOVER.md` §2.2). The analysis half was
+already vendor-agnostic; the execution half was hardcoded to FuriosaAI in exactly
+three places -- how the server starts, which sampler runs, and which interpreter
+drives the bench client -- and `--backend cuda` supplies the other value for each:
+
+    experiments/scripts/measure_envelope.py --backend cuda \
+        --artifact meta-llama/Llama-3.1-8B --dataset <sharegpt.jsonl> --card 0 \
+        --concurrency 4,8,16 --out outputs/a40_envelope_lowload
+
+Nothing else moves. The A5 rules live in `summarise_point`, which neither backend
+can reach, so a CUDA point is held to the same pool floor, the same served/
+requested ratio and the same power-with-utilisation requirement as an RNGD one --
+which is the point, because the two curves are meant to be compared.
+
+The bench client is shared as-is. `bench_furiosa_endpoint.py` is named for the
+node it was written on but is a plain `AsyncOpenAI` client, so it drives a vLLM
+OpenAI server unchanged. It is CLOSED-LOOP: note D19 before comparing anything it
+produces against `python -m serving`, which replays an arrival process.
 """
 
 from __future__ import annotations
@@ -239,6 +258,102 @@ def summarise_point(bench: dict, rows: list[SamplerRow], bench_window: Window,
 # orchestration -- needs the hardware
 # ---------------------------------------------------------------------------
 
+#: The three places the execution half knew a vendor. Each entry is what
+#: `run_point` needs and nothing more, so adding a third backend is a table row
+#: rather than a branch in the orchestration.
+BACKENDS = {
+    "furiosa": {
+        # On PATH: the FuriosaAI stack is a system install.
+        "server_bin": "furiosa-llm",
+        "sampler": "experiments/scripts/power_sampler.sh",
+        # The vendor stack lives in the system interpreter; .venv has no `openai`
+        # (verified 2026-09-08).
+        "bench_python": "/usr/bin/python3",
+    },
+    "cuda": {
+        # NOT on PATH, and that is the "one venv per vendor" rule showing up in
+        # the launch line: vLLM is installed only in .venv-vllm, so a bare
+        # `vllm` resolves to nothing and the server never starts. Same venv as
+        # `bench_python` below, deliberately -- server and client must agree on
+        # the vLLM version they are speaking about.
+        "server_bin": ".venv-vllm/bin/vllm",
+        "sampler": "experiments/scripts/power_sampler_nvidia.sh",
+        # .venv-vllm is the CUDA venv and the only one here with vLLM + openai.
+        # HANDOVER "One venv per vendor": never install vLLM into .venv.
+        "bench_python": ".venv-vllm/bin/python",
+    },
+}
+
+
+def _server_bin(backend: str) -> str:
+    """Absolute path for a repo-relative binary, verbatim for one on PATH."""
+    binary = BACKENDS[backend]["server_bin"]
+    return str(REPO_ROOT / binary) if binary.startswith(".") else binary
+
+
+def server_command(backend: str, artifact: str, port: int,
+                   card: int, tp: int,
+                   engine: dict[str, str] | None = None,
+                   ) -> tuple[list[str], dict[str, str]]:
+    """The launch line and the environment it needs, per backend.
+
+    Returns the env OVERLAY, not a whole environment: the caller merges it, so a
+    backend that pins by environment variable (CUDA) and one that pins by flag
+    (FuriosaAI) are expressed the same way.
+
+    Device pinning is the part worth stating. `--devices npu:N:*` names the card
+    on the FuriosaAI side; CUDA has no such flag, so the card is selected by
+    making it the only one the process can see. That also fixes what the server
+    calls it -- inside the process the pinned card is always device 0 -- while the
+    sampler and `nvidia-smi` keep using the PHYSICAL index. `--card` is the
+    physical index in both roles and the two must not be allowed to drift apart.
+    """
+    if backend == "furiosa":
+        return ([
+            _server_bin("furiosa"), "serve", artifact,
+            "--host", "127.0.0.1", "--port", str(port),
+            "--devices", f"npu:{card}:*",
+        ], {})
+    if backend == "cuda":
+        cmd = [
+            _server_bin("cuda"), "serve", artifact,
+            "--host", "127.0.0.1", "--port", str(port),
+            "--tensor-parallel-size", str(tp),
+        ]
+        # Engine knobs are passed through rather than left at vLLM's defaults,
+        # and that is load-bearing rather than tidy. The open-loop A40 points are
+        # measured by `python -m bench run` at max_num_seqs 128 /
+        # max_num_batched_tokens 2048 (the config that produced the 170.56 point).
+        # A closed-loop curve taken at vLLM's defaults would differ from it in the
+        # SCHEDULER as well as in the load generator, and the whole purpose of
+        # measuring both is to attribute the difference to the protocol.
+        for flag, value in sorted((engine or {}).items()):
+            cmd += [flag, str(value)]
+        return (cmd, {"CUDA_VISIBLE_DEVICES": str(card)})
+    raise ValueError(f"unknown backend: {backend}")
+
+
+def gpu_uuid(card: int) -> str | None:
+    """The pinned GPU's UUID, for the A5(c) analysis filter.
+
+    Resolved rather than asked for, because the alternative is an operator pasting
+    a serial and the analysis silently averaging eight cards when they get it
+    wrong -- seven of which are idle at ~30 W on this node and would drag the mean
+    of the one under test toward idle. `nvidia-smi` reports `serial` as [N/A] on
+    these boards, so the UUID is the stable identifier; `power_sampler_nvidia.sh`
+    writes it into `device_sn` for exactly this join.
+    """
+    try:
+        out = subprocess.run(
+            ["nvidia-smi", "--query-gpu=uuid", "--format=csv,noheader",
+             "-i", str(card)],
+            capture_output=True, text=True, timeout=60, check=True,
+        ).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return out.splitlines()[0].strip() if out else None
+
+
 def wait_for_server(port: int, timeout: float) -> str | None:
     """Reuses the pattern in rebuild_rngd_bundle_from_edf.py."""
     import urllib.error
@@ -266,15 +381,16 @@ def run_point(args, concurrency: int, out_dir: Path, repeat: int = 0) -> dict | 
     bench_json = out_dir / f"bench_{tag}.json"
     log_path = out_dir / f"serve_{tag}.log"
 
+    cmd, env_overlay = server_command(
+        args.backend, str(args.artifact), args.port, args.card, args.tp,
+        engine=args.engine)
+    env = {**os.environ, **env_overlay}
     with log_path.open("w") as log:
         server = subprocess.Popen(
-            ["furiosa-llm", "serve", str(args.artifact),
-             "--host", "127.0.0.1", "--port", str(args.port),
-             "--devices", f"npu:{args.card}:*"],
-            stdout=log, stderr=log, start_new_session=True,
+            cmd, stdout=log, stderr=log, start_new_session=True, env=env,
         )
     sampler = subprocess.Popen(
-        [str(REPO_ROOT / "experiments/scripts/power_sampler.sh"),
+        [str(REPO_ROOT / BACKENDS[args.backend]["sampler"]),
          "--out", str(sampler_csv)] +
         (["--devices", args.sample_devices] if args.sample_devices else []),
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True,
@@ -295,8 +411,10 @@ def run_point(args, concurrency: int, out_dir: Path, repeat: int = 0) -> dict | 
         print(f"c{concurrency}: benching pool={pool}", file=sys.stderr)
         bench_t0 = time.time()
         subprocess.run(
-            # sys.executable may be a venv without the vendor stack; the bench
-            # client needs the system interpreter (see rebuild_rngd_bundle_from_edf).
+            # sys.executable may be a venv without the vendor stack, so the
+            # interpreter is per backend: the FuriosaAI stack lives in the system
+            # python (see rebuild_rngd_bundle_from_edf), the CUDA one in
+            # .venv-vllm. Neither is `.venv`, which has no `openai` at all.
             [args.bench_python, "-u",
              str(REPO_ROOT / "experiments/scripts/bench_furiosa_endpoint.py"),
              "--base-url", f"http://127.0.0.1:{args.port}/v1",
@@ -333,28 +451,74 @@ def run_point(args, concurrency: int, out_dir: Path, repeat: int = 0) -> dict | 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--artifact", type=Path, required=True)
+    ap.add_argument("--backend", choices=sorted(BACKENDS), default="furiosa",
+                    help="which execution half to use. Default stays `furiosa` so "
+                         "every committed RNGD invocation runs unchanged.")
+    # Not a Path on the CUDA side: `vllm serve` takes an HF model id as readily as
+    # a directory, and coercing "meta-llama/Llama-3.1-8B" through Path would make
+    # it look local. It is passed through verbatim and recorded in the artifact.
+    ap.add_argument("--artifact", required=True)
     ap.add_argument("--dataset", type=Path, required=True)
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--concurrency", default="1,2,4,8,16")
-    ap.add_argument("--card", type=int, default=0)
+    ap.add_argument("--card", type=int, default=0,
+                    help="PHYSICAL device index. On CUDA it becomes "
+                         "CUDA_VISIBLE_DEVICES for the server (which then sees it "
+                         "as device 0) and `nvidia-smi -i` for the sampler.")
+    ap.add_argument("--tp", type=int, default=1,
+                    help="tensor-parallel degree; CUDA only. The FuriosaAI side "
+                         "takes it from the compiled artifact, not from a flag.")
     ap.add_argument("--port", type=int, default=8000)
     ap.add_argument("--device-sn", default=None,
                     help="restrict the power/util analysis to this serial; "
                          "dev_name is not stable across re-enumeration")
     ap.add_argument("--sample-devices", default=None,
                     help="comma-separated dev_names for the sampler to record")
-    ap.add_argument("--bench-python", default="/usr/bin/python3",
-                    help="the vendor stack lives in the system interpreter; .venv "
-                         "has no `openai` (verified 2026-09-08)")
+    ap.add_argument("--bench-python", default=None,
+                    help="interpreter for the bench client. Default is per "
+                         "backend: /usr/bin/python3 for furiosa (the vendor stack "
+                         "lives there), .venv-vllm/bin/python for cuda. `.venv` "
+                         "has no `openai` under either (verified 2026-09-08).")
     ap.add_argument("--pool", type=int, default=None,
                     help="override the A5(b) pool size; the point is still flagged "
                          "if it falls below 4x the concurrency")
     ap.add_argument("--repeats", type=int, default=1,
                     help="independent processes per point (STEP 3.2 asks for 2)")
+    # Defaults are the engine config the A40's open-loop points were measured
+    # under (outputs/phase0_bench/A40/vllm/meta.json), so the closed-loop and
+    # open-loop halves differ ONLY in how load is offered. CUDA only; the
+    # FuriosaAI side takes these from the compiled artifact.
+    ap.add_argument("--max-num-seqs", type=int, default=128)
+    ap.add_argument("--max-num-batched-tokens", type=int, default=2048)
+    ap.add_argument("--dtype", default="bfloat16")
+    ap.add_argument("--kv-cache-dtype", default="auto")
+    ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--startup-timeout", type=float, default=1800.0)
     ap.add_argument("--bench-timeout", type=float, default=7200.0)
     args = ap.parse_args()
+
+    if args.bench_python is None:
+        args.bench_python = BACKENDS[args.backend]["bench_python"]
+    args.engine = {}
+    if args.backend == "cuda":
+        args.engine = {
+            "--max-num-seqs": args.max_num_seqs,
+            "--max-num-batched-tokens": args.max_num_batched_tokens,
+            "--dtype": args.dtype,
+            "--kv-cache-dtype": args.kv_cache_dtype,
+            "--seed": args.seed,
+        }
+        # Pin BOTH halves to the same physical card by default. Leaving the
+        # sampler unfiltered on an 8-GPU node records seven idle cards beside the
+        # one under test; leaving `--device-sn` unset then averages all eight, and
+        # A5(c) would be satisfied by a number that is mostly idle.
+        if args.sample_devices is None:
+            args.sample_devices = str(args.card)
+        if args.device_sn is None:
+            args.device_sn = gpu_uuid(args.card)
+            if args.device_sn is None:
+                print("could not resolve the GPU UUID; the power analysis will "
+                      "average every device the sampler recorded", file=sys.stderr)
 
     out_dir = args.out
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -377,8 +541,28 @@ def main() -> int:
             print(f"c{c} r{rep}: served {r['served_concurrency']:.2f} "
                   f"(ratio {r['served_ratio']:.3f}){pstr}{flag}", file=sys.stderr)
 
+    # The run block is new with the CUDA backend and is not decoration: an
+    # envelope file that does not say which backend, which artifact and which
+    # physical card produced it cannot be checked against absolute rule 3 later,
+    # and this repository moves between three nodes. Nothing reads `envelope.json`
+    # programmatically, so adding it breaks no consumer.
     (out_dir / "envelope.json").write_text(
-        json.dumps({"points": results}, indent=2) + "\n")
+        json.dumps({
+            "run": {
+                "backend": args.backend,
+                "artifact": args.artifact,
+                "dataset": str(args.dataset),
+                "card": args.card,
+                "tp": args.tp,
+                "device_sn": args.device_sn,
+                "sample_devices": args.sample_devices,
+                "bench_python": args.bench_python,
+                "engine": args.engine,
+                "closed_loop": True,
+                "repeats": args.repeats,
+            },
+            "points": results,
+        }, indent=2) + "\n")
     print(f"wrote {out_dir / 'envelope.json'}", file=sys.stderr)
     return 0
 

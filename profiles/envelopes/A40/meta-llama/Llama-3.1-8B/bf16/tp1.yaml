@@ -1,0 +1,114 @@
+# A40 performance envelope, Llama-3.1-8B bf16, TP=1, one card.
+#
+# Measured 2026-09-10 on the A40 node (`scripts/whichnode.sh`: a40, 8 x NVIDIA
+# A40, driver 560.35.05), card 0 pinned by CUDA_VISIBLE_DEVICES. Raw:
+# `outputs/a40_envelope_openloop/`. Harness:
+# `experiments/scripts/measure_envelope_openloop.py`.
+#
+# **OPEN-LOOP, and that is not the same curve as the RNGD one.** The RNGD card
+# envelope beside this file is closed-loop: a fixed number of requests in flight.
+# This is an arrival trace replayed at a constant rate. Both are legitimate
+# measurements of served concurrency by Little's law, but they are different
+# occupancy regimes, and `closed_loop: false` below is what says so. The reason
+# this half was measured open-loop is `profiles/calibration/a40.accuracy.yaml`:
+# its existing point at served concurrency 170.56 came from `python -m bench run`,
+# an arrival replay, and a domain whose points were taken under two protocols
+# cannot be interpolated across. Consistency with the point being joined beat
+# consistency with the other device's curve.
+#
+# **Why the 170.56 point is NOT in this file, although it is in the accuracy
+# domain.** It is real and it is on this axis -- the harness reproduces it to
+# 170.5619 -- but it is a SATURATED run (offered 10.3 rps, completed 1.671, queue
+# delay growing at +4.15 s per second of arrivals) and it sits 15x beyond the
+# nearest measured point. An envelope is inverted by the solver to answer "what
+# operating point does this arrival rate produce", and a linear interpolation
+# across a 15x gap into a saturated point would answer that question confidently
+# and wrongly. `validity` therefore ends at 11.27 and `extrapolation: refuse`
+# means the solver declines rather than guesses. The accuracy domain has a
+# different job -- pricing predictor error, where the alternative was ONE point
+# and no slope at all -- so it keeps 170.56 and says what the gap costs.
+envelope_id: A40/meta-llama/Llama-3.1-8B/bf16/tp1
+unit: card
+source: measured
+concurrency_metric: served
+closed_loop: false
+
+measured_on_workload:
+  dataset: workloads/sharegpt-llama-3.1-8b-300-sps10.jsonl
+  input_tokens_p50: 731.5
+  output_tokens_p50: 632
+  # Little's law needs the MEAN, not the p50; the same 3.2 % gap the RNGD file
+  # records. Same dataset, so the same number.
+  output_tokens_mean: 652.51
+
+provenance:
+  - measured_at: 2026-09-10
+    node: a40
+    points: [4.076, 11.272]
+    harness: experiments/scripts/measure_envelope_openloop.py
+    raw: outputs/a40_envelope_openloop/
+    device_sn: GPU-6e0d82b1-edc3-40ba-8f19-0f0a4b535efb   # card 0, 0000:01:00.0
+    repeats: 2
+    offered_rps: [0.2, 0.5]
+    weights: NousResearch/Meta-Llama-3.1-8B
+    engine: {max_num_seqs: 128, max_num_batched_tokens: 2048, dtype: bfloat16,
+             kv_cache_dtype: auto, seed: 42}
+    note: >
+      Two independent processes per point, 300 requests each, zero failures in
+      1200. Served concurrency agreed to three decimals across repeats (spread
+      0.008 % and 0.011 %), throughput to 0.001 %, TPOT p50 to 0.03 %, and power
+      to 0.21 % and 0.66 % -- so the 5 % rule never called for a third repeat.
+      Neither point is saturated: queue delay slope is order 1e-9 s/s at both,
+      against +4.15 for the saturated 170.56 run.
+      The `weights` are the ungated NousResearch mirror, which is what the
+      committed 170.56 run also loaded -- identical weights and tokenizer to the
+      gated `meta-llama` id the path is named for, so the compute is the same.
+      The engine config is that run's, unchanged, so these points and 170.56
+      differ in offered load and nothing else.
+
+# Idle, and why there is only one usable reading. The harness takes a 60 s
+# empty-card window before each bench process. Only the FIRST is a cold card:
+# 31.24 W. The other three read 39.84, 40.57 and 41.81 W because they begin 60 s
+# after the previous run's process exited and the board has not returned to idle.
+# They are recorded in the raw artifacts and deliberately not averaged in here --
+# an "idle" that is really a cooling curve would understate every energy figure
+# it was subtracted from.
+#
+# This is also NOT the RNGD envelope's idle. That one is a LOADED but unoccupied
+# card (the server stays up between points, 40.0 W). `python -m bench run` loads
+# and unloads the model inside its own process, so a loaded-but-idle window does
+# not exist on this route and none is claimed.
+idle:
+  empty_card_w: 31.24
+  util_pct: 0.0
+  samples: 60
+  kind: empty_card
+  note: >
+    Cold card, before any model was loaded. Not comparable to the RNGD
+    envelope's 40.0 W loaded-but-idle figure.
+
+# tput/tpot/ttft are per card. power_w is the sustained mean over the bench
+# window -- which comes from meta.json's own started_at/finished_at, so model
+# loading is outside it -- with util_pct from the SAME samples (A5(c)). rps is
+# the offered arrival rate, which here is measured input rather than derived:
+# the trace was replayed at exactly this rate and `bench run` honours it (2.000 s
+# spacing requested, 2.000 s observed).
+points:
+  - {conc:  4.076, tput_tok_s: 128.96, tpot_p50: 31.334, tpot_p99: 33.191, ttft_p99: 467, util_pct: 100.0, power_w: 293.95, tok_per_j: 0.4387, rps: 0.2}
+  - {conc: 11.272, tput_tok_s: 314.41, tpot_p50: 35.494, tpot_p99: 38.244, ttft_p99: 487, util_pct:  99.9, power_w: 294.98, tok_per_j: 1.0658, rps: 0.5}
+
+validity:
+  conc_min: 4.076
+  conc_max: 11.272
+  extrapolation: refuse
+  power_valid_range: [4.076, 11.272]
+
+notes: >
+  Two points, so this curve carries a slope and no curvature. Power is nearly
+  flat across it -- 293.95 W to 294.98 W, a 0.35 % span -- while throughput moves
+  2.44x, which is the same shape the RNGD card shows (1.085x power across 9.5x
+  throughput) and the same reason: at these concurrencies the card is already
+  drawing full serving power and batching buys throughput almost for free. The
+  A40's 0.35 % is flatter still than RNGD's 8.2 %, and unlike RNGD there is no U
+  -- but two points cannot show a U, so that is an absence of evidence and is not
+  recorded as a finding.

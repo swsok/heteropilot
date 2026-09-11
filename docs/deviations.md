@@ -2093,3 +2093,71 @@ against, where it is the right instrument because that side is a card measuremen
 If the planner's energy definition is ever changed, it must be a deliberate,
 documented migration that re-derives the historical numbers — not a side effect of
 this file appearing.
+
+---
+
+## D32 — a 20-request simulation is not at the same operating point as a 300-request measurement · Open (measured on A40, RNGD side unchecked)
+
+**What the code does.** `experiments/scripts/lowload_sim_error.py` compares the
+simulator against a measured envelope point by offering the same arrival rate to
+both. Its `--num-reqs` defaults to **20**, while every hardware envelope point it
+is compared against is **300 requests**. The script then computes each side's
+served concurrency by Little's law and refuses the comparison if they differ by
+more than 20 % (`comparable: false`).
+
+**What that costs, measured.** Running the A40 points both ways, same rates, same
+trace prefix, changing only the simulator's request count:
+
+| offered | measured conc | sim conc @20 req | gap | sim conc @300 req | gap |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 0.1976 rps | 4.076 | 3.74 | **−8.2 %** | 4.043 | −0.8 % |
+| 0.4818 rps | 11.272 | 7.70 | **−31.7 %** | 10.800 | −4.2 % |
+
+The second 20-request point fails the script's own ±20 % guard and would have
+been dropped. Nothing physical differs between the two columns.
+
+**Why.** `served = Σ latency / wall`, and `wall` spans the first arrival to the
+last completion — so it includes a drain tail of roughly one request latency
+after arrivals stop. Over a short run that tail is a large fraction of the wall
+and depresses the answer by about `span/(span+latency)`. At 0.4818 rps, 20
+requests span 41.5 s against a ~23 s mean latency:
+`11.27 × 41.5/(41.5+23) ≈ 7.2`, against the 7.70 observed. The effect vanishes as
+the run lengthens; at 300 requests the span is 15× longer and the residual gap is
+the real throughput error.
+
+**Adopted.** The A40 domain's two new points are measured with `--num-reqs 300`,
+matching the hardware side. The default is left at 20 rather than changed,
+because changing it would silently alter what a bare re-run of the committed
+RNGD invocation means; the A40 command line in the script's docstring passes it
+explicitly.
+
+**What is NOT resolved, and it touches a committed artifact.** The four RNGD
+low-load points in `profiles/calibration/rngd_card_edf.yaml` were taken with the
+20-request default — their notes say so ("20-req sim at 0.0967 rps vs measured
+c1.0"). Their sim/measured concurrency gaps are +9 %, +10 %, −1.5 % and −19 %,
+and that file additionally **discards two further points** at a gap it describes
+as "40 % below the hardware", attributing it to throughput error:
+
+> "At offered rates matching the measured c15.3 and c15.59 the simulator settled
+>  at served concurrency 9.1 and 9.3 — 40 % below the hardware — so its TPOT is a
+>  different operating point's TPOT and the pair is not comparable. That
+>  divergence is itself the throughput error the 76 point records."
+
+A −40 % gap at the top of a 20-request sweep is also the exact signature of the
+tail artifact above, which at −31.7 % on the A40 was entirely an artifact. **This
+does not establish that the RNGD attribution is wrong** — RNGD genuinely does
+have throughput error at high concurrency, and the two causes are additive — but
+it does mean the split between them has not been measured, and two points may
+have been discarded for the wrong reason.
+
+Testing it needs no NPU hardware: the RNGD envelope is committed, so re-running
+`lowload_sim_error.py` at `--num-reqs 300` against it is pure simulation and runs
+on any node. It is not done here because it would change the RNGD accuracy
+domain, and therefore E6's other half, beyond the scope of the A40 work order
+this deviation came out of. The sweep cache is domain-independent, so re-ranking
+E6 afterwards is a replay rather than a re-simulation.
+
+**Where.** `experiments/scripts/lowload_sim_error.py`,
+`profiles/calibration/a40.accuracy.yaml` (`request_count_note`),
+`profiles/calibration/rngd_card_edf.yaml` (unchanged, flagged here),
+`experiments/results/a40_lowload_envelope.md`.

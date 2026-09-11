@@ -1,0 +1,15 @@
+╭────────────────────────────────────────────────────────────────╮
+│ LLMServingSim Bench                                            │
+│ vLLM end-to-end run -> outputs/a40_envelope_openloop/r0p2_rep1 │
+╰────────────────────────────────────────────────────────────────╯
+[13:49:32] INFO     Loaded 300 requests from                                    
+                    outputs/a40_envelope_openloop/trace_r0p2_rep1.jsonl         
+[13:49:33] INFO     Booting AsyncLLM …                                          
+[13:49:48] INFO     ✓ Booting AsyncLLM (15.1s)                                  
+           INFO     Submitting 300 requests …                                   
+  Requests ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 300/300 • 0:25:17 • 0:00:00
+[14:15:06] INFO     ✓ Submitting 300 requests (1518.0s)                         
+           INFO     Shutting AsyncLLM down …                                    
+           INFO     ✓ Shutting AsyncLLM down (0.2s)                             
+[14:15:08] INFO     ✓ 300 requests, 1518 timeseries rows ->                     
+                    outputs/a40_envelope_openloop/r0p2_rep1                     
