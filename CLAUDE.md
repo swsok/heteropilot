@@ -382,7 +382,9 @@ built in parallel; `calibration.AccuracyDomain` is the one that remains, `refuse
 for a new domain while the three committed domains opt into `widen_error_bars` explicitly, and the
 per-candidate `MarginPolicy` in `planner/optimizer/margin.py` is the single consumer. A candidate
 whose operating point no domain covers is `outside_calibration_domain` — unmeasured, not
-infeasible.
+infeasible. Stage B sits on top: `planner/uncertainty/{perturb,sensitivity,measurement_plan}.py`
+re-judge perturbed metrics through the same `judge()`/`rank_plans()` the search uses, and
+`plan --accuracy-domain --measurement-plan` emits what to measure next, ranked by regret per hour.
 
 Derive schemas from real artifacts, with one trap: **`outputs/example_*_run.csv` are stale** and
 must not be used as golden references — their `output` column counts `input + output` tokens while

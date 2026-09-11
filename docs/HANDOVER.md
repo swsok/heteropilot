@@ -489,6 +489,21 @@ D23 and D14 are **closed** (D26 and D28 respectively); what remains is narrower:
 
 ---
 
+### 2.9 The uncertainty-planner stack (patent 2) — **landed 2026-09-11 as three stacked PRs**
+
+`WORK_ORDER_uncertainty_planner.md` A1–B3 was built on `feat/uq-*` from
+`108e48a` and never opened as PRs while `main` took #71–#77 on top of the rps
+design; the two had each built an accuracy domain. **D33** records the
+reconciliation (main's `calibration.AccuracyDomain` stays, `refuse` default, the
+per-candidate `MarginPolicy` in `planner/optimizer/margin.py` is the single
+consumer, `UNMEASURED` → `outside_calibration_domain`). PRs: #78 A1 registry →
+#79 A2–A5 margins → B1–B3 perturbation/sensitivity/measurement plan on top.
+Left for the stack's owner: **STEP B4** (truth-degradation experiments E-B1–E-B3,
+`feat/uq-b4-wip` holds the harness, stopped before a valid run) and **STEP B5**
+(`docs/uncertainty_planner.md`, README, CHANGELOG). Left for the rps owners:
+whether to flip the committed domains to `refuse` (three E6 cells become
+undecidable) and the linear `margin_from_error` (under-corrects by 4 pp at 18 %).
+
 ## 3. Traps that have each cost a session
 
 Recorded because they are not discoverable from the code.
