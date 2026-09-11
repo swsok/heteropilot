@@ -45,7 +45,11 @@ from pathlib import Path
 from planner.candidate_generator import CandidateGenerator
 from planner.inventory import detect_islands, load_cluster_spec, load_profiles_for
 from planner.optimizer import exhaustive, pareto
-from planner.optimizer.surrogate import AnalyticalRooflineRanker, SurrogateRanker
+from planner.optimizer.surrogate import (
+    AnalyticalRooflineRanker,
+    BinnedRooflineRanker,
+    SurrogateRanker,
+)
 from planner.predictor import Predictor, SimOutcome, SimResult
 from planner.predictor.llmservingsim import LLMServingSimPredictor
 from planner.spec import load_service_spec
@@ -96,6 +100,40 @@ def _rankers() -> dict[str, SurrogateRanker]:
             }
             return sorted(candidates, key=lambda c: (self._keyfn(est[c.id]), c.id))
 
+    class _MergeRanker(AnalyticalRooflineRanker):
+        """Round-robin fusion of two orderings, first-seen wins.
+
+        The rate-keyed corpora show why a single key cannot be enough: at 1-10 rps
+        the efficiency order finds the optimum and the floor order is catastrophic
+        (regret 2.7 at 1 rps), and at 20 rps that reverses -- both efficiency
+        rankers are false-infeasible to K=50 while the floor finds a plan. Which
+        term decides feasibility is a function of load, and the ranker is not told
+        the load.
+
+        Fusion sidesteps having to know. Taking alternately from the two lists
+        puts each ranker's top ~K/2 inside any top-K, so the merged ranker is
+        false-infeasible only where BOTH parents are. It pays for that with depth:
+        a parent that was perfect at K=10 now gets five slots there. No weight, no
+        threshold, nothing fitted -- which is the point, since a load-dependent
+        blend is exactly the fixture-specific move D30 forbids.
+        """
+
+        def __init__(self, a, b):
+            self._a, self._b = a, b
+
+        def order(self, candidates, spec, islands, profiles, *,
+                  gpu_memory_utilization: float = 0.90):
+            kw = {"gpu_memory_utilization": gpu_memory_utilization}
+            la = self._a.order(candidates, spec, islands, profiles, **kw)
+            lb = self._b.order(candidates, spec, islands, profiles, **kw)
+            out, taken = [], set()
+            for x, y in zip(la, lb, strict=True):
+                for c in (x, y):
+                    if c.id not in taken:
+                        taken.add(c.id)
+                        out.append(c)
+            return out
+
     return {
         "roofline": AnalyticalRooflineRanker(),
         "floor": _KeyRanker(lambda e: e.roofline_tpot_ms),
@@ -103,6 +141,20 @@ def _rankers() -> dict[str, SurrogateRanker]:
             lambda e: (e.roofline_tpot_ms, -e.proxy_tokens_per_joule)),
         "tpj_then_floor": _KeyRanker(
             lambda e: (-e.proxy_tokens_per_joule, e.roofline_tpot_ms)),
+        # Three tolerances rather than one, because a single fitted width would
+        # be the fixture-specific move D30 forbids. 0.1 % is already three times
+        # the measured noise; 5 % is still far below the factor-of-four gaps
+        # between `max_num_seqs` groups. If the three disagree, the width is
+        # doing the work and none of them should ship.
+        "tpj_bin0p1pct": BinnedRooflineRanker(0.001),
+        "tpj_bin1pct": BinnedRooflineRanker(0.01),
+        "tpj_bin5pct": BinnedRooflineRanker(0.05),
+        "merge_bin_floor": _MergeRanker(BinnedRooflineRanker(0.01),
+                                        _KeyRanker(lambda e: e.roofline_tpot_ms)),
+        # The same fusion with the SHIPPED ranker as one parent, to separate what
+        # the binning buys from what the fusion buys.
+        "merge_roofline_floor": _MergeRanker(AnalyticalRooflineRanker(),
+                                             _KeyRanker(lambda e: e.roofline_tpot_ms)),
     }
 
 
@@ -118,6 +170,7 @@ def _load_cache_corpus(cache_dir: Path) -> dict[str, SimResult]:
     from planner.plan import PredictedMetrics
 
     out: dict[str, SimResult] = {}
+    seen: dict[str, int] = {}
     for path in sorted(cache_dir.glob("*.json")):
         try:
             payload = json.loads(path.read_text())
@@ -125,17 +178,67 @@ def _load_cache_corpus(cache_dir: Path) -> dict[str, SimResult]:
         except Exception as exc:  # a half-written or foreign file is not a corpus entry
             print(f"  skipping unreadable {path.name}: {exc}", file=sys.stderr)
             continue
+        seen[payload["candidate_id"]] = seen.get(payload["candidate_id"], 0) + 1
         out[payload["candidate_id"]] = SimResult(
             candidate_id=payload["candidate_id"],
             outcome=SimOutcome.OK,
             metrics=metrics,
             warnings=["metrics replayed from a cached corpus"],
         )
+    # A corpus must be ONE sweep point. A multi-rate sweep (`pd_slo_sweep.py
+    # --rps a,b,c`) writes one entry per rate under the same candidate_id --
+    # different trace digests, so different filenames -- and reading by
+    # candidate_id would keep whichever sorted last and silently mix arrival
+    # rates into one ranking. Measured on outputs/e6/pd-rngd-gpu/cache: 660 files,
+    # 289 distinct candidates, 371 shadowed. Refused rather than deduplicated,
+    # because the payload does not record the trace digest and nothing here can
+    # tell the rates apart afterwards.
+    dupes = sum(n - 1 for n in seen.values() if n > 1)
+    if dupes:
+        raise SystemExit(
+            f"error: {cache_dir} holds {sum(seen.values())} entries for "
+            f"{len(seen)} distinct candidates -- {dupes} would be silently "
+            f"shadowed. This is a multi-point sweep's cache (one entry per "
+            f"arrival rate); point --cache-dir at a single-point corpus."
+        )
     return out
+
+
+def _keyed_cache_corpus(cache_dir: Path, spec, cluster, islands, trace_path: Path
+                        ) -> dict[str, SimResult]:
+    """Read a multi-point sweep's cache at ONE arrival rate, by its real key.
+
+    `_load_cache_corpus` reads by candidate_id and therefore refuses a sweep that
+    wrote several rates. The rates are not actually indistinguishable -- the cache
+    key binds the trace digest, which is what separates them on disk -- so the way
+    to use such a corpus is to ask the planner's own `EnvelopeCache` for the
+    entry, with the trace regenerated at the rate in question. That makes the
+    largest corpora available (E6's are 660 and 688 entries across four rates)
+    and adds the arrival-rate axis, which every single-point corpus lacks.
+
+    The caller must reproduce the sweep's `--num-requests` and `--seed` as well;
+    a different trace is a different digest and the lookup simply misses, which
+    shows up as an empty corpus rather than as wrong numbers.
+    """
+    from planner.envelope import EnvelopeCache
+    from planner.topology import TopologyGraph
+
+    cache = EnvelopeCache(
+        cache_dir, spec,
+        accelerator_of={i.id: i.accelerator_model for i in islands},
+        link_bw_gbps=TopologyGraph(cluster).reduce_for_simulator(islands).link_bw_gbps,
+        trace_digest=prov.hash_file(trace_path),
+    )
+    return cache
 
 
 def run(args: argparse.Namespace) -> int:
     spec = load_service_spec(args.service)
+    if args.cache_rps is not None:
+        # The whole measurement moves to that rate: the corpus was simulated
+        # there, so feasibility and ranking must be judged there too.
+        spec = spec.model_copy(deep=True)
+        spec.traffic.arrival_rate_rps = args.cache_rps
     cluster = load_cluster_spec(args.cluster)
     profiles = load_profiles_for(cluster, args.root)
     islands = detect_islands(cluster, profiles)
@@ -164,7 +267,18 @@ def run(args: argparse.Namespace) -> int:
         # about. Anything the sweep did not simulate is dropped here and counted,
         # so a partial corpus narrows the claim rather than skewing it.
         replayed_from = str(args.cache_dir)
-        corpus = _load_cache_corpus(Path(args.cache_dir))
+        if args.cache_rps is not None:
+            keyed = _keyed_cache_corpus(Path(args.cache_dir), spec, cluster,
+                                        islands, trace.path)
+            corpus = {}
+            for c in simulatable:
+                got = keyed.get(c)
+                if got is not None:
+                    corpus[c.id] = got
+            print(f"  keyed lookup at {args.cache_rps} rps: {len(corpus)} entries",
+                  file=sys.stderr)
+        else:
+            corpus = _load_cache_corpus(Path(args.cache_dir))
         hits = [c for c in simulatable if c.id in corpus]
         if not hits:
             print("error: the cache covers none of the generated candidates -- "
@@ -329,6 +443,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--enable-pd", action="store_true", default=True,
                    help="generate P/D candidates (default: on, as before)")
     p.add_argument("--no-enable-pd", dest="enable_pd", action="store_false")
+    p.add_argument("--cache-rps", type=float, default=None,
+                   help="resolve --cache-dir entries by the planner's own cache "
+                        "key at this arrival rate, instead of by candidate id. "
+                        "Required for a multi-point sweep's cache, which holds "
+                        "one entry per rate under each candidate id; reproduce "
+                        "that sweep's --num-requests and --seed too.")
     p.add_argument("--cache-dir", type=Path, default=None,
                    help="replay an EnvelopeCache corpus instead of simulating")
     p.add_argument("--rankers", nargs="+", default=["roofline"],

@@ -1,0 +1,390 @@
+{
+  "candidates": 528,
+  "oracle_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+  "oracle_goodput_per_joule": -60350.0,
+  "provenance": {
+    "accelerators": {
+      "atom_devices": 4,
+      "cuda": null,
+      "rngd_cards": 3
+    },
+    "backend_version": null,
+    "candidates": 528,
+    "cluster_spec_hash": "a663850533202d6b34fe38e7126592163fecae323daa7e42693c9289ccec4b14",
+    "command": "exp_surrogate.py --service examples/service_specs/llama31-8b.yaml --cluster experiments/configs/clusters/pd-rngd-gpu-card.yaml --enable-pd --cache-dir outputs/.hp-reval-margin18-pd-rngd-gpu-card/cache --rankers roofline floor tpj_bin1pct merge_bin_floor merge_roofline_floor --k-values 5 10 20 30 50 --work-dir outputs/surrogate_v3/card --output-dir outputs/surrogate_v3/card --quiet",
+    "cpu_count": 96,
+    "dataset_hash": "cbd7f6d5b61f27fd3bdce005f176d515f380e1a524d5c2a55cd7e906280348b5",
+    "enable_pd": true,
+    "experiment": "exp_surrogate_topk",
+    "git_commit": "854fc72444caac89ecf492c8c47ad6d76baf8440",
+    "git_dirty": true,
+    "hardware_profile_hash": "e85d5f866ec847c6eab1755182b964a3966bac3dcaeefbebf0935e8306954f54",
+    "hostname": "etri-001",
+    "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
+    "model_revision": null,
+    "oracle_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+    "oracle_goodput_per_joule": -60350.0,
+    "platform": "Linux-6.8.0-40-generic-x86_64-with-glibc2.35",
+    "python_version": "3.10.12",
+    "random_seed": 42,
+    "rankers": [
+      "roofline",
+      "floor",
+      "tpj_bin1pct",
+      "merge_bin_floor",
+      "merge_roofline_floor"
+    ],
+    "replayed_from": "outputs/.hp-reval-margin18-pd-rngd-gpu-card/cache",
+    "service_spec_hash": "860c8a567b759ac948d4ae16951a5c878e7654201d9e89b08bf21e6e38f4880c",
+    "surrogate": "roofline",
+    "timestamp": "2026-09-11T04:47:20.882952+00:00",
+    "vllm_version": null,
+    "workload": {
+      "horizon_s": 11.372,
+      "num_requests": 120,
+      "path": "outputs/surrogate_v3/card/workload.jsonl",
+      "random_seed": 42,
+      "total_input_tokens": 98130,
+      "total_output_tokens": 76149
+    }
+  },
+  "replayed_from": "outputs/.hp-reval-margin18-pd-rngd-gpu-card/cache",
+  "rows": [
+    {
+      "false_infeasible": false,
+      "k": 5,
+      "recall": 0.0,
+      "regret": 0.00115990057995029,
+      "speedup": 105.6,
+      "surrogate_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t2048",
+      "surrogate_goodput_per_joule": -60420.0
+    },
+    {
+      "false_infeasible": false,
+      "k": 10,
+      "recall": 1.0,
+      "regret": 0.0,
+      "speedup": 52.8,
+      "surrogate_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+      "surrogate_goodput_per_joule": -60350.0
+    },
+    {
+      "false_infeasible": false,
+      "k": 20,
+      "recall": 1.0,
+      "regret": 0.0,
+      "speedup": 26.4,
+      "surrogate_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+      "surrogate_goodput_per_joule": -60350.0
+    },
+    {
+      "false_infeasible": false,
+      "k": 30,
+      "recall": 1.0,
+      "regret": 0.0,
+      "speedup": 17.6,
+      "surrogate_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+      "surrogate_goodput_per_joule": -60350.0
+    },
+    {
+      "false_infeasible": false,
+      "k": 50,
+      "recall": 1.0,
+      "regret": 0.0,
+      "speedup": 10.56,
+      "surrogate_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+      "surrogate_goodput_per_joule": -60350.0
+    },
+    {
+      "false_infeasible": false,
+      "k": 528,
+      "recall": 1.0,
+      "regret": 0.0,
+      "speedup": 1.0,
+      "surrogate_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+      "surrogate_goodput_per_joule": -60350.0
+    }
+  ],
+  "rows_by_ranker": {
+    "floor": [
+      {
+        "false_infeasible": true,
+        "k": 5,
+        "recall": 0.0,
+        "regret": 1.0,
+        "speedup": 105.6,
+        "surrogate_best_id": null,
+        "surrogate_goodput_per_joule": null
+      },
+      {
+        "false_infeasible": true,
+        "k": 10,
+        "recall": 0.0,
+        "regret": 1.0,
+        "speedup": 52.8,
+        "surrogate_best_id": null,
+        "surrogate_goodput_per_joule": null
+      },
+      {
+        "false_infeasible": false,
+        "k": 20,
+        "recall": 0.0,
+        "regret": 0.21888980944490471,
+        "speedup": 26.4,
+        "surrogate_best_id": "cuda-a40-node_a40a-tp4-dp1-s128-t8192",
+        "surrogate_goodput_per_joule": -73560.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 30,
+        "recall": 0.0,
+        "regret": 0.06760563380281702,
+        "speedup": 17.6,
+        "surrogate_best_id": "cuda-a40-node_a40a-tp4-dp1-s256-t8192",
+        "surrogate_goodput_per_joule": -64430.00000000001
+      },
+      {
+        "false_infeasible": false,
+        "k": 50,
+        "recall": 0.0,
+        "regret": 0.06760563380281702,
+        "speedup": 10.56,
+        "surrogate_best_id": "cuda-a40-node_a40a-tp4-dp1-s256-t8192",
+        "surrogate_goodput_per_joule": -64430.00000000001
+      },
+      {
+        "false_infeasible": false,
+        "k": 528,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 1.0,
+        "surrogate_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+        "surrogate_goodput_per_joule": -60350.0
+      }
+    ],
+    "merge_bin_floor": [
+      {
+        "false_infeasible": true,
+        "k": 5,
+        "recall": 0.0,
+        "regret": 1.0,
+        "speedup": 105.6,
+        "surrogate_best_id": null,
+        "surrogate_goodput_per_joule": null
+      },
+      {
+        "false_infeasible": false,
+        "k": 10,
+        "recall": 0.0,
+        "regret": 0.00115990057995029,
+        "speedup": 52.8,
+        "surrogate_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t2048",
+        "surrogate_goodput_per_joule": -60420.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 20,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 26.4,
+        "surrogate_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+        "surrogate_goodput_per_joule": -60350.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 30,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 17.6,
+        "surrogate_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+        "surrogate_goodput_per_joule": -60350.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 50,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 10.56,
+        "surrogate_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+        "surrogate_goodput_per_joule": -60350.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 528,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 1.0,
+        "surrogate_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+        "surrogate_goodput_per_joule": -60350.0
+      }
+    ],
+    "merge_roofline_floor": [
+      {
+        "false_infeasible": true,
+        "k": 5,
+        "recall": 0.0,
+        "regret": 1.0,
+        "speedup": 105.6,
+        "surrogate_best_id": null,
+        "surrogate_goodput_per_joule": null
+      },
+      {
+        "false_infeasible": false,
+        "k": 10,
+        "recall": 0.0,
+        "regret": 0.00115990057995029,
+        "speedup": 52.8,
+        "surrogate_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t2048",
+        "surrogate_goodput_per_joule": -60420.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 20,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 26.4,
+        "surrogate_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+        "surrogate_goodput_per_joule": -60350.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 30,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 17.6,
+        "surrogate_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+        "surrogate_goodput_per_joule": -60350.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 50,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 10.56,
+        "surrogate_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+        "surrogate_goodput_per_joule": -60350.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 528,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 1.0,
+        "surrogate_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+        "surrogate_goodput_per_joule": -60350.0
+      }
+    ],
+    "roofline": [
+      {
+        "false_infeasible": false,
+        "k": 5,
+        "recall": 0.0,
+        "regret": 0.00115990057995029,
+        "speedup": 105.6,
+        "surrogate_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t2048",
+        "surrogate_goodput_per_joule": -60420.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 10,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 52.8,
+        "surrogate_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+        "surrogate_goodput_per_joule": -60350.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 20,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 26.4,
+        "surrogate_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+        "surrogate_goodput_per_joule": -60350.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 30,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 17.6,
+        "surrogate_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+        "surrogate_goodput_per_joule": -60350.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 50,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 10.56,
+        "surrogate_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+        "surrogate_goodput_per_joule": -60350.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 528,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 1.0,
+        "surrogate_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+        "surrogate_goodput_per_joule": -60350.0
+      }
+    ],
+    "tpj_bin1pct": [
+      {
+        "false_infeasible": false,
+        "k": 5,
+        "recall": 0.0,
+        "regret": 0.00115990057995029,
+        "speedup": 105.6,
+        "surrogate_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t2048",
+        "surrogate_goodput_per_joule": -60420.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 10,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 52.8,
+        "surrogate_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+        "surrogate_goodput_per_joule": -60350.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 20,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 26.4,
+        "surrogate_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+        "surrogate_goodput_per_joule": -60350.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 30,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 17.6,
+        "surrogate_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+        "surrogate_goodput_per_joule": -60350.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 50,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 10.56,
+        "surrogate_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+        "surrogate_goodput_per_joule": -60350.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 528,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 1.0,
+        "surrogate_best_id": "mix(furiosa-rngd-card-node_rngd0-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+        "surrogate_goodput_per_joule": -60350.0
+      }
+    ]
+  }
+}
