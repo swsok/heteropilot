@@ -201,3 +201,120 @@ def test_a_path_outside_the_repo_is_absolute_not_a_crash(tmp_path):
     assert ll._arg_path(outside) == str(outside.resolve())
     assert ll._arg_path(ll.DEFAULT_CLUSTER) == (
         "experiments/configs/clusters/rngd-card-llama31-8b-tp1.json")
+
+
+# --- served-concurrency matching -------------------------------------------
+#
+# The RNGD-CARD and A40 domains were built by offering the envelope point's own
+# arrival rate and checking that both sides then landed at the same SERVED
+# concurrency. That check is not a formality: on the per-PE RNGD fixture the
+# simulator sits at served 1.86 where the hardware sits at 1.00, so every point
+# fails the guard and the recipe measures nothing. `--match served` pairs against
+# the measured curve interpolated at the simulator's own operating point instead,
+# which is also the axis `planner/util/operating_point.py` indexes the domain by.
+
+
+@pytest.fixture
+def env():
+    return ll.load_envelope(
+        ROOT / "profiles/envelopes/RNGD-CARD/meta-llama/Llama-3.1-8B/bf16/tp1.yaml")
+
+
+def _raw(conc_sim, tpot_sim, conc_measured=1.00, tpot_measured=15.71):
+    return {"conc_measured": conc_measured, "conc_sim": conc_sim,
+            "offered_rps": 0.0967, "tpot_measured_ms": tpot_measured,
+            "tpot_sim_ms": tpot_sim, "requests": 300, "rc": 0}
+
+
+def test_offered_matching_is_unchanged_and_still_refuses_a_moved_operating_point(env):
+    """The default must keep scoring exactly as it did, guard included."""
+    near = ll.score(env, _raw(1.05, 16.5), "offered")
+    assert near["comparable"] is True
+    assert near["tpot_err_pct"] == pytest.approx((16.5 - 15.71) / 15.71 * 100)
+    # No extra keys: a committed artifact must re-run byte-identical.
+    assert "tpot_ref_ms" not in near and "match" not in near
+
+    moved = ll.score(env, _raw(1.86, 29.04), "offered")
+    assert moved["comparable"] is False, "a +86 % concurrency gap is not a pair"
+
+
+def test_served_matching_compares_against_the_curve_at_the_sims_own_point(env):
+    """The reference is the hardware's TPOT where the SIMULATOR ran, not where
+    the offered rate was supposed to put it."""
+    rec = ll.score(env, _raw(1.86, 29.04), "served")
+    assert rec["comparable"] is True
+    # Between the measured (1.00, 15.71) and (1.99, 18.01), log-log.
+    assert 15.71 < rec["tpot_ref_ms"] < 18.01
+    assert rec["tpot_err_pct"] == pytest.approx(
+        (29.04 - rec["tpot_ref_ms"]) / rec["tpot_ref_ms"] * 100)
+    # Smaller than the offered-matched error, because it charges the model for
+    # its TPOT error alone instead of adding its throughput error to it.
+    offered = ll.score(env, _raw(1.86, 29.04), "offered")
+    assert rec["tpot_err_pct"] < offered["tpot_err_pct"]
+    assert rec["match"] == "served"
+
+
+def test_a_sim_point_outside_the_measured_range_is_refused_not_extrapolated(env):
+    """`validity.extrapolation: refuse` has to reach up through the pairing. An
+    invented reference TPOT is exactly what the policy exists to prevent."""
+    rec = ll.score(env, _raw(0.4, 40.0), "served")
+    assert rec["comparable"] is False
+    assert rec["tpot_err_pct"] is None
+    assert rec["tpot_ref_ms"] is None
+    assert "outside the measured range" in rec["refused"]
+
+
+def test_rescoring_from_raw_needs_no_simulator(tmp_path, monkeypatch, env):
+    """Changing the pairing is arithmetic on facts the artifact already records.
+    Re-simulating to get it would be hours of compute for the same answer, so
+    --from-raw must not launch `python -m serving` at all."""
+    def _boom(*args, **kwargs):
+        raise AssertionError("--from-raw must not run the simulator")
+
+    monkeypatch.setattr(ll.subprocess, "run", _boom)
+    prior = tmp_path / "prior.json"
+    # A failed record alongside a good one: it carries no facts to re-score and
+    # dropping it would silently shorten the sweep.
+    prior.write_text(json.dumps([_raw(1.86, 29.04), {"conc": 7.88, "rc": 1,
+                                                     "error": "run failed"}]))
+    out = tmp_path / "out"
+    argv = ["lowload_sim_error.py", "--match", "served",
+            "--from-raw", str(prior), "--out", str(out)]
+    old, sys.argv = sys.argv, argv
+    try:
+        assert ll.main() == 0
+    finally:
+        sys.argv = old
+    got = json.loads((out / "lowload_sim_error.json").read_text())
+    assert len(got) == 2
+    assert got[0]["match"] == "served" and got[0]["comparable"] is True
+    assert got[1] == {"conc": 7.88, "rc": 1, "error": "run failed"}
+    run = json.loads((out / "run.json").read_text())
+    assert run["match"] == "served" and run["rescored_from"].endswith("prior.json")
+
+
+@pytest.mark.parametrize("raw,envelope", [
+    ("outputs/lowload_sim_error/lowload_sim_error.json",
+     "profiles/envelopes/RNGD-CARD/meta-llama/Llama-3.1-8B/bf16/tp1.yaml"),
+    ("outputs/a40_lowload_sim_error/lowload_sim_error.json",
+     "profiles/envelopes/A40/meta-llama/Llama-3.1-8B/bf16/tp1.yaml"),
+])
+def test_the_committed_artifacts_rescore_byte_identically(tmp_path, raw, envelope):
+    """Adding a second pairing must not move the first one's numbers.
+
+    Both committed domains were scored by the code path `--match offered` still
+    takes, so re-scoring their raw artifacts has to return the file unchanged --
+    the cheap half of the proof that the refactor was a refactor. The expensive
+    half, that the simulator still produces those raw records, is not re-run here;
+    it is what the artifacts themselves are.
+    """
+    src = ROOT / raw
+    out = tmp_path / "out"
+    argv = ["lowload_sim_error.py", "--envelope", str(ROOT / envelope),
+            "--from-raw", str(src), "--out", str(out)]
+    old, sys.argv = sys.argv, argv
+    try:
+        assert ll.main() == 0
+    finally:
+        sys.argv = old
+    assert (out / "lowload_sim_error.json").read_text() == src.read_text()
