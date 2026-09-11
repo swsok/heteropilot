@@ -262,6 +262,10 @@ def test_fully_measured_profiles_are_counted_not_listed(llama_spec, grades, cost
     assert reg.measured_count["profile"] == len(islands)
 
 
+@pytest.mark.skipif(
+    not (ROOT / "profiler/perf/ASCEND_TARGET-t0").exists(),
+    reason="needs the gitignored synthetic Tier 0 bundle; run scripts/gen-tier0-bundles.sh",
+)
 def test_weaker_of_the_two_signals_wins_for_a_tier0_bundle(grades, costs) -> None:
     """ascend_target: profile vendor_spec (rank 3) + bundle -t0 analytical (1)."""
     spec = load_service_spec(ROOT / "examples/service_specs/qwen3-32b.yaml")
