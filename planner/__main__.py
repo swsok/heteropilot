@@ -352,9 +352,9 @@ def _resimulate_top(
     from planner.uncertainty.sensitivity import refine
 
     runner = partial(
-        resim.resimulate, spec=spec, cluster=cluster, islands=by_id,
-        profiles=profiles, candidates=candidates, predictor=predictor,
-        island_hw=island_hw, max_workers=args.workers,
+        resim.resimulate, baseline=metrics, spec=spec, cluster=cluster,
+        islands=by_id, profiles=profiles, candidates=candidates,
+        predictor=predictor, island_hw=island_hw, max_workers=args.workers,
     )
     penalty = output.provenance.get("uncertainty", {}).get("slo_penalty", 1.0)
     refined, records = refine(

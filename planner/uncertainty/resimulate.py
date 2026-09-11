@@ -21,6 +21,15 @@ for one kind it means nothing at all:
   feature exists for: a profile error is an error in per-operator time, and
   scaling latency percentiles by the same factor ignores that a slower engine
   also holds requests longer.
+
+  One asymmetry to know about. A registry PROFILE item names ISLANDS, but a
+  perf bundle belongs to an accelerator MODEL, and a cluster usually has several
+  identical islands of one model. Only the candidates that use an affected
+  island are re-evaluated, so a candidate on an untouched twin keeps its
+  measured prediction - but a candidate spanning two islands of the same model
+  gets both of them slowed, where the closed form applies one multiplier to the
+  candidate as a whole. The two agree on "this candidate became ~x slower" and
+  differ on how it was apportioned inside the candidate.
 * `POWER` - scale the profile's power block and re-evaluate. No files: the power
   model is a handful of fields on the profile the planner already loaded.
 * `LINK_BW` / `LINK_LAT` - rewrite the link in a copy of the cluster spec and
@@ -163,6 +172,7 @@ def endpoints_for(item: UncertainInput) -> tuple[float, float]:
 def resimulate(
     item: UncertainInput,
     *,
+    baseline: JudgedMetrics,
     spec: ServiceSpec,
     cluster,
     islands: dict[str, ExecutionIsland],
@@ -187,23 +197,35 @@ def resimulate(
     lo, hi = endpoints_for(item)
     return Resimulation(
         input_id=item.id, kind=item.kind.value,
-        lo=_endpoint(item, lo, spec=spec, cluster=cluster, islands=islands,
-                     profiles=profiles, candidates=candidates, predictor=predictor,
-                     island_hw=island_hw, max_workers=max_workers),
-        hi=_endpoint(item, hi, spec=spec, cluster=cluster, islands=islands,
-                     profiles=profiles, candidates=candidates, predictor=predictor,
-                     island_hw=island_hw, max_workers=max_workers),
+        lo=_endpoint(item, lo, baseline=baseline, spec=spec, cluster=cluster,
+                     islands=islands, profiles=profiles, candidates=candidates,
+                     predictor=predictor, island_hw=island_hw,
+                     max_workers=max_workers),
+        hi=_endpoint(item, hi, baseline=baseline, spec=spec, cluster=cluster,
+                     islands=islands, profiles=profiles, candidates=candidates,
+                     predictor=predictor, island_hw=island_hw,
+                     max_workers=max_workers),
     )
 
 
 def _endpoint(
-    item: UncertainInput, value: float, *, spec, cluster, islands, profiles,
-    candidates, predictor, island_hw, max_workers,
+    item: UncertainInput, value: float, *, baseline, spec, cluster, islands,
+    profiles, candidates, predictor, island_hw, max_workers,
 ) -> Endpoint:
+    """One endpoint, as a COMPLETE metric set.
+
+    Only the candidates this input can touch are simulated - the rest cannot
+    have moved - but what comes back is the baseline with those replaced, never
+    the touched ones on their own. `perturb` returns a full set for the same
+    reason, and the two have to agree: a partial set drops the incumbent
+    whenever the input does not touch it, and the sweep then reads a missing
+    incumbent as one that missed by a whole unit. That is how a profile on an
+    island the recommendation does not use came back worth an entire objective.
+    """
     import time
 
     from planner.optimizer import exhaustive
-    from planner.uncertainty.perturb import judged_metrics
+    from planner.uncertainty.perturb import JudgedMetrics, judged_metrics
 
     scaled_cluster = cluster
     scaled_profiles = dict(profiles)
@@ -232,11 +254,13 @@ def _endpoint(
             cache=None, island_hw=island_hw, max_workers=max_workers,
         )
         elapsed = time.monotonic() - started
+        merged = dict(baseline)
+        merged.update(judged_metrics(evaluation))
     finally:
         if bundle is not None and bundle.exists():
             shutil.rmtree(bundle)
     return Endpoint(
-        value=value, metrics=judged_metrics(evaluation), seconds=elapsed,
+        value=value, metrics=JudgedMetrics.trusted(merged), seconds=elapsed,
         simulated=len(touched),
     )
 

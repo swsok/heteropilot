@@ -40,7 +40,6 @@ from pathlib import Path
 from eb1_regret_vs_budget import (
     _best,
     _default_penalty,
-    _state,
     build_world,
 )
 
@@ -115,7 +114,7 @@ def main() -> int:
             d for d in world.pool
             if d.item.kind.value in ("profile", "sim_error")
         ]
-    print(f"degrading {len(chosen)}: {[d.id for d in chosen]}")
+    print(f"sweeping {len(chosen)}: {[d.id for d in chosen]}")
 
     penalty = _default_penalty([
         pareto.objective_value(
@@ -128,15 +127,27 @@ def main() -> int:
         for cid in world.truth if cid in world.candidates
     ])
 
-    metrics, policy = _state(world, chosen, set())
+    # Both sides sweep from TRUTH, and this is the whole correctness of the
+    # experiment. An earlier run swept the closed form from a DEGRADED state
+    # while `resimulate` rebuilt its endpoints from the truth cluster and
+    # profiles - so the two figures differed by their baseline as well as by
+    # their rule, and the "disagreement" it reported was partly the harness.
+    # From truth the two are exactly comparable: same starting metrics, same
+    # scoring, one item moved to the same endpoint by two different means.
+    metrics, policy = world.truth, world.policy_truth
     best = _best(world, metrics, policy)
     if best is None:
-        raise SystemExit("no feasible plan in the degraded state; nothing to rank")
+        raise SystemExit("no feasible plan in the truth state; nothing to rank")
     output = PlannerOutput(
         feasible=True, service_model=world.spec.model,
         cluster_id=world.cluster.cluster_id, recommended=best,
     )
-    registry = UncertainInputRegistry(items=[d.item for d in chosen])
+    # Re-based to the truth nominal, for the same reason: an item's `nominal` is
+    # what the planner currently believes, and here that is the measured value.
+    items = [
+        d.item.model_copy(update={"nominal": d.truth_value}) for d in chosen
+    ]
+    registry = UncertainInputRegistry(items=items)
 
     started = time.monotonic()
     closed = analyze(
@@ -148,12 +159,42 @@ def main() -> int:
     for s in closed:
         print(f"  {s.input_id:42s} dR={s.delta_regret} approx={s.approximation}")
 
-    runner = partial(
-        resim.resimulate, spec=world.spec, cluster=world.cluster,
+    base = partial(
+        resim.resimulate, baseline=metrics, spec=world.spec, cluster=world.cluster,
         islands=world.islands, profiles=world.profiles,
         candidates=list(world.candidates.values()), predictor=world.predictor,
         island_hw=world.island_hw, max_workers=args.workers,
     )
+    #: The `lo` endpoint of a PROFILE item is the multiplier 1.0 - the MEASURED
+    #: bundle - so its resimulation must reproduce the cached truth prediction.
+    #: It is the control for the whole bundle-copy path, and it is checked
+    #: rather than assumed: a copy that quietly perturbed something would make
+    #: every disagreement below unattributable.
+    controls: list[dict] = []
+
+    def runner(item):
+        result = base(item)
+        for endpoint in (result.lo, result.hi):
+            if abs(endpoint.value - 1.0) > 1e-12:
+                continue
+            worst, where = 0.0, ""
+            for cid, m in endpoint.metrics.items():
+                truth = world.truth.get(cid)
+                if truth is None:
+                    continue
+                for field in ("p99_ttft_ms", "p99_tpot_ms", "total_energy_j"):
+                    a, b = getattr(truth, field), getattr(m, field)
+                    if a in (None, 0) or b is None:
+                        continue
+                    rel = abs(b - a) / abs(a)
+                    if rel > worst:
+                        worst, where = rel, f"{cid}.{field}"
+            controls.append({
+                "input_id": item.id, "value": endpoint.value,
+                "candidates": len(endpoint.metrics),
+                "worst_relative_deviation_from_cache": worst, "worst_at": where,
+            })
+        return result
     started = time.monotonic()
     refined, records = refine(
         closed, registry, runner, metrics, policy, world.spec, world.context,
@@ -189,6 +230,7 @@ def main() -> int:
         "order_closed": [s.input_id for s in closed],
         "order_refined": [s.input_id for s in refined],
         "refinements": [r.model_dump() for r in records],
+        "identity_controls": controls,
         "closed": [s.model_dump(exclude={"grid"}) for s in closed],
         "refined": [s.model_dump(exclude={"grid"}) for s in refined],
         "provenance": prov.collect(random_seed=0),
@@ -198,6 +240,9 @@ def main() -> int:
     out.write_text(json.dumps(payload, indent=2, default=str))
     print(f"wrote {out}")
     print(f"  spearman(rank) = {rho_rank}")
+    for c in controls:
+        print(f"  control {c['input_id']} at x1.0: worst deviation from cache "
+              f"{c['worst_relative_deviation_from_cache']:.3e} ({c['worst_at']})")
     for r in records:
         if r.skipped:
             print(f"  SKIPPED {r.input_id}: {r.skipped[:90]}")

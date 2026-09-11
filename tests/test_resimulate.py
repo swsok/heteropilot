@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import csv
 from pathlib import Path
+from types import SimpleNamespace
 from typing import NamedTuple
 
 import pytest
@@ -127,8 +128,9 @@ def test_a_sim_error_has_nothing_to_simulate(world: _World) -> None:
     )
     with pytest.raises(resim.NotResimulable, match="margin, not the prediction"):
         resim.resimulate(
-            item, spec=world.spec, cluster=world.cluster, islands=world.islands,
-            profiles={}, candidates=[], predictor=None, island_hw=world.island_hw,
+            item, baseline=world.metrics, spec=world.spec, cluster=world.cluster,
+            islands=world.islands, profiles={}, candidates=[], predictor=None,
+            island_hw=world.island_hw,
         )
 
 
@@ -300,3 +302,47 @@ def test_top_bounds_how_many_items_are_simulated(world: _World) -> None:
         world.context, world.island_hw, "B", top=1, slo_penalty=2000.0,
     )
     assert len(seen) == 1
+
+
+def test_an_endpoint_returns_the_whole_metric_set_not_just_what_moved(
+    world: _World, monkeypatch
+) -> None:
+    """Regression: a partial set drops the incumbent and costs it a full penalty.
+
+    Only the candidates an input can touch are simulated - the rest cannot have
+    moved - but the endpoint must hand back the BASELINE with those replaced.
+    Returning the touched ones alone made `_swept_from` find no incumbent and
+    charge `overshoot = 1.0`, so a profile on an island the recommendation does
+    not even use came back worth an entire objective.
+    """
+    from planner.optimizer import exhaustive
+
+    item = _profile_item(world)   # affects a40a; candidate B lives on a40b
+
+    def fake_evaluate(touched, *args, **kwargs):
+        assert [c.id for c in touched] == ["A"], "only A uses the affected island"
+
+        return SimpleNamespace(
+            unmeasured_metrics={},
+            feasible_plans=[
+                DeploymentPlan(
+                    plan_id="hp-A", model=world.spec.model,
+                    candidate=world.candidates["A"],
+                    predicted=_metrics(energy=5000.0),
+                )
+            ],
+            infeasible_plans=[],
+        )
+
+    monkeypatch.setattr(exhaustive, "evaluate_candidates", fake_evaluate)
+    # The bundle copy has its own test; here only the merge is under examination.
+    monkeypatch.setattr(resim, "_scaled_profiles", lambda *a, **k: (None, {}))
+    endpoint = resim._endpoint(
+        item, 1.4, baseline=world.metrics, spec=world.spec, cluster=world.cluster,
+        islands=world.islands, profiles={}, candidates=list(world.candidates.values()),
+        predictor=None, island_hw=world.island_hw, max_workers=1,
+    )
+    assert set(endpoint.metrics) == {"A", "B"}
+    assert endpoint.metrics["A"].total_energy_j == 5000.0      # resimulated
+    assert endpoint.metrics["B"].total_energy_j == 1000.0      # carried over
+    assert endpoint.simulated == 1
