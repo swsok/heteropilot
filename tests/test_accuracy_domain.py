@@ -81,11 +81,50 @@ def test_unsorted_points_are_rejected():
 # --- the committed domains --------------------------------------------------
 
 def test_the_rngd_domain_spans_the_measured_range():
+    """Rebuilt at 300 requests on 2026-09-11 (deviations D32): nine points from
+    1.020, not six from 1.09. The floor moved because the run it was measured on
+    changed length, not because the hardware did."""
     d = load_calibration(RNGD).hardware["RNGD-CARD"].accuracy_domain
     assert d is not None
-    assert d.conc_min == pytest.approx(1.09)
+    assert d.conc_min == pytest.approx(1.020)
     assert d.conc_max == pytest.approx(76.0)
     assert d.fitted_at_concurrency == pytest.approx(16.6)
+    assert len(d.points) == 9
+
+
+def test_the_two_points_discarded_at_a_40pct_gap_are_back_and_changed_sign():
+    """The D32 result, pinned.
+
+    `rngd_card_edf.yaml` used to discard the c15.3 and c15.59 points because the
+    simulator settled 40 % below the hardware, and attributed that to throughput
+    error. At 300 requests -- same rates, same trace, only the run length
+    different -- they land at -3.1 % and -2.4 %, so the gap was the drain tail.
+    Their TPOT error also changes SIGN, from -1.22 / -1.97 % to +3.26 / +2.47 %,
+    and only a negative error earns a margin: readmitting them REMOVES a margin
+    around c15 rather than adding one.
+    """
+    d = load_calibration(RNGD).hardware["RNGD-CARD"].accuracy_domain
+    assert d is not None
+    concs = [p.conc for p in d.points]
+    assert pytest.approx(14.832) in concs
+    assert pytest.approx(15.212) in concs
+    assert d.tpot_error_at(14.832) == pytest.approx(3.26, abs=0.01)
+    assert d.tpot_error_at(15.212) == pytest.approx(2.47, abs=0.01)
+    assert d.tpot_margin_pct(15.212) == 0.0
+
+
+def test_the_two_points_above_29_stay_out():
+    """Not everything the 300-request run touched is admissible. At the rates
+    matching measured c59.2 and c107.2 the simulator settles at served 37.67 and
+    44.47 even at 300 requests -- gaps of -36.4 % and -58.5 % -- so its TPOT
+    belongs to a different operating point. That residual is the card model's
+    real throughput ceiling, and it is what the 20-request runs could not
+    separate from the drain tail."""
+    d = load_calibration(RNGD).hardware["RNGD-CARD"].accuracy_domain
+    assert d is not None
+    concs = [p.conc for p in d.points]
+    assert not any(30.0 < c < 76.0 for c in concs), (
+        "only 25.181 may sit between the 16.6 and 76.0 anchors")
 
 
 def test_the_simulator_is_pessimistic_at_low_load_and_optimistic_at_high():

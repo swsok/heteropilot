@@ -191,6 +191,14 @@ the 1 rps row was still simulating after 10 minutes and its original run took
 re-rank affordable — but the claim should read *minutes to hours, not seconds*,
 and a full eight-row re-rank of one fixture is a multi-hour job.
 
+> **Sharpened 2026-09-11** by `d32_card_recheck.md`, which re-ranked all eight
+> rows of the other fixture. Where the corpus covers every candidate (3.3 rps,
+> **318 of 318**) a row really does replay in **seconds**; the cost is entirely
+> the candidates that are never cached because they fail — 36 of them at 1 rps
+> cost 44 minutes. Read it as *seconds to hours, depending on corpus coverage*.
+> The whole eight-row re-rank came to **1.26 h**, not the multi-hour job feared
+> here.
+
 This is why only the one cell that could change was re-ranked, and why the
 argument above that the other four cannot change is load-bearing rather than a
 convenience.

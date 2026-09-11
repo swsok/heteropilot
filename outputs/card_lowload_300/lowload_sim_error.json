@@ -1,0 +1,74 @@
+[
+  {
+    "conc_measured": 1.0,
+    "conc_sim": 1.0196405607865688,
+    "conc_gap_pct": 1.964056078656884,
+    "offered_rps": 0.09670349879695331,
+    "tpot_measured_ms": 15.71,
+    "tpot_sim_ms": 16.0631955,
+    "tpot_err_pct": 2.2482208784213764,
+    "requests": 300,
+    "rc": 0,
+    "comparable": true
+  },
+  {
+    "conc_measured": 1.99,
+    "conc_sim": 2.194175569303009,
+    "conc_gap_pct": 10.260078859447697,
+    "offered_rps": 0.16873304623683927,
+    "tpot_measured_ms": 18.01,
+    "tpot_sim_ms": 19.990958499999998,
+    "tpot_err_pct": 10.999214325374771,
+    "requests": 300,
+    "rc": 0,
+    "comparable": true
+  },
+  {
+    "conc_measured": 3.98,
+    "conc_sim": 4.311229811946086,
+    "conc_gap_pct": 8.322357084072522,
+    "offered_rps": 0.3078880017164488,
+    "tpot_measured_ms": 19.48,
+    "tpot_sim_ms": 21.5819585,
+    "tpot_err_pct": 10.790341375770012,
+    "requests": 300,
+    "rc": 0,
+    "comparable": true
+  },
+  {
+    "conc_measured": 7.88,
+    "conc_sim": 8.21068581989926,
+    "conc_gap_pct": 4.196520557097202,
+    "offered_rps": 0.5468115431181132,
+    "tpot_measured_ms": 21.86,
+    "tpot_sim_ms": 23.4626375,
+    "tpot_err_pct": 7.331370082342178,
+    "requests": 300,
+    "rc": 0,
+    "comparable": true
+  },
+  {
+    "conc_measured": 15.3,
+    "conc_sim": 14.83174963466898,
+    "conc_gap_pct": -3.060459904124313,
+    "offered_rps": 0.8977640189422383,
+    "tpot_measured_ms": 25.71,
+    "tpot_sim_ms": 26.547231500000002,
+    "tpot_err_pct": 3.25644301828083,
+    "requests": 300,
+    "rc": 0,
+    "comparable": true
+  },
+  {
+    "conc_measured": 15.59,
+    "conc_sim": 15.211588154832663,
+    "conc_gap_pct": -2.4272729003677798,
+    "offered_rps": 0.916767559117868,
+    "tpot_measured_ms": 26.05,
+    "tpot_sim_ms": 26.692481,
+    "tpot_err_pct": 2.466337811900192,
+    "requests": 300,
+    "rc": 0,
+    "comparable": true
+  }
+]
