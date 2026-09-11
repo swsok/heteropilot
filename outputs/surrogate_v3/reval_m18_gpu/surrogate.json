@@ -1,0 +1,390 @@
+{
+  "candidates": 612,
+  "oracle_best_id": "cuda-a40-node_a40a-tp4-dp1-s256-t8192",
+  "oracle_goodput_per_joule": -64430.00000000001,
+  "provenance": {
+    "accelerators": {
+      "atom_devices": 4,
+      "cuda": null,
+      "rngd_cards": 3
+    },
+    "backend_version": null,
+    "candidates": 612,
+    "cluster_spec_hash": "1db71189086838c4ef6e2e4e7bf45269790b58b83de693bb377986fddb4f4a1b",
+    "command": "exp_surrogate.py --service examples/service_specs/llama31-8b.yaml --cluster experiments/configs/clusters/pd-rngd-gpu.yaml --enable-pd --cache-dir outputs/.hp-reval-margin18-pd-rngd-gpu/cache --rankers roofline floor tpj_bin1pct merge_bin_floor merge_roofline_floor --k-values 5 10 20 30 50 --work-dir outputs/surrogate_v3/reval_m18_gpu --output-dir outputs/surrogate_v3/reval_m18_gpu --quiet",
+    "cpu_count": 96,
+    "dataset_hash": "cbd7f6d5b61f27fd3bdce005f176d515f380e1a524d5c2a55cd7e906280348b5",
+    "enable_pd": true,
+    "experiment": "exp_surrogate_topk",
+    "git_commit": "854fc72444caac89ecf492c8c47ad6d76baf8440",
+    "git_dirty": true,
+    "hardware_profile_hash": "9d36209c520047e6729f42e721dd71f2a5abfd61b9f235409ae5ad23218f2f0a",
+    "hostname": "etri-001",
+    "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
+    "model_revision": null,
+    "oracle_best_id": "cuda-a40-node_a40a-tp4-dp1-s256-t8192",
+    "oracle_goodput_per_joule": -64430.00000000001,
+    "platform": "Linux-6.8.0-40-generic-x86_64-with-glibc2.35",
+    "python_version": "3.10.12",
+    "random_seed": 42,
+    "rankers": [
+      "roofline",
+      "floor",
+      "tpj_bin1pct",
+      "merge_bin_floor",
+      "merge_roofline_floor"
+    ],
+    "replayed_from": "outputs/.hp-reval-margin18-pd-rngd-gpu/cache",
+    "service_spec_hash": "860c8a567b759ac948d4ae16951a5c878e7654201d9e89b08bf21e6e38f4880c",
+    "surrogate": "roofline",
+    "timestamp": "2026-09-11T04:47:23.983662+00:00",
+    "vllm_version": null,
+    "workload": {
+      "horizon_s": 11.372,
+      "num_requests": 120,
+      "path": "outputs/surrogate_v3/reval_m18_gpu/workload.jsonl",
+      "random_seed": 42,
+      "total_input_tokens": 98130,
+      "total_output_tokens": 76149
+    }
+  },
+  "replayed_from": "outputs/.hp-reval-margin18-pd-rngd-gpu/cache",
+  "rows": [
+    {
+      "false_infeasible": true,
+      "k": 5,
+      "recall": 0.0,
+      "regret": 1.0,
+      "speedup": 122.4,
+      "surrogate_best_id": null,
+      "surrogate_goodput_per_joule": null
+    },
+    {
+      "false_infeasible": true,
+      "k": 10,
+      "recall": 0.0,
+      "regret": 1.0,
+      "speedup": 61.2,
+      "surrogate_best_id": null,
+      "surrogate_goodput_per_joule": null
+    },
+    {
+      "false_infeasible": true,
+      "k": 20,
+      "recall": 0.0,
+      "regret": 1.0,
+      "speedup": 30.6,
+      "surrogate_best_id": null,
+      "surrogate_goodput_per_joule": null
+    },
+    {
+      "false_infeasible": false,
+      "k": 30,
+      "recall": 0.0,
+      "regret": 0.7108489833928292,
+      "speedup": 20.4,
+      "surrogate_best_id": "mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s256-t8192",
+      "surrogate_goodput_per_joule": -110230.0
+    },
+    {
+      "false_infeasible": false,
+      "k": 50,
+      "recall": 1.0,
+      "regret": 0.0,
+      "speedup": 12.24,
+      "surrogate_best_id": "cuda-a40-node_a40a-tp4-dp1-s256-t8192",
+      "surrogate_goodput_per_joule": -64430.00000000001
+    },
+    {
+      "false_infeasible": false,
+      "k": 612,
+      "recall": 1.0,
+      "regret": 0.0,
+      "speedup": 1.0,
+      "surrogate_best_id": "cuda-a40-node_a40a-tp4-dp1-s256-t8192",
+      "surrogate_goodput_per_joule": -64430.00000000001
+    }
+  ],
+  "rows_by_ranker": {
+    "floor": [
+      {
+        "false_infeasible": true,
+        "k": 5,
+        "recall": 0.0,
+        "regret": 1.0,
+        "speedup": 122.4,
+        "surrogate_best_id": null,
+        "surrogate_goodput_per_joule": null
+      },
+      {
+        "false_infeasible": true,
+        "k": 10,
+        "recall": 0.0,
+        "regret": 1.0,
+        "speedup": 61.2,
+        "surrogate_best_id": null,
+        "surrogate_goodput_per_joule": null
+      },
+      {
+        "false_infeasible": true,
+        "k": 20,
+        "recall": 0.0,
+        "regret": 1.0,
+        "speedup": 30.6,
+        "surrogate_best_id": null,
+        "surrogate_goodput_per_joule": null
+      },
+      {
+        "false_infeasible": false,
+        "k": 30,
+        "recall": 0.0,
+        "regret": 0.1417041750737233,
+        "speedup": 20.4,
+        "surrogate_best_id": "cuda-a40-node_a40a-tp4-dp1-s128-t8192",
+        "surrogate_goodput_per_joule": -73560.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 50,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 12.24,
+        "surrogate_best_id": "cuda-a40-node_a40a-tp4-dp1-s256-t8192",
+        "surrogate_goodput_per_joule": -64430.00000000001
+      },
+      {
+        "false_infeasible": false,
+        "k": 612,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 1.0,
+        "surrogate_best_id": "cuda-a40-node_a40a-tp4-dp1-s256-t8192",
+        "surrogate_goodput_per_joule": -64430.00000000001
+      }
+    ],
+    "merge_bin_floor": [
+      {
+        "false_infeasible": true,
+        "k": 5,
+        "recall": 0.0,
+        "regret": 1.0,
+        "speedup": 122.4,
+        "surrogate_best_id": null,
+        "surrogate_goodput_per_joule": null
+      },
+      {
+        "false_infeasible": true,
+        "k": 10,
+        "recall": 0.0,
+        "regret": 1.0,
+        "speedup": 61.2,
+        "surrogate_best_id": null,
+        "surrogate_goodput_per_joule": null
+      },
+      {
+        "false_infeasible": true,
+        "k": 20,
+        "recall": 0.0,
+        "regret": 1.0,
+        "speedup": 30.6,
+        "surrogate_best_id": null,
+        "surrogate_goodput_per_joule": null
+      },
+      {
+        "false_infeasible": true,
+        "k": 30,
+        "recall": 0.0,
+        "regret": 1.0,
+        "speedup": 20.4,
+        "surrogate_best_id": null,
+        "surrogate_goodput_per_joule": null
+      },
+      {
+        "false_infeasible": false,
+        "k": 50,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 12.24,
+        "surrogate_best_id": "cuda-a40-node_a40a-tp4-dp1-s256-t8192",
+        "surrogate_goodput_per_joule": -64430.00000000001
+      },
+      {
+        "false_infeasible": false,
+        "k": 612,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 1.0,
+        "surrogate_best_id": "cuda-a40-node_a40a-tp4-dp1-s256-t8192",
+        "surrogate_goodput_per_joule": -64430.00000000001
+      }
+    ],
+    "merge_roofline_floor": [
+      {
+        "false_infeasible": true,
+        "k": 5,
+        "recall": 0.0,
+        "regret": 1.0,
+        "speedup": 122.4,
+        "surrogate_best_id": null,
+        "surrogate_goodput_per_joule": null
+      },
+      {
+        "false_infeasible": true,
+        "k": 10,
+        "recall": 0.0,
+        "regret": 1.0,
+        "speedup": 61.2,
+        "surrogate_best_id": null,
+        "surrogate_goodput_per_joule": null
+      },
+      {
+        "false_infeasible": true,
+        "k": 20,
+        "recall": 0.0,
+        "regret": 1.0,
+        "speedup": 30.6,
+        "surrogate_best_id": null,
+        "surrogate_goodput_per_joule": null
+      },
+      {
+        "false_infeasible": true,
+        "k": 30,
+        "recall": 0.0,
+        "regret": 1.0,
+        "speedup": 20.4,
+        "surrogate_best_id": null,
+        "surrogate_goodput_per_joule": null
+      },
+      {
+        "false_infeasible": false,
+        "k": 50,
+        "recall": 0.0,
+        "regret": 0.1417041750737233,
+        "speedup": 12.24,
+        "surrogate_best_id": "cuda-a40-node_a40a-tp4-dp1-s128-t8192",
+        "surrogate_goodput_per_joule": -73560.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 612,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 1.0,
+        "surrogate_best_id": "cuda-a40-node_a40a-tp4-dp1-s256-t8192",
+        "surrogate_goodput_per_joule": -64430.00000000001
+      }
+    ],
+    "roofline": [
+      {
+        "false_infeasible": true,
+        "k": 5,
+        "recall": 0.0,
+        "regret": 1.0,
+        "speedup": 122.4,
+        "surrogate_best_id": null,
+        "surrogate_goodput_per_joule": null
+      },
+      {
+        "false_infeasible": true,
+        "k": 10,
+        "recall": 0.0,
+        "regret": 1.0,
+        "speedup": 61.2,
+        "surrogate_best_id": null,
+        "surrogate_goodput_per_joule": null
+      },
+      {
+        "false_infeasible": true,
+        "k": 20,
+        "recall": 0.0,
+        "regret": 1.0,
+        "speedup": 30.6,
+        "surrogate_best_id": null,
+        "surrogate_goodput_per_joule": null
+      },
+      {
+        "false_infeasible": false,
+        "k": 30,
+        "recall": 0.0,
+        "regret": 0.7108489833928292,
+        "speedup": 20.4,
+        "surrogate_best_id": "mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s256-t8192",
+        "surrogate_goodput_per_joule": -110230.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 50,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 12.24,
+        "surrogate_best_id": "cuda-a40-node_a40a-tp4-dp1-s256-t8192",
+        "surrogate_goodput_per_joule": -64430.00000000001
+      },
+      {
+        "false_infeasible": false,
+        "k": 612,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 1.0,
+        "surrogate_best_id": "cuda-a40-node_a40a-tp4-dp1-s256-t8192",
+        "surrogate_goodput_per_joule": -64430.00000000001
+      }
+    ],
+    "tpj_bin1pct": [
+      {
+        "false_infeasible": true,
+        "k": 5,
+        "recall": 0.0,
+        "regret": 1.0,
+        "speedup": 122.4,
+        "surrogate_best_id": null,
+        "surrogate_goodput_per_joule": null
+      },
+      {
+        "false_infeasible": true,
+        "k": 10,
+        "recall": 0.0,
+        "regret": 1.0,
+        "speedup": 61.2,
+        "surrogate_best_id": null,
+        "surrogate_goodput_per_joule": null
+      },
+      {
+        "false_infeasible": false,
+        "k": 20,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 30.6,
+        "surrogate_best_id": "cuda-a40-node_a40a-tp4-dp1-s256-t8192",
+        "surrogate_goodput_per_joule": -64430.00000000001
+      },
+      {
+        "false_infeasible": false,
+        "k": 30,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 20.4,
+        "surrogate_best_id": "cuda-a40-node_a40a-tp4-dp1-s256-t8192",
+        "surrogate_goodput_per_joule": -64430.00000000001
+      },
+      {
+        "false_infeasible": false,
+        "k": 50,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 12.24,
+        "surrogate_best_id": "cuda-a40-node_a40a-tp4-dp1-s256-t8192",
+        "surrogate_goodput_per_joule": -64430.00000000001
+      },
+      {
+        "false_infeasible": false,
+        "k": 612,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 1.0,
+        "surrogate_best_id": "cuda-a40-node_a40a-tp4-dp1-s256-t8192",
+        "surrogate_goodput_per_joule": -64430.00000000001
+      }
+    ]
+  }
+}

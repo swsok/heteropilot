@@ -356,8 +356,15 @@ def _plan_once(args: argparse.Namespace, return_output: bool = False):
 
     surrogate = None
     if args.top_k is not None:
-        from planner.optimizer.surrogate import AnalyticalRooflineRanker
-        surrogate = AnalyticalRooflineRanker()
+        from planner.optimizer.surrogate import (
+            AnalyticalRooflineRanker,
+            BinnedRooflineRanker,
+        )
+        # `roofline` stays selectable so a published run reproduces; `binned` is
+        # the default because it weakly dominates it over sixteen corpora
+        # (docs/surrogate_topk_regret.md, deviations D30).
+        surrogate = (BinnedRooflineRanker() if args.surrogate == "binned"
+                     else AnalyticalRooflineRanker())
 
     accuracy_domains = load_accuracy_domains(args.root) if args.accuracy_domain else None
     envelopes = (_load_envelopes(cluster, profiles, spec)
@@ -629,7 +636,7 @@ def build_parser() -> argparse.ArgumentParser:
                            "analytical roofline and fully simulate only the K best. HEURISTIC "
                            "- it can drop the optimum (measured by exp_surrogate.py). Default: "
                            "simulate all survivors. Mutually exclusive with --oracle.")
-    plan.add_argument("--surrogate", choices=["roofline"], default="roofline",
+    plan.add_argument("--surrogate", choices=["binned", "roofline"], default="binned",
                       help="Surrogate ranker for --top-k. 'roofline' reuses the greedy "
                            "analytical proxy (a learned/xgboost ranker is a corpus-gated "
                            "future option).")

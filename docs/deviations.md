@@ -1791,7 +1791,43 @@ resolve, so the PATH hazard is gone by construction; what replaces it is an
 failure — this venv has `ENABLE_USER_SITE = False` and no `~/.local` on `sys.path`, so
 there is no wrong-version fallback to silently succeed with.
 
-## D30 — the roofline surrogate's proxy is invariant to TP and DP, so top-K is not a cost lever on P/D or heterogeneous corpora · Open (measured, not fixed)
+## D30 — the roofline surrogate's proxy is invariant to TP and DP, so top-K is not a cost lever on P/D or heterogeneous corpora · Resolved for K>=20 (2026-09-11); the 20 rps end remains open
+
+> **Update 2026-09-11 — a ranker that fixes it without breaking a corpus now
+> ships.** The entry below ends *"no ranker change is made"*, and the reason
+> was that the only alternative measured, `floor`, repaired two corpora and
+> broke the third. The fix was hiding in this entry's own evidence:
+> `tpj_then_floor` measured **byte-identical to `roofline`**, because the
+> proxy's TP/DP cancellation is algebraic but the arithmetic is floating
+> point -- about one part in ten thousand survives, no two values are ever
+> exactly tied, and `sorted()` reads that dust as a preference. The ranker
+> does not ignore the parallelism axis; it lets rounding error pick for it.
+>
+> `BinnedRooflineRanker` makes the tie explicit -- group proxy tok/J within a
+> relative tolerance, order inside the group by `roofline_tpot_ms` -- and
+> leaves the coarse order (accelerator, `max_num_seqs`, which differ by
+> factors) alone, which is why it does not break the corpus `floor` broke.
+> Measured on **sixteen** corpora rather than three, including E6's two
+> sweeps read one arrival rate at a time: **96 (corpus, K) cells, 11 strictly
+> better, 0 worse, 85 identical**, and false-infeasibility at K=20 falls from
+> 8 corpora to 2. It is now `plan --surrogate`'s default; `roofline` stays
+> selectable so published runs reproduce. `docs/surrogate_topk_regret.md`.
+>
+> **The tolerance is not fitted**: 0.001, 0.01 and 0.05 give identical regret
+> curves and identical top-K membership everywhere.
+>
+> **What stays open.** At **20 rps** every efficiency-ordered ranker is
+> false-infeasible to K=50 on both fixtures, while `floor` finds a plan --
+> feasibility there is decided by the TPOT floor alone. So `--top-k` is still
+> not a general cost lever; the exception is now characterised (the top of
+> the load axis) instead of unknown. K=5 and K=10 are unchanged. And sixteen
+> corpora are still only **two cluster fixtures**.
+>
+> **Rank fusion was tried and is worse.** Round-robin merging `binned` with
+> `floor` -- no fitted weight, each parent's top K/2 inside any top-K -- is
+> false-infeasible at K=20 on 7 corpora against 2, because the depth it gives
+> up costs more than the complementarity buys. Kept in
+> `exp_surrogate.py --rankers`; does not ship.
 
 *D28 and D29 are reserved for `WORK_ORDER_rps_aware.md` STEP 2 and STEP 4.*
 

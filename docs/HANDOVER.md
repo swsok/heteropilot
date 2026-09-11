@@ -25,7 +25,7 @@
 **Gates at this commit**, on the NPU node in `.venv`:
 
 ```
-pytest -q     668 passed in 151.15s         # NPU node, 2026-09-11
+pytest -q     679 passed in 145.62s         # NPU node, 2026-09-11
 ruff check .  All checks passed!
 mypy          Success: no issues found in 38 source files
 ```
@@ -374,20 +374,49 @@ Exp 4. Memory and power *are* measured. Resolution paths, in order of expected
 effort: the trace schema from Rebellions; a torch backend registering device
 `rbln`; a llama entry in vllm-rbln's native model registry.
 
-### 2.5 A surrogate that can rank P/D — **any node** (simulation only)
+### 2.5 A surrogate that can rank P/D — **MOSTLY DONE 2026-09-11**, any node
 
-**D30.** `--top-k` is currently unusable on any P/D or heterogeneous corpus, so
-E6 ran without it. The cause is structural: the roofline proxy's tok/J is
-*algebraically invariant to TP and DP* — throughput and power both scale with
-`tp·dp`, so the ratio cancels — which leaves the ranker blind to the axis that
-decides feasibility. It is false-infeasible at K=20 on two of three corpora.
+**D30 is resolved for K≥20.** `plan --surrogate` now defaults to
+`BinnedRooflineRanker`. Write-up: `docs/surrogate_topk_regret.md`.
 
-**Do not fix this by ordering on the roofline TPOT floor.** That was tried and
-measured: it repairs those two corpora and breaks the third, which is the same
-one-fixture error that produced the "regret 0.000 at every K" claim now partly
-retracted. Any replacement needs its regret measured across all three corpora
-before it is switched on; `exp_surrogate.py --cache-dir --rankers` replays them
-without re-simulating.
+The fix was inside D30's own evidence. `tpj_then_floor` — an explicit tie-break
+on the parallelism-sensitive term — had measured **byte-identical to
+`roofline`**, because the proxy's TP/DP cancellation is algebraic while the
+arithmetic is floating point: about one part in ten thousand survives, nothing is
+ever exactly tied, and `sorted()` reads the dust as a preference. The ranker does
+not ignore the parallelism axis, it lets rounding error pick for it. So make the
+tie explicit — bin proxy tok/J by a relative tolerance, order inside a bin by
+`roofline_tpot_ms` — and leave the coarse order (accelerator, `max_num_seqs`,
+factor-scale gaps) alone, which is why it does not break the corpus `floor`
+broke.
+
+| | |
+| --- | --- |
+| corpora measured | **16**, up from 3 — including E6's two sweeps read one arrival rate at a time |
+| dominance over the shipped ranker | 96 cells: **11 better, 0 worse**, 85 identical |
+| false-infeasible at K=20 | **8 corpora → 2** |
+| tolerance sensitivity | 0.001 / 0.01 / 0.05 give identical curves and identical top-K membership |
+
+**What is still open, and it is a real limit.** At **20 rps** every
+efficiency-ordered ranker is false-infeasible to K=50 on both fixtures while
+`floor` finds a plan, so feasibility at the top of the load axis is decided by
+the TPOT floor alone. `--top-k` is **not** yet a general cost lever. K=5 and K=10
+are unchanged. And sixteen corpora are still only **two cluster fixtures** — a
+third needs a corpus that does not exist.
+
+**Two things not to repeat.** Ordering by the floor alone is worse than D30
+recorded: the rate-keyed corpora catch it at regret **2.734** (1 rps) and
+**1.980** (3.3 rps), not merely false-infeasible. And **rank fusion** — round-robin
+merging the two orderings, no fitted weight — is false-infeasible at K=20 on 7
+corpora against 2; the depth it gives up costs more than the complementarity
+buys. Both stay in `exp_surrogate.py --rankers`, neither ships.
+
+**Trap: a multi-point sweep's cache cannot be replayed by candidate id.** It
+holds one entry per arrival rate under each id (`outputs/e6/pd-rngd-gpu/cache` is
+660 files for 289 candidates), and the old loader would have kept whichever
+sorted last — four rates silently mixed into one ranking. That is now refused,
+and `--cache-rps` resolves such a corpus properly through the planner's own cache
+key.
 
 ### 2.6 The rest of the tight-TTFT and asymmetric-P/D story — **any node**
 

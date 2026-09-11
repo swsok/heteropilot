@@ -1,0 +1,390 @@
+{
+  "candidates": 612,
+  "oracle_best_id": "furiosa-rngd-node_rngd0-tp4-dp1-s32-t2048",
+  "oracle_goodput_per_joule": -119180.0,
+  "provenance": {
+    "accelerators": {
+      "atom_devices": 4,
+      "cuda": null,
+      "rngd_cards": 3
+    },
+    "backend_version": null,
+    "candidates": 612,
+    "cluster_spec_hash": "1db71189086838c4ef6e2e4e7bf45269790b58b83de693bb377986fddb4f4a1b",
+    "command": "exp_surrogate.py --service examples/service_specs/llama31-8b.yaml --cluster experiments/configs/clusters/pd-rngd-gpu.yaml --enable-pd --cache-dir outputs/e6/pd-rngd-gpu/cache --cache-rps 1 --num-requests 300 --seed 42 --rankers roofline floor tpj_bin1pct merge_bin_floor merge_roofline_floor --k-values 5 10 20 30 50 --work-dir outputs/surrogate_v3/e6_gpu_rps1 --output-dir outputs/surrogate_v3/e6_gpu_rps1 --quiet",
+    "cpu_count": 96,
+    "dataset_hash": "a775cb0c6d517dcc0797a3819ab269795d55d82d9f1e1729009cd47f35228f26",
+    "enable_pd": true,
+    "experiment": "exp_surrogate_topk",
+    "git_commit": "854fc72444caac89ecf492c8c47ad6d76baf8440",
+    "git_dirty": true,
+    "hardware_profile_hash": "9d36209c520047e6729f42e721dd71f2a5abfd61b9f235409ae5ad23218f2f0a",
+    "hostname": "etri-001",
+    "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
+    "model_revision": null,
+    "oracle_best_id": "furiosa-rngd-node_rngd0-tp4-dp1-s32-t2048",
+    "oracle_goodput_per_joule": -119180.0,
+    "platform": "Linux-6.8.0-40-generic-x86_64-with-glibc2.35",
+    "python_version": "3.10.12",
+    "random_seed": 42,
+    "rankers": [
+      "roofline",
+      "floor",
+      "tpj_bin1pct",
+      "merge_bin_floor",
+      "merge_roofline_floor"
+    ],
+    "replayed_from": "outputs/e6/pd-rngd-gpu/cache",
+    "service_spec_hash": "860c8a567b759ac948d4ae16951a5c878e7654201d9e89b08bf21e6e38f4880c",
+    "surrogate": "roofline",
+    "timestamp": "2026-09-11T04:47:38.938355+00:00",
+    "vllm_version": null,
+    "workload": {
+      "horizon_s": 303.008,
+      "num_requests": 300,
+      "path": "outputs/surrogate_v3/e6_gpu_rps1/workload.jsonl",
+      "random_seed": 42,
+      "total_input_tokens": 262617,
+      "total_output_tokens": 190920
+    }
+  },
+  "replayed_from": "outputs/e6/pd-rngd-gpu/cache",
+  "rows": [
+    {
+      "false_infeasible": false,
+      "k": 5,
+      "recall": 0.0,
+      "regret": 0.6198187615371706,
+      "speedup": 122.4,
+      "surrogate_best_id": "mix(furiosa-rngd-node_rngd0-tp8-dp1+furiosa-rngd-node_rngd1-tp8-dp1)-s256-t2048",
+      "surrogate_goodput_per_joule": -193050.0
+    },
+    {
+      "false_infeasible": false,
+      "k": 10,
+      "recall": 0.0,
+      "regret": 0.28561839234770936,
+      "speedup": 61.2,
+      "surrogate_best_id": "furiosa-rngd-node_rngd0-tp8-dp1-s128-t2048",
+      "surrogate_goodput_per_joule": -153220.0
+    },
+    {
+      "false_infeasible": false,
+      "k": 20,
+      "recall": 0.0,
+      "regret": 0.28561839234770936,
+      "speedup": 30.6,
+      "surrogate_best_id": "furiosa-rngd-node_rngd0-tp8-dp1-s128-t2048",
+      "surrogate_goodput_per_joule": -153220.0
+    },
+    {
+      "false_infeasible": false,
+      "k": 30,
+      "recall": 0.0,
+      "regret": 0.28561839234770936,
+      "speedup": 20.4,
+      "surrogate_best_id": "furiosa-rngd-node_rngd0-tp8-dp1-s128-t2048",
+      "surrogate_goodput_per_joule": -153220.0
+    },
+    {
+      "false_infeasible": false,
+      "k": 50,
+      "recall": 0.0,
+      "regret": 0.28561839234770936,
+      "speedup": 12.24,
+      "surrogate_best_id": "furiosa-rngd-node_rngd0-tp8-dp1-s128-t2048",
+      "surrogate_goodput_per_joule": -153220.0
+    },
+    {
+      "false_infeasible": false,
+      "k": 612,
+      "recall": 1.0,
+      "regret": 0.0,
+      "speedup": 1.0,
+      "surrogate_best_id": "furiosa-rngd-node_rngd0-tp4-dp1-s32-t2048",
+      "surrogate_goodput_per_joule": -119180.0
+    }
+  ],
+  "rows_by_ranker": {
+    "floor": [
+      {
+        "false_infeasible": true,
+        "k": 5,
+        "recall": 0.0,
+        "regret": 1.0,
+        "speedup": 122.4,
+        "surrogate_best_id": null,
+        "surrogate_goodput_per_joule": null
+      },
+      {
+        "false_infeasible": false,
+        "k": 10,
+        "recall": 0.0,
+        "regret": 2.734351401241819,
+        "speedup": 61.2,
+        "surrogate_best_id": "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s32-t8192",
+        "surrogate_goodput_per_joule": -445060.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 20,
+        "recall": 0.0,
+        "regret": 2.734351401241819,
+        "speedup": 30.6,
+        "surrogate_best_id": "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s32-t8192",
+        "surrogate_goodput_per_joule": -445060.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 30,
+        "recall": 0.0,
+        "regret": 2.4943782513844606,
+        "speedup": 20.4,
+        "surrogate_best_id": "cuda-a40-node_a40a-tp4-dp1-s128-t8192",
+        "surrogate_goodput_per_joule": -416460.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 50,
+        "recall": 0.0,
+        "regret": 2.116798120490015,
+        "speedup": 12.24,
+        "surrogate_best_id": "pd(furiosa-rngd-node_rngd0-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s128-t8192",
+        "surrogate_goodput_per_joule": -371460.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 612,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 1.0,
+        "surrogate_best_id": "furiosa-rngd-node_rngd0-tp4-dp1-s32-t2048",
+        "surrogate_goodput_per_joule": -119180.0
+      }
+    ],
+    "merge_bin_floor": [
+      {
+        "false_infeasible": true,
+        "k": 5,
+        "recall": 0.0,
+        "regret": 1.0,
+        "speedup": 122.4,
+        "surrogate_best_id": null,
+        "surrogate_goodput_per_joule": null
+      },
+      {
+        "false_infeasible": false,
+        "k": 10,
+        "recall": 0.0,
+        "regret": 0.6198187615371706,
+        "speedup": 61.2,
+        "surrogate_best_id": "mix(furiosa-rngd-node_rngd0-tp8-dp1+furiosa-rngd-node_rngd1-tp8-dp1)-s256-t2048",
+        "surrogate_goodput_per_joule": -193050.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 20,
+        "recall": 0.0,
+        "regret": 0.28561839234770936,
+        "speedup": 30.6,
+        "surrogate_best_id": "furiosa-rngd-node_rngd0-tp8-dp1-s128-t2048",
+        "surrogate_goodput_per_joule": -153220.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 30,
+        "recall": 0.0,
+        "regret": 0.28561839234770936,
+        "speedup": 20.4,
+        "surrogate_best_id": "furiosa-rngd-node_rngd0-tp8-dp1-s128-t2048",
+        "surrogate_goodput_per_joule": -153220.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 50,
+        "recall": 0.0,
+        "regret": 0.28561839234770936,
+        "speedup": 12.24,
+        "surrogate_best_id": "furiosa-rngd-node_rngd0-tp8-dp1-s128-t2048",
+        "surrogate_goodput_per_joule": -153220.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 612,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 1.0,
+        "surrogate_best_id": "furiosa-rngd-node_rngd0-tp4-dp1-s32-t2048",
+        "surrogate_goodput_per_joule": -119180.0
+      }
+    ],
+    "merge_roofline_floor": [
+      {
+        "false_infeasible": true,
+        "k": 5,
+        "recall": 0.0,
+        "regret": 1.0,
+        "speedup": 122.4,
+        "surrogate_best_id": null,
+        "surrogate_goodput_per_joule": null
+      },
+      {
+        "false_infeasible": false,
+        "k": 10,
+        "recall": 0.0,
+        "regret": 0.6198187615371706,
+        "speedup": 61.2,
+        "surrogate_best_id": "mix(furiosa-rngd-node_rngd0-tp8-dp1+furiosa-rngd-node_rngd1-tp8-dp1)-s256-t2048",
+        "surrogate_goodput_per_joule": -193050.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 20,
+        "recall": 0.0,
+        "regret": 0.28561839234770936,
+        "speedup": 30.6,
+        "surrogate_best_id": "furiosa-rngd-node_rngd0-tp8-dp1-s128-t2048",
+        "surrogate_goodput_per_joule": -153220.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 30,
+        "recall": 0.0,
+        "regret": 0.28561839234770936,
+        "speedup": 20.4,
+        "surrogate_best_id": "furiosa-rngd-node_rngd0-tp8-dp1-s128-t2048",
+        "surrogate_goodput_per_joule": -153220.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 50,
+        "recall": 0.0,
+        "regret": 0.28561839234770936,
+        "speedup": 12.24,
+        "surrogate_best_id": "furiosa-rngd-node_rngd0-tp8-dp1-s128-t2048",
+        "surrogate_goodput_per_joule": -153220.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 612,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 1.0,
+        "surrogate_best_id": "furiosa-rngd-node_rngd0-tp4-dp1-s32-t2048",
+        "surrogate_goodput_per_joule": -119180.0
+      }
+    ],
+    "roofline": [
+      {
+        "false_infeasible": false,
+        "k": 5,
+        "recall": 0.0,
+        "regret": 0.6198187615371706,
+        "speedup": 122.4,
+        "surrogate_best_id": "mix(furiosa-rngd-node_rngd0-tp8-dp1+furiosa-rngd-node_rngd1-tp8-dp1)-s256-t2048",
+        "surrogate_goodput_per_joule": -193050.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 10,
+        "recall": 0.0,
+        "regret": 0.28561839234770936,
+        "speedup": 61.2,
+        "surrogate_best_id": "furiosa-rngd-node_rngd0-tp8-dp1-s128-t2048",
+        "surrogate_goodput_per_joule": -153220.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 20,
+        "recall": 0.0,
+        "regret": 0.28561839234770936,
+        "speedup": 30.6,
+        "surrogate_best_id": "furiosa-rngd-node_rngd0-tp8-dp1-s128-t2048",
+        "surrogate_goodput_per_joule": -153220.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 30,
+        "recall": 0.0,
+        "regret": 0.28561839234770936,
+        "speedup": 20.4,
+        "surrogate_best_id": "furiosa-rngd-node_rngd0-tp8-dp1-s128-t2048",
+        "surrogate_goodput_per_joule": -153220.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 50,
+        "recall": 0.0,
+        "regret": 0.28561839234770936,
+        "speedup": 12.24,
+        "surrogate_best_id": "furiosa-rngd-node_rngd0-tp8-dp1-s128-t2048",
+        "surrogate_goodput_per_joule": -153220.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 612,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 1.0,
+        "surrogate_best_id": "furiosa-rngd-node_rngd0-tp4-dp1-s32-t2048",
+        "surrogate_goodput_per_joule": -119180.0
+      }
+    ],
+    "tpj_bin1pct": [
+      {
+        "false_infeasible": false,
+        "k": 5,
+        "recall": 0.0,
+        "regret": 0.6198187615371706,
+        "speedup": 122.4,
+        "surrogate_best_id": "mix(furiosa-rngd-node_rngd0-tp8-dp1+furiosa-rngd-node_rngd1-tp8-dp1)-s256-t2048",
+        "surrogate_goodput_per_joule": -193050.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 10,
+        "recall": 0.0,
+        "regret": 0.28561839234770936,
+        "speedup": 61.2,
+        "surrogate_best_id": "furiosa-rngd-node_rngd0-tp8-dp1-s128-t2048",
+        "surrogate_goodput_per_joule": -153220.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 20,
+        "recall": 0.0,
+        "regret": 0.28561839234770936,
+        "speedup": 30.6,
+        "surrogate_best_id": "furiosa-rngd-node_rngd0-tp8-dp1-s128-t2048",
+        "surrogate_goodput_per_joule": -153220.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 30,
+        "recall": 0.0,
+        "regret": 0.28561839234770936,
+        "speedup": 20.4,
+        "surrogate_best_id": "furiosa-rngd-node_rngd0-tp8-dp1-s128-t2048",
+        "surrogate_goodput_per_joule": -153220.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 50,
+        "recall": 0.0,
+        "regret": 0.28561839234770936,
+        "speedup": 12.24,
+        "surrogate_best_id": "furiosa-rngd-node_rngd0-tp8-dp1-s128-t2048",
+        "surrogate_goodput_per_joule": -153220.0
+      },
+      {
+        "false_infeasible": false,
+        "k": 612,
+        "recall": 1.0,
+        "regret": 0.0,
+        "speedup": 1.0,
+        "surrogate_best_id": "furiosa-rngd-node_rngd0-tp4-dp1-s32-t2048",
+        "surrogate_goodput_per_joule": -119180.0
+      }
+    ]
+  }
+}
