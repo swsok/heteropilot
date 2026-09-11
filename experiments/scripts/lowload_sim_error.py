@@ -193,6 +193,7 @@ def _write(args, results: list[dict]) -> None:
         "dataset": _arg_path(args.dataset),
         "num_reqs": args.num_reqs,
         "max_conc": args.max_conc,
+        **({"min_conc": args.min_conc} if args.min_conc else {}),
         "run_prefix": args.run_prefix,
         "compared_metric": "tpot_p50",
         "note": "TPOT only. The bench side is closed-loop and the simulator "
@@ -224,6 +225,10 @@ def main() -> int:
     ap.add_argument("--timeout", type=float, default=5400)
     ap.add_argument("--max-conc", type=float, default=20.0,
                     help="only the envelope points at or below this concurrency")
+    ap.add_argument("--min-conc", type=float, default=0.0,
+                    help="and at or above this one. Extending a sweep upwards "
+                         "costs a re-run of everything below it otherwise, which "
+                         "on the per-PE fixture was 1 h 52 m of settled results.")
     ap.add_argument("--run-prefix", default="lowload",
                     help="--run-id prefix, so two devices' runs cannot collide in "
                          "one ASTRA-Sim input root")
@@ -277,7 +282,7 @@ def main() -> int:
 
     results = []
     for pt in env.points:
-        if pt.conc > args.max_conc or pt.tpot_p50 is None:
+        if not (args.min_conc <= pt.conc <= args.max_conc) or pt.tpot_p50 is None:
             continue
         rps = pt.tput_tok_s / mean_out
         tag = f"c{pt.conc}".replace(".", "p")

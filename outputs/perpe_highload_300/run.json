@@ -1,0 +1,13 @@
+{
+  "envelope": "profiles/envelopes/RNGD-CARD/meta-llama/Llama-3.1-8B/bf16/tp1.yaml",
+  "cluster": "experiments/configs/clusters/rngd-llama31-8b-tp8.json",
+  "dataset": "workloads/sharegpt-llama-3.1-8b-300-sps10.jsonl",
+  "num_reqs": 300,
+  "max_conc": 110.0,
+  "min_conc": 20.0,
+  "run_prefix": "perpe-hi",
+  "compared_metric": "tpot_p50",
+  "note": "TPOT only. The bench side is closed-loop and the simulator replays an arrival process, so TTFT is not comparable (D19).",
+  "match": "served",
+  "match_note": "tpot_err_pct is against the measured curve interpolated at the SIMULATOR's served concurrency, not against the envelope point whose rate was offered. See score() in this script."
+}

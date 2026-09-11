@@ -1,0 +1,121 @@
+# The PE-as-device RNGD profile's accuracy domain, Llama-3.1-8B bf16, TP=8.
+#
+# `profiles/accelerators/furiosa_rngd.yaml` (sim_hardware: RNGD) is the DEFAULT
+# RNGD abstraction -- one accelerator is one PE, a card is a TP-8 island, and
+# ASTRA-Sim prices the intra-card collectives. It had no accuracy domain at all
+# until now, which is why the five `unknown` cells in
+# `experiments/results/e6_rps_sweep.md` carried margin 0.00 % and no basis for it.
+# `rngd_card_edf.yaml` is the sibling file for the card-as-device abstraction
+# (sim_hardware: RNGD-CARD); the two model THE SAME SILICON and must not be
+# merged, because their errors differ by a factor of twenty.
+#
+# NO NEW HARDWARE MEASUREMENT STANDS BEHIND THIS FILE, and none was needed.
+# `docs/HANDOVER.md` §2.2, `docs/CLAIMS.md` §2 and `docs/PAPER_OUTLINE.md` all
+# said a per-PE domain "needs the NPU node". That was wrong: per-PE and card are
+# two simulator models of one physical card at TP=8, not two devices, so the
+# measured side already existed -- `profiles/envelopes/RNGD-CARD/.../tp1.yaml`,
+# nine points from 2026-08-31 and 2026-09-08. What was missing was the SIMULATOR
+# side run under the per-PE fixture, and that is pure simulation. It ran on the
+# NPU node but would have run anywhere.
+# `experiments/results/rngd_card_vs_pe_model.md` is the precedent: it fits both
+# abstractions to one real furiosa-llm run.
+hardware:
+  RNGD:
+    hardware: RNGD
+    # No linear fit and no per-bucket errors here on purpose. `profiles/
+    # calibration/rngd.yaml` already carries the TTFT/TPOT fit for this hardware
+    # from the 20-request validation run; duplicating it would put two answers in
+    # the loader for one key. This file adds only what did not exist.
+    accuracy_domain:
+      # The concurrency the per-PE model was first validated at: served 17.342 in
+      # the simulator against 17.738 on the hardware, TPOT p50 35.809 vs 28.664 ms
+      # (experiments/results/rngd_sim_vs_real_summary.md, recomputed from
+      # outputs/rngd_bench/real_tp8.json and outputs/envcheck/rngd_verify_tp8.csv).
+      # That is +24.93 %, and it is NOT a point below: it was measured on
+      # outputs/envcheck/rngd20.jsonl, a different token distribution from the
+      # envelope's sharegpt workload, and putting two workloads on one
+      # interpolation axis is what `lowload_sim_error.py --dataset` refuses. It
+      # stands instead as an independent CHECK: interpolating the points below at
+      # 17.34 gives about +30 %, so two campaigns on two datasets agree to ~5 pp.
+      fitted_at_concurrency: 17.342
+      outside_domain: widen_error_bars
+      source: measured
+      #
+      # The x axis is served concurrency AS COMPUTED FROM THE SIMULATION
+      # (planner/util/operating_point.py), because that is what the planner knows
+      # when it consults this table.
+      #
+      # HOW THESE WERE PAIRED, and why not the way the other two domains were.
+      # RNGD-CARD and A40 offered each envelope point's own arrival rate to the
+      # simulator and then checked that both sides landed at the same served
+      # concurrency, within 20 %. On this fixture that check fails everywhere: at
+      # the rate that puts the hardware at c1.00 the per-PE model sits at 1.83,
+      # because it is slow enough to back up. So the comparison here is against
+      # the measured curve INTERPOLATED at the simulator's own served concurrency
+      # (`lowload_sim_error.py --match served`), which is the axis the domain is
+      # read back on and which charges the model for its TPOT error alone instead
+      # of summing it with its throughput error.
+      #
+      # SIGN. (sim - measured) / measured, so POSITIVE means the simulator is
+      # PESSIMISTIC -- it predicts a longer TPOT than the card delivers. Every
+      # point here is positive, at every load, which is why
+      # `AccuracyDomain.margin_from_error` charges this hardware NOTHING: the
+      # margin is one-sided by construction and a conservative predictor needs no
+      # inflating. The cells this domain labels therefore keep margin 0.00 % --
+      # what changes is that 0.00 % is now a measured statement instead of the
+      # absence of one.
+      points:
+        - {conc: 1.832, tpot_err_pct: 63.16, note: "300-req sim at 0.0967 rps; sim TPOT 28.91 ms vs curve 17.72 ms at the same served concurrency; the hardware point offered was c1.00"}
+        - {conc: 3.221, tpot_err_pct: 53.86, note: "300-req sim at 0.1687 rps; sim TPOT 29.26 ms vs curve 19.02 ms; hardware point c1.99"}
+        - {conc: 6.801, tpot_err_pct: 60.74, note: "300-req sim at 0.3079 rps; sim TPOT 34.28 ms vs curve 21.32 ms; hardware point c3.98"}
+        - {conc: 12.063, tpot_err_pct: 43.73, note: "300-req sim at 0.5468 rps; sim TPOT 34.87 ms vs curve 24.26 ms; hardware point c7.88"}
+        - {conc: 19.471, tpot_err_pct: 26.86, note: "300-req sim at 0.8978 rps; sim TPOT 35.21 ms vs curve 27.75 ms; hardware point c15.3"}
+        - {conc: 19.885, tpot_err_pct: 26.34, note: "300-req sim at 0.9168 rps; sim TPOT 35.27 ms vs curve 27.92 ms; hardware point c15.59"}
+        - {conc: 52.440, tpot_err_pct: 71.58, note: "300-req sim at 1.3925 rps; sim TPOT 71.86 ms vs curve 41.88 ms; hardware point c29.3"}
+        - {conc: 70.843, tpot_err_pct: 42.85, note: "300-req sim at 1.9571 rps; sim TPOT 72.27 ms vs curve 50.59 ms; hardware point c59.2"}
+        - {conc: 79.028, tpot_err_pct: 32.70, note: "300-req sim at 2.2579 rps; sim TPOT 72.55 ms vs curve 54.67 ms; hardware point c107.2"}
+      note: >
+        Measured from served concurrency 1.832 to 79.028. The error is
+        pessimistic throughout and falls with load, 63 % to 26 %, which is what a
+        per-step overhead charged too often looks like as more tokens per forward
+        amortise it -- `rngd_card_vs_pe_model.md` puts ASTRA-Sim's collective at
+        ~340 us/layer against a measured 115 us. Two features are not noise and
+        should not be smoothed. The interval 19.885 -> 52.440 crosses the
+        simulator's saturation knee with nothing measured inside it: TPOT nearly
+        doubles there, 35.27 to 71.86 ms, while the hardware curve rises 27.92 to
+        41.88. And the top three points show the model hitting a throughput wall
+        the hardware does not -- offering more load moves simulated TPOT only
+        71.86 -> 72.55 ms while served concurrency creeps 52.4 -> 79.0, so the
+        simulator saturates near 1.4 rps where the card reaches 2.26. Above
+        79.028 `widen_error_bars` extrapolates and never caps; the hardware
+        envelope itself stops at 107.2 (`pool_binding_above`), so a simulated
+        point above ~79 cannot be given a measured reference at all.
+provenance:
+  fitted_from:
+    RNGD:
+      - profiles/envelopes/RNGD-CARD/meta-llama/Llama-3.1-8B/bf16/tp1.yaml
+      - experiments/configs/clusters/rngd-llama31-8b-tp8.json
+      - outputs/perpe_lowload_300/lowload_sim_error.json
+      - outputs/perpe_highload_300/lowload_sim_error.json
+  measured_side_note: >
+    The measured half is the RNGD-CARD envelope and that is not a mislabel. It is
+    one physical card running TP=8, measured by furiosa-llm; "RNGD-CARD" names the
+    simulator abstraction it was first used for, not a different device. The
+    per-PE fixture models the same card as 8 accelerators at tp8
+    (experiments/configs/clusters/rngd-llama31-8b-tp8.json), so the hardware
+    reference is the same curve.
+  simulator_side_note: >
+    Nine runs, 300 requests each, constant arrival spacing, no prefix caching,
+    `--network-backend analytical`, on the NPU node 2026-09-11. Low six:
+    1 h 52 m. High three: 9 m 35 s -- the high-load points are CHEAPER because
+    300 requests at 2.26 rps span 133 s of simulated time against 3102 s at
+    0.0967 rps.
+  request_count_note: >
+    300 requests, matching the hardware side, per D32 -- and this file is where
+    D32's RNGD half stops being unchecked. The same sweep at the script's
+    20-request default put the top two points at served concurrency 10.82 and
+    10.92; at 300 they are 19.47 and 19.88. That is an 80 % difference with
+    nothing physical between the two, exactly the drain-tail artifact D32
+    measured at -31.7 % on the A40. Every point here is from the 300-request
+    runs. The 20-request sweep is kept at outputs/perpe_lowload_shape/ as the
+    evidence for that sentence and is the basis of nothing.
