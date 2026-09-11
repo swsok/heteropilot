@@ -280,10 +280,26 @@ extrapolated 1.42 %, and it is the difference this work bought.
 
 Both are the card fixture at 3.3 rps, and both are held there by the same thing:
 the winner is `P[cuda:tp1] D[furiosa:tp1]`, whose A40 leg is a **prefill role at
-served concurrency 0.499**. The domain now starts at 4.043. Closing that gap
-would mean measuring a server that is idle 99 % of the time, which is not an
-operating point a bench can hold — so this cell is not "not yet measured", it is
-**not measurable by this method**, and the label is doing exactly its job. Its
+served concurrency 0.499**. The domain now starts at 4.043.
+
+> **Correction, 2026-09-11.** This paragraph first said closing that gap "would
+> mean measuring a server that is idle 99 % of the time, which is not an
+> operating point a bench can hold", and called the cell **not measurable by this
+> method**. That is wrong twice. Served concurrency 0.499 means the engine is
+> busy about **50 %** of the time, not 1 %; and an open-loop bench holds it by
+> offering a low enough rate. From the measured batch-1 latency of 19.7 s the
+> rate is **0.0254 rps**, so 100 requests is **~1.1 h** per repeat and 300 is
+> ~3.3 h. It is expensive, not impossible, and the original wording overstated
+> the obstacle.
+
+What is genuinely approximate, and would be true of any such point, is that this
+bench measures an **aggregated** engine while the E6 leg is **prefill-only**. At
+concurrency 0.5 nearly all of a request's 19.7 s is decode, so an aggregated
+point is mostly a decode measurement. It is still the right thing to charge the
+leg with: `_auto_margins` bills a `prefill`-phase device for **TTFT only**, and
+TTFT at concurrency 0.5 is prefill latency under either arrangement. So the gap
+is closable with about an hour of idle A40 time per repeat, and until it is, the
+label is doing its job. Its
 12.52 % margin comes from the RNGD-CARD decode leg, which is in-domain, so the
 cell is better founded than the label alone suggests.
 

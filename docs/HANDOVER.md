@@ -228,11 +228,15 @@ in the tight-TTFT regime §2.5 still records as not quotable. TPOT, by contrast,
 is nearly exact at low load and **changes sign** across the range (+0.59 % to
 −1.42 %), so the one-sided margin correctly charges nothing at the bottom.
 
-**What remains, and it cannot be fixed by measuring the A40 harder.** The two
-cells still `extrapolated` are the card fixture at 3.3 rps, whose winner's A40
-leg is a *prefill role at served concurrency 0.499* — an almost-idle server is
-not an operating point a bench can hold. The five `unknown` cells need a per-PE
-RNGD accuracy domain, which needs the NPU node.
+**What remains.** The two cells still `extrapolated` are the card fixture at
+3.3 rps, whose winner's A40 leg is a *prefill role at served concurrency 0.499*,
+below the domain's new floor of 4.043. **This is closable and an earlier draft of
+this section said it was not** — see the correction in
+`experiments/results/e6_rps_sweep.md`. An open-loop point at 0.0254 rps reaches
+it: ~1.1 h per repeat at 100 requests, ~3.3 h at 300, on an otherwise idle A40.
+Expensive, not impossible. The five `unknown` cells are the ones that genuinely
+cannot be reached from an NVIDIA node — they need a per-PE RNGD accuracy domain,
+which needs the NPU node.
 
 **A method correction came out of it — `docs/deviations.md` D32.** The simulator
 side must run the same number of requests as the hardware. At the script's

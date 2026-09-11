@@ -76,9 +76,15 @@ def test_it_brackets_every_a40_operating_point_e6_recommends(a40, conc):
 
 def test_the_prefill_leg_at_0499_is_still_outside_and_must_stay_flagged(a40):
     """E6's 3.3 rps card cells rest on an A40 PREFILL leg at served concurrency
-    0.499. No hardware measurement reaches an almost-idle server, so this cell
-    cannot be rescued by measuring harder -- and it must keep saying so rather
-    than borrowing the nearest point's number."""
+    0.499, below this domain's floor. Until a point is measured down there the
+    margin must keep saying it is extrapolated rather than borrowing the nearest
+    point's number.
+
+    An earlier version of this docstring said no hardware measurement could reach
+    an almost-idle server. That was wrong: 0.499 means the engine is busy ~50 %
+    of the time, and an open-loop bench holds it at 0.0254 rps -- about 1.1 h per
+    repeat at 100 requests. The cell is unmeasured, not unmeasurable.
+    """
     assert not a40.in_domain(0.499)
     # widen_error_bars extrapolates DOWNWARD from the low end and never caps, so
     # the margin there exceeds the one at the nearest measured point.

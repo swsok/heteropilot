@@ -153,9 +153,11 @@ Seven cells still are not measured, and neither group is waiting on effort:
     **not** rehabilitated by appearing here. Only a per-PE RNGD domain fixes
     these, and that needs the NPU node.
   - **two are `extrapolated`** on the card fixture at 3.3 rps, whose winner's A40
-    leg is a *prefill role at served concurrency 0.499*. An almost-idle server is
-    not an operating point a bench can hold, so this is not measurable by this
-    method rather than not yet measured.
+    leg is a *prefill role at served concurrency 0.499*, below the domain's floor
+    of 4.043. These are **not yet measured** rather than unmeasurable: an
+    open-loop point at 0.0254 rps reaches that occupancy in ~1.1 h per repeat at
+    100 requests. An earlier version of this entry called it unmeasurable and was
+    wrong — `experiments/results/e6_rps_sweep.md` carries the correction.
 
 **Carried with it, and it bears on any future tight-TTFT claim:** the simulator
 is **~18 % optimistic on TTFT at served concurrency 4–11**, where the single
