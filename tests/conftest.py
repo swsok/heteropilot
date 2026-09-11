@@ -69,10 +69,34 @@ class MockPredictor(Predictor):
     """
 
     def __init__(self, *, fail_ids: set[str] | None = None,
-                 timeout_ids: set[str] | None = None) -> None:
+                 timeout_ids: set[str] | None = None,
+                 served_concurrency: float | None = None,
+                 operating_point: dict[str, dict] | None = None) -> None:
         self.fail_ids = fail_ids or set()
         self.timeout_ids = timeout_ids or set()
+        #: Operating point to report (uncertainty work order A2/A4). None - the
+        #: default - matches a predictor with no per-request records, so every
+        #: existing test is unaffected and an accuracy-domain policy correctly
+        #: sees "no operating point" rather than a fabricated one. When only
+        #: `served_concurrency` is given, every hardware kind the candidate uses
+        #: is reported at that concurrency in phase "total"; `operating_point`
+        #: overrides that with an explicit per-hardware dict.
+        self.served_concurrency = served_concurrency
+        self.operating_point = operating_point
         self.calls: list[str] = []
+
+    def _operating_point(self, candidate: CandidateConfig, islands, profiles) -> dict:
+        if self.operating_point is not None:
+            return dict(self.operating_point)
+        if self.served_concurrency is None:
+            return {}
+        out: dict[str, dict] = {}
+        for a in candidate.assignments:
+            profile = profiles[islands[a.island_id].accelerator_model]
+            hw = profile.sim_hardware or profile.model
+            out[hw] = {"concurrency": self.served_concurrency, "phase": "total",
+                       "requests": 100, "wall_s": 10.0}
+        return out
 
     def predict(self, candidate: CandidateConfig, spec, cluster, islands, profiles) -> SimResult:
         from planner.util import memory as memutil
@@ -166,7 +190,9 @@ class MockPredictor(Predictor):
                 peak_power_w=None if energy is None else energy / 8.0,
                 tokens_per_joule=None if energy is None else tokens / energy,
                 sim_wall_seconds=0.0,
+                served_concurrency=self.served_concurrency,
             ),
+            operating_point=self._operating_point(candidate, islands, profiles),
         )
 
 

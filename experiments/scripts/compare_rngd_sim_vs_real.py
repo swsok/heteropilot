@@ -36,6 +36,7 @@ import argparse
 import csv
 import json
 import statistics
+import sys
 from pathlib import Path
 
 from bench.core.plots import write_summary
@@ -94,6 +95,34 @@ def describe(label: str, values: list[float]) -> str:
             f"p50={pct(0.5):10.1f} p90={pct(0.9):10.1f} p99={pct(0.99):10.1f}")
 
 
+def _resolve_bucket(args) -> str:
+    """The calibration entry's key, canonical or nothing (§2.4.1).
+
+    A free string is not rejected outright - `split_bucket` files it under
+    `label` and leaves the canonical key empty - but it is never usable as a
+    lookup key, so this warns rather than letting the caller believe otherwise.
+    """
+    from planner.envelope import is_canonical_bucket, workload_bucket
+    from planner.spec import load_service_spec
+
+    if args.service and args.bucket:
+        raise SystemExit("give at most one of --bucket and --service")
+    if args.service:
+        return workload_bucket(load_service_spec(args.service))
+    if not args.bucket:
+        raise SystemExit(
+            "give --bucket (a canonical key) or --service (a spec to compute one from)"
+        )
+    if not is_canonical_bucket(args.bucket):
+        print(
+            f"WARNING: --bucket {args.bucket!r} is not a canonical key, so it is stored "
+            f"as a LABEL and this calibration will be invisible to --accuracy-domain "
+            f"lookup (uncertainty work order §2.4.1). Pass --service to place it.",
+            file=sys.stderr,
+        )
+    return args.bucket
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--sim-csv", required=True, type=Path)
@@ -101,8 +130,17 @@ def main() -> None:
     parser.add_argument("--out-dir", required=True, type=Path)
     parser.add_argument("--prefix", default="rngd")
     parser.add_argument("--hardware", default="RNGD")
-    parser.add_argument("--bucket", default="sharegpt-llama31-8b-20",
-                        help="workload bucket label for the calibration entry")
+    parser.add_argument(
+        "--bucket", default=None,
+        help="Canonical bucket key (in_*-out_*-rps_*) - §2.4.1 makes it the only "
+             "lookup key. Or give --service to compute it from a spec. Free-form "
+             "names go in --label, which is never used for lookup.")
+    parser.add_argument(
+        "--service", default=None,
+        help="Service spec whose workload_bucket() becomes the canonical key.")
+    parser.add_argument(
+        "--label", default="",
+        help="Free-form name for this run. Never a lookup key.")
     parser.add_argument("--calibration-out", type=Path, default=None,
                         help="write profiles/calibration/<hw>.yaml here")
     args = parser.parse_args()
@@ -137,7 +175,12 @@ def main() -> None:
     pairs = parse_validation_summary(summary_path.read_text())
     if not pairs.ttft or not pairs.tpot:
         raise SystemExit("summary produced no TTFT/TPOT rows to fit")
-    model = fit_from_summaries([(summary_path, args.hardware, args.bucket)])
+    bucket = _resolve_bucket(args)
+    model = fit_from_summaries([(summary_path, args.hardware, bucket)])
+    if args.label:
+        entry = model.hardware[args.hardware].errors.get(bucket)
+        if entry is not None:
+            entry.label = args.label
     calibration = model.hardware[args.hardware]
     print("=== fitted real = alpha * sim + beta ===")
     for metric in ("ttft", "tpot"):

@@ -19,12 +19,17 @@ from planner.candidate_generator import CandidateGenerator
 from planner.envelope import EnvelopeCache
 from planner.inventory import AcceleratorProfile, ClusterSpecV2, ExecutionIsland
 from planner.optimizer import feasibility, pareto
+from planner.optimizer.margin import (
+    AccuracyDomainMargin,
+    GlobalMargin,
+    MarginDecision,
+    MarginPolicy,
+)
 from planner.optimizer.surrogate import SurrogateRanker
 from planner.perf_envelope import PerfEnvelope, Saturated, solve_operating_point
 from planner.plan import (
     CandidateConfig,
     DeploymentPlan,
-    OperatingPointRecord,
     PlannerOutput,
     PredictedMetrics,
     Rejection,
@@ -37,7 +42,7 @@ from planner.plan import (
 )
 from planner.predictor import Predictor, SimOutcome, SimResult
 from planner.predictor.calibration import AccuracyDomain
-from planner.spec import ServiceSpec
+from planner.spec import Objective, ServiceSpec
 from planner.topology import TopologyError, TopologyGraph
 from planner.util import kv_transfer
 from planner.util import tier as tierutil
@@ -95,6 +100,12 @@ class SearchResult:
     #: for the KV transfer. Surfaced into provenance so the assumptions behind
     #: the (analytical, un-simulated) transfer cost travel with the plan.
     pd_transfers: list[dict] = field(default_factory=list)
+    #: Candidates whose operating point no measurement covers (STEP A3). Kept
+    #: apart from `infeasible_plans` on purpose - these were not judged and
+    #: failed, they were not judged at all - and used to tell the operator which
+    #: measurement would settle the strongest of them.
+    unmeasured: list[tuple[str, MarginDecision]] = field(default_factory=list)
+    unmeasured_metrics: dict[str, PredictedMetrics] = field(default_factory=dict)
 
 
 def _plan_id(index: int) -> str:
@@ -302,87 +313,6 @@ def _envelope_prefilter(
     return kept, rejections
 
 
-@dataclass
-class _AutoMargin:
-    """What the candidate's own operating point earns it.
-
-    Events are structured rather than pre-formatted because they are per
-    CANDIDATE and there can be hundreds; the caller aggregates them into one line
-    per hardware. An earlier version appended a sentence per candidate and buried
-    the plan under 300 near-identical caveats.
-    """
-
-    ttft_percent: float = 0.0
-    tpot_percent: float = 0.0
-    source: str = ""
-    operating_point: list[OperatingPointRecord] = field(default_factory=list)
-    #: hardware -> served concurrency, for candidates outside the domain
-    extrapolated: dict[str, float] = field(default_factory=dict)
-    #: hardware kinds with no accuracy domain at all
-    no_domain: tuple[str, ...] = ()
-    #: set when the run produced no readable operating point
-    unreadable: bool = False
-
-
-def _auto_margins(
-    candidate: CandidateConfig,
-    sim: SimResult,
-    domains: dict[str, AccuracyDomain] | None,
-) -> _AutoMargin:
-    """Read the run's operating point and price the simulator's error at it.
-
-    Hardware without an accuracy domain contributes nothing -- margin 0 and a
-    note, never a borrowed number from a different device (rule 3).
-
-    Which error applies to which metric follows the roles. In a P/D deployment the
-    PREFILL hardware determines TTFT and the DECODE hardware determines TPOT, so
-    each side is charged only for the metric it owns; charging the decode device's
-    TPOT error against a prefill engine that runs no decode steps would be the
-    same category error the role-aware pruning bounds already avoid.
-    """
-    out = _AutoMargin()
-    if not domains:
-        return out
-    # Read off the SimResult, which carries it whether the run just happened or
-    # came from the cache. Re-deriving it from `artifacts` here is what made the
-    # margin vanish on a cache hit, silently and with the plan still printing.
-    points = sim.operating_point
-    if not points:
-        out.unreadable = True
-        return out
-
-    missing = []
-    for hw, raw in sorted(points.items()):
-        conc = float(raw["concurrency"])
-        phase = str(raw["phase"])
-        domain = domains.get(hw)
-        if domain is None:
-            missing.append(hw)
-            out.operating_point.append(OperatingPointRecord(
-                hardware=hw, concurrency=conc, phase=phase))
-            continue
-        tpot_err = domain.tpot_error_at(conc)
-        ttft_err = domain.ttft_error_at(conc)
-        out.operating_point.append(OperatingPointRecord(
-            hardware=hw, concurrency=conc, phase=phase,
-            tpot_error_pct=tpot_err, ttft_error_pct=ttft_err,
-            in_calibration_domain=domain.in_domain(conc),
-        ))
-        # phase == "prefill" owns TTFT only; "decode" owns TPOT only; "total"
-        # (aggregated, or one device carrying both P/D roles) owns both.
-        if phase in ("decode", "total"):
-            out.tpot_percent = max(out.tpot_percent,
-                                   AccuracyDomain.margin_from_error(tpot_err))
-        if phase in ("prefill", "total"):
-            out.ttft_percent = max(out.ttft_percent,
-                                   AccuracyDomain.margin_from_error(ttft_err))
-        out.source = "accuracy_domain"
-        if not domain.in_domain(conc):
-            out.extrapolated[hw] = conc
-    out.no_domain = tuple(missing)
-    return out
-
-
 def evaluate_candidates(
     candidates: list[CandidateConfig],
     spec: ServiceSpec,
@@ -395,6 +325,8 @@ def evaluate_candidates(
     ttft_margin_percent: float = 0.0,
     tpot_margin_percent: float = 0.0,
     accuracy_domains: dict[str, AccuracyDomain] | None = None,
+    margin_policy: MarginPolicy | None = None,
+    island_hw: dict[str, str] | None = None,
     max_workers: int | None = None,
     progress: Callable[[int, int, CandidateConfig], None] | None = None,
 ) -> SearchResult:
@@ -409,6 +341,26 @@ def evaluate_candidates(
     """
     result = SearchResult()
     topology = TopologyGraph(cluster)
+    # Which margin each candidate gets. No policy and no domains is the manual
+    # behaviour exactly: one pair of percentages for every candidate. Domains
+    # without an explicit policy build the accuracy-domain policy with the two
+    # scalars as floors (rps STEP 4.3). Constructed here rather than defaulted
+    # in the signature so the scalar arguments stay the single source of truth
+    # (rule A4). `margin_basis` is recorded on the plan only when the caller
+    # opted into either, so the default YAML is byte-identical.
+    if margin_policy is not None:
+        policy: MarginPolicy = margin_policy
+    elif accuracy_domains:
+        from planner.envelope import workload_shape
+
+        policy = AccuracyDomainMargin(
+            accuracy_domains, shape=workload_shape(spec),
+            ttft_floor=ttft_margin_percent, tpot_floor=tpot_margin_percent,
+        )
+    else:
+        policy = GlobalMargin(ttft_margin_percent, tpot_margin_percent)
+    basis_recorded = margin_policy is not None or bool(accuracy_domains)
+    hw_labels = island_hw or {}
 
     # Phase 1: resolve a SimResult for every candidate. Cache hits are free; the
     # misses are simulated concurrently, then their ok results are memoized.
@@ -467,6 +419,7 @@ def evaluate_candidates(
     _extrapolated: dict[str, list[float]] = {}
     _no_domain: dict[str, int] = {}
     _unreadable = 0
+    _partial: dict[str, int] = {}
 
     # Phase 2: assemble in candidate order (deterministic plan_ids and lists).
     for index, candidate in enumerate(candidates):
@@ -511,18 +464,32 @@ def evaluate_candidates(
 
         # The margin the candidate's OWN operating point earns. A hand-set
         # --tpot-margin-percent cannot know whether a run sat at concurrency 1 or
-        # 76, where the simulator is 3.1 % and 18 % optimistic respectively; this
-        # reads it off the run. When both are given the LARGER wins, because a
-        # manual margin is an explicit instruction not to go below it.
-        auto = _auto_margins(candidate, sim, accuracy_domains)
-        ttft_used = max(ttft_margin_percent, auto.ttft_percent)
-        tpot_used = max(tpot_margin_percent, auto.tpot_percent)
-        for _hw, _conc in auto.extrapolated.items():
+        # 76, where the simulator is 3.1 % and 18 % optimistic respectively; the
+        # policy reads it off the run, and when a manual floor is also given the
+        # LARGER wins, because a floor is an explicit instruction not to go below.
+        decision = policy.decide(candidate, sim, metrics, hw_labels)
+        for _hw, _conc in decision.extrapolated.items():
             _extrapolated.setdefault(_hw, []).append(_conc)
-        for _hw in auto.no_domain:
+        for _hw in decision.no_domain:
             _no_domain[_hw] = _no_domain.get(_hw, 0) + 1
-        if auto.unreadable:
+        if decision.unreadable:
             _unreadable += 1
+        if decision.is_unmeasured:
+            # No verdict is possible, so none is given. Deliberately BEFORE the
+            # SLO check and never added to infeasible_plans: an undecidable
+            # candidate must not surface as `closest_plan`, which is a claim
+            # about how narrowly something missed. Charged to the same epistemic
+            # stage as a slab3d refusal (D33): unmeasured, not infeasible.
+            result.unmeasured.append((candidate.id, decision))
+            result.unmeasured_metrics[candidate.id] = metrics
+            result.rejections.append(
+                Rejection(
+                    candidate_id=candidate.id,
+                    stage=RejectionStage.OUTSIDE_CALIBRATION_DOMAIN,
+                    reason=f"unmeasured: {decision.basis}",
+                )
+            )
+            continue
 
         plan = DeploymentPlan(
             plan_id=_plan_id(index),
@@ -530,11 +497,11 @@ def evaluate_candidates(
             candidate=candidate,
             predicted=metrics,
             routing=_routing_for(candidate),
-            robust_margin_ttft_percent=ttft_used,
-            robust_margin_tpot_percent=tpot_used,
-            operating_point=auto.operating_point,
-            margin_source=auto.source if auto.source and (
-                auto.tpot_percent >= tpot_margin_percent) else "manual",
+            robust_margin_ttft_percent=decision.ttft_percent,
+            robust_margin_tpot_percent=decision.tpot_percent,
+            operating_point=decision.operating_point,
+            margin_source=decision.source,
+            margin_basis=decision.basis if basis_recorded else None,
         )
         if cached:
             result.cache_hits.append(candidate.id)
@@ -542,12 +509,21 @@ def evaluate_candidates(
         report = feasibility.evaluate(
             plan,
             spec,
-            ttft_margin_percent=ttft_used,
-            tpot_margin_percent=tpot_used,
+            ttft_margin_percent=decision.ttft_percent,
+            tpot_margin_percent=decision.tpot_percent,
         )
         result.notes.extend(report.notes)
 
         if report.passed:
+            if decision.unmeasured_metrics:
+                # It PASSED, but a metric it owns has no measured margin here (a
+                # TPOT-only domain, D19). A margin only ever inflates, so any
+                # violation is real whatever the coverage; the pass is kept and
+                # the gap is carried as an aggregated caveat rather than a
+                # rejection (D33 - rejecting would empty every search on the
+                # committed TPOT-only domains).
+                for _m in decision.unmeasured_metrics:
+                    _partial[_m] = _partial.get(_m, 0) + 1
             result.feasible_plans.append(plan)
         else:
             result.infeasible_plans.append((plan, report))
@@ -570,15 +546,100 @@ def evaluate_candidates(
     for _hw, _n in sorted(_no_domain.items()):
         result.notes.append(
             f"{_n} candidate(s) use {_hw}, which has no measured accuracy domain; "
-            f"they carry margin 0 (an unmeasured margin is not invented, rule 3)"
+            f"they carry the whole-bucket SCALAR margin, not one read at their "
+            f"operating point"
         )
     if _unreadable:
         result.notes.append(
             f"{_unreadable} candidate(s) produced no readable operating point, so "
-            f"no accuracy-domain margin was applied to them"
+            f"no accuracy-domain margin could be applied and they were left "
+            f"undecided (outside_calibration_domain)"
+        )
+    for _m, _n in sorted(_partial.items()):
+        result.notes.append(
+            f"{_n} feasible candidate(s) passed with NO measured {_m} margin: the "
+            f"accuracy domain that covers their operating point has no {_m} point "
+            f"(D19: a closed-loop measurement carries no TTFT), so that check ran "
+            f"unmargined. The pass is a verdict on the other metric only"
         )
 
     return result
+
+
+def _unmeasured_suggestions(
+    spec: ServiceSpec,
+    unmeasured: list[tuple[str, MarginDecision]],
+    metrics_by_id: dict[str, PredictedMetrics],
+) -> list[str]:
+    """Say which measurement would settle the strongest undecidable candidate.
+
+    Consistent with the infeasible-is-a-diagnosis principle (§3.5): a candidate
+    nobody can judge is a gap in the evidence, and the useful output is the
+    experiment that closes it - not silence.
+
+    "Strongest" is the best raw value of the primary objective among the
+    undecidable candidates, scored with `pareto.objective_value` so it is the
+    same arithmetic the ranked plans get. It is a lower bound on their standing,
+    since the margin that would apply to them is exactly what is unknown.
+    """
+    if not unmeasured:
+        return []
+
+    objective = spec.objective.primary
+    maximize = objective is not Objective.MINIMIZE_ENERGY and (
+        objective is not Objective.MINIMIZE_ACTIVE_ACCELERATORS
+    )
+    best_id: str | None = None
+    best_value: float | None = None
+    best_decision: MarginDecision | None = None
+    for candidate_id, decision in unmeasured:
+        metrics = metrics_by_id.get(candidate_id)
+        if metrics is None:
+            continue
+        value = _objective_value_of_metrics(metrics, objective)
+        if value is None:
+            continue
+        if best_value is None or (value > best_value if maximize else value < best_value):
+            best_id, best_value, best_decision = candidate_id, value, decision
+
+    out = [
+        f"{len(unmeasured)} candidate(s) could not be judged: their operating point "
+        f"lies outside every measured accuracy domain (or their hardware has none), "
+        f"so no margin applies. They are undecidable, not infeasible "
+        f"(outside_calibration_domain)."
+    ]
+    if best_id is not None and best_decision is not None:
+        where = (
+            f"served concurrency {best_decision.concurrency:.4g}"
+            if best_decision.concurrency is not None
+            else "an unknown operating point"
+        )
+        out.append(
+            f"the strongest of them by {objective.value} is {best_id} "
+            f"({best_value:,.4g}) at {where} - measure the envelope there to decide "
+            f"it, or set outside_domain: widen_error_bars to accept an extrapolation. "
+            f"Reason: {best_decision.basis}"
+        )
+    return out
+
+
+def _objective_value_of_metrics(
+    metrics: PredictedMetrics, objective: Objective
+) -> float | None:
+    """The primary objective read straight off a prediction.
+
+    `pareto.objective_value` takes a DeploymentPlan, and an undecidable
+    candidate deliberately never becomes one, so the two metric-only objectives
+    are read here. MINIMIZE_ACTIVE_ACCELERATORS is not a metric at all and
+    returns None rather than a stand-in.
+    """
+    if objective is Objective.MAXIMIZE_SLO_GOODPUT_PER_JOULE:
+        if metrics.total_energy_j is None or metrics.total_energy_j <= 0:
+            return None
+        return metrics.slo_goodput_rps / metrics.total_energy_j
+    if objective is Objective.MINIMIZE_ENERGY:
+        return metrics.total_energy_j
+    return None
 
 
 def _suggestions(
@@ -716,6 +777,7 @@ def search(
     activation_reserve_gb: float = 0.0,
     ttft_margin_percent: float = 0.0,
     tpot_margin_percent: float = 0.0,
+    margin_policy: MarginPolicy | None = None,
     surrogate: SurrogateRanker | None = None,
     top_k: int | None = None,
     envelopes: dict[str, PerfEnvelope] | None = None,
@@ -789,6 +851,11 @@ def search(
         ]
         candidates = [c for c in candidates if c.id in keep]
 
+    # Resolved before evaluation because a margin policy needs each island's
+    # hardware label to find its calibration. `_profile_tiers` is pure, so
+    # moving the call earlier changes nothing else.
+    island_tiers, island_hw, tier_warnings = _profile_tiers(spec, islands, profiles, perf_root)
+
     evaluation = evaluate_candidates(
         candidates,
         spec,
@@ -800,11 +867,11 @@ def search(
         ttft_margin_percent=ttft_margin_percent,
         tpot_margin_percent=tpot_margin_percent,
         accuracy_domains=accuracy_domains,
+        margin_policy=margin_policy,
+        island_hw=island_hw,
         max_workers=max_workers,
         progress=progress,
     )
-
-    island_tiers, island_hw, tier_warnings = _profile_tiers(spec, islands, profiles, perf_root)
 
     all_rejections = (generation.rejections + envelope_rejections
                       + surrogate_rejections + evaluation.rejections)
@@ -920,6 +987,9 @@ def search(
             caveats=feasible_caveats + evaluation.notes + tier_caveats,
             profile_tier=tier_value,
             profile_tiers=prov["profile_tiers"],
+            suggestions=_unmeasured_suggestions(
+                spec, evaluation.unmeasured, evaluation.unmeasured_metrics
+            ),
         )
 
     closest_pair = min(
@@ -941,11 +1011,23 @@ def search(
         reason=(
             "no currently available configuration satisfies all constraints"
             if evaluation.infeasible_plans
-            else "no candidate survived generation, so nothing was simulated"
+            # An all-undecidable search HAS simulated candidates, so the
+            # "nothing was simulated" wording would be a false diagnosis - the
+            # failure is missing evidence, not a missing configuration.
+            else (
+                f"every simulated candidate was undecidable: all "
+                f"{len(evaluation.unmeasured)} of them run at an operating point "
+                f"outside the measured accuracy domain"
+                if evaluation.unmeasured
+                else "no candidate survived generation, so nothing was simulated"
+            )
         ),
         closest_plan=closest,
         violated_constraints=report.violations if report else [],
-        suggestions=_suggestions(spec, closest, report, summary),
+        suggestions=_suggestions(spec, closest, report, summary)
+        + _unmeasured_suggestions(
+            spec, evaluation.unmeasured, evaluation.unmeasured_metrics
+        ),
         unscored=unscored,
         rejected_summary=summary,
         evaluated_candidates=evaluation.evaluated,

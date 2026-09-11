@@ -132,6 +132,8 @@ def _render_plan(scored: ScoredPlan, label: str) -> str:
         f"  score             : {scored.objective.value} = {scored.value:,.4f}",
         render_metrics(plan),
     ]
+    if plan.margin_basis:
+        out.append(f"  margin basis      : {plan.margin_basis}")
     return "\n".join(out)
 
 
@@ -145,6 +147,20 @@ def render(output: PlannerOutput, *, top_n: int = 5) -> str:
         lines.append(
             f"!!  PROFILE TIER: {output.profile_tier.upper()} - this plan rests on "
             f"non-measured profile inputs  !!"
+        )
+        lines.append("!" * WIDTH)
+        lines.append("")
+    override = (output.provenance.get("uncertainty") or {}).get("bucket_override")
+    if override:
+        lines.append("!" * WIDTH)
+        lines.append(
+            f"!!  BUCKET OVERRIDE: accuracy domains looked up under "
+            f"{override.get('used')} instead of this service's own "
+            f"{override.get('requested')}  !!"
+        )
+        lines.append(
+            "!!  This asserts that an error measured on a DIFFERENT workload applies "
+            "here.  !!"
         )
         lines.append("!" * WIDTH)
         lines.append("")
@@ -168,6 +184,14 @@ def render(output: PlannerOutput, *, top_n: int = 5) -> str:
             lines.append(
                 "  NOTE: sim_error means the simulator crashed or timed out. Those "
                 "candidates are unmeasured, not infeasible."
+            )
+        if "outside_calibration_domain" in output.rejected_summary:
+            lines.append(
+                "  NOTE: outside_calibration_domain means a value the candidate needs "
+                "was never measured - its operating point lies outside an accuracy "
+                "domain under `refuse`, its hardware has no calibration, or the slab3d "
+                "table does not cover it. Those candidates were NOT judged infeasible "
+                "- they were not judged at all."
             )
     else:
         lines.append("  (none)")

@@ -13,7 +13,8 @@ hardware:
       source: measured
     errors:
       sharegpt-llama31-8b-20-tp8:
-        workload_bucket: sharegpt-llama31-8b-20-tp8
+        workload_bucket: ''
+        label: sharegpt-llama31-8b-20-tp8
         ttft:
           mean_error: -0.26338838197134484
           p95_abs_error: 0.32984320149523827
@@ -28,3 +29,20 @@ provenance:
   fitted_from:
     RNGD:
     - outputs/rngd_bench/rngd-tp8-burst_summary.txt
+  bucket_migration:
+    canonical_key: null
+    why_unresolved: "NO ARRIVAL RATE EXISTS for this fit, so the rps_ component of\
+      \ a canonical bucket cannot be determined and \xA72.4.1 forbids guessing it.\
+      \ The fit is a burst against a closed-loop client: the sim side ran outputs/envcheck/rngd20_burst.jsonl\
+      \ with every arrival_time_ns zeroed (experiments/results/rngd_ttft_gap_resolved.md\
+      \ 'Reproduce'), and the real side, bench_furiosa_endpoint.py, IGNORES arrival_time_ns\
+      \ and drives a fixed concurrency of 64 (docs/deviations.md D19) - which is why\
+      \ the sim had to be given a burst at all. A closed-loop burst has an offered\
+      \ rate of infinity, not a number."
+    input_tokens_p50: 1021.0
+    output_tokens_p50: 737.0
+    consequence: invisible to --accuracy-domain lookup by design; candidates on this
+      hardware come back `unmeasured` rather than borrowing an error measured on a
+      workload they do not match. Consistent with D19's own note that both RNGD calibrations
+      are scoped to this one bucket, and D22's finding that the sweep runs at ~76
+      concurrency against 16.6 in validation.

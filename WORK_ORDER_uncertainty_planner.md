@@ -172,6 +172,31 @@ def served_concurrency_little(rps: float, ttft_ms: float, tpot_ms: float, mean_o
 
 `operating_points`를 채우는 도구: `python -m planner fit-accuracy-domain --real outputs/rngd_envelope/edf/real_c*.json --sim <대응 sim csv> --hardware RNGD-CARD --bucket ...`. 기존 `compare_rngd_sim_vs_real.py`의 페어링 로직을 재사용한다(**조사 필요**: 각 real_cN에 대응하는 sim CSV가 `outputs/envcheck/`에 있는지; 없으면 E-A2에서 생성).
 
+#### 2.4.1 버킷 키 규칙 (A1 조사에서 드러난 불일치의 해소)
+
+커밋된 `profiles/calibration/*.yaml`의 `errors` 키는 손으로 넣은 이름(`sharegpt-llama31-8b-20`, `sharegpt-llama31-8b-20-tp8`)이고, 플래너가 계산하는 키는 `envelope.workload_bucket(spec)`(예: `in_lt1024-out_ge512-rps_lt20`)이다. 두 체계를 다음과 같이 통일한다.
+
+- **정규 키는 `envelope.workload_bucket(spec)` 하나뿐이다.** `BucketError.workload_bucket`은 정규 키만 담는다. 사람용 이름은 새 필드 `BucketError.label: str = ""`로 옮긴다. TP 크기(`-tp8`)는 워크로드가 아니라 배치 속성이므로 키에서 제거하고 `label`에만 남긴다(TP별 오차 차이가 확인되면 §5.7 다차원 동작점으로 확장).
+- **조회는 정규 키 완전 일치만.** 퍼지 매칭·최근접 버킷·"유일한 항목이면 그것 사용" 모두 금지. `--accuracy-domain` 모드에서 (hw, 정규 키) 항목이 없으면 그 hw의 후보는 `unmeasured`이며, 사유에 요청 키와 보유 키 목록을 모두 적는다: `"no accuracy domain for RNGD-CARD at bucket in_lt1024-out_ge512-rps_lt20 (available: in_lt1024-out_lt512-rps_lt5)"`. 기본 모드의 `CalibrationModel.margins()` → `(0.0, 0.0)` 동작은 그대로 둔다(A4 golden).
+- **마이그레이션.** 세 yaml의 정규 키는 **적합에 쓰인 벤치의 워크로드에서 계산**한다: `provenance.fitted_from`의 summary 경로 → 그 벤치가 쓴 워크로드 jsonl에서 입력·출력 토큰 p50, 벤치 설정에서 요청률(`sps10` → 10 rps)을 읽어 `workload_bucket()`과 같은 경계로 계산. 셋 중 하나라도 확인이 안 되면 정규 키를 비워 두고 `label`만 남긴다(→ `--accuracy-domain`에서 자동으로 unmeasured). 추측으로 채우는 것은 금지. 마이그레이션 결과(파일별 정규 키, 근거 경로, 미확정 사유)를 A4 PR 설명에 표로 남긴다.
+- **적합 도구.** `fit-accuracy-domain`(A2)과 `experiments/scripts/compare_rngd_sim_vs_real.py`의 `--bucket`은 정규 키 형식만 받거나 `--service <spec.yaml>`을 받아 계산한다. 자유 문자열은 `--label`로만 받는다.
+- **탈출구.** `--calibration-bucket <정규키>` 명시 오버라이드를 허용한다(정규 키 형식 검증, `label`로는 찾지 않음). 사용 시 `provenance["uncertainty"]["bucket_override"] = {"requested": ..., "used": ...}`를 기록하고 렌더 출력에 경고 한 줄을 넣는다.
+
+#### 2.4.2 §2.4.1 개정 — 정확도 도메인은 토큰 혼합(shape)으로 매칭한다
+
+E-A2 수행 중 §2.4.1의 "정규 키 완전 일치" 규칙이 **측정이 옳은데도 조회를 놓치는** 경우를 만든다는 것이 확인되어, 도메인 조회에 한해 다음과 같이 개정한다. 스칼라 항목의 규칙은 §2.4.1 그대로다.
+
+- **도메인은 `shape = in_*-out_*` 로 매칭한다.** 정규 키의 `rps_` 성분은 쓰지 않는다. 근거 셋:
+  1. `rps_`는 **서비스 수준** 양이고 calibration은 **하드웨어별**이다. 복제본 N개면 카드 하나가 보는 부하는 λ/N이므로, spec에서 한 번 계산한 서비스 rate를 모든 하드웨어별 조회에 적용하는 것은 범주 오류다. RNGD 카드는 최대 측정 동시성(107)에서 2.26 req/s를 완료하므로 10 rps spec은 카드 ~5장을 요구하고, 그때 카드당 2 rps는 측정 버킷(`rps_lt5`)과 정확히 일치한다.
+  2. 도메인은 이미 **장치당 부하를 서빙 동시성 L 축으로 명시적으로** 색인한다. `rps_`는 그 축과 중복이다.
+  3. 토큰 혼합은 계산/메모리 균형을 정하므로 **반드시 일치해야 한다** — 그래서 shape은 버리지 않는다.
+- **스칼라 항목은 여전히 정규 키 완전 일치.** 동시성 축이 없으므로 `rps_`를 대신할 것이 없다.
+- **shape 매칭도 완전 일치이며, 모호하면 거절한다.** 한 하드웨어에 같은 shape의 도메인이 둘 이상이면 고르지 않고 `unmeasured`로 보고한다(사유에 후보 label 나열).
+- **`BucketError`에 두 필드 추가.** `workload_shape`(정규 키가 있으면 그 접두사에서 자동 유도, 검증), `arrival_process: open_loop | closed_loop | unknown`.
+- **부분 커버리지를 허용하고 명시한다.** 도메인의 어떤 지표에 운영점이 없으면 그 지표는 `unmeasured`이며, **버킷 스칼라로 되돌아가지 않는다.** (되돌아가면 미적합 스칼라 0.0이 "오차 0 = 완벽한 시뮬레이터"로 읽힌다 — 이 작업지시서가 막으려는 실패 그 자체다. 구현 중 실제로 발생했다.) `MarginDecision`에 `ttft_status`/`tpot_status`/`unmeasured_metrics`를 둔다.
+- **판정 규칙(3분기).** 마진은 `max(0, m)`이라 항상 부풀리기만 하므로, **위반은 커버리지와 무관하게 진짜 위반이다.** 따라서: 위반이 있으면 `SLO_VIOLATED` → 없고 미측정 지표가 있으면 `UNMEASURED`("통과했으나 그 통과가 판정이 아니다") → 그 외 feasible.
+- **closed-loop 측정의 TTFT는 open-loop 배치로 전이되지 않는다**(D19: 도착 처리를 고치자 TTFT calibration이 크게 움직였고 TPOT은 ~1 %). `arrival_process: closed_loop` 항목은 사유에 그 사실을 붙인다.
+
 ### 2.5 전환 검출과 결정 후회 감소량 — Stage B
 
 레지스트리 항목 `i`에 대해 격자 `G_i = {g_1..g_m}` (기본 m=5: `lo`, `lo+¼`, nominal, `hi−¼`, `hi`; `unbounded`면 격자 없음 → ΔR_i 정의 불가, "측정 전 결정 불가"로 표기). 각 격자점 `g`에서:

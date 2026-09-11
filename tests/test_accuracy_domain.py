@@ -187,3 +187,189 @@ def test_the_planner_does_not_compute_energy_from_the_power_model():
         f"only inventory.py may mention power_model in code; {users} would couple "
         f"the planner's energy definition to a card-level curve (D29b)"
     )
+
+
+# --- D33: refuse is the default, and the domain says so -------------------
+
+def test_refuse_is_the_default_and_the_committed_domains_opt_into_widening():
+    """Deviations D33. A new domain refuses outside its points; the E5/E6 domains
+    say `widen_error_bars` explicitly and keep extrapolating."""
+    assert _domain().outside_domain == "refuse"
+    for path, hw in ((RNGD, "RNGD-CARD"), (A40, "A40"),
+                     ("profiles/calibration/rngd_perpe.yaml", "RNGD")):
+        d = load_calibration(path).hardware[hw].accuracy_domain
+        assert d is not None and d.outside_domain == "widen_error_bars"
+
+
+def test_errors_at_is_none_outside_a_refusing_domain_and_a_pair_inside():
+    d = _domain()
+    assert d.errors_at(25.0) is None
+    assert d.errors_at(5.0) is None
+    inside = d.errors_at(15.0)
+    assert inside is not None
+    ttft, tpot = inside
+    assert ttft is None, "no TTFT point anywhere in this domain"
+    assert tpot == pytest.approx(-10.0)
+    assert d.has_metric("tpot") and not d.has_metric("ttft")
+
+
+def test_errors_at_widens_when_told_to():
+    d = _domain(outside_domain="widen_error_bars")
+    got = d.errors_at(25.0)
+    assert got is not None and got[1] == pytest.approx(d.tpot_error_at(25.0))
+    assert got[1] < -15.0
+
+
+def test_basis_at_names_the_bracket_or_the_refusal():
+    d = _domain()
+    assert "interpolated between L=10 and L=20" in d.basis_at(15.0)
+    assert "ttft: NO point" in d.basis_at(15.0)
+    assert "refuse" in d.basis_at(25.0)
+    assert "EXTRAPOLATED" in _domain(outside_domain="widen_error_bars").basis_at(25.0)
+
+
+def test_a_domain_may_be_scoped_to_a_canonical_shape_only():
+    assert _domain(workload_shape="in_lt1024-out_ge512").workload_shape == "in_lt1024-out_ge512"
+    with pytest.raises(ValueError, match="canonical shape"):
+        _domain(workload_shape="sharegpt")
+
+
+def test_two_files_with_a_domain_for_one_hardware_are_refused(tmp_path):
+    """The loader never picks silently between two measurements of one device."""
+    from pathlib import Path
+
+    from planner.predictor.calibration import load_accuracy_domains
+
+    src = Path(RNGD).read_text()
+    (tmp_path / "a.yaml").write_text(src)
+    (tmp_path / "b.yaml").write_text(src)
+    with pytest.raises(ValueError, match="two accuracy domains for RNGD-CARD"):
+        load_accuracy_domains(paths=[tmp_path / "a.yaml", tmp_path / "b.yaml"])
+    only = load_accuracy_domains(paths=[tmp_path / "a.yaml"])
+    assert set(only) == {"RNGD-CARD"}
+
+
+def test_the_committed_tree_loads_without_a_duplicate():
+    from planner.predictor.calibration import load_accuracy_domains, load_calibrations
+
+    domains = load_accuracy_domains(".")
+    assert {"A40", "RNGD-CARD", "RNGD"} <= set(domains)
+    merged = load_calibrations(".")
+    assert {"A40", "RNGD-CARD", "RNGD"} <= set(merged.hardware)
+
+
+# --- served concurrency (uncertainty work order A2) -----------------------
+
+def test_served_concurrency_from_sim_is_total_time_over_the_window():
+    """Four requests of 10 s each inside a 20 s window average 2 in flight."""
+    from planner.predictor.accuracy_domain import served_concurrency_from_sim
+
+    assert served_concurrency_from_sim([10.0, 10.0, 10.0, 10.0], 20.0) == pytest.approx(2.0)
+    assert served_concurrency_from_sim([1.0], 0.0) == 0.0
+
+
+def test_served_concurrency_little():
+    """rps 2, W = 100 ms + 500 x 20 ms = 10.1 s, so L = 20.2."""
+    from planner.predictor.accuracy_domain import served_concurrency_little
+
+    assert served_concurrency_little(
+        rps=2, ttft_ms=100, tpot_ms=20, mean_out_tokens=500
+    ) == pytest.approx(20.2)
+
+
+def test_served_concurrency_reproduces_the_committed_d22_envelope():
+    """The one check that this is the same arithmetic D22 published.
+
+    docs/deviations.md D22's table gives eff. conc 15.3 / 29.3 / 59.2 / 107.2
+    for real_c{16,32,64,128}.json. Reproducing it from the raw per-request
+    records is what says `served_concurrency_from_sim` is the D22 statistic and
+    not the requested concurrency, which for these same runs reads 16 / 32 /
+    64 / 128.
+    """
+    import json
+    from pathlib import Path
+
+    from planner.predictor.accuracy_domain import served_concurrency_from_sim
+
+    root = Path(__file__).resolve().parents[1]
+    expected = {16: 15.3, 32: 29.3, 64: 59.2, 128: 107.2}
+    for requested, published in expected.items():
+        path = root / f"outputs/rngd_envelope/edf/real_c{requested}.json"
+        report = json.loads(path.read_text())
+        latencies = [
+            row["latency_ns"] / 1e9
+            for row in report["per_request"]
+            if not row.get("error") and row.get("latency_ns")
+        ]
+        served = served_concurrency_from_sim(latencies, report["wall_s"])
+        assert served == pytest.approx(published, abs=0.05)
+        assert report["concurrency"] == requested
+        assert abs(served - requested) > 0.5, "requested and served must not be confused"
+
+
+# --- golden: served_concurrency must not leak into default output ---------
+
+def _plan_with_metrics(served: float | None):
+    from planner.plan import (
+        CandidateConfig,
+        DeploymentPlan,
+        IslandAssignment,
+        PlannerOutput,
+        PredictedMetrics,
+        ScoredPlan,
+    )
+    from planner.spec import Objective
+
+    metrics = PredictedMetrics(
+        p50_ttft_ms=1.0, p95_ttft_ms=2.0, p99_ttft_ms=3.0,
+        p50_tpot_ms=1.0, p95_tpot_ms=2.0, p99_tpot_ms=3.0,
+        throughput_tps=10.0, slo_goodput_rps=1.0, slo_attainment=1.0,
+        completed_requests=1, completed_tokens=1,
+        served_concurrency=served,
+    )
+    plan = DeploymentPlan(
+        plan_id="hp-1", model="m",
+        candidate=CandidateConfig(
+            id="c1", model="m", dtype="bfloat16",
+            assignments=[IslandAssignment(island_id="i", tp_size=1)],
+        ),
+        predicted=metrics,
+    )
+    return PlannerOutput(
+        feasible=True, service_model="m", cluster_id="c",
+        recommended=ScoredPlan(plan=plan, objective=Objective.MAXIMIZE_SLO_GOODPUT_PER_JOULE,
+                               value=1.0),
+        alternatives=[ScoredPlan(plan=plan, objective=Objective.MAXIMIZE_SLO_GOODPUT_PER_JOULE,
+                                 value=0.5)],
+    )
+
+
+def test_served_concurrency_is_absent_from_the_default_yaml(tmp_path):
+    """Rule A4. The predictor fills this on every real run, so unlike
+    `uncertain_inputs` it would appear WITH A VALUE, not as a null, in output
+    that must not change."""
+    import yaml as _yaml
+
+    from planner.__main__ import _write_output
+
+    path = tmp_path / "plan.yaml"
+    _write_output(_plan_with_metrics(42.5), path)
+    text = path.read_text()
+    assert "served_concurrency" not in text
+    loaded = _yaml.safe_load(text)
+    assert "served_concurrency" not in loaded["recommended"]["plan"]["predicted"]
+    assert "served_concurrency" not in loaded["alternatives"][0]["plan"]["predicted"]
+
+
+def test_served_concurrency_is_kept_once_the_registry_is_present(tmp_path):
+    import yaml as _yaml
+
+    from planner.__main__ import _write_output
+    from planner.uncertainty import UncertainInputRegistry
+
+    output = _plan_with_metrics(42.5)
+    output.uncertain_inputs = UncertainInputRegistry()
+    path = tmp_path / "plan.yaml"
+    _write_output(output, path)
+    loaded = _yaml.safe_load(path.read_text())
+    assert loaded["recommended"]["plan"]["predicted"]["served_concurrency"] == 42.5
