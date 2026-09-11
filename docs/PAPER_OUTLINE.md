@@ -143,8 +143,11 @@ subsection; most systems papers cannot show the negative half of their own recor
 1. ~~**The A40 accuracy domain has one point**~~ — **resolved 2026-09-11**
    (`experiments/results/a40_lowload_envelope.md`). It has three, measured on the
    A40 node, and nine of sixteen cells now read `measured`. Two residual limits
-   replace it, and both are structural rather than pending: five cells need a
-   **per-PE RNGD** accuracy domain that does not exist, and two rest on an A40
+   replace it, and both are structural rather than pending: ~~five cells need a
+   **per-PE RNGD** accuracy domain that does not exist~~ (**closed 2026-09-11**,
+   `experiments/results/rngd_perpe_accuracy_domain.md` — it exists, it needed no
+   NPU access, four of those cells read `measured` and the fifth is rejected),
+   and two rest on an A40
    **prefill leg at served concurrency 0.499** — an almost-idle server, which is
    not an operating point a bench can hold.
    The correction that came with it belongs in this section: the simulator is
@@ -161,10 +164,17 @@ subsection; most systems papers cannot show the negative half of their own recor
    input p50 732 / output mean 652.5.
 4. **ATOM is out** (D20): host I/O exceeds the kernels and the device tracer's
    schema is undocumented, so no bundle reaches contract fidelity.
-5. **The per-PE RNGD profile has no accuracy domain**, so its rows carry margin
-   0.00 % and validity `unknown` — including a 4.956 tok/J that **is** the
-   retracted headline. It appears in E6's tables and is not rehabilitated by
-   appearing there.
+5. ~~**The per-PE RNGD profile has no accuracy domain**~~ — **closed
+   2026-09-11**, and the closure is a result rather than a caveat removed.
+   `profiles/calibration/rngd_perpe.yaml` is nine points from served concurrency
+   1.83 to 79.03, built with no hardware access because per-PE and card are two
+   simulator models of one card at TP=8. The model is **pessimistic** throughout,
+   +63 % falling to +26 %, so the one-sided margin charges it nothing and four
+   cells change label without changing plan. The 4.956 tok/J row — which **is**
+   the retracted headline — runs at served concurrency 139.4, outside the
+   measured range, earns a 42.12 % margin and **fails the TPOT SLO**: the planner
+   now rejects it, and that cell's winner is `agg[cuda:tp4]` at 2.595 tok/J. The
+   domain covers TPOT only and makes no energy claim in either direction.
 6. **68–114 candidates per E6 point fail in the simulator's KV allocator** after
    passing the generator's memory bound, so every "best" is the best of what
    evaluated. The count is printed for that reason.

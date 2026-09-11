@@ -7,10 +7,21 @@ that rule on purpose, and the reason is a claim made elsewhere.
 `outputs/e6_rerun/*/cache/` is what makes re-ranking E6 under a **different
 accuracy domain** a replay instead of a re-simulation: the cache key covers the
 candidate and the trace digest, not the domain, so changing a calibration file
-and re-ranking costs seconds. `docs/deviations.md` D32 and PR #74 both say so
-about the RNGD follow-up. That statement is only true while the cache exists, and
-it lived on the A40 node alone — regenerating it costs **13.6 h** (4.18 h + 9.39 h
-measured, on 64 cores).
+and re-ranking reuses every simulation that succeeded. `docs/deviations.md` D32
+and PR #74 both say so about the RNGD follow-up. That statement is only true
+while the cache exists, and it lived on the A40 node alone — regenerating it
+costs **13.6 h** (4.18 h + 9.39 h measured, on 64 cores).
+
+> **"costs seconds" was wrong — corrected 2026-09-11 while doing it.** The cache
+> stores only the simulations that SUCCEEDED. Every candidate that dies in the
+> simulator's KV allocator is re-run on every replay, and there are 114 of those
+> per point at 10 rps and **291** at 1 rps. Measured: the 10 rps row replayed in
+> **2.7 minutes** with 243 of 357 served from cache; the 1 rps row was still
+> simulating after 10 minutes, against 150 minutes for its original run. Read the
+> claim as *minutes to hours, not seconds*. A full eight-row re-rank of one
+> fixture is a multi-hour job, which is why
+> `experiments/results/rngd_perpe_accuracy_domain.md` re-ranked one cell and
+> argued the other four could not move.
 
 787 entries, 217 KB compressed. Restore with:
 

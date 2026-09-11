@@ -305,12 +305,26 @@ cell is better founded than the label alone suggests.
 
 ## The five `unknown` cells are untouched, as expected
 
+> **CLOSED 2026-09-11, and the last sentence below was wrong.**
+> `experiments/results/rngd_perpe_accuracy_domain.md` built the per-PE domain
+> **without touching the NPU**, because per-PE and card are two simulator models
+> of one physical card at TP=8 — so the measured curve already existed and only
+> the simulated side was missing. Four of these five cells become `measured` with
+> their plans unchanged (the model is pessimistic there, so the one-sided margin
+> charges nothing). **The fifth, the 4.956 tok/J cell, is rejected**: its leg runs
+> at served concurrency 139.4 against a domain measured to 79.03, earns a 42.12 %
+> margin, and 48.355 × 1.4212 = 68.7 ms fails the 50 ms TPOT SLO. That cell's
+> winner is now `agg[cuda:tp4]` at 2.595 tok/J. The superseded text is kept
+> below, per the retract-in-public rule.
+
 Every one is a per-PE fixture cell whose winner is RNGD-only. The per-PE RNGD
 profile has **no accuracy domain at all**, so those plans carry margin 0.00 % and
 validity `unknown` — including the `agg[furiosa:tp8]` at 4.956 tok/J, which is
 D22's retracted headline reproduced exactly. Nothing here rehabilitates it.
-`docs/CLAIMS.md` §3 still stands. An A40 measurement cannot reach these cells;
-only a per-PE RNGD domain could, and that needs the NPU node.
+`docs/CLAIMS.md` §3 still stands. ~~An A40 measurement cannot reach these cells;
+only a per-PE RNGD domain could, and that needs the NPU node.~~ — an A40
+measurement indeed cannot reach them, but the per-PE domain needed no measurement
+at all.
 
 ## Cross-node reproduction
 
