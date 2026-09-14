@@ -463,3 +463,100 @@ def test_a_profile_earns_regret_through_energy_alone(world) -> None:
     # Nothing crossed an SLO: every grid point still has a feasible plan, so the
     # regret is the objective gap and not a penalty term.
     assert all(p.best_value > float("-inf") for p in out[0].grid)
+
+# --- SIM_ERROR: the margin moves, and the overshoot must move with it ------
+
+def test_a_sim_error_that_rejects_the_incumbent_has_positive_regret(world) -> None:
+    """Regression: the overshoot was measured under the WRONG margin.
+
+    A SIM_ERROR grid point does not change the prediction, it replaces the
+    margin (§2.7), and `_plans_at` applies that override when it judges. The
+    sweep then asked "how badly did the incumbent miss?" by re-deriving the
+    decision from the policy - WITHOUT the override - under which the incumbent
+    was still feasible and its report's `worst_overshoot` was 0.0. Every
+    SIM_ERROR item therefore came out at exactly `delta_regret == 0.0` however
+    decisively the margin rejected the plan, so a measurement plan ranked the
+    accuracy domain below inputs it had priced at zero and E-B1's `ours`
+    strategy bought two inert links before the one measurement that mattered.
+
+    Here B, the incumbent, has a TPOT p99 of 14 ms against the spec's 50 ms SLO,
+    so a margin above ~257 % rejects it; the range reaches 400 %.
+    """
+    item = _item(UncertainKind.SIM_ERROR, "sim_error:x", 0.0,
+                 Range(lo=0.0, hi=4.0, unit="fraction", source="tests"), hours=0.041)
+    out = analyze(
+        _output("B", world.spec, world.candidates, world.metrics), _registry(item),
+        world.metrics, GlobalMargin(), world.spec, world.context, world.island_hw,
+        slo_penalty=2000.0,
+    )
+    assert out[0].flip is True
+    assert out[0].delta_regret is not None and out[0].delta_regret > 0.0
+
+
+def test_an_unmeasured_incumbent_is_charged_in_full(world) -> None:
+    """No "how narrowly it missed" exists for a plan nobody can verify.
+
+    A decision that could margin NOTHING makes the judgement `UNMEASURED`, and
+    such a judgement still carries a report whose `worst_overshoot` is 0.0
+    because nothing was violated. Charging that would price an unverifiable
+    recommendation at zero regret, so the sweep charges a whole unit instead.
+
+    **Partial coverage is deliberately NOT this case** (`docs/deviations.md`
+    D33 §5). The uncertainty stack originally rejected a pass that rested on a
+    metric with no measured margin; every committed RNGD domain is TPOT-only by
+    construction (D19), so that rule would have emptied every search on the
+    committed data. A pass with one unmargined metric is kept and reported as a
+    caveat, which is why this test uses `status="unmeasured"` rather than
+    `unmeasured_metrics=["ttft"]`.
+    """
+    from planner.optimizer.margin import MarginDecision
+    from planner.uncertainty.sensitivity import _swept_from
+
+    class _UnmeasuredPolicy:
+        # main's signature (D33 §3): the policy is handed the SimResult its
+        # operating point comes from as well as the metrics.
+        def decide(self, candidate, sim, metrics, island_hw):
+            return MarginDecision(
+                ttft_percent=0.0, tpot_percent=0.0, status="unmeasured",
+                ttft_status="unmeasured", tpot_status="unmeasured",
+                unmeasured_metrics=["ttft", "tpot"], concurrency=42.0,
+                basis="test: nothing could be margined",
+            )
+
+    swept = _swept_from(
+        0.0, dict(world.metrics), False, None, world.context, world.spec,
+        _UnmeasuredPolicy(), world.island_hw, "B",
+    )
+    # Nothing is judgeable, so nothing is feasible and the incumbent's miss is
+    # charged a whole unit rather than the 0.0 its passing report would give.
+    assert swept.incumbent_value is None
+    assert swept.overshoot == 1.0
+    assert swept.best_plan_id == ""
+
+
+def test_partial_margin_coverage_is_a_caveat_not_a_rejection(world) -> None:
+    """The other half of D33 §5, pinned so the reversal is not undone by accident.
+
+    A decision that margins TPOT but not TTFT still yields a feasible plan. The
+    uncertainty stack's original rule rejected it, and on the committed
+    TPOT-only domains that rule empties every search.
+    """
+    from planner.optimizer.margin import MarginDecision
+    from planner.uncertainty.sensitivity import _swept_from
+
+    class _PartialPolicy:
+        def decide(self, candidate, sim, metrics, island_hw):
+            return MarginDecision(
+                ttft_percent=0.0, tpot_percent=0.0, status="in_domain",
+                ttft_status="unmeasured", tpot_status="in_domain",
+                unmeasured_metrics=["ttft"], concurrency=42.0, basis="test",
+            )
+
+    swept = _swept_from(
+        0.0, dict(world.metrics), False, None, world.context, world.spec,
+        _PartialPolicy(), world.island_hw, "B",
+    )
+    assert swept.incumbent_value is not None, (
+        "a pass resting on one unmargined metric is kept -- D33 §5"
+    )
+    assert swept.overshoot == 0.0

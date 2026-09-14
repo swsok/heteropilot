@@ -50,6 +50,9 @@ class MeasurementItem(_Strict):
     #: True when the regret rests on a first-order perturbation rather than the
     #: planner's own arithmetic. Shown as "(approx)" wherever it is quoted.
     approximation: bool = False
+    #: True when `--resimulate-top` checked this item by really simulating both
+    #: ends of its range, so `delta_regret` is not a first-order stand-in.
+    resimulated: bool = False
     note: str = ""
 
 
@@ -119,6 +122,7 @@ def build(
             regret_per_hour=s.regret_per_hour,
             flip=s.flip,
             approximation=s.approximation,
+            resimulated=s.resimulated,
             note=s.note,
         )
         cost = item.cost_hours or 0.0

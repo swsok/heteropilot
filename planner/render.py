@@ -398,6 +398,8 @@ def render_measurement_plan(plan: MeasurementPlan, *, top_n: int = 20) -> str:
             cost = "unknown" if item.cost_hours is None else f"{item.cost_hours:,.3g} h"
             flag = " FLIPS" if item.flip else ""
             approx = " (approx)" if item.approximation else ""
+            if item.resimulated:
+                approx = " (resimulated)"
             lines.append(
                 f"  {item.rank:>3} {item.input_id:<38} {item.delta_regret:>12,.4g} "
                 f"{per_hour:>12} {cost:>8}  {item.how_to_measure}{flag}{approx}"

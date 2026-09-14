@@ -1,0 +1,6 @@
+# Simulator work dirs and the sweep's console log: regenerable from the command
+# in experiments/uncertainty/results/eb1_regret_vs_budget.md. The result JSONs
+# are committed; these are not.
+work/
+run.log
+report.log

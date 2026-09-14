@@ -302,6 +302,22 @@ def test_measurement_plan_requires_the_accuracy_domain(capsys) -> None:
     assert "needs --accuracy-domain" in capsys.readouterr().err
 
 
+def test_resimulate_top_needs_a_ranking_to_refine(capsys) -> None:
+    """It refines --measurement-plan's order; alone it has nothing to work on."""
+    parser = build_parser()
+    args = parser.parse_args([*BASE, "--accuracy-domain", "x", "--resimulate-top", "3"])
+    assert args.func(args) == 1
+    assert "no ranking to refine" in capsys.readouterr().err
+
+
+def test_resimulate_top_is_off_by_default(monkeypatch, tmp_path, domain_file) -> None:
+    """Absolute rule A4: an opt-in feature must not move the default path."""
+    parser = build_parser()
+    args = parser.parse_args([*BASE, "--accuracy-domain", str(domain_file),
+                              "--measurement-plan"])
+    assert args.resimulate_top == 0
+
+
 def test_a_measurement_plan_is_emitted_and_rendered(monkeypatch, tmp_path,
                                                     domain_file) -> None:
     from planner.render import render
@@ -385,7 +401,13 @@ def test_without_the_flag_there_is_no_plan_in_the_yaml(monkeypatch, tmp_path,
         monkeypatch, served=60.0,
     )
     assert output.measurement_plan is None
-    assert "measurement_plan" not in out_path.read_text()
+    # Against the PARSED document, not the raw text: provenance records the
+    # command line, so `pytest tests/test_measurement_plan.py` put the string
+    # "measurement_plan" in the file and failed this on a substring that had
+    # nothing to do with the plan.
+    import yaml
+
+    assert "measurement_plan" not in yaml.safe_load(out_path.read_text())
 
 
 def test_a_domain_scoped_to_another_model_is_refused(monkeypatch, tmp_path) -> None:

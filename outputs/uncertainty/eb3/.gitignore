@@ -1,0 +1,8 @@
+# E-B3 really simulates, with the envelope cache bypassed on purpose (a scaled
+# perf bundle shares its cache key with the measured one). Those runs are large
+# and regenerable; the result JSON is committed.
+work/
+probe/
+*.stdout
+*.stderr
+run.log

@@ -708,6 +708,7 @@ drops, TTFT flat, `none`-mode control flat — all PASS) and `tests/test_sim_pd_
 | D33 | uncertainty planner (Stage A/B) | **Decided 2026-09-11** — two accuracy-domain implementations were built in parallel from 108e48a (rps STEP 4's `calibration.AccuracyDomain`, per hardware, `widen_error_bars`; the uncertainty stack's `predictor/accuracy_domain.py`, per bucket, `unmeasured` outside). One remains: main's curve, `refuse` by default, the uncertainty stack's per-candidate `MarginPolicy` on top, `UNMEASURED` absorbed into `outside_calibration_domain`, E-A2's domain dropped as the D32 mis-pairing |
 | D34 | uncertainty planner (Stage B) | **Resolved 2026-09-14** — the register of which closed-form perturbation rules are approximate: `SIM_ERROR`, `LINK_BW`, `LINK_LAT` exact; `PROFILE`, `POWER` first-order. Writing it down found that `PROFILE`'s "energy unchanged" clause contradicted the simulator — `power_model.py:73` makes active energy linear in operator latency, and a ×1.38876 profile moved measured energy 162 260 → 225 190 J (×1.3878). The double-counting rationale was wrong: energy is watts × seconds, PROFILE moves the seconds and POWER the watts, so they compose rather than double-count. **Fixed** — `_scale_profile` scales energy with latency and recomputes tokens/J; ΔR on an energy-only decision goes 0.0000 → 375.0000. The one-line §2.7 amendment is the owner's |
 | D35 | uncertainty planner (Stage B) | **Recorded 2026-09-14** — STEP B5 asks for a `README.md` paragraph and a `CHANGELOG.md` entry, but both files are pure upstream LLMServingSim with no fork content, and upstream's own README policy keeps CLI tables off it. The paragraph went to `CLAUDE.md` §Commands and the long form to `docs/uncertainty_planner.md`; the two upstream files are untouched. The same rule applies to any later work order asking for those files — cite this entry rather than opening a new one |
+| D40 | uncertainty planner (Stage B) | **Open (measured, not fixed)** — `EnvelopeCache`'s placement key records each island's `hardware|arch|tp|pp|ep|dp` but not WHICH island got which share, so a pair differing only by mirroring the split collapses to one entry. Found by E-B3's identity control: `mix(a40a-tp2-dp2+a40b-tp2-dp1)` truly predicts p99 TTFT 518.95 ms / 108 750 J and its mirror 563.28 ms / 108 930 J — 8.5 % apart — and the cache serves the second to both. Either the key is too coarse or the simulator is order-sensitive for a logically identical configuration; which has not been established. The E-A1 headline winner is unaffected and re-simulates to its cached entry exactly |
 
 **Reading order.** The entries below are in the order they were written, not
 numerically: D30 and D31 precede D28 and D29 in the file because the surrogate and
@@ -2253,6 +2254,66 @@ E6 afterwards is a replay rather than a re-simulation.
 `profiles/calibration/rngd_card_edf.yaml` (unchanged, flagged here),
 `experiments/results/a40_lowload_envelope.md`.
 
+
+## D40 — `EnvelopeCache` dedups candidates the simulator does not treat as equivalent · Open (measured, not fixed)
+
+**What the key does on purpose.** `EnvelopeCache._path` hashes a placement
+string, so two candidates with the same shape share one simulation. That is the
+point: a homogeneous multi-island cluster should memoise rather than re-simulate
+`rngd0-tp4-dp1` and `rngd1-tp4-dp1`, which are the same configuration on
+interchangeable hardware.
+
+**Where it is wrong.** The placement string records each island's
+`hardware|arch|tp|pp|ep|dp` but not WHICH island got which share, so a pair that
+differs only by mirroring the split collapses to one entry. Found by E-B3's
+identity control — a x1.0 perturbation must reproduce the cached prediction, and
+one A40 candidate deviated by 7.9e-2 while 120 RNGD runs deviated by 0.000. The
+cause is not the perturbation: the x1.0 bundle copy is numerically exact, the
+simulator is deterministic across two fresh runs to four decimals, and the two
+mirrors genuinely differ —
+
+```
+mix(a40a-tp2-dp2 + a40b-tp2-dp1)-s128-t2048   p99 TTFT 518.95 ms / 108 750 J
+mix(a40a-tp2-dp1 + a40b-tp2-dp2)-s128-t2048   p99 TTFT 563.28 ms / 108 930 J
+```
+
+— and the cache serves the second's value to both. Since `a40a` and `a40b` are
+the same size, symmetry says these should be equal; they are 8.5 % apart on
+TTFT, so **either the key is too coarse or the simulator is order-sensitive for
+a logically identical configuration.** Which of the two has not been
+established, and the difference matters: one is a cache bug, the other is a
+simulator property the cache merely hides.
+
+**How much is grouped**, reproduced on current `main`:
+
+| fixture | candidates | distinct keys | in a shared group |
+| --- | ---: | ---: | ---: |
+| `pd-rngd-gpu`, no P/D | 324 | 180 | 264 |
+| `pd-rngd-gpu`, P/D | 612 | 294 | — (234 shared groups, 114 with a P/D member) |
+| `pd-rngd-gpu-card`, P/D | 528 | 246 | — (198 shared groups, 84 with a P/D member) |
+
+Not every group is suspect. The 4-way cross-vendor groups
+(`a40{a,b} P + rngd{0,1} D`) choose between genuinely interchangeable islands and
+are sound dedup; so are the `rngd0`/`rngd1` aggregated pairs. The unsound shape
+is the asymmetric split above.
+
+**What still stands.** The E-A1 headline winner re-simulates to its cached entry
+exactly (`cuda-a40-node_a40a-tp4-dp1-s256-t8192` → 2972.0628 ms / 49.3956 ms /
+64 430 J) and its `a40b` twin is byte-identical, so dedup is sound for
+single-island aggregated candidates. Every E6 winner in PRs #75 and #77 is
+either single-island aggregated or a choice among interchangeable islands. What
+is NOT established is how far the mix-candidate rows in those corpora move.
+
+**Why it is not fixed here.** Adding the island assignment to the key
+invalidates every committed corpus — the E-A1 cache, `outputs/e6*/`,
+`outputs/.hp-*` — and therefore every result replayed from them, including D32's
+card re-check and the surrogate regret tables. That is a decision about what to
+re-run, not a patch. Recorded so the next person does not rediscover it from a
+7.9e-2 residual.
+
+**Where.** `planner/envelope.py` (`_path`, `key_for`),
+`experiments/uncertainty/eb3_closed_form_vs_resim.py` (the identity control that
+found it).
 
 ## D33 — two accuracy-domain implementations, one kept; `refuse` becomes the default · Decided 2026-09-11
 
