@@ -112,7 +112,7 @@ pytest -q && ruff check . && mypy
 
 ---
 
-# STEP 1. 시뮬레이션 비용 — ✅ 완료 (`2d9c8f4`, 브랜치 `feat/rps-step1-sim-cost`, **미머지**)
+# STEP 1. 시뮬레이션 비용 — ✅ 완료 (`2d9c8f4`, PR #61로 머지됨)
 
 > **결과.** 프로파일: `read_wait`(ASTRA-Sim 대기) 53.9 %, Chakra subprocess 28.9 % (10 rps; 3.3 rps에서 51.6/29.6 %). 규칙상 30 % 미만이지만 **D27 시행** — 이유: 저RPS 배수(300 req 기준 3.3 rps = 2.63×, 1 rps = **10.32×**)로 E6a가 60 h가 아니라 **218 h**였고, `--top-k 20`은 FEASIBLE plan을 INFEASIBLE로 바꾸는 것이 확인되어 비용 절감 수단으로 쓸 수 없었다. D27은 정확도 손실 없는 유일한 수단. **이 판단을 승인한다.** 구현: `LLMConverter` 직접 호출(`main()`의 `setup_logging` 부작용 회피), 모듈 전역 상태 없음 확인. 1.55–1.72× 빨라짐, R1×3·R2·3개 rate CSV **7건 byte-identical**. D26은 subsumed(해석할 인터프리터가 없어짐; venv에 chakra가 없으면 ImportError — 더 나은 실패). 테스트 483.
 >
@@ -138,6 +138,39 @@ pytest -q && ruff check . && mypy
 
 ## 배경 — surrogate 발견 (`0659675`, `docs/surrogate_topk_regret.md`)
 
+> **결론이 2026-09-11에 뒤집혔다 (PR #76).** 아래 본문의 *"랭커를 바꾸지 않는다"* 는
+> 더 이상 유효하지 않다. 당시의 판단 근거는 대안 랭커(`floor`)가 두 fixture를 고치고
+> **세 번째를 깨뜨린다**는 것이었고, 그 판단 자체는 옳았다 — 틀린 것은 "그러므로 고칠
+> 수 있는 랭커가 없다"는 암묵적 결론이었다.
+>
+> **수정은 이 절의 증거 안에 있었다.** `tpj_then_floor`(병렬성 항으로 명시적 tie-break)가
+> `roofline`과 **바이트 동일**하게 측정됐다는 사실이 기록돼 있었는데, 그것은 무결과가
+> 아니라 원인이다. tp·dp 상쇄는 대수적이지만 연산은 부동소수점이라 약 1만분의 1이
+> 남고(4.65에서 0.000463), 따라서 정확히 같은 값이 없어 tie-break가 한 번도 발동하지
+> 않는다. 랭커는 병렬성 축을 **무시한** 것이 아니라 반올림 오차가 대신 고르게 두고
+> 있었다.
+>
+> `BinnedRooflineRanker`는 tie를 명시화한다 — proxy tok/J가 상대 허용오차 안이면 동률로
+> 묶고 그 안에서 `roofline_tpot_ms`로 정렬. 가속기·`max_num_seqs`처럼 *배수*로 갈리는
+> 거친 순서는 건드리지 않으므로 `floor`가 깨뜨린 fixture를 깨지 않는다. **16개 코퍼스**
+> (세 개가 아니라 — E6의 두 스윕을 도착률별로 읽어 부하 축을 추가)에서 측정: 96개
+> (코퍼스, K) 셀 중 **11개 개선, 0개 악화, 85개 동일**, K=20 false-infeasible이 8개
+> 코퍼스에서 **2개**로. 지금은 `plan --surrogate`의 기본값이고 `roofline`은 재현용으로
+> 남아 있다. 허용오차는 맞춘 값이 아니다(0.001·0.01·0.05가 동일한 곡선과 동일한 top-K
+> 멤버십).
+>
+> **살아남은 절반:** *"`--top-k`를 일반적 비용 레버로 쓰지 않는다"* 는 여전히 유효하다.
+> **20 rps에서는 효율 기반 랭커가 K=50까지 false-infeasible**이고 `floor`만 답을 찾는다 —
+> 최고 부하에서는 feasibility를 TPOT floor가 전적으로 결정한다. K=5·K=10도 그대로다.
+> 그리고 16개 코퍼스는 여전히 **클러스터 fixture 2개**다.
+>
+> 시도했다가 측정으로 기각한 것 하나: **rank fusion**(두 순서의 라운드로빈 병합, 가중치
+> 없음)은 K=20에서 7개 코퍼스가 false-infeasible로 `binned`의 2개보다 나쁘다. 포기한
+> 깊이가 상보성 이득보다 크다. `exp_surrogate.py --rankers`에 남겨 두었고 출하하지 않는다.
+>
+> `docs/deviations.md` D30, `docs/surrogate_topk_regret.md`. 아래 본문과 지시는 2026-09-08
+> 당시의 기록으로 그대로 둔다.
+
 `AnalyticalRooflineRanker`가 쓰는 proxy tok/J는 **TP·DP에 대해 대수적으로 불변**(throughput과 power가 모두 `tp·dp`에 비례해 비율이 소거) — 랭커는 가속기와 `max_num_seqs`만 보고 병렬성을 보지 못한다. 병렬성이 feasibility를 가르는 fixture(`tp4-dp1` 49.40 ms vs `tp2-dp2` 53.47 ms, SLO 50 ms)에서 `--top-k 20`은 두 fixture 중 둘에서 false-INFEASIBLE. 대안 랭커(roofline floor)는 그 둘을 고치고 **세 번째 fixture를 깨뜨린다**. 결론: **랭커를 바꾸지 않고, `--top-k`를 E6에서 쓰지 않는다.** K=30은 세 fixture에서 깨끗하지만 세 fixture로 임계값을 정하지 않는다. `PROJECT_REPORT.md` §4.7 "regret is 0 even at K=1"은 N=78·aggregated 위주 fixture 하나의 결과였다 → **부분 철회**. 부수 수정: `exp_surrogate.py`의 regret 공식(최소화 목적에서 `oracle_value > 0` 가드로 항상 `None`이던 것 → `abs()`), `--cache-dir` 재생 모드.
 
 ## 지시
@@ -148,10 +181,13 @@ pytest -q && ruff check . && mypy
 4. `docs/HANDOVER.md` §2.1에 "rev 2" 반영: E6a 예산과 설계 변경 한 단락.
 5. 브랜치가 커밋한 `outputs/**/cache/*.json`(envelope cache 재생용 ~200개 소파일)은 유지 — 재생 근거. `.gitignore` 변경 14줄이 무엇을 풀었는지 PR에서 확인.
 
-## 완료 조건
-- [ ] `main`에 D27 + surrogate 발견, 게이트 통과(483)
-- [ ] §4.7·SLIDE_OUTLINE·CLAIMS §3 표기
-- [ ] 원격 브랜치가 `main` + `spike/d14-asym-tp`만
+## 완료 조건 — 전부 이행됨 (확인 2026-09-14)
+- [x] `main`에 D27 + surrogate 발견 — D27·D30 모두 `docs/deviations.md`에 있음
+- [x] §4.7·SLIDE_OUTLINE·CLAIMS §3 표기 — `PROJECT_REPORT.md:237`,
+      `SLIDE_OUTLINE.md:117`의 `SUPERSEDED IN PART 2026-09-08` 블록, `CLAIMS.md:319`의
+      D30 항목
+- [x] 원격 브랜치 정리 — `spike/d14-asym-tp`는 STEP 2.1 완료 시 삭제됨. 이후 다른
+      작업지시서의 브랜치들이 새로 생겼으므로 이 조건은 당시 기준으로만 참이다.
 
 ---
 
