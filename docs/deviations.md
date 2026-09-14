@@ -2667,3 +2667,58 @@ is superseded. Until then a reader looking for the flags finds them in
 
 **Where.** `CLAUDE.md`, `docs/uncertainty_planner.md`; `README.md` and
 `CHANGELOG.md` deliberately untouched.
+
+## D71 — a TP=1 decode island reaches the simulator and raises; the planner cannot pre-reject it · Recorded 2026-09-14
+
+STEP C1's F2 corpus (`WORK_ORDER_uq_stage_b_plus.md`) is the first one built with
+`enable_pd=True` on this cluster, and 23 of its 246 candidates never produced
+metrics. They all died the same way, in the simulator, at the moment the router
+hands a finished prefill to a decode engine:
+
+```
+File "serving/core/router.py", line 348, in transfer_prefill_request
+  self.decode_schedulers[instance_id].add_decode(req)
+File "serving/core/scheduler.py", line 841, in add_decode
+  self.memory.allocate(kv_size, Device.NPU)
+RuntimeError: [MemoryModel] [node_id=1,inst=1] NPU: tried to load 92.00MB
+              but only 25.49MB is available.
+```
+
+**The discriminator is TP=1 on the decode side, not TP=1.** All 23 have
+`tp1-dp1` in both roles. Candidates that keep `tp1` for *prefill* and give decode
+more — `pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)`
+— simulate normally, as do aggregated `mix(...tp1-dp1 + ...tp1-dp1)` placements
+at the same total device count. A P/D decode engine holds the KV of every request
+in flight, while an aggregated pair of the same two devices splits that working
+set across both; one card's worth of KV is enough for the second arrangement and
+not for the first.
+
+**This is not a planner bug, and "fix the pruning" is the wrong fix.** Stage 2 is
+`planner/util/memory.py::feasible` with its default `min_kv_tokens=1`, and the
+generator calls it role-agnostically on purpose (`_parallelism_options`'s
+docstring). Raising the threshold to a working-set estimate would make stage 2
+reject candidates that `§5.6` declares nothing about — precisely the
+*relaxation, never an extra condition* invariant in `CLAUDE.md`, and precisely
+the mistake the throughput bound made before the oracle-agreement test caught it.
+A stage may reject only when the most optimistic arithmetic already misses a
+declared constraint, and "the decode engine will fill up at this concurrency" is
+not one.
+
+**What the simulator is missing is admission control**, not capacity.
+`add_decode` allocates unconditionally instead of leaving the request queued
+until KV frees, so an over-subscribed decode instance raises where a real engine
+would simply run at a worse TPOT — which the planner would then have judged
+against the SLO in the ordinary way. Changing that is an edit to upstream
+`serving/core/scheduler.py`, which needs a work order that names the file
+(absolute rule 1); D12 is the standing warning about guessing in this file.
+
+**How it is handled meanwhile.** The runs are counted `sim_error` — no verdict,
+not a rejection — and `experiments/uncertainty/results/f2_truth.md` lists them
+under *Runs that did not finish* with the cause and the shared shape, so a reader
+of the F2 truth is not left thinking the planner judged that sub-family. The cost
+is 23 wasted simulator launches per cold corpus build; with the cache warm it is
+paid once.
+
+**Where.** `experiments/uncertainty/build_truth_cache.py`,
+`experiments/uncertainty/results/f2_truth.md`; the D-number comes from the
+`D70–D79` block `WORK_ORDER_uq_stage_b_plus.md` claims in STEP C0 (PR #87).
