@@ -1,0 +1,56 @@
+# F2 — the E-A1 service spec with the TTFT SLO moved into the middle regime.
+#
+# `WORK_ORDER_uq_stage_b_plus.md` §2.1. Everything except `slo.ttft.max_ms` is
+# byte-identical to `examples/service_specs/llama31-8b.yaml`, which is what lets
+# the E-A1 truth cache be reused: the TTFT SLO enters neither `EnvelopeKey` (its
+# six fields are model, dtype, placement, scheduler_config_hash, network_class,
+# workload_bucket) nor the trace digest. Verified rather than assumed -- the key
+# digest and the trace digest are identical under both specs.
+#
+# **8 000 ms, not the work order's 4 000.** §2.1 says to read the regime
+# boundaries and use the table's middle value if 4 000 is wrong. It is:
+# `docs/d23_revalidation.md` §3 is the document that CLOSED the three-regime
+# table, and on this fixture (card) its winner at <= 8 000 ms is
+# `P[cuda:tp2] D[cuda:tp2]` -- a P/D split -- while at <= 500 ms it is
+# `agg[cuda:tp2]`, which is not. 4 000 appears only in the SUPERSEDED
+# `pd_slo_sweep.md`, whose <= 4 s winner is `agg[cuda:tp4]`, also not P/D. A
+# fixture whose winner is not a P/D candidate cannot test whether link bandwidth
+# moves a P/D verdict, which is the whole reason for moving the SLO.
+#
+# **An older artifact appears to say 8 000 ms is infeasible; it does not apply.**
+# `outputs/pd_slo_sweep_margin18/pd-rngd-gpu-card.json` records
+# `ttft_slo_max_ms: 8000 -> feasible: false` over a 468-candidate corpus. This
+# generator produces 324 candidates with `enable_pd=False` and 528 with it, under
+# both specs -- 468 is neither, so that sweep predates the current enumeration and
+# cannot be read against F2. Re-run on today's corpus, TTFT <= 8 000 ms is
+# feasible under all three margin regimes: no margin, D22's global 18 %, and the
+# committed accuracy domains under `refuse`. Two of those three pick a P/D winner.
+
+service:
+  model: meta-llama/Llama-3.1-8B
+  dtype: bfloat16
+  kv_cache_dtype: auto
+
+traffic:
+  arrival_rate_rps: 10
+  input_tokens:
+    p50: 731
+    p95: 2470
+    p99: 2884
+  output_tokens:
+    p50: 632
+    p95: 780
+  burstiness: 1.0
+  prefix_share_ratio: 0.07     # measured prefix hit ratio on this workload
+
+slo:
+  ttft:
+    percentile: 99
+    max_ms: 8000
+  tpot:
+    percentile: 99
+    max_ms: 50
+
+objective:
+  primary: minimize_energy
+  secondary: minimize_active_accelerators

@@ -1,0 +1,8 @@
+{
+  "service": "experiments/uncertainty/fixtures/llama31-8b-ttft8000.yaml",
+  "cluster": "experiments/configs/clusters/pd-rngd-gpu-card.yaml",
+  "num_requests": 300,
+  "seed": 42,
+  "enable_pd": true,
+  "note": "F2. Same cluster, trace and seed as E-A1; the only difference in the service spec is slo.ttft.max_ms 25000 -> 8000, which enters neither the EnvelopeKey nor the trace digest, so E-A1's simulations are reusable. 8000 is d23_revalidation.md's middle regime, where this fixture's winner is a P/D split; the work order's 4000 is from the superseded pd_slo_sweep.md and is not."
+}
