@@ -381,7 +381,40 @@ Do not begin topology graphs, P/D placement, or replanning before the Phase 0–
 If upstream's actual filenames, config schema, or output columns contradict the work order,
 **the real code wins**. Record the difference in `docs/deviations.md` and continue.
 
-Thirty-three divergences are recorded there. D2 (power is stdout-only) and D3 (no topology graph in
+### Claim a D-number from your work order's block, never "the next one"
+
+**Every number up to the last entry in `docs/deviations.md` is taken.** When two work orders run in parallel they both reach for the
+next free number from the same base and collide — which happened on 2026-09-14, when
+`WORK_ORDER_uncertainty_planner.md` STEP B5 and the B4 experiments both wrote a `D34`.
+**Git does not catch this.** The two entries land ~190 lines apart in a 2,500-line file,
+so there is no textual overlap: the merge succeeds and the file simply contains two
+`## D34` headings. A person caught it; that is not a repeatable defence.
+
+Renumbering afterwards is not cheap either — there are **~1,100 D-references** across
+`docs/`, `planner/`, `tests/` and `experiments/` (D22 alone has 193), so a number that
+has been referenced for a while cannot move without a large, risky edit.
+
+So each concurrent work order owns a block and takes numbers only from it:
+
+| block | owner |
+| --- | --- |
+| D40–D49 | `WORK_ORDER_uncertainty_planner.md` |
+| D50–D59 | `WORK_ORDER_pipeline_domain.md` |
+| D60–D69 | `WORK_ORDER_cxl_kv_pool.md` |
+| D70–D79 | unassigned — claim it here in the same commit that first uses it |
+| D80–D89 | one-off work with no work order |
+
+D37–D39 are left free on purpose: they are the only numbers a stream may take
+**without** a block, and only for an entry that must sit immediately after the last
+one already recorded.
+Gaps inside a block cost nothing — `deviations.md` already says its entries are in
+the order they were written, not numerically, and `D29b` exists because one had to be
+squeezed in.
+
+`tests/test_deviations_numbering.py` enforces what a reader cannot: no duplicate
+heading, and no reference to a `D<n>` that has no entry.
+
+Thirty-six divergences are recorded there. D2 (power is stdout-only) and D3 (no topology graph in
 the cluster config) are decided; **D4 is now closed** by the Tier 0 synthetic-bundle path (D21).
 **D10 is the one to know before touching Phase 2**: the simulator's memory model applies no
 utilization or activation reserve, so it over-estimates usable KV by +71% on a 24 GB card.
