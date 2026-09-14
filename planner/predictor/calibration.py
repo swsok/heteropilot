@@ -152,10 +152,12 @@ class AccuracyDomain(_Strict):
     its own uncertainty rather than by a guess.
 
     A domain may be scoped to a token-mix `workload_shape` (the in/out half of a
-    canonical bucket, e.g. `in_lt1024-out_ge512`). The error the simulator makes
-    depends on the compute/memory balance of the requests, so a margin policy
-    refuses to apply a scoped domain to a service with a different shape.
-    Unscoped (the committed domains) applies to any workload on that hardware.
+    canonical bucket, e.g. `in_lt1024-out_ge512`), a `model` and a precision
+    `variant`. The error the simulator makes depends on the compute/memory
+    balance of the requests and on the kernels the model exercises, so a margin
+    policy refuses to apply a scoped domain to a service that differs on any set
+    field. Unscoped (the committed domains) applies to anything on that
+    hardware; scoping one is a measurement claim, not a code change (D33).
     """
 
     fitted_at_concurrency: float = Field(gt=0)
@@ -166,6 +168,13 @@ class AccuracyDomain(_Strict):
     #: Token-mix half of a canonical bucket this domain was measured on, or ""
     #: for a domain that applies to any workload on the hardware.
     workload_shape: str = ""
+    #: The model the SIMULATOR predicted when this was measured, and the
+    #: precision variant (`tier.resolve_variant`, e.g. `bf16`); "" applies to
+    #: any (uncertainty work order §2.4.1 rev 2: the verification conditions are
+    #: model, precision and token mix - never an arrival rate, which the
+    #: concurrency axis already carries per device).
+    model: str = ""
+    variant: str = ""
     #: How load was offered when the REAL side was measured. `closed_loop` (a
     #: fixed number of clients in flight) has no arrival rate and, per D19, its
     #: TTFT error does not transfer to an open-loop deployment; a margin policy

@@ -291,3 +291,116 @@ def test_the_committed_scalar_calibrations_are_placeable_or_labelled(monkeypatch
         assert all(not e.workload_bucket for e in cal.errors.values())
         assert all(e.label for e in cal.errors.values())
         assert "no canonical bucket" in " ".join(cal.available_buckets())
+
+
+# --- --measurement-plan (STEP B3) -----------------------------------------
+
+def test_measurement_plan_requires_the_accuracy_domain(capsys) -> None:
+    parser = build_parser()
+    args = parser.parse_args([*BASE, "--measurement-plan"])
+    assert args.func(args) == 1
+    assert "needs --accuracy-domain" in capsys.readouterr().err
+
+
+def test_a_measurement_plan_is_emitted_and_rendered(monkeypatch, tmp_path,
+                                                    domain_file) -> None:
+    from planner.render import render
+
+    out_path = tmp_path / "plan.yaml"
+    _code, output = _run(
+        [*BASE, "--accuracy-domain", str(domain_file), "--measurement-plan",
+         "--output", str(out_path)],
+        monkeypatch, served=60.0,
+    )
+    assert output is not None
+    plan = output.measurement_plan
+    assert plan is not None
+
+    # Every registry entry is accounted for: ranked, deferred, or undecidable.
+    seen = (
+        {i.input_id for i in plan.items}
+        | {i.input_id for i in plan.uncovered}
+        | set(plan.undecidable)
+    )
+    assert seen == {i.id for i in output.uncertain_inputs.items}
+
+    # The knobs that decide the ranking travel with the result (§2.5).
+    assert output.provenance["uncertainty"]["slo_penalty"] > 0
+    assert output.provenance["uncertainty"]["grid_weighting"] == "uniform"
+
+    text = render(output)
+    assert "Measurement plan" in text
+    # a40x8 declares measured links and the fixture calibration carries no
+    # scalar bucket, so the registry can legitimately be empty here; the section
+    # then says so instead of printing an empty table.
+    assert "decision regret" in text or "nothing to measure" in text
+    assert "measurement_plan" in yaml.safe_load(out_path.read_text())
+
+
+def test_a_measurement_plan_ranks_the_placeholder_links_of_a_mixed_cluster(
+    monkeypatch, domain_file
+) -> None:
+    """On `pd-rngd-gpu.yaml` (14 placeholder links, D33 registry) every uncertain
+    input is either ranked, deferred or listed as undecidable, and the render
+    states the regret the budget removes."""
+    from planner.render import render
+
+    argv = [
+        "plan", "--service", str(SERVICE),
+        "--cluster", str(ROOT / "experiments/configs/clusters/pd-rngd-gpu.yaml"),
+        "--root", str(ROOT), "--num-requests", "8", "--quiet",
+        "--accuracy-domain", str(domain_file), "--measurement-plan",
+    ]
+    _code, output = _run(argv, monkeypatch, served=60.0)
+    assert output is not None and output.uncertain_inputs is not None
+    assert output.uncertain_inputs.items, "placeholder links make this registry non-empty"
+    plan = output.measurement_plan
+    assert plan is not None
+    seen = (
+        {i.input_id for i in plan.items}
+        | {i.input_id for i in plan.uncovered}
+        | set(plan.undecidable)
+    )
+    assert seen == {i.id for i in output.uncertain_inputs.items}
+    text = render(output)
+    assert "decision regret" in text
+
+
+def test_a_budget_defers_what_does_not_fit(monkeypatch, domain_file) -> None:
+    _code, output = _run(
+        [*BASE, "--accuracy-domain", str(domain_file), "--measurement-plan",
+         "--budget-hours", "0"],
+        monkeypatch, served=60.0,
+    )
+    plan = output.measurement_plan
+    assert plan.items == []
+    assert plan.covered_regret == 0.0
+
+
+def test_without_the_flag_there_is_no_plan_in_the_yaml(monkeypatch, tmp_path,
+                                                      domain_file) -> None:
+    out_path = tmp_path / "plan.yaml"
+    _code, output = _run(
+        [*BASE, "--accuracy-domain", str(domain_file), "--output", str(out_path)],
+        monkeypatch, served=60.0,
+    )
+    assert output.measurement_plan is None
+    assert "measurement_plan" not in out_path.read_text()
+
+
+def test_a_domain_scoped_to_another_model_is_refused(monkeypatch, tmp_path) -> None:
+    """§2.4.1 rev 2 as D33 carries it: the verification conditions are model,
+    precision and token mix, held as scope fields on the domain."""
+    model = CalibrationModel(hardware={"A40": HardwareCalibration(
+        hardware="A40",
+        accuracy_domain=AccuracyDomain(
+            fitted_at_concurrency=20.0, model="Qwen/Qwen3-32B",
+            points=[{"conc": 20.0, "tpot_err_pct": -2.0}, {"conc": 120.0, "tpot_err_pct": -20.0}],
+        ),
+    )})
+    scoped = tmp_path / "scoped.yaml"
+    save_calibration(model, scoped)
+    code, output = _run([*BASE, "--accuracy-domain", str(scoped)], monkeypatch, served=60.0)
+    assert output is not None
+    assert output.rejected_summary.get(OUTSIDE, 0) > 0
+    assert code == 3

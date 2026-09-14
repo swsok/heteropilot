@@ -150,6 +150,35 @@ def _node_power_block(
     }
 
 
+def instance_island_ids(
+    candidate: CandidateConfig,
+    cluster: ClusterSpecV2,
+    islands: dict[str, ExecutionIsland],
+) -> list[str]:
+    """Island id per simulator instance, in the order the compiler emits them.
+
+    `compile_to_sim_config` groups instances by node and, within a node, emits
+    one per (assignment, replica) in assignment order; the simulator then numbers
+    them across nodes in `cluster.nodes` order. Reproduced here so a per-request
+    CSV's `instance id` can be attributed to the island that produced it -
+    uncertainty work order §2.4.1 rev 2 indexes an accuracy domain by
+    PER-INSTANCE load, and a deployment-wide figure would charge a four-replica
+    candidate four times its real per-card concurrency.
+
+    `tests/test_instance_attribution.py` pins this against the compiler's actual
+    output, so the two orderings cannot drift apart silently.
+    """
+    by_node: dict[str, list[str]] = {}
+    for assignment in candidate.assignments:
+        island = islands[assignment.island_id]
+        for _replica in range(assignment.dp_replicas):
+            by_node.setdefault(island.node_id, []).append(island.id)
+    out: list[str] = []
+    for node in cluster.nodes:
+        out.extend(by_node.get(node.id, []))
+    return out
+
+
 def compile_to_sim_config(
     candidate: CandidateConfig,
     cluster: ClusterSpecV2,
@@ -414,14 +443,15 @@ class LLMServingSimPredictor(Predictor):
         # total would under-count energy and inflate tokens/J (deviations D14).
         power_complete = all("power" in node for node in config["nodes"])
 
+        instance_islands = instance_island_ids(candidate, cluster, islands)
         result = self._run_once(candidate, spec, config_path, run_dir, power_complete,
-                                config=config)
+                                config=config, instance_islands=instance_islands)
         if result.outcome is SimOutcome.CRASHED and self.retry_once:
             # §5.5 asks for one retry. A deterministic simulator rarely benefits,
             # but a transient failure (disk, port, ASTRA-Sim startup) can.
             retry = self._run_once(
                 candidate, spec, config_path, run_dir, power_complete, attempt=2,
-                config=config,
+                config=config, instance_islands=instance_islands,
             )
             if retry.ok:
                 retry.warnings.append("succeeded on retry after a first-attempt failure")
@@ -443,6 +473,7 @@ class LLMServingSimPredictor(Predictor):
         power_complete: bool,
         attempt: int = 1,
         config: dict | None = None,
+        instance_islands: list[str] | None = None,
     ) -> SimResult:
         csv_path = run_dir / f"sim{attempt}.csv"
         log_path = run_dir / f"sim{attempt}.log"
@@ -516,7 +547,9 @@ class LLMServingSimPredictor(Predictor):
             )
 
         try:
-            metrics, warnings = self._parse(csv_path, stdout, spec, wall, power_complete)
+            metrics, warnings = self._parse(
+                csv_path, stdout, spec, wall, power_complete, instance_islands or []
+            )
         except (ValueError, KeyError, PowerParseError) as exc:
             return SimResult(
                 candidate.id,
@@ -547,6 +580,7 @@ class LLMServingSimPredictor(Predictor):
         spec: ServiceSpec,
         wall: float,
         power_complete: bool,
+        instance_islands: list[str] | None = None,
     ) -> tuple[PredictedMetrics, list[str]]:
         df = pd.read_csv(csv_path)
         if df.empty:
@@ -581,9 +615,36 @@ class LLMServingSimPredictor(Predictor):
         # law read off the trace: total time-in-system over the observation
         # window. Deliberately not the requested concurrency - D22's retracted
         # top point is what reading that number instead costs.
+        #
+        # PER INSTANCE, not per deployment (§2.4.1 rev 2). A domain is measured
+        # on one card, so a four-replica candidate whose whole deployment holds
+        # 200 requests is running each card at 50 - charging it 200 would push a
+        # perfectly ordinary candidate outside every measured envelope. The CSV
+        # attributes each request to an `instance id`, so this is measured, not
+        # assumed; the headline figure is the BUSIEST instance, because that is
+        # the one whose error decides the verdict. (`SimResult.operating_point`
+        # carries the per-hardware, per-phase decomposition the margin reads.)
         served_concurrency = None
+        per_island: dict[str, float] = {}
         if COL_LATENCY in df.columns and duration_s > 0:
-            served_concurrency = float(df[COL_LATENCY].sum()) / NS_PER_S / duration_s
+            if COL_INSTANCE in df.columns:
+                per_instance: dict[int, float] = {}
+                for instance, group in df.groupby(COL_INSTANCE):
+                    per_instance[int(instance)] = (
+                        float(group[COL_LATENCY].sum()) / NS_PER_S / duration_s
+                    )
+                served_concurrency = max(per_instance.values())
+                for index, load in sorted(per_instance.items()):
+                    if instance_islands and 0 <= index < len(instance_islands):
+                        island = instance_islands[index]
+                        per_island[island] = max(per_island.get(island, 0.0), load)
+            else:
+                served_concurrency = float(df[COL_LATENCY].sum()) / NS_PER_S / duration_s
+                warnings.append(
+                    "per-request CSV has no instance column: served concurrency is the "
+                    "whole deployment's, which over-states a replicated candidate's "
+                    "per-card load"
+                )
 
         power = parse_power(stdout)
         warnings.extend(power.warnings)
@@ -618,6 +679,7 @@ class LLMServingSimPredictor(Predictor):
                 tokens_per_joule=tok_per_j,
                 sim_wall_seconds=round(wall, 2),
                 served_concurrency=served_concurrency,
+                served_concurrency_per_island=per_island or None,
             ),
             warnings,
         )

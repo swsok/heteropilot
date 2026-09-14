@@ -7,13 +7,16 @@
 
 > **착륙 시 조정 (2026-09-11, `docs/deviations.md` D33).** 이 지시서의 §2.4 정확도 도메인은 `WORK_ORDER_rps_aware.md` STEP 4의
 > `calibration.AccuracyDomain`(PR #72–#77)과 같은 기점(`108e48a`)에서 병렬로 구현되었다. main에는 rps 쪽 곡선이 남고, 이 지시서의
-> A2–A4는 그 위에 다시 세웠다: 곡선·부호 규약(`(sim − measured)/measured × 100`, 음수 = 낙관)·yaml 위치(`HardwareCalibration.accuracy_domain`)는
-> main 것, 후보별 `MarginPolicy`·`unmeasured` 판정·정규 버킷 키(§2.4.1)·shape 매칭(§2.4.2)·`arrival_process`는 이 지시서 것.
+> A2–B3는 그 위에 다시 세웠다: 곡선·부호 규약(`(sim − measured)/measured × 100`, 음수 = 낙관)·yaml 위치(`HardwareCalibration.accuracy_domain`)는
+> main 것, 후보별 `MarginPolicy`·`unmeasured` 판정·인스턴스당 서빙 동시성(§2.4.1 개정 2)·`arrival_process`·섭동/민감도/측정 계획(B1–B3)은 이 지시서 것.
 > `outside_domain` 기본값은 규칙 A2대로 `refuse`이되, 커밋된 세 도메인은 명시적 `widen_error_bars`를 유지한다(E5/E6 불변).
-> `UNMEASURED` 단계는 `outside_calibration_domain`에 흡수되었고, 부분 커버리지(§2.4.2의 3분기 규칙 중 "미측정 지표에 기댄 통과")는
-> 거절이 아니라 caveat로 낮췄다 — 커밋된 RNGD 도메인이 모두 TPOT 전용이어서 거절 규칙으로는 모든 탐색이 비기 때문이다.
+> `UNMEASURED` 단계는 `outside_calibration_domain`에 흡수되었고, 부분 커버리지("미측정 지표에 기댄 통과")는 거절이 아니라 caveat로 낮췄다 —
+> 커밋된 RNGD 도메인이 모두 TPOT 전용이어서 거절 규칙으로는 모든 탐색이 비기 때문이다.
+> §2.4.1 개정 2의 **도메인 키(`model|variant|in|out`)는 키로 채택하지 않았다**: 도메인은 하드웨어당 하나(main 구조)이고, 그 검증 조건은
+> `AccuracyDomain.workload_shape / model / variant` 선택 필드로 표현되며 정책이 불일치를 거절한다. 스칼라 `BucketError`는 정규 envelope 키
+> (`in_*-out_*-rps_*`)를 유지한다 — main의 `apply_robust_margins`가 그 키로 조회하기 때문이다.
 > E-A2의 `rngd_card_edf.domain.yaml`은 D32 오매칭(sim 측 서빙 동시성 71–189 vs 실측 15–107)으로 판명되어 폐기, main의 9점 D32 도메인이 대신한다.
-> 아래 §2.4·A2–A5 본문은 원문 그대로이며, 구현과 다른 곳은 D33이 우선한다.
+> 아래 본문은 원문 그대로이며, 구현과 다른 곳은 D33이 우선한다.
 
 ---
 
@@ -182,30 +185,26 @@ def served_concurrency_little(rps: float, ttft_ms: float, tpot_ms: float, mean_o
 
 `operating_points`를 채우는 도구: `python -m planner fit-accuracy-domain --real outputs/rngd_envelope/edf/real_c*.json --sim <대응 sim csv> --hardware RNGD-CARD --bucket ...`. 기존 `compare_rngd_sim_vs_real.py`의 페어링 로직을 재사용한다(**조사 필요**: 각 real_cN에 대응하는 sim CSV가 `outputs/envcheck/`에 있는지; 없으면 E-A2에서 생성).
 
-#### 2.4.1 버킷 키 규칙 (A1 조사에서 드러난 불일치의 해소)
+#### 2.4.1 도메인 키 규칙 (개정 2 — E-A1 시작 조건 검토 결과 반영)
 
-커밋된 `profiles/calibration/*.yaml`의 `errors` 키는 손으로 넣은 이름(`sharegpt-llama31-8b-20`, `sharegpt-llama31-8b-20-tp8`)이고, 플래너가 계산하는 키는 `envelope.workload_bucket(spec)`(예: `in_lt1024-out_ge512-rps_lt20`)이다. 두 체계를 다음과 같이 통일한다.
+**배경.** A1 조사에서 커밋된 calibration의 버킷 이름(`sharegpt-llama31-8b-20`)과 `envelope.workload_bucket(spec)`(`in_lt1024-out_ge512-rps_lt20`)이 어긋남이 드러났고, E-A1 시작 조건 검토에서 그보다 근본적인 문제가 확인되었다: (1) envelope 4점 실측은 closed-loop(고정 동시성 16/32/64/128, D19)라 **offered rate가 존재하지 않아** `rps_` 성분을 정할 수 없고, (2) `rps_`는 **서비스 단위** 양인데 정확도 도메인은 **하드웨어 단위**다 — 복제 N개면 카드 하나가 보는 부하는 λ/N이므로 spec의 rps를 하드웨어별 조회에 그대로 쓰는 것은 범주 오류이며, (3) 도메인의 부하 축은 이미 `L_c`(인스턴스당 서빙 동시성)이므로 rps를 키에 넣으면 부하를 다른 단위로 두 번 세는 것이다.
 
-- **정규 키는 `envelope.workload_bucket(spec)` 하나뿐이다.** `BucketError.workload_bucket`은 정규 키만 담는다. 사람용 이름은 새 필드 `BucketError.label: str = ""`로 옮긴다. TP 크기(`-tp8`)는 워크로드가 아니라 배치 속성이므로 키에서 제거하고 `label`에만 남긴다(TP별 오차 차이가 확인되면 §5.7 다차원 동작점으로 확장).
-- **조회는 정규 키 완전 일치만.** 퍼지 매칭·최근접 버킷·"유일한 항목이면 그것 사용" 모두 금지. `--accuracy-domain` 모드에서 (hw, 정규 키) 항목이 없으면 그 hw의 후보는 `unmeasured`이며, 사유에 요청 키와 보유 키 목록을 모두 적는다: `"no accuracy domain for RNGD-CARD at bucket in_lt1024-out_ge512-rps_lt20 (available: in_lt1024-out_lt512-rps_lt5)"`. 기본 모드의 `CalibrationModel.margins()` → `(0.0, 0.0)` 동작은 그대로 둔다(A4 golden).
-- **마이그레이션.** 세 yaml의 정규 키는 **적합에 쓰인 벤치의 워크로드에서 계산**한다: `provenance.fitted_from`의 summary 경로 → 그 벤치가 쓴 워크로드 jsonl에서 입력·출력 토큰 p50, 벤치 설정에서 요청률(`sps10` → 10 rps)을 읽어 `workload_bucket()`과 같은 경계로 계산. 셋 중 하나라도 확인이 안 되면 정규 키를 비워 두고 `label`만 남긴다(→ `--accuracy-domain`에서 자동으로 unmeasured). 추측으로 채우는 것은 금지. 마이그레이션 결과(파일별 정규 키, 근거 경로, 미확정 사유)를 A4 PR 설명에 표로 남긴다.
-- **적합 도구.** `fit-accuracy-domain`(A2)과 `experiments/scripts/compare_rngd_sim_vs_real.py`의 `--bucket`은 정규 키 형식만 받거나 `--service <spec.yaml>`을 받아 계산한다. 자유 문자열은 `--label`로만 받는다.
-- **탈출구.** `--calibration-bucket <정규키>` 명시 오버라이드를 허용한다(정규 키 형식 검증, `label`로는 찾지 않음). 사용 시 `provenance["uncertainty"]["bucket_override"] = {"requested": ..., "used": ...}`를 기록하고 렌더 출력에 경고 한 줄을 넣는다.
+**규칙.**
 
-#### 2.4.2 §2.4.1 개정 — 정확도 도메인은 토큰 혼합(shape)으로 매칭한다
+- **정확도 도메인 키는 `(hardware, model, dtype, in_bucket, out_bucket)`이다.** `rps_` 성분은 포함하지 않는다. 부하 좌표는 `L_c` 하나다. 구현은 `envelope.workload_bucket()`을 건드리지 말고 `planner/predictor/accuracy_domain.py`에 `accuracy_domain_key(spec, model, dtype) -> str`(예: `meta-llama/Llama-3.1-8B|bf16|in_lt1024|out_ge512`)를 별도로 둔다. `in`/`out` 경계는 `envelope.INPUT_BUCKETS/OUTPUT_BUCKETS`를 **import해서** 쓴다(중복 정의 금지). 모델·정밀도가 키에 들어가는 것은 신고서 v3 §5.2의 "적용 조건"(하드웨어·모델·정밀도·워크로드 구간) 정의와 일치한다.
+- **`EnvelopeKey`(시뮬레이션 캐시)의 `workload_bucket`은 그대로 둔다.** 캐시에서는 도착률이 다르면 시뮬 결과가 다르므로 `rps_`가 정당한 키다. 두 키는 목적이 다르다 — 캐시 키는 "같은 시뮬레이션인가", 도메인 키는 "같은 오차 검증 조건인가".
+- **`BucketError.workload_bucket`은 도메인 키 형식만 담고**, 사람용 이름은 `label: str = ""`로 옮긴다. TP 크기(`-tp8`)는 배치 속성이므로 키에서 제거하고 `label`에만 남긴다. 측정 방식은 `measured_mode: Literal["closed_loop","open_loop"]`로 기록한다(현재 4점은 `closed_loop`).
+- **조회는 도메인 키 완전 일치만.** 퍼지 매칭·최근접·"유일 항목이면 사용" 금지. `--accuracy-domain` 모드에서 (hw, 도메인 키) 항목이 없으면 그 hw의 후보는 `unmeasured`이며, 사유에 요청 키와 보유 키 목록을 모두 적는다. 기본 모드의 `CalibrationModel.margins()` → `(0.0, 0.0)` 동작은 그대로(A4 golden).
+- **`L_c`는 인스턴스당 서빙 동시성이다.** 도메인이 카드(인스턴스) 단위이므로 복제 `dp_replicas = N`인 후보는 전체 in-flight를 N으로 나눈다. 시뮬 요청 기록에 인스턴스 귀속이 있으면 인스턴스별로 계산해 **최댓값**을 쓰고(가장 붐비는 인스턴스가 판정을 지배), 귀속이 없으면 균등 라우팅 가정으로 나눈 뒤 `provenance["uncertainty"]["concurrency_basis"] = "uniform_routing_assumed"`를 기록한다. 혼합/PD 후보는 아일랜드별로 따로 계산한다.
+- **마이그레이션.** 세 yaml의 도메인 키는 적합에 쓰인 벤치의 워크로드에서 계산한다: `provenance.fitted_from`의 summary → 그 벤치의 워크로드 jsonl에서 입력·출력 토큰 p50 → `in`/`out` 버킷; 모델·정밀도는 벤치 로그/프로파일에서. 확인이 안 되는 항목은 키를 비우고 `label`만 남긴다(→ 자동 unmeasured). 추측 금지. 결과(파일별 키·근거 경로·미확정 사유)를 PR 설명에 표로 남긴다.
+- **적합 도구.** `fit-accuracy-domain`(A2)과 `compare_rngd_sim_vs_real.py`는 `--service <spec.yaml> --model --dtype`으로 키를 계산하거나 도메인 키 형식 문자열만 받는다. 자유 문자열은 `--label`.
+- **탈출구.** `--calibration-bucket <도메인키>` 오버라이드는 남기되 **E-A1/E-B* 실험 결과에는 사용 금지**(오버라이드로 통과시킨 결과는 특허 증거로 쓰지 않는다). 사용 시 provenance 기록 + 렌더 경고.
 
-E-A2 수행 중 §2.4.1의 "정규 키 완전 일치" 규칙이 **측정이 옳은데도 조회를 놓치는** 경우를 만든다는 것이 확인되어, 도메인 조회에 한해 다음과 같이 개정한다. 스칼라 항목의 규칙은 §2.4.1 그대로다.
+**금지.** closed-loop 완료율(완료 수 / wall)을 `rps`로 적어 `rps_` 버킷을 유도하는 것 — 그것은 처리량이지 offered rate가 아니며 절대 규칙 A1 위반이다.
 
-- **도메인은 `shape = in_*-out_*` 로 매칭한다.** 정규 키의 `rps_` 성분은 쓰지 않는다. 근거 셋:
-  1. `rps_`는 **서비스 수준** 양이고 calibration은 **하드웨어별**이다. 복제본 N개면 카드 하나가 보는 부하는 λ/N이므로, spec에서 한 번 계산한 서비스 rate를 모든 하드웨어별 조회에 적용하는 것은 범주 오류다. RNGD 카드는 최대 측정 동시성(107)에서 2.26 req/s를 완료하므로 10 rps spec은 카드 ~5장을 요구하고, 그때 카드당 2 rps는 측정 버킷(`rps_lt5`)과 정확히 일치한다.
-  2. 도메인은 이미 **장치당 부하를 서빙 동시성 L 축으로 명시적으로** 색인한다. `rps_`는 그 축과 중복이다.
-  3. 토큰 혼합은 계산/메모리 균형을 정하므로 **반드시 일치해야 한다** — 그래서 shape은 버리지 않는다.
-- **스칼라 항목은 여전히 정규 키 완전 일치.** 동시성 축이 없으므로 `rps_`를 대신할 것이 없다.
-- **shape 매칭도 완전 일치이며, 모호하면 거절한다.** 한 하드웨어에 같은 shape의 도메인이 둘 이상이면 고르지 않고 `unmeasured`로 보고한다(사유에 후보 label 나열).
-- **`BucketError`에 두 필드 추가.** `workload_shape`(정규 키가 있으면 그 접두사에서 자동 유도, 검증), `arrival_process: open_loop | closed_loop | unknown`.
-- **부분 커버리지를 허용하고 명시한다.** 도메인의 어떤 지표에 운영점이 없으면 그 지표는 `unmeasured`이며, **버킷 스칼라로 되돌아가지 않는다.** (되돌아가면 미적합 스칼라 0.0이 "오차 0 = 완벽한 시뮬레이터"로 읽힌다 — 이 작업지시서가 막으려는 실패 그 자체다. 구현 중 실제로 발생했다.) `MarginDecision`에 `ttft_status`/`tpot_status`/`unmeasured_metrics`를 둔다.
-- **판정 규칙(3분기).** 마진은 `max(0, m)`이라 항상 부풀리기만 하므로, **위반은 커버리지와 무관하게 진짜 위반이다.** 따라서: 위반이 있으면 `SLO_VIOLATED` → 없고 미측정 지표가 있으면 `UNMEASURED`("통과했으나 그 통과가 판정이 아니다") → 그 외 feasible.
-- **closed-loop 측정의 TTFT는 open-loop 배치로 전이되지 않는다**(D19: 도착 처리를 고치자 TTFT calibration이 크게 움직였고 TPOT은 ~1 %). `arrival_process: closed_loop` 항목은 사유에 그 사실을 붙인다.
+**E-A1에 대한 영향.** 조건 (c)는 이 규칙으로 해소된다(4점의 `in_lt1024|out_ge512`가 fixture spec과 일치). 보조 실험으로 spec의 rps만 2.5로 바꾼 실행을 하나 추가하여, 같은 (in, out) 형상에서 rps가 달라도 도메인 조회가 안정적인지 확인한다(`ea1_margin_modes.md`에 별도 절).
+
+**Stage C로 넘기는 항목 (필수).** open-loop(도착률 구동) 재측정. closed-loop에서는 예측 동시성 ≈ 실측 동시성이라 신고서 v3가 확정한 "예측 동시성 좌표" 설계의 필요성이 드러나지 않는다. 플래너의 실제 명세는 개루프이므로 낙관적 예측기는 예측 L을 실측보다 작게 낸다. 이 차이를 실측으로 보여야 좌표 선택이 검증된다. `ea2_rngd_domain.md`에 "현재 4점은 closed_loop이며 예측 좌표 = 실측 좌표로 취급함; open-loop 재측정은 Stage C"를 한 줄 명시한다.
 
 ### 2.5 전환 검출과 결정 후회 감소량 — Stage B
 
@@ -214,7 +213,7 @@ E-A2 수행 중 §2.4.1의 "정규 키 완전 일치" 규칙이 **측정이 옳�
 1. `perturb.py`로 **모든 후보의 예측 지표를 닫힌 형식으로 재계산**한다(재시뮬레이션 없음, §2.7).
 2. 후보별 마진·SLO 판정·순위를 다시 매겨 그 격자점에서의 최적 계획 `π*(g)`와 목적함수 값 `V(π*(g))`, 그리고 현재 추천 `π̂`의 그 격자점에서의 값 `V_g(π̂)`을 얻는다.
 3. `flip_i = any_g [ id(π*(g)) != id(π̂) ]`.
-4. `ΔR_i = mean_g [ V_g(π*(g)) − V_g(π̂) ]` — 격자점 균등 가중(가중 방식은 provenance에 기록). `V`는 `ObjectiveSpec`의 1차 목적(기본 `slo_goodput_per_joule`), 실행불가는 `V = −∞`가 아니라 **SLO 위반 비용 항**으로 처리: `V_g(π̂) = value − penalty × overshoot_ratio` (penalty는 `--slo-penalty`, 기본은 목적값의 최댓값 — provenance에 기록).
+4. `ΔR_i = mean_g [ V_g(π*(g)) − V_g(π̂) ]` — 격자점 균등 가중(가중 방식은 provenance에 기록). `V`는 `ObjectiveSpec`의 1차 목적(기본 `slo_goodput_per_joule`). **실행불가 처리(B2에서 확정된 정의):** 격자점 g에서 현 추천 π̂가 실행불가이면 π̂는 배포할 수 없으므로 운영자가 실제로 얻는 것은 그 격자점의 최선 실행가능 값이고, 벌점은 그 위에 SLO를 벗어난 정도로 매긴다: `V_g(π̂) = V_g(π*(g)) − penalty × overshoot_ratio(π̂, g)`. 따라서 그 격자점의 후회 기여는 `penalty × overshoot_ratio`이며 **구성상 ΔR ≥ 0**이고, 실행불가 계획이 실행가능 계획을 이기는 일이 없다(플래너의 사전식 순위 원칙과 일치). 격자점 g에 실행가능 후보가 하나도 없으면 기준값을 0으로 두어 기여 = `penalty × overshoot_ratio(π̂, g)`로 하고, "이 격자점에서는 측정이 결정을 바꾸지 않음"을 `note`에 남긴다. `penalty`는 `--slo-penalty`(기본: 격자 전체에서 관측된 목적값의 최댓값)이며 결과를 지배하는 노브이므로 `provenance["uncertainty"]["slo_penalty"]`에 기록하고, E-B1에서 기본값과 그 1/10 두 값으로 민감도 실행을 추가하여 순위가 뒤집히는 항목을 보고한다. (초안의 "value − penalty × overshoot"는 비교 기준이 비어 있어 실행불가 추천이 실행가능 후보를 이겨 ΔR < 0이 되는 결함이 있었다 — B2 첫 테스트에서 검출.)
 
 `ΔR_i > 0`인 항목만 측정 계획 후보. 정렬 키 `ΔR_i / cost_i`.
 
@@ -237,7 +236,7 @@ E-A2 수행 중 §2.4.1의 "정규 키 완전 일치" 규칙이 **측정이 옳�
 |---|---|---|
 | `SIM_ERROR` | 마진 `m_c` | 정확도 도메인 보간값을 범위 안에서 이동. 예측 지표 자체는 불변 |
 | `PROFILE` (Tier 0/1) | TTFT, TPOT | 해당 island를 쓰는 후보의 TTFT·TPOT에 `(1+δ)` 곱. 처리량·goodput은 `1/(1+δ)` 스케일. 에너지는 불변(전력 모델 별도) |
-| `LINK_BW` | TTFT (P/D 후보), 하한 S4′(PP 후보) | `kv_transfer.kv_transfer_cost()`로 nominal과 섭동값의 전송 시간 차를 계산해 TTFT 백분위에 더하고 뺀다. 이 항은 `compile_to_sim_config`가 넣는 값과 같은 수식이어야 한다(**조사 필요**: 시뮬레이터가 KV 전송을 지연에 어떻게 반영하는지 — 단순 가산이 아니면 이 규칙은 근사이며 `approximation: true` 플래그를 결과에 붙인다) |
+| `LINK_BW` | TTFT (P/D 후보), 하한 S4′(PP 후보) | `kv_transfer.kv_transfer_cost()`로 nominal과 섭동값의 전송 시간 차를 계산해 TTFT 백분위에 더하고 뺀다. **조사 결과(B2):** envelope 캐시는 `apply_pd_transfer_cost` **이전**의 원시 시뮬레이터 출력을 저장하고 KV 전송 항은 플래너가 사후 가산하므로, 이 규칙을 **평가 후 지표(`metrics_from_evaluation`)에 적용하면 근사가 아니라 정확**하다(`approximation=False`). 원시 캐시 지표에 적용하면 없던 항에 차이를 더하게 되므로, 원시 지표가 섭동 함수에 들어가는 것을 docstring이 아니라 타입(평가 후 지표 래퍼) 또는 assertion으로 막는다 |
 | `LINK_LAT` | TTFT | 링크 지연 × 홉 수 가산 |
 | `POWER` | energy, tokens/J | 평균 전력 `(1+δ)` 곱 |
 

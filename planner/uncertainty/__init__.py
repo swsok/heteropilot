@@ -9,6 +9,12 @@ recommendation.
 
 Absolute rule A1 governs everything here: an error range with no source is
 recorded as ``unbounded``, never as a plausible default.
+
+`perturb` is deliberately NOT re-exported here. `planner.plan` imports
+`registry` for the `uncertain_inputs` field, so this package's ``__init__`` runs
+while `planner.plan` is still initialising; `perturb` needs `PredictedMetrics` at
+runtime (it is a pydantic field type, not just an annotation), which would close
+the cycle. Import it as ``from planner.uncertainty.perturb import perturb``.
 """
 
 from planner.uncertainty.grades import (

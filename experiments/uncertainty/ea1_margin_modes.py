@@ -25,15 +25,16 @@ headline recommendation. Both read the same cache, so neither costs a
 simulation.
 
 Operating points. The committed cache entries predate per-hardware
-operating-point caching (they carry the RUN-level served concurrency,
-`sum(latency)/wall`, but not the per-hardware, per-phase decomposition the
-margin policy reads). `_RunLevelOperatingPoint` fills the gap the way the
-original E-A1 indexed its domains: every hardware kind in the candidate is
-placed at the run-level served concurrency in phase "total". Exact for a
-single-hardware aggregated candidate; for a mixed A40+RNGD candidate it charges
-both islands the whole run's concurrency, which is conservative (it can only
-push an island further out). The JSON records which candidates were filled
-this way.
+operating-point caching: they carry the served concurrency PER ISLAND
+(busiest instance of each island, `served_concurrency_per_island`, uncertainty
+§2.4.1 rev 2) but not the per-hardware, per-phase decomposition the margin
+policy reads (`SimResult.operating_point`). `_IslandOperatingPoint` fills the
+gap: each hardware kind in the candidate is placed at the busiest of its
+islands' per-island figures, in phase "total" - the same aggregation
+`planner/util/operating_point.py` applies to an aggregated deployment, so for
+the 324 aggregated and mixed candidates here (no P/D) this is the operating
+point the predictor would have recorded. Entries with no per-island figure
+fall back to the run-level served concurrency and are counted separately.
 
 Writes the GENERATED tables (`--out`) and the full per-candidate record
 (`--json-out`). The authored analysis lives beside them in
@@ -88,31 +89,41 @@ class Condition:
     tpot_percent: float = 0.0
 
 
-class _RunLevelOperatingPoint(EnvelopeCache):
+class _IslandOperatingPoint(EnvelopeCache):
     """An envelope cache that fills a missing per-hardware operating point from
-    the run-level served concurrency (see the module docstring)."""
+    the cached per-island served concurrency (see the module docstring)."""
 
     def __init__(self, *args, island_hw: dict[str, str], **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.island_hw = island_hw
-        self.filled: list[str] = []
+        self.filled_per_island: list[str] = []
+        self.filled_run_level: list[str] = []
 
     def get(self, candidate: CandidateConfig) -> SimResult | None:
         result = super().get(candidate)
         if result is None or result.operating_point or result.metrics is None:
             return result
-        served = result.metrics.served_concurrency
-        if served is None:
-            return result
+        per_island = result.metrics.served_concurrency_per_island or {}
+        run_level = result.metrics.served_concurrency
+        filled = False
         for a in candidate.assignments:
             hw = self.island_hw.get(a.island_id)
             if hw is None:
                 continue
-            result.operating_point[hw] = {
-                "concurrency": served, "phase": "total",
-                "requests": result.metrics.completed_requests, "wall_s": None,
-            }
-        self.filled.append(candidate.id)
+            load = per_island.get(a.island_id, run_level)
+            if load is None:
+                continue
+            current = result.operating_point.get(hw)
+            if current is None or load > current["concurrency"]:
+                result.operating_point[hw] = {
+                    "concurrency": load, "phase": "total",
+                    "requests": result.metrics.completed_requests, "wall_s": None,
+                }
+            filled = True
+        if filled:
+            (self.filled_per_island if per_island else self.filled_run_level).append(
+                candidate.id
+            )
         return result
 
 
@@ -218,7 +229,7 @@ def main() -> int:
         num_requests=fixture["num_requests"], seed=fixture["seed"],
     )
     reduction = TopologyGraph(cluster).reduce_for_simulator(islands)
-    cache = _RunLevelOperatingPoint(
+    cache = _IslandOperatingPoint(
         args.cache_dir, spec,
         accelerator_of={i.id: i.accelerator_model for i in islands},
         link_bw_gbps=reduction.link_bw_gbps,
@@ -292,7 +303,8 @@ def main() -> int:
                  "points": len(d.points), "outside_domain": d.outside_domain}
             for hw, d in sorted(domains.items())
         },
-        "operating_point_filled_from_run_level": sorted(set(cache.filled)),
+        "operating_point_filled_from_per_island": sorted(set(cache.filled_per_island)),
+        "operating_point_filled_from_run_level": sorted(set(cache.filled_run_level)),
         "cache_stats": cache.stats(),
         "provenance": prov.collect(
             service_spec_path=fixture["service"],
@@ -330,8 +342,9 @@ def _render(payload: dict) -> str:
         "",
         "One set of simulations serves all four conditions - only the verdict rule",
         "differs - so the comparison is of decision rules, not of predictions.",
-        f"Operating points filled from the run-level served concurrency: "
-        f"{len(payload['operating_point_filled_from_run_level'])} candidates "
+        f"Operating points filled from the cached per-island served concurrency: "
+        f"{len(payload['operating_point_filled_from_per_island'])} candidates; from "
+        f"the run-level figure: {len(payload['operating_point_filled_from_run_level'])} "
         f"(see the script docstring).",
         "",
         "## Headline",

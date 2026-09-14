@@ -15,6 +15,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from planner.spec import Objective
+from planner.uncertainty.measurement_plan import MeasurementPlan
 from planner.uncertainty.registry import UncertainInputRegistry
 
 
@@ -216,15 +217,21 @@ class PredictedMetrics(_Strict):
     peak_power_w: float | None = None
     tokens_per_joule: float | None = None
     sim_wall_seconds: float | None = None
-    #: Mean in-flight requests over the whole run, `sum(latency) / wall` - the
-    #: run-level operating point (uncertainty work order §2.4). The per-hardware
-    #: operating points a margin is read at live on `SimResult.operating_point`;
-    #: this is the single number experiments report. Filled by the real
-    #: predictor from the per-request CSV; None for predictors that have no
-    #: per-request records. `_write_output` drops the key unless the caller
-    #: opted into the accuracy-domain machinery, so default plans are unchanged
-    #: (rule A4).
+    #: The BUSIEST instance's mean in-flight requests over the run,
+    #: `sum(latency) / wall` per simulator instance (uncertainty work order
+    #: §2.4.1 rev 2): a domain is measured on one card, so a four-replica
+    #: candidate holding 200 requests runs each card at 50, and the headline
+    #: figure is the instance whose error decides the verdict. The per-hardware,
+    #: per-phase operating points a margin is actually read at live on
+    #: `SimResult.operating_point`. Filled by the real predictor from the
+    #: per-request CSV; None for predictors that have no per-request records.
+    #: `_write_output` drops the key unless the caller opted into the
+    #: accuracy-domain machinery, so default plans are unchanged (rule A4).
     served_concurrency: float | None = None
+    #: Per ISLAND, from the per-request CSV's instance attribution; the busiest
+    #: instance of each island. None when the predictor has no per-request
+    #: records.
+    served_concurrency_per_island: dict[str, float] | None = None
 
     @property
     def has_energy(self) -> bool:
@@ -334,6 +341,11 @@ class PlannerOutput(_Strict):
     #: opted in via `--accuracy-domain`; `_write_output` drops the key entirely
     #: in that case, so the default path's YAML is byte-identical (rule A4).
     uncertain_inputs: UncertainInputRegistry | None = None
+
+    #: What to measure next and what it buys (§2.5, STEP B3). None unless the
+    #: caller asked for it with `--measurement-plan`; dropped from the YAML in
+    #: that case, so the default path is unchanged (rule A4).
+    measurement_plan: MeasurementPlan | None = None
 
     @property
     def prune_ratio(self) -> float:

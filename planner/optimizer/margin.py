@@ -191,6 +191,8 @@ class AccuracyDomainMargin:
         domains: dict[str, AccuracyDomain],
         *,
         shape: str = "",
+        model: str = "",
+        variant: str = "",
         calibration: CalibrationModel | None = None,
         bucket: str = "",
         ttft_floor: float = 0.0,
@@ -210,6 +212,8 @@ class AccuracyDomainMargin:
             )
         self.domains = domains
         self.shape = shape
+        self.model = model
+        self.variant = variant
         self.calibration = calibration
         self.bucket = bucket
         self.ttft_floor = ttft_floor
@@ -278,12 +282,12 @@ class AccuracyDomainMargin:
                 consulted = True
                 continue
 
-            if domain.workload_shape and self.shape and domain.workload_shape != self.shape:
+            mismatch = self._scope_mismatch(domain)
+            if mismatch is not None:
                 return self._unmeasured(
                     _busiest(sim),
-                    f"{hw} accuracy domain was measured on token mix "
-                    f"{domain.workload_shape}, this service is {self.shape}; refusing to "
-                    f"apply an error measured on a different workload (§2.4.1)",
+                    f"{hw} accuracy domain was measured {mismatch}; refusing to apply "
+                    f"an error measured under different conditions (§2.4.1 rev 2)",
                 )
 
             errs = domain.errors_at(conc)
@@ -389,6 +393,21 @@ class AccuracyDomainMargin:
         )
 
     # -- helpers --------------------------------------------------------------
+
+    def _scope_mismatch(self, domain: AccuracyDomain) -> str | None:
+        """Why this domain does not apply to the service, or None if it does.
+
+        Each scope field is checked only when BOTH sides state it: an unscoped
+        domain applies to anything, and a policy built without a model or shape
+        cannot refuse on one.
+        """
+        if domain.workload_shape and self.shape and domain.workload_shape != self.shape:
+            return f"on token mix {domain.workload_shape}, this service is {self.shape}"
+        if domain.model and self.model and domain.model != self.model:
+            return f"on model {domain.model}, this service runs {self.model}"
+        if domain.variant and self.variant and domain.variant != self.variant:
+            return f"at precision {domain.variant}, this service runs {self.variant}"
+        return None
 
     def _scalar_entry(self, hardware: str):
         if self.calibration is None or not self.bucket:

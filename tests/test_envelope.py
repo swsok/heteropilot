@@ -240,3 +240,58 @@ def test_a_pre_existing_cache_entry_says_it_cannot_be_margined(tmp_path, spec):
     got = cache(tmp_path, spec).get(cand)
     assert got is not None and got.operating_point == {}
     assert any("predates operating-point caching" in w for w in got.warnings)
+
+
+def test_a_metrics_schema_change_invalidates_the_cache(tmp_path, spec) -> None:
+    """A stale entry must miss, not validate (uncertainty STEP B2, D33).
+
+    A new optional field defaults to None, so an entry written before it existed
+    still parses - and E-A1 once re-ran to byte-identical numbers off a cache that
+    predated `served_concurrency_per_island`, which reads as "the change had no
+    effect" when it means "the change was never applied". The digest lives in the
+    payload, not the file name, so the committed replay caches keep their names.
+    """
+    import json
+
+    import planner.envelope as env
+    from planner.plan import CandidateConfig, IslandAssignment, PredictedMetrics
+    from planner.predictor import SimOutcome, SimResult
+
+    candidate = CandidateConfig(
+        id="c", model=spec.model, dtype="bfloat16",
+        assignments=[IslandAssignment(island_id="i0", tp_size=1)],
+    )
+    metrics = PredictedMetrics(
+        p50_ttft_ms=1.0, p95_ttft_ms=1.0, p99_ttft_ms=1.0,
+        p50_tpot_ms=1.0, p95_tpot_ms=1.0, p99_tpot_ms=1.0,
+        throughput_tps=1.0, slo_goodput_rps=1.0, slo_attainment=1.0,
+        completed_requests=1, completed_tokens=1,
+    )
+
+    def make() -> env.EnvelopeCache:
+        return env.EnvelopeCache(
+            tmp_path, spec, accelerator_of={"i0": "A40"}, link_bw_gbps=100.0
+        )
+
+    make().put(candidate, SimResult("c", SimOutcome.OK, metrics=metrics))
+    path = next(tmp_path.glob("*.json"))
+    assert json.loads(path.read_text())["metrics_schema"] == env._METRICS_SCHEMA
+    hit = make().get(candidate)
+    assert hit is not None, "same schema, same entry"
+    assert not any("no metrics-schema digest" in w for w in hit.warnings)
+
+    original = env._METRICS_SCHEMA
+    try:
+        env._METRICS_SCHEMA = "pretend-a-field-was-added"
+        assert make().get(candidate) is None, "a schema change must miss"
+    finally:
+        env._METRICS_SCHEMA = original
+    assert make().get(candidate) is not None, "and the original is still there"
+
+    # A legacy entry with no digest at all is served, and says so.
+    payload = json.loads(path.read_text())
+    payload.pop("metrics_schema")
+    path.write_text(json.dumps(payload))
+    legacy = make().get(candidate)
+    assert legacy is not None
+    assert any("no metrics-schema digest" in w for w in legacy.warnings)

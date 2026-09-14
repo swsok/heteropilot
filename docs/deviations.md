@@ -2338,8 +2338,45 @@ the uncertainty stack is rebuilt on it; `refuse` is the default. Concretely:
   measurement claim about which token mixes they transfer to, not a code
   change, and is not made here.
 
+**Stage B (B1–B3), landed the same day on the same terms.** The perturbation
+engine, sensitivity sweep and measurement plan (`planner/uncertainty/{perturb,
+sensitivity,measurement_plan}.py`, `plan --measurement-plan`, `measure-apply`)
+came over intact; four of the uncertainty stack's B-stage decisions were adapted:
+
+8. **The "rev 2" domain key (`model|variant|in_*|out_*`) is not adopted as a
+   key.** A domain is one per hardware (main's structure); the verification
+   conditions it was measured under are the optional scope fields
+   `AccuracyDomain.workload_shape` / `model` / `variant`, and the margin policy
+   refuses a domain whose set fields differ from the service's. Scalar
+   `BucketError` entries keep the canonical envelope key
+   (`in_*-out_*-rps_*`) — `apply_robust_margins` on `main` looks them up by it,
+   and re-keying would have made that lookup a silent `(0, 0)`.
+9. **Served concurrency is per instance**, as the stack had it (`served_
+   concurrency` = the busiest instance, `served_concurrency_per_island`,
+   `instance_island_ids`). The margin still reads `SimResult.operating_point`,
+   which `planner/util/operating_point.py` already computes per hardware and
+   per P/D phase from the same per-instance attribution.
+10. **The metrics-schema digest lives in the cache payload, not the file
+    name.** The stack folded it into the entry name so a schema change misses;
+    that would have renamed every entry of `main`'s committed replay caches
+    (`outputs/perf/topk/cache_*`, E6). Stored inside the entry instead: a
+    mismatch is a miss, a missing digest is served with a warning. E-A1's 162
+    B-stage entries were re-keyed to the repository naming and stamped.
+11. **`measure-apply --input sim_error:…` adds an `AccuracyPoint`** to the
+    hardware's `accuracy_domain` (created under `refuse` if none), with
+    `--value` the signed error in `AccuracyPoint`'s convention.
+12. **`judge()` keeps two branches, not three.** The stack's second branch
+    (pass on an unmeasured metric → unmeasured) is item 5 above; the verdict is
+    kept and the search carries the gap as a caveat.
+
+E-A1 was re-run a third time, off the per-island cache: 86 of the 114 RNGD
+candidates now sit *inside* the RNGD-CARD domain and are rejected on a
+measured 3.2–17.6 % margin — D22's two-card winner among them, at per-card
+served 71.6–74.7 and 56.9 ms robust TPOT, which is E5's verdict reached from
+inside the fixture. `experiments/uncertainty/results/ea1_margin_modes.md`.
+
 **Where.** `planner/predictor/calibration.py`, `planner/optimizer/margin.py`,
 `planner/optimizer/exhaustive.py`, `planner/__main__.py`,
 `tests/test_margin_policy.py`, `tests/test_cli_accuracy_domain.py`,
-`tests/test_accuracy_domain.py`; PR stack `feat/uq-a1-registry` →
+`tests/test_accuracy_domain.py`, `planner/uncertainty/`, `tests/test_{perturb,sensitivity,measurement_plan,instance_attribution}.py`; PR stack `feat/uq-a1-registry` →
 `feat/uq-a5-ea2-rngd-domain` → `feat/uq-b3-measurement-plan`.

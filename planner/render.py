@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from planner.plan import DeploymentPlan, PlannerOutput, ScoredPlan
+from planner.uncertainty.measurement_plan import MeasurementPlan
 from planner.uncertainty.registry import (
     UncertainInput,
     UncertainInputRegistry,
@@ -274,6 +275,10 @@ def render(output: PlannerOutput, *, top_n: int = 5) -> str:
         lines.append("")
         lines.append(render_uncertain_inputs(output.uncertain_inputs))
 
+    if output.measurement_plan is not None:
+        lines.append("")
+        lines.append(render_measurement_plan(output.measurement_plan))
+
     if output.caveats:
         lines.append("")
         lines.append(_rule("Caveats"))
@@ -355,4 +360,71 @@ def render_uncertain_inputs(registry: UncertainInputRegistry, *, top_n: int = 40
     if len(ordered) > top_n:
         lines.append(f"    ... {len(ordered) - top_n} more")
     lines.append("  ** = unbounded (no sourced range)")
+    return "\n".join(lines)
+
+
+def render_measurement_plan(plan: MeasurementPlan, *, top_n: int = 20) -> str:
+    """The "Measurement plan" section (§2.5, STEP B3).
+
+    Ordered by what each measurement is worth per hour, with the regret the
+    budget removes stated on its own line - the number the operator is actually
+    deciding on.
+    """
+    lines = [_rule("Measurement plan")]
+    if not plan.items and not plan.uncovered and not plan.undecidable:
+        lines.append("  nothing to measure: no uncertain input moves the recommendation")
+        return "\n".join(lines)
+
+    if plan.budget_hours is None:
+        lines.append("  budget: unlimited")
+    else:
+        lines.append(
+            f"  budget: {plan.budget_hours:,.3g} h, of which "
+            f"{plan.total_hours:,.3g} h planned "
+            f"({plan.exclusive_hours:,.3g} h with the device to itself)"
+        )
+    lines.append(
+        f"  this budget removes {plan.covered_regret:,.4g} of decision regret "
+        f"across {len(plan.items)} measurement(s)"
+    )
+
+    if plan.items:
+        lines.append("")
+        lines.append(
+            f"  {'#':>3} {'input':<38} {'dR':>12} {'dR/h':>12} {'cost':>8}  measure by"
+        )
+        for item in plan.items[:top_n]:
+            per_hour = "n/a" if item.regret_per_hour is None else f"{item.regret_per_hour:,.4g}"
+            cost = "unknown" if item.cost_hours is None else f"{item.cost_hours:,.3g} h"
+            flag = " FLIPS" if item.flip else ""
+            approx = " (approx)" if item.approximation else ""
+            lines.append(
+                f"  {item.rank:>3} {item.input_id:<38} {item.delta_regret:>12,.4g} "
+                f"{per_hour:>12} {cost:>8}  {item.how_to_measure}{flag}{approx}"
+            )
+        if len(plan.items) > top_n:
+            lines.append(f"      ... {len(plan.items) - top_n} more")
+
+    if plan.uncovered:
+        lines.append("")
+        lines.append(
+            f"  {len(plan.uncovered)} measurement(s) worth doing did not fit the budget, "
+            f"starting at rank {plan.uncovered[0].rank}:"
+        )
+        for item in plan.uncovered[:5]:
+            cost = "unknown" if item.cost_hours is None else f"{item.cost_hours:,.3g} h"
+            lines.append(f"      {item.rank:>3} {item.input_id} ({cost})")
+        if len(plan.uncovered) > 5:
+            lines.append(f"      ... {len(plan.uncovered) - 5} more")
+
+    if plan.undecidable:
+        lines.append("")
+        lines.append(
+            f"  {len(plan.undecidable)} input(s) CANNOT BE DECIDED BEFORE MEASURING - "
+            f"no sourced range, so no regret can be computed for them at all:"
+        )
+        for input_id in plan.undecidable[:8]:
+            lines.append(f"      {input_id}")
+        if len(plan.undecidable) > 8:
+            lines.append(f"      ... {len(plan.undecidable) - 8} more")
     return "\n".join(lines)
