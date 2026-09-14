@@ -153,7 +153,14 @@ def cmd_inspect_cluster(args: argparse.Namespace) -> int:
 
 def _write_output(output: PlannerOutput, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(yaml.safe_dump(output.model_dump(mode="json"), sort_keys=False))
+    data = output.model_dump(mode="json")
+    if output.uncertain_inputs is None:
+        # Dropped rather than emitted as `uncertain_inputs: null`. The dump has
+        # no exclude_none (other optional fields DO appear as null and the
+        # golden outputs contain them), so the new key is removed on its own to
+        # keep the default path's YAML byte-identical (absolute rule A4).
+        data.pop("uncertain_inputs", None)
+    path.write_text(yaml.safe_dump(data, sort_keys=False))
 
 
 def _load_envelopes(

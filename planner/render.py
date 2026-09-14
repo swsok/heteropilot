@@ -11,6 +11,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from planner.plan import DeploymentPlan, PlannerOutput, ScoredPlan
+from planner.uncertainty.registry import (
+    UncertainInput,
+    UncertainInputRegistry,
+    UncertainKind,
+)
 
 if TYPE_CHECKING:
     from planner.deploy.base import DeploymentHandle, DeploymentMetrics
@@ -241,10 +246,89 @@ def render(output: PlannerOutput, *, top_n: int = 5) -> str:
             if len(ids) > 4:
                 lines.append(f"      ... {len(ids) - 4} more")
 
+    if output.uncertain_inputs is not None:
+        lines.append("")
+        lines.append(render_uncertain_inputs(output.uncertain_inputs))
+
     if output.caveats:
         lines.append("")
         lines.append(_rule("Caveats"))
         for c in dict.fromkeys(output.caveats):
             lines.append(f"  - {c}")
 
+    return "\n".join(lines)
+
+
+#: Order the uncertain-input table walks its kinds; stable so the section reads
+#: the same across runs and diffs cleanly.
+_KIND_ORDER = ("sim_error", "profile", "power", "link_bw", "link_lat")
+
+
+def _coverage_line(registry: UncertainInputRegistry) -> str:
+    """"26 links, 16 uncertain (placeholder 14, vendor_spec 2)" per kind.
+
+    Printed before the table because a table of uncertain inputs alone cannot
+    say whether it covers two inputs or two hundred.
+    """
+    parts: list[str] = []
+    for kind_value in _KIND_ORDER:
+        kind = UncertainKind(kind_value)
+        items = registry.by_kind(kind)
+        total = registry.total_for(kind)
+        if total == 0:
+            continue
+        by_grade: dict[str, int] = {}
+        for item in items:
+            by_grade[item.grade.value] = by_grade.get(item.grade.value, 0) + 1
+        detail = ", ".join(f"{g} {n}" for g, n in sorted(by_grade.items()))
+        parts.append(
+            f"{kind_value} {len(items)}/{total} uncertain" + (f" ({detail})" if detail else "")
+        )
+    return "; ".join(parts) if parts else "no inputs classified"
+
+
+def render_uncertain_inputs(registry: UncertainInputRegistry, *, top_n: int = 40) -> str:
+    """The "Uncertain inputs" section (§2.3, STEP A1).
+
+    Unbounded items come first and are marked: they are the ones no amount of
+    analysis can settle, so they head the operator's reading order.
+    """
+    lines = [_rule("Uncertain inputs")]
+    lines.append(f"  coverage: {_coverage_line(registry)}")
+    if not registry.items:
+        lines.append("  (every classified input is a measurement)")
+        return "\n".join(lines)
+
+    unbounded = registry.unbounded()
+    if unbounded:
+        lines.append(
+            f"  {len(unbounded)} input(s) have NO sourced range - a plan cannot be "
+            f"decided against them before measuring"
+        )
+    lines.append("")
+    lines.append(
+        f"  {'':2}{'id':<44} {'kind':<10} {'grade':<12} "
+        f"{'nominal':>12}  {'range':<26} affects"
+    )
+
+    def sort_key(item: UncertainInput) -> tuple:
+        return (
+            0 if item.range.is_unbounded else 1,
+            _KIND_ORDER.index(item.kind.value) if item.kind.value in _KIND_ORDER else 99,
+            item.id,
+        )
+
+    ordered = sorted(registry.items, key=sort_key)
+    for item in ordered[:top_n]:
+        mark = "**" if item.range.is_unbounded else "  "
+        affects = ", ".join(item.affects[:2]) + (
+            f", +{len(item.affects) - 2}" if len(item.affects) > 2 else ""
+        )
+        lines.append(
+            f"  {mark}{item.id:<44} {item.kind.value:<10} {item.grade.value:<12} "
+            f"{item.nominal:>12,.4g}  {item.range!s:<26} {affects or '-'}"
+        )
+    if len(ordered) > top_n:
+        lines.append(f"    ... {len(ordered) - top_n} more")
+    lines.append("  ** = unbounded (no sourced range)")
     return "\n".join(lines)

@@ -1,0 +1,126 @@
+# What it costs to replace an uncertain input with a measurement
+# (WORK_ORDER_uncertainty_planner.md §2.6).
+#
+# `hours` is wall-clock. A kind with no evidence gets `hours: null` rather than
+# an estimate; the measurement plan sorts such items last instead of pretending
+# to know (absolute rule A1). `exclusive: true` means the measurement owns the
+# device for its duration, so a budget can count occupancy separately from
+# elapsed time.
+#
+# THREE CLASSES OF `hours`, and every row says which it is:
+#   measured   a timestamped artifact records the wall clock
+#   derived    computed from committed script constants; a LOWER BOUND, since
+#              setup the script does not time is excluded
+#   external   a figure from the literature, not measured in this repository
+#
+# INVESTIGATION RESULT (work order §0.4): the method the work order names for
+# `sim_error` yields nothing - outputs/rngd_envelope/edf/serve_c*.log contain
+# ZERO timestamps (grep -cE '[0-9]{2}:[0-9]{2}:[0-9]{2}' returns 0 on all four).
+# The bench half is recoverable from a different file; see that row.
+
+costs:
+  - kind: profile
+    method: python -m profiler profile
+    hours: 2.1
+    exclusive: true
+    source: >
+      EXTERNAL. WORK_ORDER_tiered_profiles.md:55 (§1.2 tier table, Tier 2 row)
+      records "전체 (~2.1h)", and :1706 attributes that figure to LLMServingSim
+      2.0, ISPASS 2026, DOI 10.1109/ISPASS69572.2026.00012 - "외부 하드웨어
+      시뮬레이터 profile ingest 경로; single decode block, ~2.1h".
+    note: >
+      NOT measured in this repository, and NOT per (hardware, model, tp). Line
+      55 says "전체" - the whole grid - and the per-(hw, model, tp) qualifier is
+      WORK_ORDER_uncertainty_planner.md §2.6's own addition, which nothing here
+      supports. This repo has never timed its own profiler: all ten
+      profiler/perf/*/meta.yaml record a single `profiled_at` instant and no
+      duration.
+      Exclusive of ONE ACCELERATOR, not the node: profiles/accelerators/a40.yaml
+      :18-22 records "one A40 per run ... TP is emulated by shrinking layer dims
+      on one GPU, so tp4 needs no 4-GPU group", and a power run on GPU 2
+      co-existed with a profiling job on GPU 0/1
+      (experiments/results/a40_power/power_summary.md:3-5).
+
+  - kind: sim_error
+    method: serve the model, then one bench run (bench_furiosa_endpoint.py or vLLM bench)
+    hours: 0.041
+    exclusive: true
+    source: >
+      MEASURED (bench leg only). outputs/rngd_envelope/edf/real_c{16,32,64,128}
+      .json field `wall_s`: 146.65 / 94.526 / 130.768 / 132.818 s, self-timed by
+      bench_furiosa_endpoint.py (perf_counter_ns at :128, emitted as "wall_s"
+      at :143). The largest, 146.65 s, is 0.041 h; the mean is 0.035 h.
+    note: >
+      LOWER BOUND. This covers only the benchmark leg. The serving-stack startup
+      that must precede it is NOT timestamped - the companion serve_c*.log files
+      carry uvicorn INFO lines with no timestamps at all - so the compile-and-
+      load time (for a furiosa-llm artifact, the larger half) is unrecoverable
+      from what is committed. The only ceiling available is the harness's own
+      timeouts: experiments/scripts/rebuild_rngd_bundle_from_edf.py
+      --startup-timeout 300.0, --bench-timeout 1200.0, server.wait(timeout=90)
+      sum to 0.442 h per operating point. So the true cost lies in
+      [0.041, 0.442] h and any ranking that uses this figure is OPTIMISTIC about
+      sim_error's cost. Re-derive it from a run that records its own start and
+      end.
+      Exclusive of a whole card: the serve command claims every PE with
+      `--devices npu:{card}:*`.
+
+  - kind: link_bw
+    method: experiments/scripts/gpu_host_bandwidth.py / rngd_device_facts.py
+    hours: 0.114
+    exclusive: true
+    source: >
+      DERIVED, not logged. Neither probe writes a timestamped log and neither
+      artifact records an elapsed time, so this is computed from the committed
+      script constants and the artifacts' own parameters. GPU probe: sustained
+      phase 12 rows x 3 trials x 2 directions x duration_s 5.0 = 360 s, plus a
+      parallel phase of ~45 s and single-stream of ~1 s, = ~410 s = 0.114 h.
+    note: >
+      LOWER BOUND: excludes CUDA init, pinned-buffer allocation, gc/empty_cache
+      and the nvidia-smi topo subprocess, none of which the script times. The
+      RNGD host<->PE probe derives to ~168 s = 0.047 h by the same method
+      (4 stream counts x 3 trials x 2 directions x duration_s 5.0 = 120 s, plus
+      2.0 s of spin-wait per direction per trial), also excluding 45 worker
+      spawns that each import torch and furiosa.torch. The larger of the two is
+      recorded here. A third probe, rngd_collective_probe.py, has NO derivable
+      cost - 16 fresh compiling subprocesses whose only bound is --timeout 900.0
+      each - and produces no bandwidth anyway (its artifact holds collective
+      latency in microseconds).
+      Exclusivity differs by probe: the GPU one takes the WHOLE NODE in its
+      parallel phase (default --parallel-groups ends in 0,1,2,3,4,5,6,7) and
+      saturates the shared host path besides; the RNGD ones take a whole card.
+
+  - kind: link_lat
+    method: not implemented
+    hours: null
+    exclusive: false
+    note: >
+      No link latency in this repository has ever been measured (see
+      grades.yaml, link_lat rows), so there is no procedure to cost. This row
+      exists to say that explicitly rather than leave the kind unmentioned.
+
+  - kind: power
+    method: nvidia-smi power.draw sampling alongside a real bench run
+    hours: 0.172
+    exclusive: false
+    source: >
+      MEASURED. The committed power artifacts are timestamped end to end.
+      experiments/results/a40_power/: idle_gpu2.csv 2026/08/18 18:05:53.587 to
+      load_gpu2.csv 18:16:14.121 = 620.534 s = 0.172 h. The A5000 equivalent
+      (experiments/results/a5000_power/, 2026/08/14 17:24:03.380 to
+      17:32:42.480) is 519.100 s = 0.144 h. The larger is recorded.
+    note: >
+      The committed script does NOT reproduce these artifacts and cannot be used
+      to cost them: profiler/power/profile_gpu_power.sh is one unbounded line
+      that samples at `-lms 1000` (1 Hz) until killed, whereas the artifacts are
+      10 Hz (mean sample spacing 100.2 ms, and power_summary.md:6-7 says 10 Hz).
+      The duration above therefore reflects the bench run the sampler rode
+      along with, which is the honest cost: sampling power is close to free when
+      attached to a run that was happening anyway.
+      NOT exclusive at node level - experiments/results/a40_power/
+      power_summary.md:3-5 records this very measurement co-existing with a
+      profiling job on GPU 0/1 - but it does occupy the one GPU being driven.
+      The exception is node-level power: power_summary.md:44-49 records that
+      NodePower was not measured partly because a concurrent profiling job
+      "would contaminate any whole-node reading now anyway", so an IPMI-based
+      node power measurement WOULD need a quiet node.
