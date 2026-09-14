@@ -2,7 +2,9 @@
 
 > `WORK_ORDER_uncertainty_planner.md` Stage A·B 완료(PR #78–#84, `main` = `fcf8ba5`) 이후, 측정 계획(ΔR/비용 순위·판정 보류·`measure-apply`)의 **우월성 증거**를 만들기 위한 후속 작업지시서. 결과는 세 번째 직무발명(측정 계획) 신고서 §6 효과와 논문 한 절의 근거가 된다.
 > 대상 저장소: `github.com/swsok/heteropilot` · 작성일: 2026-09-14 · 도구: Claude Code (CPU 노드로 충분, 가속기 불필요)
-> 선행 문서: `docs/uncertainty_planner.md`, `experiments/uncertainty/results/eb1_regret_vs_budget.md`, `eb2_flip_detection.md`, `docs/deviations.md` D33·D34·D40
+> 선행 문서: `docs/uncertainty_planner.md`, `experiments/uncertainty/results/eb1_regret_vs_budget.md`, `eb2_flip_detection.md`, `eb3_closed_form_vs_resim.md`, `docs/deviations.md` D33·D34·D40
+>
+> **개정 rev 2 (2026-09-14, `main` = `201f99e`).** 초안 작성 중 PR #86(E-B3 실행, `exp/uq-eb3`)과 PR #85(rps 작업지시서 STEP 1.5 정리)가 머지되었다. E-B3는 **이미 E-A1 fixture에서 실행되었으므로** §1 표와 STEP C4를 그 결과 위에서 다시 정의했다: 닫힌 형식은 순서를 보존했지만(같은 항목 1위, 비활성 3항목 정확히 0) 유일한 활성 항목의 ΔR 크기를 **30.5 % 과소**(14,298 vs 20,583)했고, 그 20,583에는 D40 미러 결함이 섞여 있어 분리되지 않았다. 따라서 C4의 목표는 "E-B3를 돌리는 것"이 아니라 **활성 항목이 둘 이상인 F2에서 크기 오차를 D40과 분리해 다시 재는 것**이다. `BinnedRooflineRanker`가 `--surrogate` 기본값이 된 것(PR #76, D30)은 이 지시서와 무관하다.
 
 ---
 
@@ -33,7 +35,7 @@ E-B1(2026-09-14 재실행)에서 `ours`는 모든 예산에서 오라클과 일�
 | 후회를 갖는 항목이 하나뿐 | 그 항목을 첫째로 놓는 어떤 규칙도 오라클과 일치한다. `ours = oracle`은 순위 규칙의 증거가 아니라 "가장 싼 항목이 가장 중요했다"는 우연의 증거다 |
 | E-B2 정밀도 0.773은 `sim_error` 56건에 대한 수치(TP 38 / FP 17 / FN 1) | 검출기 일반의 성능이 아니다. FP 17건의 원인이 분류되지 않았다 |
 | 격자 밀도 m=3/5/9가 결과를 전혀 바꾸지 않음 | "구간이 교차점을 포함하는가"로 전환이 결정되므로 격자는 후회 크기에만 영향. 이 사실은 발명 설명에 유리하니 명시한다 |
-| E-B3 미실행. `--resimulate-top N`은 `main`에 **있다**(`planner/uncertainty/resimulate.py`, `__main__.py:1262`) — `docs/uncertainty_planner.md` §5·§6의 "not implemented"는 오기 | 근사 규칙(PROFILE·POWER)의 ΔR 순위 보존도가 미측정 |
+| E-B3(PR #86, E-A1 fixture, `--top 4`): 닫힌 형식 0.287 s vs 재시뮬 2,090.8 s(1,104 런, **7,285×**). 순서 보존(활성 1항목 1위, 비활성 3항목 = 0). 그러나 활성 항목 `profile:cuda-a40-node_a40a`의 ΔR은 **14,298 vs 재시뮬 20,583, 30.5 % 과소**. `sim_error`는 정의상 재시뮬 불가(SKIPPED). Spearman 1.000은 4항목 중 3개가 0으로 묶여 **사실상 공허**하며, `--top 1` 실행의 Spearman은 항진(tautological)이라 인용 금지 | "닫힌 형식은 **무엇을 측정할지** 정하는 데는 충분하지만 ΔR을 **절약량**으로 인용하기엔 3할 낮다"가 현재 결론. 크기 오차가 닫힌 형식의 1차 근사 때문인지 D40 때문인지 **분리되지 않음**(×1.0 identity control이 A40 미러 후보에서 7.87e-2 편차, RNGD는 0). `docs/uncertainty_planner.md` §5·§6의 "`--resimulate-top` not implemented"는 오기 |
 | D40: `EnvelopeCache`가 미러 대칭 P/D 분할을 하나로 병합 | P/D 후보 진실 캐시를 만들 때 진실 자체가 오염될 수 있음 |
 
 이 지시서의 목표는 **둘 이상의 입력 종류가 동시에 결정에 관여하는 fixture**에서 E-B1·E-B2·E-B3를 다시 돌려, 순위 규칙이 기준선과 실제로 갈리는지(또는 갈리지 않는지)를 측정하는 것이다.
@@ -83,9 +85,17 @@ E-B2의 FP 17건(`outputs/uncertainty/eb2/eb2_flip_detection.json`)을 **개별�
 
 분류 결과에 따라 두 지표를 **병기**한다: (1) 기존 "실현 전환" 기준 정밀도·재현율, (2) **"가능 전환" 기준** — 진실을 nominal에서 항목 범위 내 여러 값(격자점)으로 바꾸어 각 값에서의 실현 여부와 예측을 비교한 정밀도·재현율. (2)가 검출기 자체의 정확도이고, (1)은 "이 fixture의 진실이 어디 있었나"에 좌우된다. 신고서 §6에는 두 값을 모두 적고 차이의 이유를 한 문장으로 쓴다.
 
-### 2.5 E-B3 — 근사 규칙의 순위 보존
+### 2.5 E-B3 재실행 — 크기 오차를 D40과 분리하고, 활성 항목 둘 이상에서 재기
 
-`--resimulate-top N`(구현 있음)으로 PROFILE 항목의 양끝점을 실제 시뮬레이션해 ΔR을 재계산한다. F2에서 PROFILE 항목은 island 수만큼(A40 1~2, RNGD-CARD 1~2)이므로 N=4면 전부. 비교: 닫힌 형식 ΔR 순위 vs 재시뮬 ΔR 순위의 Spearman ρ, 절대값 차이, 소요 시간(2N 코퍼스). `resimulate.py` docstring이 지적한 비대칭(PROFILE 항목은 island를 가리키지만 번들은 모델 단위)이 F2에서 실제로 어떤 후보에 영향을 주는지 표로 남긴다. D40의 identity control(×1.0 섭동이 캐시 예측을 재현해야 함)을 E-B3 실행의 **선행 게이트**로 둔다.
+E-A1 fixture의 E-B3(PR #86)는 순서는 맞고 크기는 30.5 % 낮다는 결론을 냈지만, (i) 활성 항목이 하나라 순위 지표가 공허하고, (ii) 재시뮬 ΔR에 D40 미러 결함이 섞여 크기 오차의 원인이 분리되지 않았다. F2에서는 다음과 같이 다시 잰다.
+
+- **D40 분리가 먼저다.** C1의 미러 쌍 목록으로 미러 후보를 재시뮬·ΔR 계산 **양쪽에서 제외**한 뒤 크기 비교를 한다. 그러면 남는 차이는 닫힌 형식(1차 근사)만의 오차다. 제외 전/후 두 값을 모두 보고하고, 차이가 D40의 기여다.
+- **헤드라인 지표는 Spearman이 아니라 항목별 크기 오차**(`closed/resim − 1`)와 **활성 항목 사이의 순서 보존 여부**다. Spearman은 활성(ΔR>0) 항목이 3개 이상일 때만 계산하고, 그 미만이면 "계산 안 함"으로 기록한다(PR #86의 교훈).
+- `--top N`은 재시뮬 가능한 항목 전부(PROFILE·POWER·LINK; `sim_error`는 정의상 SKIPPED로 별도 표기). F2에서 링크 항목이 활성이면 LINK_BW 재시뮬은 닫힌 형식과 **일치해야 한다**(정확 규칙) — 이것이 하네스의 두 번째 identity control이 된다.
+- 소요 시간: E-A1에서 4항목 1,104 런 35 분(32 워커). F2는 후보 ~1.5배, 항목 ~2배로 **2~3 h**(32 워커) 예상. 재시뮬 결과는 별도 캐시 디렉터리에 저장해 재실행 시 재사용.
+- `resimulate.py` docstring의 비대칭(PROFILE 항목은 island, 번들은 모델 단위)이 F2의 어느 후보에 영향을 주는지 표로 남긴다.
+
+**결론 문장의 형태를 미리 정해 둔다.** "닫힌 형식은 측정 우선순위(순서)를 보존한다 / 보존하지 않는다; ΔR 크기는 항목별로 x~y % 낮으며 그중 D40 기여는 z %p이다." 이 문장이 특허 3 §5의 "섭동은 캐시 예측의 후처리로 수행한다"는 구성의 한계 서술이 된다.
 
 ---
 
@@ -131,11 +141,12 @@ E-B2의 FP 17건(`outputs/uncertainty/eb2/eb2_flip_detection.json`)을 **개별�
 - E-A1 fixture의 기존 FP 17건 분류 결과와 F2 결과를 `eb2_f2.md`에. 종류별 표 필수.
 - 테스트: 합성 케이스 3개(α, β, γ 각 1)가 올바르게 분류됨.
 
-### STEP C4 — E-B3 (0.5일 + 재시뮬 2N 코퍼스)
+### STEP C4 — E-B3 재실행 on F2 (0.5일 + 재시뮬 2~3 h)
 
-- D40 identity control을 실행 전 게이트로: ×1.0 재시뮬이 캐시와 1e-6 이내 일치하지 않는 후보가 있으면 목록을 출력하고 그 후보를 분석에서 제외(미러 쌍이면 C1의 제외 목록과 일치해야 함).
-- `--resimulate-top 4`로 PROFILE 항목 전부. 결과 `eb3_f2.md`: 항목별 (닫힌 형식 ΔR, 재시뮬 ΔR, 차이 %), Spearman ρ, 소요 시간, `approximation` 플래그가 재시뮬 후 `False`로 바뀐 항목 수.
-- `planner/` 변경은 `resimulate.py`에 identity-control 헬퍼를 추가하는 것으로 한정(A4).
+- `eb3_closed_form_vs_resim.py`에 `--fixture`, `--exclude <mirror_pairs.json>`(C1 산출물), 활성 항목 수 < 3이면 Spearman을 `None`으로 두는 규칙, LINK_BW 재시뮬 일치 검사(정확 규칙 identity control).
+- ×1.0 identity control은 그대로 선행 게이트. 1e-6 이내 일치하지 않는 후보 목록은 C1의 미러 쌍 목록과 **정확히 일치해야** 하며, 불일치가 있으면 D40 외의 원인이므로 중단하고 보고.
+- 결과 `eb3_f2.md`: 항목별 (닫힌 형식 ΔR, 재시뮬 ΔR — 미러 제외 전/후, 크기 오차 %), 활성 항목 순서 보존 여부, Spearman(조건부), 소요 시간과 배속, `approximation` 플래그가 `False`로 바뀐 항목 수, `sim_error` SKIPPED 표기. E-A1 fixture의 14,298 → 20,583 결과는 비교용으로 병기.
+- `planner/` 변경은 `resimulate.py`에 후보 제외 인자를 추가하는 것으로 한정(A4). 캐시 키(D40 자체) 수정 금지 — 그 결정은 별도.
 
 ### STEP C5 — 결과 정리와 특허 3 증거 매핑 (0.5일)
 
@@ -165,7 +176,8 @@ E-B2의 FP 17건(`outputs/uncertainty/eb2/eb2_flip_detection.json`)을 **개별�
 | 신고서 항목(예정) | 근거 산출물 | STEP |
 |---|---|---|
 | 배경: 오차가 크더라도 결정을 바꾸지 않는 입력이 있다 | E-B2 `link_bw` 336건 TN(E-A1 fixture), F2에서의 종류별 활성/비활성 표 | C2·C3 |
-| 구성: 캐시 예측의 닫힌 형식 후처리로 섭동 | D34 규칙표, E-B3 순위 상관 | C4 |
+| 구성: 캐시 예측의 닫힌 형식 후처리로 섭동 (속도) | E-B3(E-A1): 0.287 s vs 2,090.8 s, **7,285×**; F2 재실행 값 병기 | 완료·C4 |
+| 한계: 닫힌 형식은 순서 보존, 크기는 과소 | E-B3(E-A1): 활성 항목 −30.5 %(D40 미분리); F2에서 D40 분리 후 항목별 크기 오차 | C4 |
 | 구성: ΔR_i 정의(실행불가 = 최선 실행가능 − penalty×overshoot) | `docs/uncertainty_planner.md` §2.5, B2 테스트 | 완료 |
 | 구성: ΔR/비용 정렬·예산·undecidable | `measurement_plan.py`, `costs.yaml` | 완료 |
 | 효과: 동일 예산에서의 후회, 후회 0 도달 예산 | `eb1_f2.md` 표·그림 (+ E-A1 fixture 결과는 "단일 활성 항목 사례"로 병기) | C2 |
@@ -184,3 +196,4 @@ E-B2의 FP 17건(`outputs/uncertainty/eb2/eb2_flip_detection.json`)을 **개별�
 | P/D 시뮬 타임아웃·KV 할당 실패(HANDOVER 2.7의 68–114 후보) | `SIM_ERROR`로 분류되어 진실에서 빠짐. 개수를 `f2_truth.md`에 기록. 고치지 않음 |
 | 캐시 재사용 실패(trace digest 불일치) | 162개 재시뮬(+25 m). 원인을 기록 |
 | D40 미러 쌍이 승자에 포함 | 대표 하나만 인정하고 기록. 캐시 키 수정은 별도 PR로 제안만 |
+| F2에서도 재시뮬 가능한 활성 항목이 1개 | 크기 오차만 보고하고 순위 지표는 "계산 안 함". 특허 3에는 "닫힌 형식은 우선순위 결정용, 절약량 인용 불가"로 한계를 명시 |
