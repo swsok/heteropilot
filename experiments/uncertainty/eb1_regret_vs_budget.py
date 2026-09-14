@@ -59,15 +59,19 @@ import random
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from experiments.uncertainty.ea1_margin_modes import _IslandOperatingPoint
 from planner.candidate_generator import CandidateGenerator
-from planner.envelope import EnvelopeCache
+from planner.envelope import workload_bucket, workload_shape
 from planner.inventory import detect_islands, load_cluster_spec, load_profiles_for
 from planner.optimizer import exhaustive, pareto
 from planner.optimizer.exhaustive import Verdict, judge, rank_plans
 from planner.optimizer.margin import AccuracyDomainMargin, MarginPolicy
 from planner.plan import DeploymentPlan, PlannerOutput, ScoredPlan
-from planner.predictor.accuracy_domain import accuracy_domain_key
-from planner.predictor.calibration import CalibrationModel, load_calibration
+from planner.predictor.calibration import (
+    AccuracyPoint,
+    load_accuracy_domains,
+    load_calibrations,
+)
 from planner.predictor.llmservingsim import LLMServingSimPredictor
 from planner.spec import load_service_spec
 from planner.topology import TopologyGraph
@@ -83,6 +87,7 @@ from planner.uncertainty.registry import (
 )
 from planner.uncertainty.sensitivity import _default_penalty, analyze
 from planner.util import provenance as prov
+from planner.util.tier import resolve_variant
 from planner.util.workload import generate_trace
 
 FIXTURE = Path("outputs/pd_slo_sweep_margin18/pd-rngd-gpu-card.json")
@@ -92,22 +97,40 @@ DEGRADED_LINK_GBPS = 35.0
 #: A Tier 0 profile is ~39 % slower per operator than the measured bundle
 #: (profiles/uncertainty/grades.yaml, profile/analytical).
 DEGRADED_PROFILE = 1.38875811006420014
-#: Truth: Stage A's accuracy domain (work order STEP B4, "calibration = Stage A의
-#: 도메인 yaml"). RNGD's entry carries the four measured operating points.
+#: Truth: the committed accuracy domains (work order STEP B4, "calibration =
+#: Stage A의 도메인 yaml"). On the reconciled tree that is `rngd_card_edf.yaml`
+#: itself: D33 dropped `rngd_card_edf.domain.yaml` because it paired each real
+#: run with a sim at the same REQUESTED concurrency -- its sim side ran at served
+#: 71-189 against real 15-107, the D32 mis-pairing -- and the nine-point D32
+#: domain supersedes it. So the truth here is a DIFFERENT and better-founded
+#: domain than the one E-B1 first ran against, and its numbers are not
+#: comparable with that run's.
 DOMAIN_CALIBRATION = (
     Path("profiles/calibration/a40.yaml"),
-    Path("profiles/calibration/rngd_card_edf.domain.yaml"),
-)
-#: The degraded twin: the SAME fit before E-A2 added operating points, i.e. one
-#: error for the whole bucket. This is the work order's third degradation,
-#: "도메인을 스칼라 모드로", done at file granularity rather than by editing the
-#: model - `rngd_card_edf.yaml` IS what the domain file was built from
-#: (`provenance.accuracy_domain.base`), so the contrast is a real pair of
-#: artifacts and not a synthetic one.
-SCALAR_CALIBRATION = (
-    Path("profiles/calibration/a40.yaml"),
+    Path("profiles/calibration/a40.accuracy.yaml"),
     Path("profiles/calibration/rngd_card_edf.yaml"),
 )
+#: The degraded twin: each domain COLLAPSED TO ONE POINT at the concurrency it
+#: was fitted at, so `widen_error_bars` has no slope to widen along and every
+#: margin is that one value held flat. That is the work order's third
+#: degradation, "도메인을 스칼라 모드로" -- one error for the whole workload --
+#: and it is exactly the state `a40.accuracy.yaml`'s own header describes the A40
+#: domain as having been in before it gained a second and third point.
+#:
+#: It used to be done at FILE granularity: `rngd_card_edf.yaml` was then the
+#: pre-domain artifact that `rngd_card_edf.domain.yaml` was built from, so the
+#: contrast was a real pair rather than a synthetic one. D33 merged the domain
+#: into that file and dropped the other, so the pair no longer exists.
+#:
+#: Passing NO domains is not the same degradation and was tried first: the
+#: scalar fallback is a fitted BUCKET error, and neither `a40.yaml` nor
+#: `rngd_card_edf.yaml` carries one for this canonical bucket
+#: (`in_lt1024-out_ge512-rps_lt20`), so all 324 candidates came back `unmeasured`
+#: and the degraded search had nothing feasible at all. `analyze` then returns
+#: dR None for every item -- "no recommendation to flip" -- and the ranking
+#: degenerates to alphabetical order, which put the inert links ahead of the
+#: domain and made `ours` look like the worst strategy. That was the harness, not
+#: the invention.
 #: The worst error the domain measured (L=107.2, tpot 0.4725). The SIM_ERROR
 #: item's range runs from 0 to this: "the error here is somewhere between none
 #: and the worst we have ever seen on this hardware".
@@ -115,11 +138,24 @@ WORST_MEASURED_ERROR = 0.47252811693773233
 STRATEGIES = ("ours", "random", "round_robin", "widest", "oracle")
 
 
-def _calibration(paths: tuple[Path, ...]) -> CalibrationModel:
-    model = CalibrationModel.identity()
-    for path in paths:
-        model.hardware.update(load_calibration(path).hardware)
-    return model
+def _scalar_domains(domains: dict) -> dict:
+    """Each domain reduced to the single point it was fitted at.
+
+    One measured error for the whole workload, with no operating-point axis --
+    which is what the domain replaced, and what `widen_error_bars` degenerates to
+    when there is nothing to interpolate between.
+    """
+    out = {}
+    for hw, d in domains.items():
+        # `model_copy` does not validate, so the point is built as the model.
+        point = AccuracyPoint(
+            conc=d.fitted_at_concurrency,
+            tpot_err_pct=d.tpot_error_at(d.fitted_at_concurrency),
+            ttft_err_pct=d.ttft_error_at(d.fitted_at_concurrency),
+            note=f"scalar mode: {hw}'s domain collapsed to its fitted point",
+        )
+        out[hw] = d.model_copy(update={"points": [point]})
+    return out
 
 
 @dataclass
@@ -174,17 +210,26 @@ def build_world(
         num_requests=fixture["num_requests"], seed=fixture["seed"],
     )
     reduction = TopologyGraph(cluster).reduce_for_simulator(islands)
-    cache = EnvelopeCache(
+    _tiers, island_hw, _w = exhaustive._profile_tiers(spec, islands, profiles)
+    # The E-A1 truth cache predates operating-point caching: all 162 entries
+    # carry `metrics` and no `operating_point`, so main's margin policy -- which
+    # reads the operating point off the SimResult -- returned `unmeasured` for
+    # all 324 candidates and the experiment had no feasible truth to degrade.
+    # `_IslandOperatingPoint` is E-A1's own answer to that: it fills the missing
+    # point from the cached per-island served concurrency. Imported rather than
+    # copied so the two experiments cannot disagree about what the operating
+    # point of a cached run is.
+    cache = _IslandOperatingPoint(
         cache_dir, spec,
         accelerator_of={i.id: i.accelerator_model for i in islands},
         link_bw_gbps=reduction.link_bw_gbps,
         trace_digest=prov.hash_file(trace.path),
+        island_hw=island_hw,
     )
     predictor = LLMServingSimPredictor(trace, work_dir=work_dir / "sims")
     generation = CandidateGenerator(
         spec, cluster, islands, profiles, enable_prefix_caching=False
     ).generate()
-    _tiers, island_hw, _w = exhaustive._profile_tiers(spec, islands, profiles)
     try:
         evaluation = exhaustive.evaluate_candidates(
             generation.candidates, spec, cluster, by_id, profiles, predictor,
@@ -203,14 +248,31 @@ def build_world(
             f"simulate. Fill the cache with the E-A1 command first."
         )
 
-    key = accuracy_domain_key(spec, spec.model, spec.service.dtype)
+    # main's signature (D33 §1): the token-mix scope, the model and the precision
+    # variant are separate arguments, and the domains come in as a dict.
+    shape = workload_shape(spec)
+    bucket = workload_bucket(spec)
+    variant = resolve_variant(spec.service.dtype, spec.service.kv_cache_dtype)
+    # The planner's own loaders, so the experiment and the planner cannot
+    # disagree about which calibration an island maps to. The domain dict and the
+    # scalar fallback are separate arguments: dropping the former IS scalar mode.
+    domains = load_accuracy_domains(".", DOMAIN_CALIBRATION)
+    calibration = load_calibrations(".", DOMAIN_CALIBRATION)
     candidates = {c.id: c for c in generation.candidates}
     world = World(
         spec=spec, cluster=cluster, islands=by_id, candidates=candidates,
-        context=PerturbContext.build(spec, cluster, by_id, candidates),
+        # The operating points the evaluation recorded. main's margin policy
+        # reads them off the SimResult `sim_for` builds, so leaving them out
+        # makes every candidate `unmeasured` -- which is what it did.
+        context=PerturbContext.build(spec, cluster, by_id, candidates,
+                                     evaluation.operating_points),
         truth=judged_metrics(evaluation), island_hw=island_hw, costs=load_costs(),
-        policy_truth=AccuracyDomainMargin(_calibration(DOMAIN_CALIBRATION), key),
-        policy_scalar=AccuracyDomainMargin(_calibration(SCALAR_CALIBRATION), key),
+        policy_truth=AccuracyDomainMargin(
+            domains, shape=shape, model=spec.model, variant=variant,
+            calibration=calibration, bucket=bucket),
+        policy_scalar=AccuracyDomainMargin(
+            _scalar_domains(domains), shape=shape, model=spec.model,
+            variant=variant, calibration=calibration, bucket=bucket),
         profiles=profiles,
         predictor=predictor if keep_predictor else None,
     )
@@ -328,7 +390,13 @@ def _best(
         candidate = world.candidates.get(cid)
         if candidate is None:
             continue
-        decision = policy.decide(candidate, metrics[cid], world.island_hw)
+        # main's four-argument signature (D33 §3): the policy reads the
+        # operating point off a SimResult, which `sim_for` rebuilds around
+        # the perturbed metrics.
+        decision = policy.decide(
+            candidate, world.context.sim_for(cid, metrics[cid]),
+            metrics[cid], world.island_hw,
+        )
         plan = DeploymentPlan(
             plan_id=f"hp-{cid}", model=world.spec.model, candidate=candidate,
             predicted=metrics[cid],
@@ -356,7 +424,8 @@ def _truth_value(world: World, candidate_id: str | None, penalty: float) -> floa
         predicted=world.truth[candidate_id],
     )
     judgement = judge(plan, world.spec, world.policy_truth.decide(
-        plan.candidate, plan.predicted, world.island_hw))
+        plan.candidate, world.context.sim_for(candidate_id, plan.predicted),
+        plan.predicted, world.island_hw))
     if judgement.verdict is Verdict.FEASIBLE:
         return pareto.objective_value(plan, world.spec.objective.primary)
     if judgement.verdict is Verdict.UNMEASURED:
