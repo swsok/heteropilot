@@ -414,6 +414,37 @@ squeezed in.
 `tests/test_deviations_numbering.py` enforces what a reader cannot: no duplicate
 heading, and no reference to a `D<n>` that has no entry.
 
+### Experiment IDs carry the work order's tag — the same problem, one letter cheaper
+
+`E1` is not a name, it is a name *within a work order*, and nothing in the repo says
+which one. **Four work orders already define the same numbers**: `E1`–`E4` in both
+`WORK_ORDER_cxl_kv_pool.md` and `WORK_ORDER_tiered_profiles.md`, `E5`–`E6` in both
+`cxl_kv_pool` and `WORK_ORDER_rps_aware.md`. Meanwhile `docs/CLAIMS.md`,
+`docs/HANDOVER.md` and `docs/PROJECT_REPORT.md` all cite a bare `E5`/`E6` meaning
+`rps_aware`'s. It reads unambiguously today only because `cxl_kv_pool` has not run —
+the collision is already written down, exactly as D34's was before it fired.
+
+So a **new** experiment gets a tagged id, `E-<tag><n>`, and the tag belongs to one
+work order:
+
+| tag | owner |
+| --- | --- |
+| `E-A*`, `E-B*` | `WORK_ORDER_uncertainty_planner.md` (Stage A, Stage B) |
+| bare `E1`–`E7` | **history, do not extend** — `cxl_kv_pool`, `rps_aware`, `tiered_profiles`, read as scoped to the file that defines them |
+| anything else | unclaimed — add the row here in the same commit that first uses it |
+
+**The existing bare ids do not move.** There are ~460 `E<n>` references across `docs/`,
+`WORK_ORDER_*.md` and `experiments/`, and renaming them would be the large risky edit
+the D-block rule exists to avoid. They stay; only the next *new* experiment is tagged.
+A work order still on bare numbers picks a tag when it next adds one.
+
+**Citing another work order's experiment**, write it qualified at least once per
+document — "`rps_aware`'s E6", not "E6" — for exactly as long as bare ids exist.
+
+`tests/test_experiment_ids.py` holds the line: it fails when two work orders define an
+id that is not on the known-legacy list, so the six collisions above can be worked
+through without a seventh appearing behind them.
+
 Thirty-six divergences are recorded there. D2 (power is stdout-only) and D3 (no topology graph in
 the cluster config) are decided; **D4 is now closed** by the Tier 0 synthetic-bundle path (D21).
 **D10 is the one to know before touching Phase 2**: the simulator's memory model applies no
