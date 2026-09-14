@@ -103,20 +103,45 @@ def test_every_cited_deviation_exists() -> None:
     )
 
 
-def test_the_numbering_is_dense_so_a_gap_means_a_reservation() -> None:
-    """D1..D36 with nothing missing, which is what makes the block rule readable.
+#: Below this, numbering is history and must be dense. At and above it, a gap is
+#: a reservation -- CLAUDE.md's D37-D39 escape hatch and the D40+ blocks.
+HISTORY_CEILING = 37
+#: The blocks CLAUDE.md assigns, plus the block-free D37-D39.
+BLOCK_RANGE = (37, 89)
 
-    A gap below the blocks would be ambiguous -- retired entry, or someone's
+
+def test_the_numbering_is_dense_so_a_gap_means_a_reservation() -> None:
+    """Dense through the historical range; above it, a gap is a reservation.
+
+    A gap BELOW the blocks would be ambiguous -- retired entry, or someone's
     reservation? Blocks start at D40 precisely so that every gap above D36 is a
     reservation and every number below it is history. D37-D39 are the exception
     CLAUDE.md names, and are free.
+
+    The bound used to be `numbers[-1]`, the largest entry, which contradicted
+    that docstring: the first entry to obey the block rule -- D40, the earliest
+    number `WORK_ORDER_uncertainty_planner.md` is allowed to take -- reported
+    D36-D39 as holes and failed. Density is therefore checked through the
+    historical range only, and the range above it is checked for something
+    stronger instead: that every number there falls in a block CLAUDE.md
+    actually documents, so `D95` cannot be invented either.
     """
     numbers = sorted({int(re.match(r"D(\d+)", e).group(1)) for e in _entries()})
     assert numbers[0] == 1
-    missing = [n for n in range(1, numbers[-1] + 1) if n not in numbers]
+
+    history = [n for n in numbers if n < HISTORY_CEILING]
+    missing = [n for n in range(1, max(history) + 1) if n not in history]
     assert not missing, (
         f"D{missing} has no entry. A hole below the reserved blocks is ambiguous: "
         f"say in docs/deviations.md that the number is retired, or reuse it."
+    )
+
+    lo, hi = BLOCK_RANGE
+    stray = [n for n in numbers if n >= HISTORY_CEILING and not lo <= n <= hi]
+    assert not stray, (
+        f"D{stray} is above the historical range but outside every block "
+        f"CLAUDE.md assigns (D{lo}-D{hi}). Claim a block in CLAUDE.md in the same "
+        f"commit, or take a number from the one your work order already owns."
     )
 
 
