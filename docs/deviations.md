@@ -705,6 +705,7 @@ drops, TTFT flat, `none`-mode control flat — all PASS) and `tests/test_sim_pd_
 | D29 | Phase 4 | **Resolved** — the SLO margin comes from the candidate's own operating point, not a hand-set constant. One-sided; manual and automatic coexist with the larger winning; hardware without a domain gets 0 and a note. The A40 domain is a separate opt-in file so the default path stays byte-identical. **D29b**: `power_model` is parsed and deliberately unused by the planner's energy, because changing that definition would break every historical tok/J comparison |
 | D30 | — | **Open (measured, not fixed)** — the roofline surrogate's proxy tok/J is algebraically invariant to TP and DP, so `--top-k` is false-infeasible at K=20 on two of three P/D corpora. The obvious repair (order by the roofline floor) fixes those two and breaks the third, so **no ranker change was made** and top-K is not used as a cost lever. `docs/surrogate_topk_regret.md` |
 | D31 | — | **Resolved** — utilisation does not explain RNGD card power (falls 92.1 → 84.7 % while power is U-shaped, r = +0.24), so the §3 power model is keyed on served concurrency instead. Device- and range-specific; §3's ATOM example spans 59 pp of utilisation and the schema is right there |
+| D33 | uncertainty planner (Stage A/B) | **Decided 2026-09-11** — two accuracy-domain implementations were built in parallel from 108e48a (rps STEP 4's `calibration.AccuracyDomain`, per hardware, `widen_error_bars`; the uncertainty stack's `predictor/accuracy_domain.py`, per bucket, `unmeasured` outside). One remains: main's curve, `refuse` by default, the uncertainty stack's per-candidate `MarginPolicy` on top, `UNMEASURED` absorbed into `outside_calibration_domain`, E-A2's domain dropped as the D32 mis-pairing |
 
 **Reading order.** The entries below are in the order they were written, not
 numerically: D30 and D31 precede D28 and D29 in the file because the surrogate and
@@ -2249,3 +2250,96 @@ E6 afterwards is a replay rather than a re-simulation.
 `profiles/calibration/a40.accuracy.yaml` (`request_count_note`),
 `profiles/calibration/rngd_card_edf.yaml` (unchanged, flagged here),
 `experiments/results/a40_lowload_envelope.md`.
+
+
+## D33 — two accuracy-domain implementations, one kept; `refuse` becomes the default · Decided 2026-09-11
+
+**What happened.** `WORK_ORDER_rps_aware.md` STEP 4 and
+`WORK_ORDER_uncertainty_planner.md` STEP A2 both forked from `108e48a`
+(2026-09-09) and each built "the simulator's error as a function of the
+operating point" — 45 minutes apart on 2026-09-10 (uq-a2 `a650e33` 11:45, rps
+PR #72 merged 12:30). By the time the uncertainty stack (`feat/uq-a1` … `b3`,
+18 commits, never a PR) was noticed, `main` carried seven PRs on top of the rps
+design and the two disagreed on ten files. The disagreement was structural, not
+textual:
+
+| | `main` (rps STEP 4, #72–#77) | uncertainty stack (A2–A5) |
+| --- | --- | --- |
+| where the curve lives | `HardwareCalibration.accuracy_domain`, one per hardware | `BucketError.operating_points`, one per (hardware, workload bucket) |
+| class | `calibration.AccuracyDomain` / `AccuracyPoint` | `predictor.accuracy_domain.AccuracyDomain` wrapping `OperatingPoint` / `ConcurrencyDomain` |
+| error convention | `(sim − measured) / measured × 100`, negative = optimistic | `(real − sim) / sim` fraction, positive = optimistic |
+| outside the points | `widen_error_bars` (default): nearest error + \|slope\| × distance, uncapped | `None` → `UNMEASURED` rejection, always |
+| consumer | `exhaustive._auto_margins`, `max(manual, auto)` | `optimizer.margin.MarginPolicy`, per candidate, `unmeasured` verdict |
+| rejection stage | `OUTSIDE_CALIBRATION_DOMAIN` (slab3d), `OUTSIDE_MEASURED_ENVELOPE` | `UNMEASURED` |
+| plan record | `operating_point: [OperatingPointRecord]`, `margin_source` | `margin_basis` |
+| RNGD-CARD data | nine D32 points, served 1.02–76.0, matched-rate 300-request pairs | four E-A2 points, served 15.3–107.2, requested-concurrency pairs |
+
+**Decision** (user, 2026-09-11): `main`'s accuracy domain is the one that lands;
+the uncertainty stack is rebuilt on it; `refuse` is the default. Concretely:
+
+1. **The curve is `calibration.AccuracyDomain`.** It gains `errors_at` (None
+   when refused), `basis_at`, `has_metric`, an optional `workload_shape` scope
+   (uq §2.4.2: a domain is matched on token mix, never on arrival rate) and
+   `arrival_process` (D19: a closed-loop measurement carries no transferable
+   TTFT). `predictor/accuracy_domain.py` keeps only the served-concurrency
+   functions. One sign convention, `AccuracyPoint`'s.
+2. **`outside_domain` defaults to `refuse`.** Uncertainty rule A2 and
+   `docs/rps_aware_planning_design.md` §5 (line 103, "`refuse` is the default")
+   both say so; only the committed yaml said `widen_error_bars`. The three
+   committed domains (`rngd_card_edf.yaml`, `a40.accuracy.yaml`,
+   `rngd_perpe.yaml`) keep their explicit `widen_error_bars`, so every E5/E6
+   number is unchanged and its regression tests pass untouched. Flipping them
+   to `refuse` is a science change — three of E6's sixteen cells rest on an
+   extrapolated margin (HANDOVER §2.1) and would become
+   `outside_calibration_domain` — and is left to the rps owners as a deliberate
+   act, not done here.
+3. **The margin layer is the uncertainty stack's `MarginPolicy`**, replacing
+   `_auto_margins`. `AccuracyDomainMargin` reads `SimResult.operating_point`
+   per hardware and P/D phase (prefill owns TTFT, decode owns TPOT, total both —
+   rps STEP 4.3 unchanged), takes the worst, keeps the manual floors and the
+   `margin_source` rule, and returns `unmeasured` for a refused point, a
+   foreign token mix, or hardware with neither a domain nor a fitted bucket.
+   Hardware with a fitted bucket but no domain falls back to the bucket's
+   scalar error and says so (`status: scalar`).
+4. **`UNMEASURED` is absorbed into `OUTSIDE_CALIBRATION_DOMAIN`.** A slab3d
+   refusal (D28/D31) and an accuracy-domain refusal are the same kind of thing —
+   a value nobody measured — and one epistemic bucket is easier to read than
+   two. The reason string is prefixed `unmeasured:`; `SearchResult.unmeasured`
+   and the "measure the envelope at c>=…" suggestion survive.
+5. **Partial coverage is a caveat, not a rejection.** The uncertainty stack
+   rejected a pass that rested on a metric with no measured margin. Every
+   committed RNGD domain is TPOT-only by construction (D19), so that rule would
+   have emptied every search on the committed data. A pass with an unmargined
+   metric is kept and the search says, once, which check ran unmargined.
+6. **`--accuracy-domain` takes zero or more files.** Bare, every domain under
+   `profiles/calibration/` (rps); with files, exactly those (uq). Two files
+   carrying a domain for one hardware are refused, never last-wins. A manual
+   `--tpot-margin-percent` is a floor under it (rps), not an error (uq).
+7. **E-A2's `rngd_card_edf.domain.yaml` is dropped.** It paired each real run
+   with a simulation at the same *requested* concurrency; the sim side's own
+   served concurrency, recorded in its notes, is 71–189 against real 15–107 —
+   the D32 mis-pairing. `main`'s nine-point D32 domain supersedes it;
+   `experiments/uncertainty/results/ea2_rngd_domain.md` says so at the top.
+   E-A1 was re-run from its committed cache (2592 hits, 0 misses) against the
+   committed domains, with a fourth condition showing `refuse`:
+   `experiments/uncertainty/results/ea1_margin_modes.md`.
+
+**Two things this leaves open, on purpose.**
+
+- `AccuracyDomain.margin_from_error` charges `−err_pct` as the inflation, i.e.
+  `sim × (1 + 0.18)` for an 18 % optimistic simulator. The exact correction is
+  `sim / (1 − 0.18) = sim × 1.2195`; the uncertainty stack's convention gave
+  that (its commit `a650e33` notes "+0.22 in this code's convention, not
+  −0.18"). The linear form under-corrects by `e²/(1−e)` — 4 pp at 18 % — and
+  E5's 56.97 ms depends on it. Not changed here; a change is a re-derivation of
+  E5/E6 and belongs to the rps owners.
+- `main`'s committed domains are *unscoped* (`workload_shape` empty) because
+  they were measured on the fixture workload E5/E6 use. Scoping them is a
+  measurement claim about which token mixes they transfer to, not a code
+  change, and is not made here.
+
+**Where.** `planner/predictor/calibration.py`, `planner/optimizer/margin.py`,
+`planner/optimizer/exhaustive.py`, `planner/__main__.py`,
+`tests/test_margin_policy.py`, `tests/test_cli_accuracy_domain.py`,
+`tests/test_accuracy_domain.py`; PR stack `feat/uq-a1-registry` →
+`feat/uq-a5-ea2-rngd-domain` → `feat/uq-b3-measurement-plan`.

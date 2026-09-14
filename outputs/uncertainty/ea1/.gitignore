@@ -1,0 +1,7 @@
+# Simulator run artifacts: 317 MB of ASTRA-Sim inputs and per-candidate work
+# dirs, regenerable from the cache-fill command in
+# experiments/uncertainty/results/ea1_margin_modes.md. The envelope cache and
+# the result JSON are committed; this is not.
+work/
+*.stdout
+*.stderr

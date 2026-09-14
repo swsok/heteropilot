@@ -8,6 +8,7 @@ intended shape.
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import sys
 import tempfile
 from pathlib import Path
@@ -28,7 +29,8 @@ from planner.inventory import (
 from planner.optimizer import exhaustive
 from planner.perf_envelope import PerfEnvelope, find_envelope
 from planner.plan import DeploymentPlan, PlannerOutput
-from planner.predictor.calibration import load_accuracy_domains
+from planner.predictor.accuracy_domain import served_concurrency_from_sim
+from planner.predictor.calibration import load_accuracy_domains, load_calibrations
 from planner.predictor.llmservingsim import LLMServingSimPredictor
 from planner.render import render, render_deployment_handle, render_deployment_metrics
 from planner.spec import ServiceSpec, SpecError, load_service_spec
@@ -151,16 +153,113 @@ def cmd_inspect_cluster(args: argparse.Namespace) -> int:
 # plan (Phase 2)
 # --------------------------------------------------------------------------
 
+#: Fields the uncertainty work adds to existing structures, keyed by a field
+#: that identifies the structure they hang off. The dump has no `exclude_none` -
+#: other optional fields DO appear as null and the frozen outputs contain them -
+#: so these are removed one by one when the caller did not opt in, which is what
+#: keeps the flagless YAML byte-identical (rule A4). `served_concurrency` needs
+#: this even though `uncertain_inputs` does not: the predictor fills it on every
+#: real run, so without the strip it would appear with a value, not as a null,
+#: in output that must not change.
+_UNCERTAINTY_FIELDS: tuple[tuple[str, str], ...] = (
+    ("p50_ttft_ms", "served_concurrency"),   # PredictedMetrics
+    ("plan_id", "margin_basis"),             # DeploymentPlan
+)
+
+
+def _strip_uncertainty_fields(node: object) -> None:
+    """Recursively drop the opt-in uncertainty fields from a dumped output."""
+    if isinstance(node, dict):
+        for marker, field in _UNCERTAINTY_FIELDS:
+            if marker in node:
+                node.pop(field, None)
+        for value in node.values():
+            _strip_uncertainty_fields(value)
+    elif isinstance(node, list):
+        for value in node:
+            _strip_uncertainty_fields(value)
+
+
 def _write_output(output: PlannerOutput, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     data = output.model_dump(mode="json")
     if output.uncertain_inputs is None:
         # Dropped rather than emitted as `uncertain_inputs: null`. The dump has
         # no exclude_none (other optional fields DO appear as null and the
-        # golden outputs contain them), so the new key is removed on its own to
-        # keep the default path's YAML byte-identical (absolute rule A4).
+        # golden outputs contain them), so the new keys are removed on their own
+        # to keep the default path's YAML byte-identical (absolute rule A4).
         data.pop("uncertain_inputs", None)
+        _strip_uncertainty_fields(data)
     path.write_text(yaml.safe_dump(data, sort_keys=False))
+
+
+def _build_uncertainty(args, spec, cluster, profiles, islands, provenance):
+    """Wire up the accuracy-domain machinery for one `plan` run (STEP A4).
+
+    Returns (accuracy_domains, margin_policy, registry). All None when
+    --accuracy-domain was not given, which is what keeps the default path
+    byte-identical (rule A4). With the flag and no files, every domain under
+    profiles/calibration/ is read (the rps STEP 4 behaviour); with files, those
+    and nothing else.
+    """
+    if args.accuracy_domain is None:
+        return None, None, None
+
+    from planner.envelope import is_canonical_bucket, shape_of_bucket, workload_bucket
+    from planner.optimizer.margin import AccuracyDomainMargin
+    from planner.uncertainty import build_registry, load_costs, load_grades
+
+    paths = [Path(p) for p in args.accuracy_domain] or None
+    # Raises on two domains for one hardware: the policy never picks silently.
+    domains = load_accuracy_domains(args.root, paths)
+    # The scalar calibrations too: the registry lists their error, and a
+    # hardware with a fitted bucket but no domain falls back to it.
+    calibration = load_calibrations(args.root, paths)
+
+    requested = workload_bucket(spec)
+    bucket = requested
+    override = None
+    if args.calibration_bucket:
+        if not is_canonical_bucket(args.calibration_bucket):
+            raise SpecError(
+                f"--calibration-bucket {args.calibration_bucket!r} is not a canonical "
+                f"bucket key (§2.4.1); it must look like 'in_lt1024-out_ge512-rps_lt20'"
+            )
+        bucket = args.calibration_bucket
+        override = {"requested": requested, "used": bucket}
+    shape = shape_of_bucket(bucket)
+
+    grades, costs = load_grades(), load_costs()
+    registry = build_registry(
+        cluster, profiles, islands, calibration, grades, spec, costs,
+    )
+
+    provenance["uncertainty"] = {
+        "policy": "accuracy_domain",
+        "calibration_files": (
+            [str(p) for p in paths] if paths else f"{args.root}/profiles/calibration/*.yaml"
+        ),
+        "bucket": bucket,
+        "shape": shape,
+        "grades_digest": grades.digest,
+        "costs_digest": costs.digest,
+        "domains": {
+            hardware: {
+                "conc_min": d.conc_min, "conc_max": d.conc_max,
+                "outside_domain": d.outside_domain,
+                "workload_shape": d.workload_shape or None,
+            }
+            for hardware, d in sorted(domains.items())
+        },
+    }
+    if override is not None:
+        provenance["uncertainty"]["bucket_override"] = override
+
+    policy = AccuracyDomainMargin(
+        domains, shape=shape, calibration=calibration, bucket=bucket,
+        ttft_floor=args.ttft_margin_percent, tpot_floor=args.tpot_margin_percent,
+    )
+    return domains, policy, registry
 
 
 def _load_envelopes(
@@ -277,6 +376,10 @@ def _plan_once(args: argparse.Namespace, return_output: bool = False):
         print("error: --oracle simulates everything; --top-k is a heuristic subset - "
               "they are mutually exclusive", file=sys.stderr)
         return 1
+    if args.calibration_bucket and args.accuracy_domain is None:
+        print("error: --calibration-bucket only means something with --accuracy-domain",
+              file=sys.stderr)
+        return 1
     spec = load_service_spec(args.service)
     override = getattr(args, "_rps_override", None)
     if override is not None:
@@ -329,6 +432,14 @@ def _plan_once(args: argparse.Namespace, return_output: bool = False):
         print(f"warning: provenance fields could not be determined: {', '.join(missing)}",
               file=sys.stderr)
 
+    try:
+        accuracy_domains, margin_policy, registry = _build_uncertainty(
+            args, spec, cluster, profiles, islands, provenance
+        )
+    except (SpecError, ValueError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
     topology = TopologyGraph(cluster)
     reduction = topology.reduce_for_simulator(islands)
     if args.topology_level == 2:
@@ -373,7 +484,6 @@ def _plan_once(args: argparse.Namespace, return_output: bool = False):
         surrogate = (BinnedRooflineRanker() if args.surrogate == "binned"
                      else AnalyticalRooflineRanker())
 
-    accuracy_domains = load_accuracy_domains(args.root) if args.accuracy_domain else None
     envelopes = (_load_envelopes(cluster, profiles, spec)
                  if args.envelope_prefilter else None)
     provenance["accuracy_domain"] = sorted(accuracy_domains) if accuracy_domains else None
@@ -398,10 +508,13 @@ def _plan_once(args: argparse.Namespace, return_output: bool = False):
             accuracy_domains=accuracy_domains,
             ttft_margin_percent=args.ttft_margin_percent,
             tpot_margin_percent=args.tpot_margin_percent,
+            margin_policy=margin_policy,
             max_workers=args.workers,
             provenance=provenance,
             progress=progress,
         )
+        if registry is not None:
+            output.uncertain_inputs = registry
     finally:
         predictor.close()
 
@@ -417,6 +530,256 @@ def _plan_once(args: argparse.Namespace, return_output: bool = False):
     if return_output:
         return output
     return 0 if output.feasible else 3
+
+
+# --------------------------------------------------------------------------
+# fit-accuracy-domain (uncertainty work order STEP A2)
+# --------------------------------------------------------------------------
+
+NS_PER_MS = 1_000_000
+NS_PER_S = 1_000_000_000
+
+
+@dataclasses.dataclass(frozen=True)
+class _RunStats:
+    """TTFT / TPOT distributions (ms) and served concurrency for one run."""
+
+    ttft: list[float]
+    tpot: list[float]
+    served: float
+    wall_s: float
+    n: int
+    #: Only a real bench run records what the client asked for; None for sim.
+    requested_concurrency: int | None = None
+
+
+def _read_real_run(path: Path) -> _RunStats:
+    """TTFT / TPOT / latency (ms) and served concurrency from a bench JSON.
+
+    Schema is `bench_furiosa_endpoint.py`'s: top-level `wall_s` and
+    `concurrency`, plus `per_request[]` with `ttft_ns` / `tpot_ns` /
+    `latency_ns`. Failed rows are dropped, never counted as zero.
+    """
+    import json
+
+    report = json.loads(path.read_text())
+    ttft, tpot, latency_s = [], [], []
+    for row in report["per_request"]:
+        if row.get("error") or row.get("ttft_ns") is None:
+            continue
+        ttft.append(row["ttft_ns"] / NS_PER_MS)
+        if row.get("tpot_ns"):
+            tpot.append(row["tpot_ns"] / NS_PER_MS)
+        latency_s.append(row["latency_ns"] / NS_PER_S)
+    wall_s = float(report["wall_s"])
+    return _RunStats(
+        ttft=ttft, tpot=tpot,
+        served=served_concurrency_from_sim(latency_s, wall_s),
+        wall_s=wall_s, n=len(ttft),
+        requested_concurrency=report.get("concurrency"),
+    )
+
+
+def _csv_float(row: dict[str, str], name: str) -> float | None:
+    """A CSV cell as a float; None when the column is absent or blank."""
+    raw = (row.get(name) or "").strip()
+    return float(raw) if raw else None
+
+
+def _read_sim_run(path: Path) -> _RunStats:
+    """The same quantities from a simulator per-request CSV."""
+    import csv as _csv
+
+    ttft, tpot, latency_s, arrivals, ends = [], [], [], [], []
+    with path.open(newline="") as handle:
+        for row in _csv.DictReader(handle):
+            t, p = _csv_float(row, "TTFT"), _csv_float(row, "TPOT")
+            lat = _csv_float(row, "latency")
+            arrival, end = _csv_float(row, "arrival"), _csv_float(row, "end_time")
+            if t is not None:
+                ttft.append(t / NS_PER_MS)
+            if p:
+                tpot.append(p / NS_PER_MS)
+            if lat is not None:
+                latency_s.append(lat / NS_PER_S)
+            if arrival is not None and end is not None:
+                arrivals.append(arrival)
+                ends.append(end)
+    wall_s = (max(ends) - min(arrivals)) / NS_PER_S if arrivals else 0.0
+    return _RunStats(
+        ttft=ttft, tpot=tpot,
+        served=served_concurrency_from_sim(latency_s, wall_s),
+        wall_s=wall_s, n=len(ttft),
+    )
+
+
+def _pair_rows(
+    real: _RunStats, sim: _RunStats
+) -> tuple[list[tuple[float, float]], list[tuple[float, float]]]:
+    """`(sim, real)` summary rows per metric for one (real, sim) run pair.
+
+    Deliberately routed through the SAME pipeline the committed calibrations
+    were fitted with - `bench.core.plots.write_summary` then
+    `parse_validation_summary` - which is what
+    `experiments/scripts/compare_rngd_sim_vs_real.py` does, so a domain point and
+    the scalar fit it sits beside come from one estimator.
+    """
+    import tempfile as _tempfile
+
+    from bench.core.plots import write_summary
+    from planner.predictor.calibration import parse_validation_summary
+
+    with _tempfile.TemporaryDirectory() as tmp:
+        summary = write_summary(
+            Path(tmp), "pair",
+            bench_ttft=real.ttft, sim_ttft=sim.ttft,
+            bench_tpot=real.tpot, sim_tpot=sim.tpot,
+            bench_latency=[], sim_latency=[],
+        )
+        pairs = parse_validation_summary(summary.read_text())
+    return (pairs.ttft, pairs.tpot)
+
+
+def _signed_error_pct(rows: list[tuple[float, float]]) -> float | None:
+    """Mean `(sim - real) / real * 100` over the summary rows: the
+    `AccuracyPoint` convention, where NEGATIVE means the simulator is optimistic
+    (the direction that produced D22)."""
+    vals = [(sim - real) / real * 100.0 for sim, real in rows if real > 0]
+    if not vals:
+        return None
+    return float(sum(vals)) / len(vals)
+
+
+def cmd_fit_accuracy_domain(args: argparse.Namespace) -> int:
+    """Turn paired (real, sim) runs into a hardware's `accuracy_domain` (§2.4)."""
+    from planner.envelope import is_canonical_shape, workload_shape
+    from planner.predictor.calibration import (
+        AccuracyDomain,
+        AccuracyPoint,
+        CalibrationModel,
+        HardwareCalibration,
+        load_calibration,
+        save_calibration,
+    )
+
+    if args.service and args.shape:
+        print("error: give at most one of --service and --shape", file=sys.stderr)
+        return 1
+    shape = workload_shape(load_service_spec(args.service)) if args.service else (args.shape or "")
+    if shape and not is_canonical_shape(shape):
+        print(f"error: --shape {shape!r} is not a canonical shape; it must look like "
+              f"'in_lt1024-out_ge512'", file=sys.stderr)
+        return 1
+
+    real_paths = [Path(p) for p in args.real]
+    sim_paths = [Path(p) for p in args.sim]
+    if len(real_paths) != len(sim_paths):
+        print(
+            f"error: --real has {len(real_paths)} file(s) and --sim has {len(sim_paths)}; "
+            f"they are paired by position and must match",
+            file=sys.stderr,
+        )
+        return 1
+
+    out = Path(args.out)
+    # Absolute rule A3: a measured artifact is read-only. Refuse rather than
+    # ask, so no invocation of this command can ever destroy a calibration.
+    if out.exists() and not args.overwrite:
+        print(f"error: {out} exists; refusing to overwrite (pass --overwrite to replace)",
+              file=sys.stderr)
+        return 1
+    if args.base is not None and out.resolve() == Path(args.base).resolve():
+        print("error: --out must differ from --base; the base calibration is read-only",
+              file=sys.stderr)
+        return 1
+
+    model = load_calibration(args.base) if args.base else CalibrationModel.identity()
+    cal = model.hardware.get(args.hardware) or HardwareCalibration(hardware=args.hardware)
+    if cal.accuracy_domain is not None and not args.replace_domain:
+        print(f"error: {args.hardware} in {args.base} already carries an accuracy domain "
+              f"({len(cal.accuracy_domain.points)} points); pass --replace-domain to "
+              f"replace it", file=sys.stderr)
+        return 1
+
+    points: list[AccuracyPoint] = []
+    print("=== paired runs ===")
+    for real_path, sim_path in zip(real_paths, sim_paths, strict=True):
+        real = _read_real_run(real_path)
+        sim = _read_sim_run(sim_path)
+        ttft_rows, tpot_rows = _pair_rows(real, sim)
+        tpot_err = _signed_error_pct(tpot_rows)
+        ttft_err = None if args.metric == "tpot" else _signed_error_pct(ttft_rows)
+        if tpot_err is None:
+            # AccuracyPoint requires TPOT: a point without it is not a domain point.
+            print(f"  SKIP {real_path.name}: no TPOT data on both sides")
+            continue
+        served = real.served
+        if any(abs(pt.conc - served) < 1e-9 for pt in points):
+            print(f"error: two pairs land at served concurrency {served:.4g}; a domain "
+                  f"cannot carry two errors for one operating point", file=sys.stderr)
+            return 1
+        gap = (sim.served - served) / served * 100.0 if served > 0 else float("nan")
+        note = (
+            f"real n={real.n} wall={real.wall_s:.3f}s"
+            + (f" requested c{real.requested_concurrency}"
+               if real.requested_concurrency is not None else "")
+            + f" ({real_path.name}); sim n={sim.n} wall={sim.wall_s:.3f}s served "
+            f"L={sim.served:.3f} ({sim_path.name}); conc gap {gap:+.1f}%"
+        )
+        points.append(AccuracyPoint(
+            conc=served, tpot_err_pct=tpot_err, ttft_err_pct=ttft_err, note=note,
+        ))
+        print(
+            f"  L={served:8.3f}  tpot_err={tpot_err:+7.2f}%  ttft_err="
+            f"{'n/a' if ttft_err is None else f'{ttft_err:+.2f}%'}  "
+            f"sim served L={sim.served:.3f} (gap {gap:+.1f}%)"
+        )
+
+    if not points:
+        print("error: no usable pairs; nothing to write", file=sys.stderr)
+        return 1
+    points.sort(key=lambda pt: pt.conc)
+
+    fitted_at = args.fitted_at_concurrency
+    if fitted_at is None:
+        fitted_at = points[0].conc
+        print(f"  NOTE: --fitted-at-concurrency not given; recording the lowest measured "
+              f"point, {fitted_at:.4g}, as where the profile was validated")
+
+    cal.accuracy_domain = AccuracyDomain(
+        fitted_at_concurrency=fitted_at,
+        points=points,
+        outside_domain=args.outside_domain,
+        source=args.source,
+        note=args.note,
+        workload_shape=shape,
+        arrival_process=args.arrival_process,
+    )
+    model.hardware[args.hardware] = cal
+    fitted = model.provenance.setdefault("accuracy_domain", {})
+    fitted[args.hardware] = {
+        "pairs": [f"{r} + {s_}" for r, s_ in zip(real_paths, sim_paths, strict=True)],
+        "base": str(args.base) if args.base else None,
+        "concurrency": "served, sum(latency)/wall of the REAL run (D22)",
+        "metrics_recorded": args.metric,
+        "shape": shape or None,
+        "arrival_process": args.arrival_process,
+        "error_convention": (
+            "(sim - real) / real * 100 over write_summary's stat rows; negative = "
+            "the simulator is optimistic"
+        ),
+    }
+
+    save_calibration(model, out)
+    lo, hi = points[0].conc, points[-1].conc
+    print(f"\nwrote {out}")
+    print(f"  {args.hardware}: {len(points)} point(s), domain [{lo:.4g}, {hi:.4g}], "
+          f"outside_domain={args.outside_domain}"
+          + (f", shape {shape}" if shape else ", unscoped"))
+    if len(points) == 1:
+        print("  NOTE: one point is a domain of zero width - every other concurrency "
+              "is unmeasured under `refuse`. Add points before relying on this.")
+    return 0
 
 
 def cmd_validate_plan(args: argparse.Namespace) -> int:
@@ -653,11 +1016,24 @@ def build_parser() -> argparse.ArgumentParser:
                            "only speeds the search up - the result is byte-identical. Use "
                            "--workers 1 to force sequential.")
     plan.add_argument("--quiet", action="store_true")
-    plan.add_argument("--accuracy-domain", action="store_true",
+    plan.add_argument("--accuracy-domain", nargs="*", metavar="CALIBRATION_YAML",
+                      default=None,
                       help="size each candidate's SLO margin from its own operating "
                            "point, using the measured accuracy domains in "
-                           "profiles/calibration/. Opt-in: the default path applies "
+                           "profiles/calibration/ (or in exactly the files given). A "
+                           "candidate whose operating point a domain under `refuse` "
+                           "does not cover, or whose hardware has no calibration, is "
+                           "rejected as outside_calibration_domain - unmeasured, not "
+                           "infeasible (uncertainty work order §2.4). Also emits the "
+                           "uncertain-input registry. Opt-in: the default path applies "
                            "no automatic margin and its output is unchanged.")
+    plan.add_argument("--calibration-bucket", default=None, metavar="CANONICAL_KEY",
+                      help="Override the workload bucket the scalar calibration is "
+                           "looked up under (and the token-mix shape a scoped domain "
+                           "must match). Must be a canonical key (in_*-out_*-rps_*); a "
+                           "human label is never accepted. Recorded in provenance and "
+                           "warned about in the output, because it asserts that a "
+                           "different workload's error applies here.")
     plan.add_argument("--envelope-prefilter", action="store_true",
                       help="reject, before simulating, candidates whose predicted "
                            "operating point falls outside the hardware's measured "
@@ -673,6 +1049,58 @@ def build_parser() -> argparse.ArgumentParser:
                            "recorded in provenance.")
     plan.add_argument("--ttft-margin-percent", type=float, default=0.0)
     plan.set_defaults(func=cmd_plan)
+
+    fit_domain = sub.add_parser(
+        "fit-accuracy-domain",
+        help="Fit a hardware's error-vs-served-concurrency accuracy domain from paired "
+             "real/sim runs.",
+    )
+    fit_domain.add_argument("--real", nargs="+", required=True,
+                            help="bench JSON(s); paired with --sim by position")
+    fit_domain.add_argument("--sim", nargs="+", required=True,
+                            help="simulator per-request CSV(s), same order as --real")
+    fit_domain.add_argument("--hardware", required=True,
+                            help="calibration hardware label, e.g. RNGD-CARD")
+    fit_domain.add_argument(
+        "--service", default=None,
+        help="Service spec whose token-mix shape (in_*-out_*) scopes the domain; "
+             "candidates for a different shape are refused (§2.4.1).")
+    fit_domain.add_argument(
+        "--shape", default=None, metavar="IN_OUT",
+        help="The shape directly, instead of --service. Omit both for a domain that "
+             "applies to any workload on this hardware.")
+    fit_domain.add_argument(
+        "--arrival-process", choices=["open_loop", "closed_loop", "unknown"],
+        default="unknown",
+        help="How load was offered when the REAL side was measured. `closed_loop` (a "
+             "fixed number of clients in flight) means there is no arrival rate and, "
+             "per D19, its TTFT does not transfer to an open-loop deployment.")
+    fit_domain.add_argument(
+        "--metric", choices=["both", "tpot"], default="both",
+        help="Record TTFT too, or TPOT only. Use `tpot` when the TTFT comparison is not "
+             "like-for-like - e.g. a burst sim against a closed-loop bench, where queued "
+             "requests inflate sim TTFT by orders of magnitude while TPOT stays "
+             "comparable. TPOT is always recorded: a point without it is not a point.")
+    fit_domain.add_argument(
+        "--outside-domain", choices=["refuse", "widen_error_bars"], default="refuse",
+        help="What a margin policy does past the measured range. `refuse` (default, D33) "
+             "leaves the candidate unmeasured; `widen_error_bars` extrapolates and grows "
+             "the margin with distance.")
+    fit_domain.add_argument(
+        "--fitted-at-concurrency", type=float, default=None,
+        help="The served concurrency the hardware's profile was validated at. Defaults "
+             "to the lowest measured point, and says so.")
+    fit_domain.add_argument("--source", default="measured",
+                            help="provenance label for the domain (default: measured)")
+    fit_domain.add_argument("--note", default="", help="free-form note stored on the domain")
+    fit_domain.add_argument("--base", default=None,
+                            help="calibration YAML to extend; never modified")
+    fit_domain.add_argument("--replace-domain", action="store_true",
+                            help="allow replacing a domain the base already carries")
+    fit_domain.add_argument("--out", required=True, help="new calibration YAML to write")
+    fit_domain.add_argument("--overwrite", action="store_true",
+                            help="allow --out to replace an existing file")
+    fit_domain.set_defaults(func=cmd_fit_accuracy_domain)
 
     validate = sub.add_parser("validate-plan",
                               help="Re-simulate a saved plan against a specific dataset.")

@@ -577,6 +577,14 @@ class LLMServingSimPredictor(Predictor):
         attainment = float(meets.mean())
         goodput_rps = float(meets.sum()) / duration_s if duration_s > 0 else 0.0
 
+        # The operating point the accuracy domain is indexed by (§2.4). Little's
+        # law read off the trace: total time-in-system over the observation
+        # window. Deliberately not the requested concurrency - D22's retracted
+        # top point is what reading that number instead costs.
+        served_concurrency = None
+        if COL_LATENCY in df.columns and duration_s > 0:
+            served_concurrency = float(df[COL_LATENCY].sum()) / NS_PER_S / duration_s
+
         power = parse_power(stdout)
         warnings.extend(power.warnings)
         energy = avg_w = peak_w = tok_per_j = None
@@ -609,6 +617,7 @@ class LLMServingSimPredictor(Predictor):
                 peak_power_w=peak_w,
                 tokens_per_joule=tok_per_j,
                 sim_wall_seconds=round(wall, 2),
+                served_concurrency=served_concurrency,
             ),
             warnings,
         )

@@ -150,12 +150,17 @@ class RejectionStage(str, enum.Enum):
     #: this in - the "pruning must be a relaxation" rule is for the sound stages
     #: 4-5 only. Only appears when the caller opts in via top_k.
     SURROGATE_PRUNED = "surrogate_pruned"
-    #: The candidate is representable and was never simulated, because a value it
-    #: needs sits outside a measured calibration domain (D28/D31, A6). This is an
-    #: EPISTEMIC refusal, not a failure: "we do not know" rather than "it does not
-    #: work". It gets its own bucket for the same reason SIM_ERROR does -- folding
-    #: it into a feasibility stage would report an unmeasured configuration as an
-    #: infeasible one. STEP 4's envelope rejection joins this category.
+    #: The candidate is representable but a value it needs sits outside a
+    #: measured calibration domain (D28/D31, A6): either it was never simulated
+    #: because the slab3d latency table does not cover it, or it WAS simulated and
+    #: its operating point lies outside the hardware's accuracy domain under
+    #: `refuse` -- or the hardware has no calibration at all -- so no margin
+    #: exists and no verdict is possible (uncertainty work order A3, D33). This is
+    #: an EPISTEMIC refusal, not a failure: "we do not know" rather than "it does
+    #: not work". It gets its own bucket for the same reason SIM_ERROR does --
+    #: folding it into a feasibility stage would report an unmeasured
+    #: configuration as an infeasible one. STEP 4's envelope rejection joins this
+    #: category.
     OUTSIDE_CALIBRATION_DOMAIN = "outside_calibration_domain"
     #: The candidate's PREDICTED operating point falls outside the hardware's
     #: measured performance envelope, and the envelope's policy is `refuse`
@@ -211,6 +216,15 @@ class PredictedMetrics(_Strict):
     peak_power_w: float | None = None
     tokens_per_joule: float | None = None
     sim_wall_seconds: float | None = None
+    #: Mean in-flight requests over the whole run, `sum(latency) / wall` - the
+    #: run-level operating point (uncertainty work order §2.4). The per-hardware
+    #: operating points a margin is read at live on `SimResult.operating_point`;
+    #: this is the single number experiments report. Filled by the real
+    #: predictor from the per-request CSV; None for predictors that have no
+    #: per-request records. `_write_output` drops the key unless the caller
+    #: opted into the accuracy-domain machinery, so default plans are unchanged
+    #: (rule A4).
+    served_concurrency: float | None = None
 
     @property
     def has_energy(self) -> bool:
@@ -245,6 +259,11 @@ class DeploymentPlan(_Strict):
     #: "manual" | "accuracy_domain" | "" -- which of the two produced the margin
     #: actually applied. Both are recorded in provenance; this says which bound.
     margin_source: str = ""
+    #: How those two margins were arrived at - which accuracy domain, and
+    #: between which measured points (uncertainty work order A3). None (not "")
+    #: so `_write_output` can drop the key entirely and leave default plans
+    #: byte-identical (rule A4).
+    margin_basis: str | None = None
 
     @property
     def active_accelerators(self) -> int:

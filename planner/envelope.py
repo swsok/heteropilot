@@ -12,6 +12,7 @@ full key are interchangeable; anything else is a different experiment.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -44,6 +45,56 @@ def workload_bucket(spec: ServiceSpec) -> str:
             f"rps_{_bucket(spec.traffic.arrival_rate_rps, RATE_BUCKETS)}",
         )
     )
+
+
+#: A canonical bucket key, e.g. "in_lt1024-out_ge512-rps_lt20". Built only by
+#: `workload_bucket`; anything else is a human label and must not be used as a
+#: lookup key (uncertainty work order §2.4.1).
+_CANONICAL_BUCKET = re.compile(
+    r"^in_(lt\d+|ge\d+)-out_(lt\d+|ge\d+)-rps_(lt\d+|ge\d+)$"
+)
+
+
+#: The (input, output) half of a canonical key: "in_lt1024-out_ge512".
+_CANONICAL_SHAPE = re.compile(r"^in_(lt\d+|ge\d+)-out_(lt\d+|ge\d+)$")
+
+
+def workload_shape(spec: ServiceSpec) -> str:
+    """The token-mix half of a canonical bucket, without the arrival rate.
+
+    An accuracy domain is indexed by served concurrency, which already carries
+    per-device load; the rate component of a full bucket key is a SERVICE-level
+    quantity that gets divided across replicas, so it is the wrong axis for a
+    per-hardware error (uncertainty work order §2.4.1, amended). What must still
+    match is the token mix, because that sets the compute/memory balance.
+    """
+    return "-".join(
+        (
+            f"in_{_bucket(spec.traffic.input_tokens.p50, INPUT_BUCKETS)}",
+            f"out_{_bucket(spec.traffic.output_tokens.p50, OUTPUT_BUCKETS)}",
+        )
+    )
+
+
+def shape_of_bucket(canonical: str) -> str:
+    """The shape prefix of a full canonical key, or "" if it is not one."""
+    if not is_canonical_bucket(canonical):
+        return ""
+    return "-".join(canonical.split("-")[:2])
+
+
+def is_canonical_shape(value: str) -> bool:
+    return bool(_CANONICAL_SHAPE.match(value))
+
+
+def is_canonical_bucket(value: str) -> bool:
+    """Does this string have the shape `workload_bucket` produces?
+
+    The uncertainty work order forbids fuzzy bucket matching, so every place
+    that accepts a bucket from a human checks the shape here first rather than
+    discovering the mismatch as a silent lookup miss.
+    """
+    return bool(_CANONICAL_BUCKET.match(value))
 
 
 def network_class(link_bw_gbps: float) -> str:

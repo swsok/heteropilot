@@ -28,6 +28,8 @@ Authoritative documents, all of which outrank this file:
 | `WORK_ORDER_tiered_profiles.md` | Tier 0/1 synthetic profiles: datasheet schema, roofline generator, attention cost model, calibration | Executed; closed D4 |
 | `docs/tier0_calibration.md` | E1–E4 — what a generated profile can and cannot be trusted to rank | Read before quoting any `profile_tier: analytical` plan |
 | `WORK_ORDER_consolidation.md` | The 2026-09-03/04 sprint that merged the three tracks and split ScenarioLab out | Subordinate to the three above it |
+| `WORK_ORDER_rps_aware.md` | RPS-aware planning: measured envelopes, accuracy domains, operating-point margins, `plan --rps`, E5/E6 | Executed (STEP 0–6, PRs #60–#77); supports patent 1 |
+| `WORK_ORDER_uncertainty_planner.md` | Patent 2: uncertain-input registry, per-candidate margin policies, closed-form perturbation, sensitivity, measurement plan (Korean) | Stage A/B; read `docs/deviations.md` D33 first — its accuracy domain was reconciled onto the rps one |
 | `docs/nodes/{a40,a5000,npu}.md` | Per-node inventory, topology and traps | Read the one `scripts/whichnode.sh` names — never all three |
 | `docs/CLAIMS.md` | What can be claimed today, with each claim's label and artifact — Established / Not established / Retracted | Read before writing any result into a paper or deck |
 | `docs/HANDOVER.md` | Current state, next work by node, traps that cost a session | The live handover; the `HANDOVER_*.md` files are historical |
@@ -355,18 +357,32 @@ Do not begin topology graphs, P/D placement, or replanning before the Phase 0–
 If upstream's actual filenames, config schema, or output columns contradict the work order,
 **the real code wins**. Record the difference in `docs/deviations.md` and continue.
 
-Twenty-four divergences are recorded there. D2 (power is stdout-only) and D3 (no topology graph in
+Thirty-three divergences are recorded there. D2 (power is stdout-only) and D3 (no topology graph in
 the cluster config) are decided; **D4 is now closed** by the Tier 0 synthetic-bundle path (D21).
 **D10 is the one to know before touching Phase 2**: the simulator's memory model applies no
 utilization or activation reserve, so it over-estimates usable KV by +71% on a 24 GB card.
 `planner/util/memory.py` derates explicitly. D11 quantifies what profile-grid density costs
 (~2.2pp of end-to-end accuracy).
 
-**Three open ones gate current work.** D12 (prefix-cache memory grows until the run dies) still
+**Two open ones gate current work.** D12 (prefix-cache memory grows until the run dies) still
 blocks Phase 2 — read it before retrying, both earlier fixes were wrong and were reverted. D20
-blocks ATOM. **D23 blocks the tight-TTFT regime**: every `pd_*`/`mix_*` candidate livelocks, which
-is why no timeout settles that half of the three-regime table. And note D22 — the "RNGD wins on
-energy by 1.67×" headline is **retracted**; do not quote it.
+blocks ATOM. **D30 forbids `--top-k` as a cost lever** on P/D or heterogeneous corpora: the
+roofline surrogate's proxy is invariant to TP and DP. And note D22 — the "RNGD wins on energy by
+1.67×" headline is **retracted**; do not quote it.
+
+**D23 is resolved (2026-09-07) and its old description here was wrong.** It read "every
+`pd_*`/`mix_*` candidate livelocks"; the candidates never livelocked, and the failure was never a
+property of the candidates. The symptom was **D26** (the Chakra converter invoked as bare `python`)
+and the crashes were **D25** (the ASTRA-Sim `tmp__mem` race). The discriminator is **instance
+count**, not candidate kind. Both are fixed (D27 subsumes D26), D22's verdict holds on the fixed
+harness with **0 timeouts**, and `pd_*`/`mix_*` candidates simulate normally.
+
+**D33 is the one to know before touching accuracy domains or margins.** Two implementations were
+built in parallel; `calibration.AccuracyDomain` is the one that remains, `refuse` is the default
+for a new domain while the three committed domains opt into `widen_error_bars` explicitly, and the
+per-candidate `MarginPolicy` in `planner/optimizer/margin.py` is the single consumer. A candidate
+whose operating point no domain covers is `outside_calibration_domain` — unmeasured, not
+infeasible.
 
 Derive schemas from real artifacts, with one trap: **`outputs/example_*_run.csv` are stale** and
 must not be used as golden references — their `output` column counts `input + output` tokens while

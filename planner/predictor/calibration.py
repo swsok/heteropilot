@@ -84,11 +84,37 @@ class ErrorStats(_Strict):
 
 
 class BucketError(_Strict):
-    """Per-metric error stats for one workload bucket."""
+    """Per-metric error stats for one workload bucket.
 
-    workload_bucket: str
+    The SCALAR calibration: one error per (hardware, workload bucket). Error as
+    a function of the operating point lives in `AccuracyDomain`, one per
+    hardware, and this entry is what an accuracy-domain margin policy falls
+    back to for hardware that carries a fitted bucket but no domain.
+    """
+
+    #: THE CANONICAL KEY ONLY - what `envelope.workload_bucket(spec)` produces
+    #: (uncertainty work order §2.4.1). Empty means the workload this was fitted
+    #: on cannot be expressed as a canonical bucket, which makes it invisible to
+    #: accuracy-domain lookup on purpose: a calibration nobody can place is a
+    #: calibration nobody should silently apply.
+    workload_bucket: str = ""
+    #: The human name for the run, free-form. Never a lookup key.
+    label: str = ""
     ttft: ErrorStats = Field(default_factory=ErrorStats)
     tpot: ErrorStats = Field(default_factory=ErrorStats)
+
+    @model_validator(mode="after")
+    def _bucket_is_canonical_or_empty(self) -> BucketError:
+        from planner.envelope import is_canonical_bucket
+
+        if self.workload_bucket and not is_canonical_bucket(self.workload_bucket):
+            raise ValueError(
+                f"workload_bucket {self.workload_bucket!r} is not a canonical bucket "
+                f"key (§2.4.1). Canonical keys come from "
+                f"envelope.workload_bucket(spec) and look like "
+                f"'in_lt1024-out_ge512-rps_lt20'; put a human name in `label`"
+            )
+        return self
 
 
 class AccuracyPoint(_Strict):
@@ -115,18 +141,47 @@ class AccuracyDomain(_Strict):
     nothing in the pipeline could see it because the 18 % was a fact about the
     simulator that the simulator did not carry.
 
-    Outside the measured points the policy is `widen_error_bars`: take the nearest
-    measured point's error and add |slope| x distance, uncapped. That is
-    deliberately pessimistic and deliberately unbounded -- an extrapolated margin
-    should get worse the further it reaches, so that a candidate far outside the
-    domain is rejected by its own uncertainty rather than by a guess.
+    Outside the measured points there are two policies. `refuse`, the default
+    (deviations D33; uncertainty work order rule A2 and rps design §5 agree on
+    it): an operating point nobody measured has no error and therefore no
+    margin, and `errors_at` returns None so the caller records the candidate as
+    unmeasured rather than judging it. `widen_error_bars`, which the committed
+    E5/E6 domains opt into explicitly: take the nearest measured point's error
+    and add |slope| x distance, uncapped -- deliberately pessimistic and
+    deliberately unbounded, so a candidate far outside the domain is rejected by
+    its own uncertainty rather than by a guess.
+
+    A domain may be scoped to a token-mix `workload_shape` (the in/out half of a
+    canonical bucket, e.g. `in_lt1024-out_ge512`). The error the simulator makes
+    depends on the compute/memory balance of the requests, so a margin policy
+    refuses to apply a scoped domain to a service with a different shape.
+    Unscoped (the committed domains) applies to any workload on that hardware.
     """
 
     fitted_at_concurrency: float = Field(gt=0)
     points: list[AccuracyPoint] = Field(min_length=1)
-    outside_domain: Literal["widen_error_bars", "refuse"] = "widen_error_bars"
+    outside_domain: Literal["widen_error_bars", "refuse"] = "refuse"
     source: str = "measured"
     note: str = ""
+    #: Token-mix half of a canonical bucket this domain was measured on, or ""
+    #: for a domain that applies to any workload on the hardware.
+    workload_shape: str = ""
+    #: How load was offered when the REAL side was measured. `closed_loop` (a
+    #: fixed number of clients in flight) has no arrival rate and, per D19, its
+    #: TTFT error does not transfer to an open-loop deployment; a margin policy
+    #: says so in its basis.
+    arrival_process: Literal["open_loop", "closed_loop", "unknown"] = "unknown"
+
+    @model_validator(mode="after")
+    def _shape_is_canonical(self) -> AccuracyDomain:
+        from planner.envelope import is_canonical_shape
+
+        if self.workload_shape and not is_canonical_shape(self.workload_shape):
+            raise ValueError(
+                f"accuracy_domain workload_shape {self.workload_shape!r} is not a "
+                f"canonical shape; it must look like 'in_lt1024-out_ge512'"
+            )
+        return self
 
     @model_validator(mode="after")
     def _sorted(self) -> AccuracyDomain:
@@ -199,6 +254,55 @@ class AccuracyDomain(_Strict):
     def ttft_margin_pct(self, conc: float) -> float:
         return self.margin_from_error(self.ttft_error_at(conc))
 
+    # -- what a margin policy asks -------------------------------------------
+
+    def has_metric(self, metric: str) -> bool:
+        """Was this metric measured at ANY point of the domain?"""
+        field = "tpot_err_pct" if metric == "tpot" else "ttft_err_pct"
+        return any(getattr(p, field) is not None for p in self.points)
+
+    def errors_at(self, conc: float) -> tuple[float | None, float | None] | None:
+        """`(ttft_err_pct, tpot_err_pct)` at this operating point, or None.
+
+        None means REFUSED: `conc` lies outside `[conc_min, conc_max]` and the
+        policy is `refuse`, so there is no number here at all -- the caller
+        records the candidate as unmeasured instead of margining it (rule A2:
+        no data is no data). Under `widen_error_bars` the widened values come
+        back and `in_domain` tells the caller they are extrapolated. A metric
+        with no point anywhere in the domain is None INSIDE the tuple, which is
+        a different fact: measured elsewhere, not here.
+        """
+        if not self.in_domain(conc) and self.outside_domain == "refuse":
+            return None
+        return (self._err_at(conc, "ttft_err_pct"), self._err_at(conc, "tpot_err_pct"))
+
+    def basis_at(self, conc: float) -> str:
+        """How `errors_at` reached its answer, for a plan's `margin_basis`."""
+        lo, hi = self.conc_min, self.conc_max
+        if not self.in_domain(conc):
+            if self.outside_domain == "refuse":
+                return (f"L={conc:.4g} outside the measured domain [{lo:.4g}, {hi:.4g}]; "
+                        f"policy refuse, so no margin exists here")
+            return (f"L={conc:.4g} outside the measured domain [{lo:.4g}, {hi:.4g}]; "
+                    f"policy widen_error_bars, so the margin is EXTRAPOLATED from the "
+                    f"nearest point's slope")
+        parts = []
+        for metric, field in (("ttft", "ttft_err_pct"), ("tpot", "tpot_err_pct")):
+            concs = [p.conc for p in self.points if getattr(p, field) is not None]
+            if not concs:
+                parts.append(f"{metric}: NO point - unmeasured in this domain")
+            elif len(concs) == 1:
+                parts.append(f"{metric}: single point at L={concs[0]:.4g}")
+            else:
+                left = max((c for c in concs if c <= conc), default=concs[0])
+                right = min((c for c in concs if c >= conc), default=concs[-1])
+                if left == right:
+                    parts.append(f"{metric}: exactly at L={left:.4g}")
+                else:
+                    parts.append(f"{metric}: interpolated between L={left:.4g} and "
+                                 f"L={right:.4g}")
+        return f"L={conc:.4g} in domain [{lo:.4g}, {hi:.4g}]; " + "; ".join(parts)
+
 
 class HardwareCalibration(_Strict):
     """Linear fits and error distributions for one hardware kind."""
@@ -211,6 +315,35 @@ class HardwareCalibration(_Strict):
     #: Where this predictor's error has been measured (design §5). Optional: a
     #: hardware without one gets margin 0 and a caveat, never a guessed margin.
     accuracy_domain: AccuracyDomain | None = None
+
+    def bucket_for(self, canonical: str) -> BucketError | None:
+        """The entry fitted on this exact canonical bucket, or None.
+
+        Exact match only. §2.4.1 forbids fuzzy matching, nearest-bucket and
+        "if there is only one entry, use it": each of those would apply an
+        error measured on one workload to a different one.
+        """
+        if not canonical:
+            return None
+        for entry in self.errors.values():
+            if entry.workload_bucket == canonical:
+                return entry
+        return None
+
+    def available_buckets(self) -> list[str]:
+        """What this hardware IS fitted for, for a "no domain here" message.
+
+        Entries with no canonical key are shown by label and marked, because
+        "there is a calibration but it cannot be placed" is different from
+        "there is nothing here" and the operator needs to tell them apart.
+        """
+        out: list[str] = []
+        for key, entry in sorted(self.errors.items()):
+            if entry.workload_bucket:
+                out.append(entry.workload_bucket)
+            else:
+                out.append(f"{entry.label or key} (no canonical bucket)")
+        return out
 
 
 class CalibrationModel(_Strict):
@@ -361,19 +494,34 @@ def _fit_pairs(pairs: list[tuple[float, float]]) -> tuple[LinearFit, ErrorStats]
     return fit_linear(sim, real), compute_error_stats(sim, real)
 
 
+def split_bucket(name: str) -> tuple[str, str]:
+    """Classify a caller-supplied bucket string into (canonical, label).
+
+    §2.4.1: only a canonical key may ever be a lookup key. A free string is a
+    human label and is stored as one, which makes it INVISIBLE to
+    accuracy-domain lookup - deliberately, so a historical name can never be
+    mistaken for a workload identity. Deterministic, so an old call site keeps
+    working and simply produces an unplaceable entry.
+    """
+    from planner.envelope import is_canonical_bucket
+
+    return (name, "") if is_canonical_bucket(name) else ("", name)
+
+
 def fit_hardware(
     pairs: SummaryPairs, *, hardware: str, workload_bucket: str
 ) -> HardwareCalibration:
     """Build a `HardwareCalibration` from parsed summary pairs."""
     ttft_fit, ttft_err = _fit_pairs(pairs.ttft)
     tpot_fit, tpot_err = _fit_pairs(pairs.tpot)
+    canonical, label = split_bucket(workload_bucket)
     return HardwareCalibration(
         hardware=hardware,
         ttft=ttft_fit,
         tpot=tpot_fit,
         errors={
             workload_bucket: BucketError(
-                workload_bucket=workload_bucket, ttft=ttft_err, tpot=tpot_err
+                workload_bucket=canonical, label=label, ttft=ttft_err, tpot=tpot_err
             )
         },
     )
@@ -412,8 +560,9 @@ def fit_from_summaries(
                 continue
             _, ttft_err = _fit_pairs(bpairs.ttft)
             _, tpot_err = _fit_pairs(bpairs.tpot)
+            canonical, label = split_bucket(bucket)
             errors[bucket] = BucketError(
-                workload_bucket=bucket, ttft=ttft_err, tpot=tpot_err
+                workload_bucket=canonical, label=label, ttft=ttft_err, tpot=tpot_err
             )
         model.hardware[hardware] = HardwareCalibration(
             hardware=hardware, ttft=ttft_fit, tpot=tpot_fit, errors=errors
@@ -478,7 +627,36 @@ def load_calibration(path: str | Path) -> CalibrationModel:
     return CalibrationModel.model_validate(raw)
 
 
-def load_accuracy_domains(root: Path | str = ".") -> dict[str, AccuracyDomain]:
+def _calibration_files(root: Path | str, paths: Sequence[Path | str] | None) -> list[Path]:
+    if paths is not None:
+        return [Path(p) for p in paths]
+    return sorted((Path(root) / "profiles/calibration").glob("*.yaml"))
+
+
+def load_calibrations(
+    root: Path | str = ".", paths: Sequence[Path | str] | None = None
+) -> CalibrationModel:
+    """Every hardware calibration under `<root>/profiles/calibration/`, merged.
+
+    With `paths` given, exactly those files and nothing else. A later file wins
+    per hardware label, so a domain file can be layered over the scalar fit it
+    extends. A file that does not parse as a calibration (`slab3d_latency.yaml`
+    is a topology lookup table) is skipped, narrowly: a validation failure only,
+    never an unreadable disk.
+    """
+    merged = CalibrationModel.identity()
+    for path in _calibration_files(root, paths):
+        try:
+            model = load_calibration(path)
+        except (ValidationError, KeyError, TypeError):
+            continue                      # not a hardware calibration file
+        merged.hardware.update(model.hardware)
+    return merged
+
+
+def load_accuracy_domains(
+    root: Path | str = ".", paths: Sequence[Path | str] | None = None
+) -> dict[str, AccuracyDomain]:
     """Every measured accuracy domain under `<root>/profiles/calibration/`.
 
     That directory holds two kinds of file: hardware calibrations (this schema)
@@ -487,14 +665,26 @@ def load_accuracy_domains(root: Path | str = ".") -> dict[str, AccuracyDomain]:
     that does not parse as a calibration is skipped rather than fatal -- a
     sibling artifact must not be able to stop a planning run -- but the skip is
     narrow: only a validation failure, never an unreadable disk.
+
+    Two files carrying a domain for the SAME hardware is an error, not a
+    last-wins: a margin policy must never silently pick between two
+    measurements of one device (uncertainty work order §2.4.1).
     """
     out: dict[str, AccuracyDomain] = {}
-    for path in sorted((Path(root) / "profiles/calibration").glob("*.yaml")):
+    seen: dict[str, Path] = {}
+    for path in _calibration_files(root, paths):
         try:
             model = load_calibration(path)
         except (ValidationError, KeyError, TypeError):
             continue                      # not a hardware calibration file
         for hardware, cal in model.hardware.items():
-            if cal.accuracy_domain is not None:
-                out[hardware] = cal.accuracy_domain
+            if cal.accuracy_domain is None:
+                continue
+            if hardware in seen:
+                raise ValueError(
+                    f"two accuracy domains for {hardware}: {seen[hardware]} and {path}; "
+                    f"refusing to choose between them"
+                )
+            seen[hardware] = path
+            out[hardware] = cal.accuracy_domain
     return out

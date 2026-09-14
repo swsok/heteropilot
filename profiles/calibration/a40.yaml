@@ -12,8 +12,9 @@ hardware:
       sample_count: 5
       source: measured
     errors:
-      sharegpt-llama31-8b-300:
-        workload_bucket: sharegpt-llama31-8b-300
+      in_lt1024-out_ge512-rps_lt20:
+        workload_bucket: in_lt1024-out_ge512-rps_lt20
+        label: sharegpt-llama31-8b-300
         ttft:
           mean_error: 0.01837861354451543
           p95_abs_error: 0.019666962835182284
@@ -28,3 +29,14 @@ provenance:
   fitted_from:
     A40:
     - outputs/phase0_bench/A40/vllm/validation-nominal/summary.txt
+  bucket_migration:
+    canonical_key: in_lt1024-out_ge512-rps_lt20
+    derived_from: outputs/phase0_bench/A40/vllm/meta.json -> dataset_path workloads/sharegpt-llama-3.1-8b-300-sps10.jsonl
+      (300 requests)
+    input_tokens_p50: 731.5
+    output_tokens_p50: 632.0
+    arrival_rate_rps: 10
+    arrival_rate_evidence: 'open loop: bench/core/runner.py:215 schedules each request
+      at t0 + arrival_time_ns, and the trace''s 300 arrivals span 29.18 s (10.3/s),
+      consistent with the dataset''s own sps10 name'
+    boundaries: planner/envelope.py INPUT_BUCKETS/OUTPUT_BUCKETS/RATE_BUCKETS
