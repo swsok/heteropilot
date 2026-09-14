@@ -1,0 +1,189 @@
+{
+  "top": 1,
+  "grid": 5,
+  "degraded": [
+    "profile:cuda-a40-node_a40a",
+    "profile:cuda-a40-node_a40b",
+    "profile:furiosa-rngd-card-node_rngd0",
+    "profile:furiosa-rngd-card-node_rngd1",
+    "sim_error:domain"
+  ],
+  "slo_penalty": 198990.0,
+  "incumbent": "cuda-a40-node_a40a-tp4-dp1-s128-t8192",
+  "closed_form_seconds": 0.28572205314412713,
+  "resimulate_seconds": 836.8783751209266,
+  "speedup": 2928.9946852607104,
+  "spearman_rank": 0.9999999999999998,
+  "spearman_delta_regret_on_checked": null,
+  "order_closed": [
+    "sim_error:domain",
+    "profile:cuda-a40-node_a40a",
+    "profile:cuda-a40-node_a40b",
+    "profile:furiosa-rngd-card-node_rngd0",
+    "profile:furiosa-rngd-card-node_rngd1"
+  ],
+  "order_refined": [
+    "sim_error:domain",
+    "profile:cuda-a40-node_a40a",
+    "profile:cuda-a40-node_a40b",
+    "profile:furiosa-rngd-card-node_rngd0",
+    "profile:furiosa-rngd-card-node_rngd1"
+  ],
+  "refinements": [
+    {
+      "input_id": "sim_error:domain",
+      "kind": "sim_error",
+      "closed_form": 5686.2907175881555,
+      "resimulated": 5686.2907175881555,
+      "seconds": 0.0,
+      "simulated": 0,
+      "skipped": "sim_error:domain: a SIM_ERROR moves the margin, not the prediction (\u00a72.7), so no simulator input changes and its closed form is exact by construction - there is nothing a resimulation could disagree with"
+    },
+    {
+      "input_id": "profile:cuda-a40-node_a40a",
+      "kind": "profile",
+      "closed_form": 14298.523288161283,
+      "resimulated": 20583.311787348437,
+      "seconds": 836.501048848033,
+      "simulated": 432,
+      "skipped": ""
+    }
+  ],
+  "identity_controls": [
+    {
+      "input_id": "profile:cuda-a40-node_a40a",
+      "value": 1.0,
+      "candidates": 324,
+      "worst_relative_deviation_from_cache": 0.07869022182503534,
+      "worst_at": "mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s128-t2048.p99_ttft_ms"
+    }
+  ],
+  "closed": [
+    {
+      "input_id": "sim_error:domain",
+      "kind": "sim_error",
+      "flip": true,
+      "delta_regret": 5686.2907175881555,
+      "approximation": false,
+      "resimulated": false,
+      "cost_hours": 0.041,
+      "note": "4 grid point(s) over [0, 0.472528]"
+    },
+    {
+      "input_id": "profile:cuda-a40-node_a40a",
+      "kind": "profile",
+      "flip": true,
+      "delta_regret": 14298.523288153923,
+      "approximation": true,
+      "resimulated": false,
+      "cost_hours": 2.1,
+      "note": "4 grid point(s) over [1, 1.38876] (approximate rule)"
+    },
+    {
+      "input_id": "profile:cuda-a40-node_a40b",
+      "kind": "profile",
+      "flip": false,
+      "delta_regret": 0.0,
+      "approximation": true,
+      "resimulated": false,
+      "cost_hours": 2.1,
+      "note": "4 grid point(s) over [1, 1.38876] (approximate rule)"
+    },
+    {
+      "input_id": "profile:furiosa-rngd-card-node_rngd0",
+      "kind": "profile",
+      "flip": false,
+      "delta_regret": 0.0,
+      "approximation": true,
+      "resimulated": false,
+      "cost_hours": 2.1,
+      "note": "4 grid point(s) over [1, 1.38876] (approximate rule)"
+    },
+    {
+      "input_id": "profile:furiosa-rngd-card-node_rngd1",
+      "kind": "profile",
+      "flip": false,
+      "delta_regret": 0.0,
+      "approximation": true,
+      "resimulated": false,
+      "cost_hours": 2.1,
+      "note": "4 grid point(s) over [1, 1.38876] (approximate rule)"
+    }
+  ],
+  "refined": [
+    {
+      "input_id": "sim_error:domain",
+      "kind": "sim_error",
+      "flip": true,
+      "delta_regret": 5686.2907175881555,
+      "approximation": false,
+      "resimulated": false,
+      "cost_hours": 0.041,
+      "note": "4 grid point(s) over [0, 0.472528]"
+    },
+    {
+      "input_id": "profile:cuda-a40-node_a40a",
+      "kind": "profile",
+      "flip": true,
+      "delta_regret": 20583.311787348437,
+      "approximation": false,
+      "resimulated": true,
+      "cost_hours": 2.1,
+      "note": "4 grid point(s) over [1, 1.38876] (approximate rule) | RESIMULATED at both endpoints: closed form said 1.43e+04, simulation says 2.058e+04 over 432 candidate run(s) in 836.5 s"
+    },
+    {
+      "input_id": "profile:cuda-a40-node_a40b",
+      "kind": "profile",
+      "flip": false,
+      "delta_regret": 0.0,
+      "approximation": true,
+      "resimulated": false,
+      "cost_hours": 2.1,
+      "note": "4 grid point(s) over [1, 1.38876] (approximate rule)"
+    },
+    {
+      "input_id": "profile:furiosa-rngd-card-node_rngd0",
+      "kind": "profile",
+      "flip": false,
+      "delta_regret": 0.0,
+      "approximation": true,
+      "resimulated": false,
+      "cost_hours": 2.1,
+      "note": "4 grid point(s) over [1, 1.38876] (approximate rule)"
+    },
+    {
+      "input_id": "profile:furiosa-rngd-card-node_rngd1",
+      "kind": "profile",
+      "flip": false,
+      "delta_regret": 0.0,
+      "approximation": true,
+      "resimulated": false,
+      "cost_hours": 2.1,
+      "note": "4 grid point(s) over [1, 1.38876] (approximate rule)"
+    }
+  ],
+  "provenance": {
+    "git_commit": "c253dc406640b770cc2600a2164a38a7159322a4",
+    "git_dirty": true,
+    "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
+    "vllm_version": null,
+    "backend_version": null,
+    "model_revision": null,
+    "hardware_profile_hash": null,
+    "cluster_spec_hash": null,
+    "service_spec_hash": null,
+    "dataset_hash": null,
+    "random_seed": 0,
+    "command": "eb3_closed_form_vs_resim.py --cache-dir outputs/uncertainty/ea1/cache --top 1 --workers 32",
+    "timestamp": "2026-09-14T04:39:18.043923+00:00",
+    "python_version": "3.10.12",
+    "platform": "Linux-6.8.0-40-generic-x86_64-with-glibc2.35",
+    "hostname": "etri-001",
+    "cpu_count": 96,
+    "accelerators": {
+      "cuda": null,
+      "rngd_cards": 3,
+      "atom_devices": 4
+    }
+  }
+}
