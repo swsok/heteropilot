@@ -199,16 +199,37 @@ def _candidates_using(item: UncertainInput, context: PerturbContext) -> set[str]
 def _scale_profile(item, value, metrics, context) -> PerturbResult:
     """A profile that is `(1+delta)` slower makes its candidates that much slower.
 
-    Latencies scale up, rates scale down, energy does not move: the power model
-    is a separate uncertain input (POWER) and double-counting it here would let
-    one measurement appear to settle two.
+    Latencies scale up, rates scale down, and **energy scales with them**.
+
+    That last clause is a correction (deviations D34). §2.7 originally specified
+    energy as unchanged, reasoning that energy belongs to POWER and counting it
+    here would let one measurement settle two. The reasoning was wrong. Energy is
+    watts x seconds, and the two uncertain inputs move different factors of that
+    product: a PROFILE error is an error in per-operator TIME, a POWER error is
+    an error in WATTS. Moving both is composition, not double-counting - apply
+    PROFILE(dp) and POWER(dw) in either order and energy comes out
+    `x (1+dp)(1+dw)` exactly once.
+
+    The simulator agrees, and that is what settled it:
+    `serving/core/power_model.py` accumulates active energy as
+    `(active_power - idle_power) * latency_s`, linear in operator latency. A perf
+    bundle scaled x1.38876 moved measured total energy 162 260 -> 225 190 J,
+    x1.3878; the shortfall is the idle/standby, DRAM and link terms, which do not
+    scale with operator time. Holding energy fixed made every PROFILE item score
+    `delta_regret == 0` under a `minimize_energy` objective unless it happened to
+    cross an SLO boundary, so a measurement plan systematically under-valued
+    profiling - the most expensive measurement in `costs.yaml` at 2.1 h.
+
+    Average and peak WATTS are deliberately left alone: a slower engine draws the
+    same power for longer, and the watts axis is POWER's to move.
 
     APPROXIMATE, and the reason is worth stating. A profile error is an error in
     per-operator time; TTFT and TPOT are not linear in it once a queue forms,
     because a slower engine also holds requests longer. This scales them as if
     they were, which is right to first order and conservative in the direction
     that matters - it never makes a candidate look better than the resimulation
-    would.
+    would. The energy term inherits that same first-order character, plus the
+    idle/standby offset above.
     """
     delta = _relative(value, item.nominal)
     touched = _candidates_using(item, context)
@@ -220,7 +241,7 @@ def _scale_profile(item, value, metrics, context) -> PerturbResult:
     affected: list[str] = []
     for cid in sorted(touched & set(metrics)):
         m = metrics[cid]
-        out[cid] = m.model_copy(update={
+        updates: dict[str, object] = {
             "p50_ttft_ms": m.p50_ttft_ms * scale,
             "p95_ttft_ms": m.p95_ttft_ms * scale,
             "p99_ttft_ms": m.p99_ttft_ms * scale,
@@ -229,13 +250,24 @@ def _scale_profile(item, value, metrics, context) -> PerturbResult:
             "p99_tpot_ms": m.p99_tpot_ms * scale,
             "throughput_tps": m.throughput_tps / scale,
             "slo_goodput_rps": m.slo_goodput_rps / scale,
-        })
+        }
+        if m.total_energy_j is not None:
+            # Same multiplier as the latencies: the work is unchanged and the
+            # watts are unchanged, so the joules follow the seconds. Left alone
+            # when no energy was simulated (deviations D2/D14) rather than
+            # invented, exactly as `_scale_power` does.
+            new_energy = m.total_energy_j * scale
+            updates["total_energy_j"] = new_energy
+            updates["tokens_per_joule"] = (
+                m.completed_tokens / new_energy if new_energy > 0 else None
+            )
+        out[cid] = m.model_copy(update=updates)
         affected.append(cid)
     return PerturbResult(
         metrics=out, approximation=True, affected=affected,
         note=(
-            f"{item.id}: latencies x{scale:.4g}, rates /{scale:.4g} on "
-            f"{len(affected)} candidate(s); energy unchanged (POWER owns it). "
+            f"{item.id}: latencies and energy x{scale:.4g}, rates /{scale:.4g} on "
+            f"{len(affected)} candidate(s); watts unchanged (POWER owns those). "
             f"First-order: latency is not linear in operator time once a queue forms"
         ),
     )

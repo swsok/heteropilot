@@ -119,11 +119,93 @@ def test_a_slower_profile_scales_latency_up_and_rates_down(world) -> None:
     assert m.p95_tpot_ms == pytest.approx(before.p95_tpot_ms * 1.1)
     assert m.throughput_tps == pytest.approx(before.throughput_tps / 1.1)
     assert m.slo_goodput_rps == pytest.approx(before.slo_goodput_rps / 1.1)
-    # Energy is POWER's to move; counting it here would let one measurement
-    # appear to settle two uncertainties.
-    assert m.total_energy_j == before.total_energy_j
-    assert m.tokens_per_joule == before.tokens_per_joule
     assert result.approximation is True
+
+
+def test_a_slower_profile_burns_proportionally_more_energy(world) -> None:
+    """Energy is watts x seconds, and a PROFILE error moves the seconds (D34).
+
+    This asserted the opposite until D34: `_scale_profile` held energy fixed on
+    the grounds that energy belonged to POWER. The simulator says otherwise -
+    `serving/core/power_model.py` accumulates active energy as
+    `(active_power - idle_power) * latency_s` - and holding it fixed made every
+    PROFILE item score `delta_regret == 0` under a `minimize_energy` objective
+    unless it happened to cross an SLO boundary.
+    """
+    spec, cluster, _profiles, islands = world
+    island_id = next(iter(islands))
+    candidates = {"c": _single("c", island_id)}
+    metrics = JudgedMetrics.trusted({"c": _metrics()})
+    context = PerturbContext.build(spec, cluster, islands, candidates)
+
+    result = perturb(
+        _item(UncertainKind.PROFILE, "profile:i0", 1.0, [island_id]), 1.1, metrics, context
+    )
+    m, before = result.metrics["c"], metrics["c"]
+    assert m.total_energy_j == pytest.approx(before.total_energy_j * 1.1)
+    # Recomputed from the new energy, not scaled - so it stays consistent with
+    # `completed_tokens`, which a profile perturbation does not change.
+    assert m.completed_tokens == before.completed_tokens
+    assert m.tokens_per_joule == pytest.approx(m.completed_tokens / m.total_energy_j)
+    assert m.tokens_per_joule == pytest.approx(before.tokens_per_joule / 1.1)
+    # WATTS are POWER's axis and must not move: a slower engine draws the same
+    # power for longer. If these scaled too, PROFILE and POWER would double-count.
+    assert m.average_power_w == before.average_power_w
+    assert m.peak_power_w == before.peak_power_w
+
+
+def test_a_profile_with_no_simulated_energy_is_left_alone(world) -> None:
+    """Deviations D2/D14: absent energy is absent, never invented."""
+    spec, cluster, _profiles, islands = world
+    island_id = next(iter(islands))
+    candidates = {"c": _single("c", island_id)}
+    metrics = JudgedMetrics.trusted({
+        "c": _metrics(total_energy_j=None, tokens_per_joule=None,
+                      average_power_w=None, peak_power_w=None)
+    })
+    context = PerturbContext.build(spec, cluster, islands, candidates)
+
+    result = perturb(
+        _item(UncertainKind.PROFILE, "profile:i0", 1.0, [island_id]), 1.4, metrics, context
+    )
+    m = result.metrics["c"]
+    assert m.total_energy_j is None and m.tokens_per_joule is None
+    # The latency half still applies - only the energy term had nothing to move.
+    assert m.p99_ttft_ms == pytest.approx(metrics["c"].p99_ttft_ms * 1.4)
+
+
+def test_profile_and_power_compose_without_double_counting(world) -> None:
+    """PROFILE moves seconds, POWER moves watts; energy is their product.
+
+    D34's rationale, as an assertion. Applying both in either order must give
+    energy `x (1+dp)(1+dw)` exactly once, latency `x (1+dp)` only, and average
+    watts `x (1+dw)` only. If either rule claimed the other's factor, the two
+    orders would still agree but the magnitude would be wrong - so the test
+    checks the magnitude against the product, not merely order-independence.
+    """
+    spec, cluster, _profiles, islands = world
+    island_id = next(iter(islands))
+    candidates = {"c": _single("c", island_id)}
+    base = JudgedMetrics.trusted({"c": _metrics()})
+    context = PerturbContext.build(spec, cluster, islands, candidates)
+    prof = _item(UncertainKind.PROFILE, "profile:i0", 1.0, [island_id])
+    powr = _item(UncertainKind.POWER, "power:i0", 1.0, [island_id])
+    dp, dw = 1.25, 1.60
+
+    first = JudgedMetrics.trusted(perturb(prof, dp, base, context).metrics)
+    both = perturb(powr, dw, first, context).metrics["c"]
+    other = JudgedMetrics.trusted(perturb(powr, dw, base, context).metrics)
+    reversed_ = perturb(prof, dp, other, context).metrics["c"]
+
+    before = base["c"]
+    assert both.total_energy_j == pytest.approx(before.total_energy_j * dp * dw)
+    assert reversed_.total_energy_j == pytest.approx(both.total_energy_j)
+    # Each factor moves its own axis and only its own.
+    assert both.p99_ttft_ms == pytest.approx(before.p99_ttft_ms * dp)
+    assert both.average_power_w == pytest.approx(before.average_power_w * dw)
+    assert both.tokens_per_joule == pytest.approx(
+        before.completed_tokens / both.total_energy_j
+    )
 
 
 def test_a_profile_only_touches_candidates_on_its_own_islands(world) -> None:

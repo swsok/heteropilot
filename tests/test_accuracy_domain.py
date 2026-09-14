@@ -171,14 +171,34 @@ def test_the_planner_does_not_compute_energy_from_the_power_model():
     reason that is not a change in the hardware or the plan. Asserted on the
     source so the coupling cannot appear by accident.
     """
+    import ast
     from pathlib import Path
 
     root = Path(__file__).resolve().parents[1] / "planner"
     users = []
     for f in root.rglob("*.py"):
         text = f.read_text()
+        lines = text.splitlines()
+        # Blank out docstrings before scanning. A module may CITE
+        # serving/core/power_model.py in prose - deviations D34 does exactly
+        # that, explaining why a profile perturbation scales energy with the
+        # latency multiplier - without reading a card-level curve. A line-prefix
+        # filter cannot tell a citation from a use; the parser can. Other string
+        # literals are deliberately left in, so a `cfg["power_model"]` lookup
+        # would still be caught.
+        for node in ast.walk(ast.parse(text)):
+            if not isinstance(
+                node,
+                ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
+            ):
+                continue
+            doc = node.body[0] if node.body else None
+            if (isinstance(doc, ast.Expr) and isinstance(doc.value, ast.Constant)
+                    and isinstance(doc.value.value, str)):
+                for i in range(doc.lineno - 1, doc.end_lineno or doc.lineno):
+                    lines[i] = ""
         code = "\n".join(
-            ln for ln in text.splitlines()
+            ln for ln in lines
             if "power_model" in ln and not ln.lstrip().startswith(("#", "*", '"'))
         )
         if "power_model" in code and f.name != "inventory.py":

@@ -136,9 +136,20 @@ weeks.
 | kind | what moves | rule | exact? |
 | --- | --- | --- | --- |
 | `SIM_ERROR` | the margin `m_c` | the domain's interpolated value is moved inside its range; **the prediction does not move** | exact by construction |
-| `PROFILE` | TTFT, TPOT, throughput | `×(1+δ)` on latencies, `/(1+δ)` on rates; **energy unchanged** | first-order — **and the energy clause is wrong, see D34** |
+| `PROFILE` | TTFT, TPOT, throughput, **energy** | `×(1+δ)` on latencies and on energy, `/(1+δ)` on rates; watts untouched | first-order |
 | `POWER` | energy, tokens/J | `×(1+δ)` on average power; latency unchanged | first-order |
 | `LINK_BW`, `LINK_LAT` | TTFT of P/D candidates | the KV transfer is re-priced with `kv_transfer.transfer_ms`, the same helper the planner itself uses | **exact** |
+
+**`PROFILE` moves energy, and that is a correction** (D34). The rule originally
+held energy fixed, reasoning that energy was `POWER`'s and moving it here would
+double-count. Energy is watts × seconds; a PROFILE error is an error in the
+seconds and a POWER error in the watts, so the two compose — apply both in either
+order and energy comes out `×(1+δp)(1+δw)` exactly once. The simulator settled
+it: `serving/core/power_model.py` accumulates active energy as
+`(active_power − idle_power) × latency_s`. Holding energy fixed made every
+`PROFILE` item score `ΔR = 0` under a `minimize_energy` objective unless it
+happened to cross an SLO boundary, so the plan systematically under-valued the
+most expensive measurement in `costs.yaml`.
 
 `LINK_BW` is exact for a reason worth knowing: the envelope cache stores the raw
 simulator output from *before* `apply_pd_transfer_cost`, and the planner adds the
@@ -291,10 +302,12 @@ at the top, because a retracted measurement is evidence about method.
 Four, in the order they are likely to bite.
 
 **The closed form is first-order for two of five kinds.** `PROFILE` and `POWER`
-are scalings, not re-simulations, and `PROFILE`'s "energy unchanged" clause is
-demonstrably wrong against this simulator — deviations **D34**. Items scored by an
-approximate rule are marked `approximation=True` and printed as "(approx)"
-wherever they are quoted. `--resimulate-top N` (the escape hatch §2.7 leaves) is
+are scalings, not re-simulations. `PROFILE`'s energy term carries an extra
+offset on top of that: the measured ×1.3878 against a ×1.38876 multiplier is the
+idle/standby, DRAM and link terms, which do not scale with operator time (D34).
+Items scored by an approximate rule are marked `approximation=True` and printed
+as "(approx)" wherever they are quoted. `--resimulate-top N` (the escape hatch
+§2.7 leaves for checking one by really simulating both ends of its range) is
 **not implemented on `main`**.
 
 **The grid is uniformly weighted.** `ΔR_i` is the unweighted mean over grid

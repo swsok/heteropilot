@@ -414,3 +414,52 @@ def test_the_default_penalty_spans_the_whole_grid_not_just_the_nominal(world) ->
     # A PROFILE sweep does not move energy, so the span is unchanged here - the
     # assertion that matters is that it was computed from the sweep at all.
     assert prov["uncertainty"]["slo_penalty"] >= 2000.0
+
+
+def test_a_profile_earns_regret_through_energy_alone(world) -> None:
+    """The decision-level half of D34, and the reason it was worth fixing.
+
+    Two candidates that both sit comfortably inside the SLOs and differ only in
+    energy, which is this spec's primary objective. The incumbent B is the
+    cheaper one; a profile error on B's island makes B slower and therefore
+    costlier, and past a point A becomes the better plan. Knowing B's profile
+    is worth something, and `delta_regret` should say so.
+
+    Before D34 it said `0.0` - exactly, at every grid point - because
+    `_scale_profile` held energy fixed, so the only way a PROFILE item could earn
+    regret was to cross an SLO boundary. Under `minimize_energy` that made the
+    most expensive measurement in `costs.yaml` (2.1 h) look worthless unless it
+    happened to break a latency constraint.
+    """
+    ids = list(world.islands)
+    a_island, b_island = ids[0], ids[1]
+    candidates = {
+        "A": CandidateConfig(
+            id="A", model=world.spec.model, dtype="bfloat16",
+            assignments=[IslandAssignment(island_id=a_island, tp_size=1)],
+        ),
+        "B": CandidateConfig(
+            id="B", model=world.spec.model, dtype="bfloat16",
+            assignments=[IslandAssignment(island_id=b_island, tp_size=1)],
+        ),
+    }
+    # Latencies an order of magnitude inside the SLOs (25 000 ms / 50 ms), so
+    # nothing here can flip by crossing one.
+    metrics = JudgedMetrics.trusted({
+        "A": _metrics(energy=2000.0, ttft=500.0),
+        "B": _metrics(energy=1000.0, ttft=500.0),
+    })
+    context = PerturbContext.build(world.spec, world.cluster, world.islands, candidates)
+    item = _item(UncertainKind.PROFILE, f"profile:{b_island}", 1.0,
+                 Range(lo=1.0, hi=3.0, unit="fraction", source="tests"),
+                 affects=[b_island], hours=2.1)
+
+    out = analyze(
+        _output("B", world.spec, candidates, metrics), _registry(item), metrics,
+        GlobalMargin(), world.spec, context, world.island_hw, slo_penalty=2000.0,
+    )
+    assert out[0].flip is True, "B's energy passes A's inside the swept range"
+    assert out[0].delta_regret is not None and out[0].delta_regret > 0.0
+    # Nothing crossed an SLO: every grid point still has a feasible plan, so the
+    # regret is the objective gap and not a penalty term.
+    assert all(p.best_value > float("-inf") for p in out[0].grid)
