@@ -2254,6 +2254,66 @@ E6 afterwards is a replay rather than a re-simulation.
 `experiments/results/a40_lowload_envelope.md`.
 
 
+## D34 — `EnvelopeCache` dedups candidates the simulator does not treat as equivalent · Open (measured, not fixed)
+
+**What the key does on purpose.** `EnvelopeCache._path` hashes a placement
+string, so two candidates with the same shape share one simulation. That is the
+point: a homogeneous multi-island cluster should memoise rather than re-simulate
+`rngd0-tp4-dp1` and `rngd1-tp4-dp1`, which are the same configuration on
+interchangeable hardware.
+
+**Where it is wrong.** The placement string records each island's
+`hardware|arch|tp|pp|ep|dp` but not WHICH island got which share, so a pair that
+differs only by mirroring the split collapses to one entry. Found by E-B3's
+identity control — a x1.0 perturbation must reproduce the cached prediction, and
+one A40 candidate deviated by 7.9e-2 while 120 RNGD runs deviated by 0.000. The
+cause is not the perturbation: the x1.0 bundle copy is numerically exact, the
+simulator is deterministic across two fresh runs to four decimals, and the two
+mirrors genuinely differ —
+
+```
+mix(a40a-tp2-dp2 + a40b-tp2-dp1)-s128-t2048   p99 TTFT 518.95 ms / 108 750 J
+mix(a40a-tp2-dp1 + a40b-tp2-dp2)-s128-t2048   p99 TTFT 563.28 ms / 108 930 J
+```
+
+— and the cache serves the second's value to both. Since `a40a` and `a40b` are
+the same size, symmetry says these should be equal; they are 8.5 % apart on
+TTFT, so **either the key is too coarse or the simulator is order-sensitive for
+a logically identical configuration.** Which of the two has not been
+established, and the difference matters: one is a cache bug, the other is a
+simulator property the cache merely hides.
+
+**How much is grouped**, reproduced on current `main`:
+
+| fixture | candidates | distinct keys | in a shared group |
+| --- | ---: | ---: | ---: |
+| `pd-rngd-gpu`, no P/D | 324 | 180 | 264 |
+| `pd-rngd-gpu`, P/D | 612 | 294 | — (234 shared groups, 114 with a P/D member) |
+| `pd-rngd-gpu-card`, P/D | 528 | 246 | — (198 shared groups, 84 with a P/D member) |
+
+Not every group is suspect. The 4-way cross-vendor groups
+(`a40{a,b} P + rngd{0,1} D`) choose between genuinely interchangeable islands and
+are sound dedup; so are the `rngd0`/`rngd1` aggregated pairs. The unsound shape
+is the asymmetric split above.
+
+**What still stands.** The E-A1 headline winner re-simulates to its cached entry
+exactly (`cuda-a40-node_a40a-tp4-dp1-s256-t8192` → 2972.0628 ms / 49.3956 ms /
+64 430 J) and its `a40b` twin is byte-identical, so dedup is sound for
+single-island aggregated candidates. Every E6 winner in PRs #75 and #77 is
+either single-island aggregated or a choice among interchangeable islands. What
+is NOT established is how far the mix-candidate rows in those corpora move.
+
+**Why it is not fixed here.** Adding the island assignment to the key
+invalidates every committed corpus — the E-A1 cache, `outputs/e6*/`,
+`outputs/.hp-*` — and therefore every result replayed from them, including D32's
+card re-check and the surrogate regret tables. That is a decision about what to
+re-run, not a patch. Recorded so the next person does not rediscover it from a
+7.9e-2 residual.
+
+**Where.** `planner/envelope.py` (`_path`, `key_for`),
+`experiments/uncertainty/eb3_closed_form_vs_resim.py` (the identity control that
+found it).
+
 ## D33 — two accuracy-domain implementations, one kept; `refuse` becomes the default · Decided 2026-09-11
 
 **What happened.** `WORK_ORDER_rps_aware.md` STEP 4 and
