@@ -708,6 +708,7 @@ drops, TTFT flat, `none`-mode control flat — all PASS) and `tests/test_sim_pd_
 | D33 | uncertainty planner (Stage A/B) | **Decided 2026-09-11** — two accuracy-domain implementations were built in parallel from 108e48a (rps STEP 4's `calibration.AccuracyDomain`, per hardware, `widen_error_bars`; the uncertainty stack's `predictor/accuracy_domain.py`, per bucket, `unmeasured` outside). One remains: main's curve, `refuse` by default, the uncertainty stack's per-candidate `MarginPolicy` on top, `UNMEASURED` absorbed into `outside_calibration_domain`, E-A2's domain dropped as the D32 mis-pairing |
 | D34 | uncertainty planner (Stage B) | **Resolved 2026-09-14** — the register of which closed-form perturbation rules are approximate: `SIM_ERROR`, `LINK_BW`, `LINK_LAT` exact; `PROFILE`, `POWER` first-order. Writing it down found that `PROFILE`'s "energy unchanged" clause contradicted the simulator — `power_model.py:73` makes active energy linear in operator latency, and a ×1.38876 profile moved measured energy 162 260 → 225 190 J (×1.3878). The double-counting rationale was wrong: energy is watts × seconds, PROFILE moves the seconds and POWER the watts, so they compose rather than double-count. **Fixed** — `_scale_profile` scales energy with latency and recomputes tokens/J; ΔR on an energy-only decision goes 0.0000 → 375.0000. The one-line §2.7 amendment is the owner's |
 | D35 | uncertainty planner (Stage B) | **Recorded 2026-09-14** — STEP B5 asks for a `README.md` paragraph and a `CHANGELOG.md` entry, but both files are pure upstream LLMServingSim with no fork content, and upstream's own README policy keeps CLI tables off it. The paragraph went to `CLAUDE.md` §Commands and the long form to `docs/uncertainty_planner.md`; the two upstream files are untouched. The same rule applies to any later work order asking for those files — cite this entry rather than opening a new one |
+| D36 | uncertainty planner (Stage B) | **Open (measured, not fixed)** — `EnvelopeCache`'s placement key records each island's `hardware|arch|tp|pp|ep|dp` but not WHICH island got which share, so a pair differing only by mirroring the split collapses to one entry. Found by E-B3's identity control: `mix(a40a-tp2-dp2+a40b-tp2-dp1)` truly predicts p99 TTFT 518.95 ms / 108 750 J and its mirror 563.28 ms / 108 930 J — 8.5 % apart — and the cache serves the second to both. Either the key is too coarse or the simulator is order-sensitive for a logically identical configuration; which has not been established. The E-A1 headline winner is unaffected and re-simulates to its cached entry exactly |
 
 **Reading order.** The entries below are in the order they were written, not
 numerically: D30 and D31 precede D28 and D29 in the file because the surrogate and
@@ -2254,7 +2255,7 @@ E6 afterwards is a replay rather than a re-simulation.
 `experiments/results/a40_lowload_envelope.md`.
 
 
-## D34 — `EnvelopeCache` dedups candidates the simulator does not treat as equivalent · Open (measured, not fixed)
+## D36 — `EnvelopeCache` dedups candidates the simulator does not treat as equivalent · Open (measured, not fixed)
 
 **What the key does on purpose.** `EnvelopeCache._path` hashes a placement
 string, so two candidates with the same shape share one simulation. That is the
