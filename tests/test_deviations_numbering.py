@@ -43,6 +43,9 @@ _RANGE = re.compile(r"D\d{1,2}\s*[-\u2013\u2014]\s*D\d{1,2}")
 #: stdout and result JSON, where a retracted id can legitimately survive as a
 #: record of what a past run said.
 _SEARCH_ROOTS = ("docs", "planner", "tests", "experiments", "profiles", "CLAUDE.md")
+#: Work orders cite D-numbers heavily and are the documents most likely to be
+#: edited long after an entry was written -- exactly where a renumber goes stale.
+_SEARCH_GLOBS = ("WORK_ORDER_*.md",)
 _SUFFIXES = (".md", ".py", ".yaml", ".yml", ".sh")
 
 
@@ -59,6 +62,8 @@ def _files():
             for found in path.rglob("*"):
                 if found.suffix in _SUFFIXES and found.is_file():
                     yield found
+    for pattern in _SEARCH_GLOBS:
+        yield from sorted(ROOT.glob(pattern))
 
 
 def test_no_deviation_number_is_used_twice() -> None:
