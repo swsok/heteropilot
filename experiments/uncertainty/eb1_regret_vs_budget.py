@@ -59,6 +59,7 @@ import random
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from experiments.uncertainty.build_truth_cache import mirror_groups
 from experiments.uncertainty.ea1_margin_modes import _IslandOperatingPoint
 from planner.candidate_generator import CandidateGenerator
 from planner.envelope import workload_bucket, workload_shape
@@ -188,6 +189,14 @@ class World:
     #: E-B3 needs these to re-run the simulator; E-B1 and E-B2 never touch them.
     profiles: dict = field(default_factory=dict)
     predictor: object | None = None
+    #: Candidates dropped before evaluation, and why. Empty on the E-A1 fixture,
+    #: which enumerates no P/D candidate and therefore has neither problem.
+    #: `mirror` is D40; `uncached` is D71 -- runs that raised in the simulator and
+    #: so have no entry to read. Both are reported rather than silently absent:
+    #: the second in particular removes exactly the tp1-decode P/D family, which
+    #: is where a link degradation would have had the most to say.
+    excluded_mirror: list[str] = field(default_factory=list)
+    excluded_uncached: list[str] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -195,9 +204,10 @@ class World:
 # ---------------------------------------------------------------------------
 
 def build_world(
-    cache_dir: Path, work_dir: Path, workers: int, *, keep_predictor: bool = False
+    cache_dir: Path, work_dir: Path, workers: int, *, keep_predictor: bool = False,
+    fixture_path: Path = FIXTURE,
 ) -> World:
-    fixture = json.loads(FIXTURE.read_text())
+    fixture = json.loads(fixture_path.read_text())
     spec = load_service_spec(fixture["service"])
     cluster = load_cluster_spec(fixture["cluster"])
     profiles = load_profiles_for(cluster, Path("."))
@@ -227,12 +237,18 @@ def build_world(
         island_hw=island_hw,
     )
     predictor = LLMServingSimPredictor(trace, work_dir=work_dir / "sims")
+    # `enable_pd` comes from the fixture so the E-A1 json keeps its aggregated
+    # corpus and reproduces byte-for-byte, while F2 turns P/D on (STEP C1).
+    enable_pd = bool(fixture.get("enable_pd"))
     generation = CandidateGenerator(
-        spec, cluster, islands, profiles, enable_prefix_caching=False
+        spec, cluster, islands, profiles, enable_prefix_caching=False,
+        enable_pd=enable_pd,
     ).generate()
+    corpus, excluded_mirror, excluded_uncached = _corpus(
+        generation.candidates, cache, exclude_mirrors=enable_pd)
     try:
         evaluation = exhaustive.evaluate_candidates(
-            generation.candidates, spec, cluster, by_id, profiles, predictor,
+            corpus, spec, cluster, by_id, profiles, predictor,
             cache=cache, island_hw=island_hw, max_workers=workers,
         )
     finally:
@@ -258,7 +274,7 @@ def build_world(
     # scalar fallback are separate arguments: dropping the former IS scalar mode.
     domains = load_accuracy_domains(".", DOMAIN_CALIBRATION)
     calibration = load_calibrations(".", DOMAIN_CALIBRATION)
-    candidates = {c.id: c for c in generation.candidates}
+    candidates = {c.id: c for c in corpus}
     world = World(
         spec=spec, cluster=cluster, islands=by_id, candidates=candidates,
         # The operating points the evaluation recorded. main's margin policy
@@ -275,9 +291,67 @@ def build_world(
             variant=variant, calibration=calibration, bucket=bucket),
         profiles=profiles,
         predictor=predictor if keep_predictor else None,
+        excluded_mirror=excluded_mirror,
+        excluded_uncached=excluded_uncached,
     )
     world.pool = _degradable(world)
     return world
+
+
+def _corpus(candidates: list, cache, *, exclude_mirrors: bool
+            ) -> tuple[list, list[str], list[str]]:
+    """The candidates this experiment may reason about, and the two it may not.
+
+    Returns `(kept, excluded_mirror, excluded_uncached)`.
+
+    **Mirrors (D40), and why they are excluded only with P/D on.** The placement
+    key records each island's shape but not WHICH island got which share, so any
+    two candidates differing only by that read one cache entry -- which is why
+    E-A1's 324 aggregated candidates are served by 162 entries. Whether that is
+    a defect depends on the corpus:
+
+    * aggregated, over the two identical A40 nodes: `...node_a40a-tp4` and
+      `...node_a40b-tp4` ARE the same deployment on the same hardware, so one
+      simulation is the right answer for both, and E-B1 NEEDS both present --
+      "degrading `profile:a40a` hands the plan to its twin `a40b`" is one of the
+      three findings the committed result rests on. Collapsing the pair would
+      delete that finding rather than clean it up;
+    * P/D: the two members differ in which island PREFILLS, which the key cannot
+      see and the simulator does not treat as equivalent. That is D40, and there
+      one entry voting twice is exactly the double count STEP C1 removed.
+
+    So the fixture decides, via `enable_pd`. The pair is identified by asking the
+    cache for its own key -- the same function STEP C1 built the truth with,
+    imported rather than re-derived so the two cannot disagree about what a
+    mirror is.
+
+    **Uncached (D71).** A candidate whose run raised in the simulator has no
+    entry. Evaluating it here would be a cache MISS, which this experiment
+    treats as a fatal error precisely because a miss means it is about to
+    simulate. They are dropped with their ids kept, because on F2 they are not a
+    random 23: they are every `tp1-dp1` P/D split, the family a link degradation
+    would have had the most to say about.
+
+    **Uncached is checked either way.** It is the guard that keeps "this
+    experiment never simulates" true, and on the E-A1 fixture it finds nothing:
+    every one of the 324 candidates keys to one of the 162 committed entries.
+    """
+    mirror_ids: set[str] = set()
+    if exclude_mirrors:
+        mirrors = mirror_groups(candidates, cache)
+        mirror_ids = {i for ids in mirrors.values() for i in ids[1:]}
+    kept, uncached = [], []
+    for c in candidates:
+        if c.id in mirror_ids:
+            continue
+        key = cache.cache_key(c)
+        # `cache.get` would count a miss and trip the no-simulation guard below,
+        # so coverage is read off the path instead of through the accessor.
+        if key is None or not Path(key).exists():
+            uncached.append(c.id)
+            continue
+        kept.append(c)
+    return kept, sorted(mirror_ids), uncached
 
 
 def _degradable(world: World) -> list[Degraded]:
@@ -485,6 +559,22 @@ def _order(
             ))
         return [cid for _v, cid in sorted(scored)]
     # ours
+    return [s.input_id for s in sensitivities(
+        world, degraded, restored, penalty, grid)]
+
+
+def sensitivities(
+    world: World, degraded: list[Degraded], restored: set[str],
+    penalty: float, grid: int,
+) -> list:
+    """`analyze`'s ranking of the still-degraded inputs, dR and all.
+
+    Split out of `_order` because §2.3's headline metric is `n_active` -- how
+    many inputs, and how many KINDS of input, have dR > 0 -- and the strategy
+    loop only ever needed the order. Throwing the dR away made the one number
+    the fixture is judged on unrecoverable from the raw output.
+    """
+    remaining = [d for d in degraded if d.id not in restored]
     metrics, policy = _state(world, degraded, restored)
     best = _best(world, metrics, policy)
     output = PlannerOutput(
@@ -492,11 +582,10 @@ def _order(
         cluster_id=world.cluster.cluster_id, recommended=best,
     )
     registry = UncertainInputRegistry(items=[d.item for d in remaining])
-    ranked = analyze(
+    return analyze(
         output, registry, metrics, policy, world.spec, world.context,
         world.island_hw, grid=grid, slo_penalty=penalty,
     )
-    return [s.input_id for s in ranked]
 
 
 def run_curve(
@@ -526,6 +615,29 @@ def run_curve(
     return curve
 
 
+def stratified_subsets(pool: list[Degraded], k: int) -> list[list[Degraded]]:
+    """Every k-subset that mixes at least two KINDS of uncertain input.
+
+    Plain random sampling is dominated by the kind with the most items: this
+    cluster has six links against four profiles and one domain, so more than a
+    third of the k=2 draws are link-only and nothing in them can interact. A
+    set that degrades one link and one profile is the only kind of set that can
+    show a strategy choosing BETWEEN kinds, which is what E-B1 measures.
+
+    `k <= 1` is returned whole: a single-item set cannot mix kinds, and the work
+    order asks for those to be enumerated exhaustively anyway.
+
+    The pool is small enough (C(11,3) = 165) to enumerate and filter exactly,
+    rather than rejection-sample until a draw happens to qualify -- so the
+    result is unbiased over the qualifying subsets by construction, and a
+    caller cannot get a single-kind set no matter how it draws.
+    """
+    subsets = [list(c) for c in itertools.combinations(pool, k)]
+    if k <= 1:
+        return subsets
+    return [s for s in subsets if len({d.item.kind for d in s}) >= 2]
+
+
 def _degradation_sets(world: World, k: int, args) -> list[list[Degraded]]:
     """Which k-subsets of the pool to degrade.
 
@@ -535,6 +647,19 @@ def _degradation_sets(world: World, k: int, args) -> list[list[Degraded]]:
     """
     if k > len(world.pool):
         return []
+    if args.stratified:
+        subsets = stratified_subsets(world.pool, k)
+        if not subsets:
+            raise SystemExit(
+                f"--stratified: no k={k} subset of the pool mixes two kinds; "
+                f"the pool has {len({d.item.kind for d in world.pool})} kind(s)"
+            )
+        if args.exhaustive:
+            return subsets
+        return [
+            random.Random(1000 * k + seed).choice(subsets)
+            for seed in range(args.seeds)
+        ]
     if args.exhaustive:
         return [list(c) for c in itertools.combinations(world.pool, k)]
     return [
@@ -543,9 +668,78 @@ def _degradation_sets(world: World, k: int, args) -> list[list[Degraded]]:
     ]
 
 
+def verdict_counts(
+    world: World, metrics: JudgedMetrics, policy: MarginPolicy
+) -> dict[str, int]:
+    """How the corpus was judged in one state: feasible / rejected / unmeasured."""
+    counts: dict[str, int] = {}
+    for cid in sorted(metrics):
+        candidate = world.candidates.get(cid)
+        if candidate is None:
+            continue
+        decision = policy.decide(
+            candidate, world.context.sim_for(cid, metrics[cid]),
+            metrics[cid], world.island_hw,
+        )
+        plan = DeploymentPlan(
+            plan_id=f"hp-{cid}", model=world.spec.model, candidate=candidate,
+            predicted=metrics[cid],
+        )
+        verdict = judge(plan, world.spec, decision).verdict.value
+        counts[verdict] = counts.get(verdict, 0) + 1
+    return counts
+
+
+def require_judged_degraded(
+    world: World, degraded: list[Degraded]
+) -> dict[str, int]:
+    """The degraded state must JUDGE its corpus. Returns the verdict counts.
+
+    E-B1's first run passed no domains at all, which is not scalar mode but no
+    mode: every candidate came back `unmeasured`, the degraded search had
+    nothing feasible, and `analyze` returned dR None for every item. The ranking
+    then fell back to alphabetical order, which put the structurally inert links
+    ahead of the domain and made `ours` look like the worst of the five
+    strategies. Nothing in the output said so.
+
+    **The condition is "nothing was judged", not "nothing was feasible",** and
+    the difference is the whole point. On F2, degrading `profile:cuda-a40-node_
+    a40a` alone leaves all 223 candidates SLO-`rejected`: a real verdict, in the
+    tight TTFT regime this fixture was built for, and the state where a
+    measurement is worth the most -- `_truth_value` already prices a
+    recommendation of None at a full penalty. Halting there would refuse to
+    measure the most informative degradation in the sweep. `unmeasured` is the
+    accident: the candidate was not judged at all, so there is no verdict to
+    have regret about, and a comparison between strategies degenerates into a
+    comparison of tie-breaking.
+    """
+    metrics, policy = _state(world, degraded, set())
+    counts = verdict_counts(world, metrics, policy)
+    if counts.get("feasible", 0) == 0 and counts.get("rejected", 0) == 0:
+        raise SystemExit(
+            f"the degraded state for {[d.id for d in degraded]} judged nothing: "
+            f"{counts or 'an empty corpus'}. Every dR would be None and the "
+            "ranking would fall back to alphabetical order. Check that the "
+            "degraded accuracy domain is scalar mode (one point per domain) "
+            "and not an empty domain dict."
+        )
+    return counts
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cache-dir", type=Path, required=True)
+    parser.add_argument(
+        "--fixture", type=Path, default=FIXTURE,
+        help="Fixture json (service, cluster, num_requests, seed, and optionally "
+             "enable_pd). Defaults to E-A1's, so the committed result reproduces.",
+    )
+    parser.add_argument(
+        "--stratified", action="store_true",
+        help="Draw only degradation sets that mix at least two KINDS of input "
+             "(§2.2). Without it the six links dominate the k=2 and k=3 draws.",
+    )
+    parser.add_argument("--out-json", type=Path, default=None)
     parser.add_argument("--work-dir", type=Path,
                         default=Path("outputs/uncertainty/eb1/work"))
     parser.add_argument("--out-dir", type=Path,
@@ -564,7 +758,12 @@ def main() -> int:
     parser.add_argument("--workers", type=int, default=8)
     args = parser.parse_args()
 
-    world = build_world(args.cache_dir, args.work_dir, args.workers)
+    world = build_world(args.cache_dir, args.work_dir, args.workers,
+                        fixture_path=args.fixture)
+    if world.excluded_mirror or world.excluded_uncached:
+        print(f"corpus: {len(world.candidates)} candidates; "
+              f"{len(world.excluded_mirror)} excluded as D40 mirrors, "
+              f"{len(world.excluded_uncached)} with no cache entry (D71)")
     truth_best = _best(world, world.truth)
     if truth_best is None:
         raise SystemExit("the truth fixture has no feasible plan; nothing to degrade")
@@ -596,7 +795,18 @@ def main() -> int:
     runs: list[dict] = []
     for k in args.k:
         for index, chosen in enumerate(_degradation_sets(world, k, args)):
+            counts = require_judged_degraded(world, chosen)
             for label, value in penalties:
+                # §2.3's n_active: the dR the ranking saw at the fully degraded
+                # start, kept per item so the results can count how many inputs
+                # -- and how many kinds -- were active at all.
+                ranked = sensitivities(world, chosen, set(), value, args.grid)
+                deltas = [
+                    {"input_id": s.input_id, "kind": s.kind,
+                     "delta_regret": s.delta_regret, "flip": s.flip,
+                     "per_hour": s.regret_per_hour}
+                    for s in ranked
+                ]
                 for strategy in STRATEGIES:
                     curve = run_curve(world, chosen, strategy, index, value, args.grid)
                     runs.append({
@@ -608,12 +818,25 @@ def main() -> int:
                         # scores 0 on it and it dilutes the mean. Reported both
                         # ways rather than filtered silently.
                         "initial_regret": curve[0][1] if curve else 0.0,
+                        #: How the corpus was judged while fully degraded. A set
+                        #: with `feasible: 0` is not an error (see
+                        #: `require_judged_degraded`) -- it is the state where a
+                        #: measurement buys the most.
+                        "degraded_verdicts": counts,
+                        # Identical across the five strategies -- it describes
+                        # the degraded STATE, not the strategy -- so it is
+                        # attached once rather than five times.
+                        "sensitivities": deltas if strategy == "ours" else None,
                     })
             print(f"  k={k} set={index} {[d.id for d in chosen]} done")
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
     payload = {
-        "fixture": json.loads(FIXTURE.read_text()),
+        "fixture": json.loads(args.fixture.read_text()),
+        "fixture_path": str(args.fixture),
+        "excluded_mirror": world.excluded_mirror,
+        "excluded_uncached": world.excluded_uncached,
+        "corpus_size": len(world.candidates),
         "truth_winner": truth_best.plan.candidate.id,
         "truth_value": truth_best.value,
         "slo_penalty": penalty,
@@ -627,11 +850,14 @@ def main() -> int:
             for d in world.pool
         ],
         "penalties": dict(penalties),
-        "sampling": "exhaustive" if args.exhaustive else f"random x{args.seeds}",
+        "sampling": ("exhaustive" if args.exhaustive else f"random x{args.seeds}")
+                    + (", stratified by kind" if args.stratified else ""),
+        "stratified": args.stratified,
         "runs": runs,
         "provenance": prov.collect(random_seed=0),
     }
-    out_json = Path("outputs/uncertainty/eb1/eb1_regret_vs_budget.json")
+    out_json = args.out_json or Path(
+        "outputs/uncertainty/eb1/eb1_regret_vs_budget.json")
     out_json.parent.mkdir(parents=True, exist_ok=True)
     out_json.write_text(json.dumps(payload, indent=2, default=str))
     print(f"wrote {out_json}")

@@ -28,22 +28,22 @@ penalties in `outputs/uncertainty/eb1/eb1_summary.json`; figure:
 
 | strategy | R(0 h) | R(0.041 h) | R(2.1 h) | mean h to regret 0 |
 | --- | ---: | ---: | ---: | ---: |
-| `oracle` | 4,429.2 | **0.0** | 0.0 | **0.007** |
-| **`ours`** | 4,429.2 | **0.0** | 0.0 | **0.007** |
-| `random` | 4,429.2 | 2,394.1 | 1,077.4 | 0.072 |
-| `round_robin` | 4,429.2 | 4,309.5 | 2,035.0 | 0.176 |
-| `widest` | 4,429.2 | 3,950.3 | 0.0 | 0.030 |
+| `oracle` | 5,594.8 | **0.0** | 0.0 | **0.007** |
+| **`ours`** | 5,594.8 | **0.0** | 0.0 | **0.007** |
+| `random` | 5,594.8 | 3,024.2 | 1,360.9 | 0.072 |
+| `round_robin` | 5,594.8 | 5,443.5 | 2,570.6 | 0.176 |
+| `widest` | 5,594.8 | 4,989.9 | 0.0 | 0.030 |
 
 Restricted to the **37 sets that actually moved the plan** — the rest start at
 regret 0 and no strategy can do anything:
 
 | strategy | R(0 h) | R(0.041 h) | R(2.1 h) | mean h to regret 0 |
 | --- | ---: | ---: | ---: | ---: |
-| `oracle` | 27,652.3 | **0.0** | 0.0 | **0.041** |
-| **`ours`** | 27,652.3 | **0.0** | 0.0 | **0.041** |
-| `random` | 27,652.3 | 14,947.2 | 4,484.2 | 0.452 |
-| `round_robin` | 27,652.3 | 26,905.0 | 11,210.4 | 1.097 |
-| `widest` | 27,652.3 | 24,662.9 | 0.0 | 0.189 |
+| `oracle` | 34,929.4 | **0.0** | 0.0 | **0.041** |
+| **`ours`** | 34,929.4 | **0.0** | 0.0 | **0.041** |
+| `random` | 34,929.4 | 18,880.8 | 5,664.2 | 0.452 |
+| `round_robin` | 34,929.4 | 33,985.4 | 14,160.6 | 1.097 |
+| `widest` | 34,929.4 | 31,153.2 | 0.0 | 0.189 |
 
 **`ours` matches the oracle exactly, at every budget and on both slices**, and
 reaches zero regret in **0.041 h against `random`'s 0.452 and `round_robin`'s
@@ -59,6 +59,27 @@ because ΔR/cost puts it first; `random` gets there 1-in-k of the time;
 `round_robin` visits `link_bw` before `sim_error` alphabetically and `widest`
 prefers the links' wide range. A pool with two or three items that each matter
 would separate the strategies more sharply and is not available on this fixture.
+
+## D70 rescaled every regret here by 1.2632, and changed nothing else
+
+**Re-run on 2026-09-14 after D70** (`margin_from_error` is `-e/(1+e)`, not `-e`:
+the error's denominator is the measurement, not the simulation). The tables above
+are the re-run's. Every regret magnitude in them is the pre-D70 value times
+**1.2632**, uniformly — the spread across the twelve cells is 6e-5, which is the
+rounding in the quoted figures. Nothing else moved: the same winner
+(`cuda-a40-node_a40a-tp4-dp1-s128-t8192`), the same 37 sets that moved the plan,
+the same strategy ordering, and the same budgets to reach zero regret.
+
+The factor is the formula, not a coincidence: `1/(1+e) = 1.2632` at `e = -20.83 %`,
+and on this fixture essentially all the decision regret rides on the accuracy
+domain (see below), so correcting the margin's denominator scales the regret by
+exactly the amount it scales that one margin.
+
+It was verified rather than inferred. Checking out `calibration.py` at D70's
+parent and re-running the current harness reproduces the previously committed
+numbers exactly -- 0 mismatches across all 110 k=1 runs -- which is also what
+establishes that STEP C2's `--fixture` and `--stratified` additions are neutral
+on this path.
 
 ## What the truth is now, and why the numbers moved
 
@@ -103,9 +124,22 @@ them all into one bucket ordered by `input_id`, where `link_bw:…` precedes
 | `ours` | 195,436.6 | 1.663 | ← | identical to `round_robin` |
 | `random` | 92,388.2 | 0.506 | | |
 
+**That table stays as it was**: it records a run that no longer exists and must
+not be regenerated. What has changed since is that the mechanism behind it is no
+longer only a harness accident. STEP C2 (`eb1_f2.md`) found the same collapse
+arising legitimately on F2 — degrading either A40 profile SLO-rejects the whole
+corpus at an 8 000 ms TTFT, so 42 % of that sweep has no incumbent, `analyze`
+returns `ΔR = None` for every item for the documented reason, and `ours` again
+buys links first and loses to `random` at intermediate budgets. The two cases are
+now told apart by `require_judged_degraded`, which is fatal when the corpus was
+never *judged* and silent when it was judged and found infeasible.
+
 That table is **not a result** and is kept here only because its shape is a
 useful alarm: `ours` exactly equalling a baseline means the ranking has no
 signal, not that the invention lost.
+
+The generated form of both tables, at both penalties and both slices, is
+`eb1_table.md`, written by `eb1_report.py --out`.
 
 ## Reproduce
 
