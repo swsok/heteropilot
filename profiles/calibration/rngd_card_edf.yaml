@@ -29,6 +29,8 @@ hardware:
     # (docs/rps_aware_planning_design.md §5). The point of carrying it here is
     # that D22's winner passed a 50 ms TPOT SLO at a predicted 48.41 ms and
     # 48.41 x 1.18 = 57.1: the configuration was infeasible, not optimistic, and
+    # -- 57.1 is that product, not a measurement. The margin is -e/(1+e), so the
+    # corrected robust value is 59.04 (D70). Same verdict; the example stands.
     # nothing in the pipeline could see it because the 18 % was a fact about the
     # simulator that the simulator did not carry.
     #

@@ -282,7 +282,7 @@ def test_measure_apply_adds_an_accuracy_point_to_a_calibration_copy(tmp_path) ->
     assert [p.conc for p in domain.points] == [55.0]
     assert domain.points[0].tpot_err_pct == pytest.approx(-7.0)
     assert domain.points[0].note == "tests"
-    assert domain.tpot_margin_pct(55.0) == pytest.approx(7.0)
+    assert domain.tpot_margin_pct(55.0) == pytest.approx(7.5269, abs=1e-4)
 
 
 def test_measure_apply_refuses_a_second_point_at_the_same_concurrency(tmp_path) -> None:

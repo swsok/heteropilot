@@ -106,7 +106,7 @@ def test_the_cell_carrying_d22s_retracted_headline_is_now_rejected(rngd):
     conc = E6_PERPE_POINTS[2]
     assert not rngd.in_domain(conc), "139.4 must stay outside; it is not measured"
     margin = rngd.tpot_margin_pct(conc)
-    assert margin == pytest.approx(42.12, abs=0.01)
+    assert margin == pytest.approx(72.7858, abs=0.01)
 
     sweep = json.loads(
         (ROOT / "outputs/e6_rerun/pd-rngd-gpu/pd_slo_sweep.json").read_text())

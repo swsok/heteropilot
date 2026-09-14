@@ -195,7 +195,7 @@ robust_tpot = predicted_tpot * (1 + margin / 100.0)
 `experiments/scripts/pd_slo_sweep.py` now exposes `--tpot-margin-percent` as a
 manual stand-in for this. Automating it closes the hole structurally: the card
 fixture's winner `hp-00323` passes the 50 ms TPOT SLO at a predicted 48.41 ms,
-but 48.41 × 1.18 = 57.1 ms. **The winner is not merely optimistic — it is
+but 48.41 × 1.18 = 57.1 ms (that product is the pre-D70 arithmetic; the corrected margin gives 59.04 — same verdict). **The winner is not merely optimistic — it is
 infeasible**, and nothing in the pipeline could see that.
 
 ## 6. RPS as a search axis

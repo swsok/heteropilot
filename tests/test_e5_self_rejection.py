@@ -115,10 +115,10 @@ def test_the_committed_winner_ran_at_the_load_d22_identified(data):
 def test_the_accuracy_domain_prices_that_load_at_about_eighteen_percent(domains, data):
     conc = data["records"][WINNER]["operating_point"]["RNGD-CARD"]["concurrency"]
     margin = domains["RNGD-CARD"].tpot_margin_pct(conc)
-    assert margin == pytest.approx(17.7, abs=0.5)
+    assert margin == pytest.approx(21.41, abs=0.5)
     robust = 48.41 * (1 + margin / 100.0)
     assert robust > TPOT_SLO_MS, f"robust TPOT {robust:.2f} should breach {TPOT_SLO_MS}"
-    assert robust == pytest.approx(57.0, abs=0.3)
+    assert robust == pytest.approx(58.78, abs=0.3)
 
 
 def test_the_winner_is_rejected_for_the_slo_and_not_for_something_else(searched):
@@ -131,7 +131,7 @@ def test_the_winner_is_rejected_for_the_slo_and_not_for_something_else(searched)
 def test_the_margin_that_rejected_it_is_the_one_the_domain_gave(searched):
     plan = next(p for p, _ in searched.infeasible_plans if p.candidate.id == WINNER)
     assert plan.margin_source == "accuracy_domain"
-    assert plan.robust_margin_tpot_percent == pytest.approx(17.7, abs=0.5)
+    assert plan.robust_margin_tpot_percent == pytest.approx(21.41, abs=0.5)
     op = {r.hardware: r for r in plan.operating_point}
     assert op["RNGD-CARD"].in_calibration_domain is True, (
         "74.75 sits between the domain's 16.6 and 76 points, so the margin is "

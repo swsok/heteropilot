@@ -43,7 +43,9 @@ def _domain(**over) -> AccuracyDomain:
 
 def test_the_margin_is_one_sided():
     """A pessimistic simulator is not 'corrected' downwards."""
-    assert AccuracyDomain.margin_from_error(-18.0) == 18.0
+    # -e/(1+e), not -e: the error's denominator is the MEASUREMENT, so the
+    # multiplier that recovers it is 1/(1+e). D70.
+    assert AccuracyDomain.margin_from_error(-18.0) == pytest.approx(21.9512, abs=1e-4)
     assert AccuracyDomain.margin_from_error(+11.6) == 0.0
     assert AccuracyDomain.margin_from_error(0.0) == 0.0
     assert AccuracyDomain.margin_from_error(None) == 0.0
@@ -62,13 +64,13 @@ def test_outside_the_domain_the_margin_grows_and_does_not_cap():
     near, far = d.tpot_margin_pct(30.0), d.tpot_margin_pct(60.0)
     assert far > near > 15.0, (near, far)
     # |slope| is 1.0 %/unit, so 40 beyond the last point is 40 more percent
-    assert d.tpot_margin_pct(60.0) == pytest.approx(55.0)
+    assert d.tpot_margin_pct(60.0) == pytest.approx(122.2222, abs=1e-4)
 
 
 def test_a_single_point_domain_holds_flat_because_it_has_no_slope():
     d = _domain(points=[{"conc": 170.56, "tpot_err_pct": -1.42}])
     for c in (1.0, 170.56, 5000.0):
-        assert d.tpot_margin_pct(c) == pytest.approx(1.42)
+        assert d.tpot_margin_pct(c) == pytest.approx(1.4405, abs=1e-4)
     assert d.in_domain(1.0) is False, "flat is not the same as in-domain"
 
 
@@ -136,17 +138,25 @@ def test_the_simulator_is_pessimistic_at_low_load_and_optimistic_at_high():
     assert d.tpot_error_at(76.0) < 0, "optimistic at the top"
     # so the one-sided margin is zero where the simulator already over-predicts
     assert d.tpot_margin_pct(2.0) == 0.0
-    assert d.tpot_margin_pct(76.0) == pytest.approx(18.0)
+    assert d.tpot_margin_pct(76.0) == pytest.approx(21.9512, abs=1e-4)
 
 
 def test_the_d22_winner_would_now_be_caught():
-    """The concrete case §5 names: 48.41 ms predicted against a 50 ms SLO."""
+    """The concrete case §5 names: 48.41 ms predicted against a 50 ms SLO.
+
+    **59.04, not the 57.1 seven documents quote.** 57.1 is not a measurement --
+    every occurrence of it is the same expression, `48.41 x 1.18`, which applies
+    a MEASUREMENT-denominator error as a multiplier on a PREDICTION. The only
+    measurement here is D22's 52.7 ms against 43.2 at c76, and 48.41/(1-0.1803)
+    is 59.04. The verdict is the same either way, which is why the number
+    propagated unchallenged; D70 records it.
+    """
     d = load_calibration(RNGD).hardware["RNGD-CARD"].accuracy_domain
     assert d is not None
     margin = d.tpot_margin_pct(76.0)
     robust = 48.41 * (1 + margin / 100.0)
     assert robust > 50.0, f"robust TPOT {robust:.2f} ms should breach the 50 ms SLO"
-    assert robust == pytest.approx(57.1, abs=0.2)
+    assert robust == pytest.approx(59.04, abs=0.02)
 
 
 def test_the_a40_domain_is_a_separate_file_from_the_default_calibration():

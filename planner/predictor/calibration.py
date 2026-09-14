@@ -252,10 +252,33 @@ class AccuracyDomain(_Strict):
         simulator ran slow would make plans look better than the hardware measured,
         which is the exact direction of the D22 retraction -- so the margin is
         one-sided by construction.
+
+        **The margin is not `-e`.** The error's denominator is the MEASUREMENT --
+        `e = (sim - measured) / measured`, the convention every domain file
+        declares -- so `measured = sim / (1 + e)` and the multiplier that recovers
+        it is `1 / (1 + e)`, i.e. a margin of `-e / (1 + e)`. Using `-e` directly
+        applies the measurement-denominator error to a prediction-denominator
+        quantity and under-corrects: at the RNGD-CARD domain's -18.03 % point,
+        sim 43.2 ms against a measured 52.7, `-e` gives 18.03 % and
+        43.2 x 1.1803 = 50.99 ms, still 1.7 ms short, where -e/(1+e) gives
+        21.99 % and 43.2 x 1.2199 = 52.70 ms exactly. The shortfall grows with
+        the error: 0.01 pp at 1 %, 3.96 pp at 18 %, 42 pp at 42 %.
+        `WORK_ORDER_uq_stage_b_plus.md` STEP C0; `docs/deviations.md` D70.
         """
         if err_pct is None:
             return 0.0
-        return max(0.0, -err_pct)
+        if err_pct >= 0.0:
+            return 0.0
+        fraction = err_pct / 100.0
+        # `e <= -1` would mean the simulator predicted zero or less; the domain
+        # schema cannot express it and no committed point comes near, but the
+        # division must not be reached on one.
+        if fraction <= -1.0:
+            raise ValueError(
+                f"accuracy-domain error {err_pct} % implies a non-positive "
+                f"measured value; no margin is defined"
+            )
+        return -fraction / (1.0 + fraction) * 100.0
 
     def tpot_margin_pct(self, conc: float) -> float:
         return self.margin_from_error(self.tpot_error_at(conc))

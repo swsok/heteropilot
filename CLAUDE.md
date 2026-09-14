@@ -401,7 +401,7 @@ So each concurrent work order owns a block and takes numbers only from it:
 | D40–D49 | `WORK_ORDER_uncertainty_planner.md` |
 | D50–D59 | `WORK_ORDER_pipeline_domain.md` |
 | D60–D69 | `WORK_ORDER_cxl_kv_pool.md` |
-| D70–D79 | unassigned — claim it here in the same commit that first uses it |
+| D70–D79 | `WORK_ORDER_uq_stage_b_plus.md` (claimed 2026-09-14, STEP C0) |
 | D80–D89 | one-off work with no work order |
 
 D37–D39 are left free on purpose: they are the only numbers a stream may take

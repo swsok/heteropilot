@@ -63,7 +63,7 @@ def test_tpot_error_changes_sign_so_the_margin_is_zero_at_the_low_end(a40):
     assert a40.tpot_error_at(4.043) > 0        # pessimistic
     assert a40.tpot_error_at(170.56) < 0       # optimistic
     assert a40.tpot_margin_pct(4.043) == 0.0
-    assert a40.tpot_margin_pct(170.56) == pytest.approx(1.42, abs=0.01)
+    assert a40.tpot_margin_pct(170.56) == pytest.approx(1.4405, abs=0.01)
 
 
 @pytest.mark.parametrize("conc", [90.79, 121.81, 125.26, 138.10, 157.14, 169.86])

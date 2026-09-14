@@ -101,11 +101,15 @@ def test_each_candidate_gets_the_margin_measured_at_its_own_operating_point() ->
     assert decisions[0].tpot_percent != decisions[1].tpot_percent
     assert decisions[1].tpot_percent > decisions[0].tpot_percent
 
-    # Linear between (16.6, -3.1) and (76.0, -18.0), charged one-sided.
+    # The ERROR is linear between (16.6, -3.1) and (76.0, -18.0); the MARGIN is
+    # `-e/(1+e)` of it, not `-e`, so it is not linear in concurrency (D70).
     (lo_c, lo_e), (hi_c, hi_e) = D22_POINTS
     for decision, conc in zip(decisions[:2], CONCURRENCIES[:2], strict=True):
         weight = (conc - lo_c) / (hi_c - lo_c)
-        assert decision.tpot_percent == pytest.approx(-(lo_e + weight * (hi_e - lo_e)))
+        error = lo_e + weight * (hi_e - lo_e)
+        assert decision.tpot_percent == pytest.approx(
+            -error / (100.0 + error) * 100.0
+        )
     assert all(d.source == "accuracy_domain" for d in decisions[:2])
     assert decisions[0].operating_point[0].in_calibration_domain is True
 
@@ -165,7 +169,7 @@ def test_a_pd_candidate_charges_each_phase_to_the_hardware_that_owns_it() -> Non
     assert decision.status == "in_domain"
     solo = _decide(AccuracyDomainMargin({HW: _domain()}), {HW: 60.0})
     assert decision.tpot_percent == pytest.approx(solo.tpot_percent)   # RNGD's TPOT
-    assert decision.ttft_percent == pytest.approx(1.0)                  # A40's TTFT
+    assert decision.ttft_percent == pytest.approx(1.0101, abs=1e-4)     # A40's TTFT
     assert "A40[prefill]" in decision.basis and f"{HW}[decode]" in decision.basis
     assert len(decision.operating_point) == 2
 
@@ -307,8 +311,8 @@ def _spec_with_tpot_slo(max_ms: float):
 @pytest.mark.parametrize(
     ("concurrency", "expected_percent", "expected_robust_ms", "passes"),
     [
-        (76.0, 18.0, 57.12, False),
-        (16.6, 3.1, 49.91, True),
+        (76.0, 21.9512, 59.04, False),
+        (16.6, 3.1992, 49.96, True),
     ],
 )
 def test_d22_the_same_prediction_passes_or_fails_on_its_operating_point(
@@ -321,6 +325,10 @@ def test_d22_the_same_prediction_passes_or_fails_on_its_operating_point(
     load the card fixture actually runs, it is 18 % optimistic and the same plan
     breaks the SLO. A single scalar margin cannot express both, which is the
     whole argument for indexing error by operating point.
+
+    The margins are `-e/(1+e)`, not `-e`: a domain error of -18.0 % buys a
+    21.95 % margin and -3.1 % buys 3.20 % (D70). Both verdicts are what they
+    were; only the numbers move.
     """
     from planner.optimizer import feasibility
     from planner.plan import DeploymentPlan
