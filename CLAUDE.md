@@ -32,6 +32,7 @@ Authoritative documents, all of which outrank this file:
 | `WORK_ORDER_uncertainty_planner.md` | Patent 2: uncertain-input registry, per-candidate margin policies, closed-form perturbation, sensitivity, measurement plan (Korean) | Stage A/B; read `docs/deviations.md` D33 first — its accuracy domain was reconciled onto the rps one |
 | `docs/nodes/{a40,a5000,npu}.md` | Per-node inventory, topology and traps | Read the one `scripts/whichnode.sh` names — never all three |
 | `docs/CLAIMS.md` | What can be claimed today, with each claim's label and artifact — Established / Not established / Retracted | Read before writing any result into a paper or deck |
+| `docs/uncertainty_planner.md` | `--accuracy-domain` / `--measurement-plan`: per-candidate margins, the `unmeasured` verdict, closed-form perturbation, the measurement queue — design, CLI, results, limits | Read before touching `planner/uncertainty/` or any accuracy domain |
 | `docs/HANDOVER.md` | Current state, next work by node, traps that cost a session | The live handover; the `HANDOVER_*.md` files are historical |
 
 Upstream ships `CLAUDE.md` as a symlink to `AGENTS.md`. This fork replaces it with a real file;
@@ -282,6 +283,29 @@ python -m planner status --deployment hp-00042                       # Phase 4
 
 `plan` stdout must always include: feasible candidate count + top list, rejected counts by stage
 with reasons, recommended plan, Pareto alternatives, predicted metrics.
+
+**Uncertainty-aware planning is opt-in** (`WORK_ORDER_uncertainty_planner.md`;
+`docs/uncertainty_planner.md` is the reference). `--accuracy-domain` sizes each candidate's SLO
+margin from *its own* served concurrency using the measured domains in `profiles/calibration/`,
+instead of one number for every candidate — the simulator's TPOT error on the RNGD card is +11.6 %
+at served concurrency 3.9 and −18 % at 76, so one number is too loose somewhere and too tight
+everywhere else (D29). A candidate whose operating point no domain covers is rejected as
+`outside_calibration_domain`: **unmeasured, not infeasible**, and never offered as `closest_plan`.
+`--measurement-plan` (which requires `--accuracy-domain`) then sweeps every uncertain input across
+its *sourced* range and ranks what to measure next by regret removed per hour, `ΔR_i / cost_i`; an
+input with no sourced range is listed as undecidable rather than scored zero. `measure-apply` folds
+a measurement back into a **copy** of the spec and re-plans off the same cache.
+
+```bash
+python -m planner plan ... --accuracy-domain --measurement-plan --budget-hours 8
+python -m planner fit-accuracy-domain --real ...json --sim ...csv --hardware RNGD-CARD --out ...yaml
+python -m planner measure-apply --plan out.yaml --input link_bw:fabric-rngd0-a40a --value 13.0 \
+    --source measured --cluster experiments/configs/clusters/pd-rngd-gpu-card.yaml
+```
+
+Without `--accuracy-domain` no automatic margin is applied and the output is byte-identical to the
+pre-uncertainty path — the golden-output tests guard it. The uncertainty flags are documented here
+and not in `README.md`/`CHANGELOG.md`, which are upstream files with no fork content (D35).
 
 Quality gates required before merging a PR:
 

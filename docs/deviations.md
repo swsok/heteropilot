@@ -706,6 +706,8 @@ drops, TTFT flat, `none`-mode control flat — all PASS) and `tests/test_sim_pd_
 | D30 | — | **Open (measured, not fixed)** — the roofline surrogate's proxy tok/J is algebraically invariant to TP and DP, so `--top-k` is false-infeasible at K=20 on two of three P/D corpora. The obvious repair (order by the roofline floor) fixes those two and breaks the third, so **no ranker change was made** and top-K is not used as a cost lever. `docs/surrogate_topk_regret.md` |
 | D31 | — | **Resolved** — utilisation does not explain RNGD card power (falls 92.1 → 84.7 % while power is U-shaped, r = +0.24), so the §3 power model is keyed on served concurrency instead. Device- and range-specific; §3's ATOM example spans 59 pp of utilisation and the schema is right there |
 | D33 | uncertainty planner (Stage A/B) | **Decided 2026-09-11** — two accuracy-domain implementations were built in parallel from 108e48a (rps STEP 4's `calibration.AccuracyDomain`, per hardware, `widen_error_bars`; the uncertainty stack's `predictor/accuracy_domain.py`, per bucket, `unmeasured` outside). One remains: main's curve, `refuse` by default, the uncertainty stack's per-candidate `MarginPolicy` on top, `UNMEASURED` absorbed into `outside_calibration_domain`, E-A2's domain dropped as the D32 mis-pairing |
+| D34 | uncertainty planner (Stage B) | **Recorded 2026-09-14** — the register of which closed-form perturbation rules are approximate: `SIM_ERROR`, `LINK_BW`, `LINK_LAT` exact; `PROFILE`, `POWER` first-order. Writing it down found that `PROFILE`'s "energy unchanged" clause contradicts the simulator — `power_model.py:73` makes active energy linear in operator latency, and a ×1.38876 profile moved measured energy 162 260 → 225 190 J (×1.3878). Under `minimize_energy` the rule therefore reports ΔR ≈ 0 for every profile measurement. A §2.7 amendment, not a patch |
+| D35 | uncertainty planner (Stage B) | **Recorded 2026-09-14** — STEP B5 asks for a `README.md` paragraph and a `CHANGELOG.md` entry, but both files are pure upstream LLMServingSim with no fork content, and upstream's own README policy keeps CLI tables off it. The paragraph went to `CLAUDE.md` §Commands and the long form to `docs/uncertainty_planner.md`; the two upstream files are untouched |
 
 **Reading order.** The entries below are in the order they were written, not
 numerically: D30 and D31 precede D28 and D29 in the file because the surrogate and
@@ -2380,3 +2382,106 @@ inside the fixture. `experiments/uncertainty/results/ea1_margin_modes.md`.
 `tests/test_margin_policy.py`, `tests/test_cli_accuracy_domain.py`,
 `tests/test_accuracy_domain.py`, `planner/uncertainty/`, `tests/test_{perturb,sensitivity,measurement_plan,instance_attribution}.py`; PR stack `feat/uq-a1-registry` →
 `feat/uq-a5-ea2-rngd-domain` → `feat/uq-b3-measurement-plan`.
+
+---
+
+## D34 — which perturbation rules are approximate, and the one whose clause is wrong · Recorded 2026-09-14
+
+`WORK_ORDER_uncertainty_planner.md` STEP B5 asks for "근사 규칙이 근사인 kind
+목록" — the register of which closed-form rules are exact and which are
+first-order stand-ins. Writing it down turned one of them into a finding.
+
+**The register.** `planner/uncertainty/perturb.py`, `PerturbResult.approximation`:
+
+| kind | `approximation` | why |
+| --- | --- | --- |
+| `SIM_ERROR` | `False` | it moves the **margin**, not the prediction. No simulator input changes, so there is nothing to approximate |
+| `LINK_BW` | `False` | the envelope cache stores the raw simulator output from *before* `apply_pd_transfer_cost`; the planner adds the transfer term itself, so re-pricing it with the same `kv_transfer.transfer_ms` is the same arithmetic |
+| `LINK_LAT` | `False` | same path |
+| `PROFILE` | `True` | latency is not linear in operator time once a queue forms |
+| `POWER` | `True` | a constant factor on average power |
+
+Items scored by an approximate rule are printed as "(approx)" wherever the
+measurement plan quotes them, so an operator never spends a server-hour on a
+figure without being told how it was obtained.
+
+**The finding: `PROFILE`'s energy clause is wrong against this simulator.** Work
+order §2.7 specifies, and `_scale_profile` implements, "에너지는 불변(전력 모델
+별도)" — a profile perturbation scales latencies and rates and leaves energy
+alone, on the reasoning that energy is `POWER`'s to move and counting it twice
+would let one measurement appear to settle two.
+
+The simulator disagrees. `serving/core/power_model.py:73`:
+
+```python
+def add_npu_active_energy_consumption(self, hardware, node_id, latency_ns, num_npus=1):
+    latency_s = latency_ns * 1e-9
+    energy_j = (active_power - idle_power) * latency_s
+```
+
+Active energy is **linear in operator latency**. Scaling a perf bundle's
+`time_us` by `(1+δ)` therefore scales the active-energy term by `(1+δ)`, and the
+closed form reports no change at all. Measured on the pre-D33 stack by copying
+`profiler/perf/A40` with every `time_us` multiplied and re-simulating one
+candidate: multiplier **1.38876**, total energy **162 260 J → 225 190 J**, ratio
+**1.3878**. The small shortfall against the multiplier is the idle/standby, DRAM
+and link terms, which do not scale with operator time.
+
+**Why this matters and why it is not patched here.** The fixture's objective is
+`minimize_energy`. A rule that holds energy fixed therefore reports `ΔR = 0` for
+*every* profile measurement except where one crosses an SLO boundary, so a
+measurement plan on an energy objective systematically under-values profiling.
+The fix is a §2.7 amendment — scale the active-energy term with the latency
+multiplier, keeping `POWER` as the separate factor on watts — and it changes what
+the measurement plan recommends, so it is a specification change and not a patch.
+Left to the work order's owner, and recorded here so that no E-B1 number produced
+before the amendment is read as a fair comparison against `profile` items.
+
+**Corroboration is on an unlanded branch.** The multiplier measurement above was
+taken on `feat/uq-b4-wip`, which does not run against `main` (see D35 and
+`docs/uncertainty_planner.md` §6). The `power_model.py` code path, which is the
+load-bearing half of the claim, is on `main` and can be read directly.
+
+**Where.** `planner/uncertainty/perturb.py`, `serving/core/power_model.py:73`
+(read, not modified), `docs/uncertainty_planner.md` §2.4 and §5.
+
+---
+
+## D35 — the uncertainty planner is not documented in `README.md` or `CHANGELOG.md` · Recorded 2026-09-14
+
+`WORK_ORDER_uncertainty_planner.md` STEP B5 lists four documentation
+deliverables, two of which name files this fork does not own.
+
+**What the work order asks for.** "`README.md`에 `--accuracy-domain`,
+`--measurement-plan` 한 단락" and "`CHANGELOG.md`".
+
+**What those files actually are.** Both are pure upstream LLMServingSim files
+with no HeteroPilot content whatsoever:
+
+* `README.md` is the simulator's front door — LLMServingSim branding, a
+  `git clone https://github.com/casys-kaist/LLMServingSim.git` quickstart, and
+  links to llmservingsim.ai. Upstream's own "README and docs split" policy (see
+  its `[Unreleased]` changelog entry) makes it deliberately minimal and moves
+  CLI flag tables to the docs site. Its last three commits are upstream's.
+* `CHANGELOG.md` follows Keep a Changelog for *the simulator*, and its last
+  three commits are upstream release commits. It contains no `planner/` entry.
+
+Adding a HeteroPilot planner flag to either would put fork content into an
+upstream file, contradict upstream's stated README policy, and guarantee a
+conflict at the next re-pin. `CLAUDE.md` §*When spec and reality diverge* applies:
+the real code wins, and the difference is recorded here.
+
+**What was done instead.** The paragraph the work order asks for lives in
+`CLAUDE.md`'s *Commands* section, beside the `python -m planner` block it already
+documents, and the long form is `docs/uncertainty_planner.md` — which is where
+this fork's own documents live (`deviations.md`, `CLAIMS.md`, `HANDOVER.md`,
+`rps_aware_planning_design.md` are all top-level `docs/*.md`; `docs/docs/` and
+`docs/README.md` are the upstream Docusaurus site).
+
+**When this should be revisited.** If the fork ever grows its own README, or
+Phase 5 lifts the upstream-file restriction, the paragraph moves and this entry
+is superseded. Until then a reader looking for the flags finds them in
+`CLAUDE.md` and in `python -m planner plan --help`, both of which are accurate.
+
+**Where.** `CLAUDE.md`, `docs/uncertainty_planner.md`; `README.md` and
+`CHANGELOG.md` deliberately untouched.
