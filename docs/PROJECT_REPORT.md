@@ -653,7 +653,7 @@ pretending to be a claim about the device. The simulator's error is a *function 
 that operating point* — measured, on one RNGD card, at **+11.6 % at served
 concurrency 3.9 and −18 % at 76** — so a planner holding a scalar cannot tell a
 plan that is optimistic from one that is infeasible. §4.8.7's winner passed a 50 ms
-TPOT SLO at a predicted 48.41 ms and 48.41 × 1.18 = 57.1.
+TPOT SLO at a predicted 48.41 ms and 48.41 × 1.18 = 57.1 (that product is the pre-D70 arithmetic; the corrected margin gives 59.04 — same verdict).
 
 Four pieces close that hole, and each is refusable rather than approximate:
 

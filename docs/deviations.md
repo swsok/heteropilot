@@ -2255,6 +2255,63 @@ E6 afterwards is a replay rather than a re-simulation.
 `experiments/results/a40_lowload_envelope.md`.
 
 
+## D70 — the accuracy-domain margin was `-e`, but the error's denominator is the measurement · Resolved 2026-09-14
+
+*`WORK_ORDER_uq_stage_b_plus.md` STEP C0. First entry from that work order's
+D70-D79 block.*
+
+**The convention.** Every committed domain declares `e = (sim - measured) /
+measured`, with negative meaning the simulator is optimistic. So
+`measured = sim / (1 + e)`, and the multiplier that recovers the measurement from
+a prediction is `1 / (1 + e)` -- a margin of **`-e / (1 + e)`**.
+
+**What the code did.** `AccuracyDomain.margin_from_error` returned `max(0, -e)`,
+applying a measurement-denominator error as a multiplier on a
+prediction-denominator quantity. It under-corrects, and the shortfall grows with
+the error:
+
+| domain error | margin applied | margin needed | short by |
+| ---: | ---: | ---: | ---: |
+| -1.42 % (A40 @170.56) | 1.42 % | 1.44 % | 0.02 pp |
+| -3.05 % (RNGD-CARD @16.5) | 3.05 % | 3.14 % | 0.10 pp |
+| -11.68 % (RNGD-CARD @54.2) | 11.68 % | 13.22 % | 1.54 pp |
+| **-18.03 % (RNGD-CARD @76)** | **18.03 %** | **21.99 %** | **3.96 pp** |
+| -42.12 % (RNGD @139.4, extrapolated) | 42.12 % | 72.78 % | 30.66 pp |
+
+The c76 point is the one that can be checked against a measurement:
+`rngd_concurrency_envelope.md` records **52.7 ms measured against 43.2 simulated**.
+`43.2 x 1.1803 = 50.99` -- still 1.7 ms short. `43.2 x 1.2199 = 52.70`, exactly.
+
+**`48.41 x 1.18 = 57.1` is the same mistake, and it is in seven documents.**
+57.1 ms is **not a measurement**: every occurrence of it is that one expression.
+The only measurement behind the 18 % is the 52.7/43.2 pair above. Under the
+corrected formula D22's winner is robust-**59.04 ms**, not 57.1. *The verdict is
+unchanged* -- both breach the 50 ms SLO -- which is why the number propagated
+unchallenged through `PROJECT_REPORT.md`, `rps_aware_planning_design.md`,
+`uncertainty_planner.md`, `patent_future_ideas.md`, `e5_self_rejection.md`,
+`rngd_card_edf.yaml` and this file.
+
+**What the work order got wrong, and it is worth recording.**
+`WORK_ORDER_uq_stage_b_plus.md` STEP C0 asks for the c76 point's
+`tpot_err_pct: -18.0` to be **changed to -15.2**, on the reading that -18.0 is
+D22's `(57.1 - 48.41)/48.41 = 17.95 %` with the sign flipped. It is not. -18.0 is
+`(43.2 - 52.7)/52.7`, computed from the envelope's own measurement and correct
+under the file's stated convention. The inconsistency the work order correctly
+sensed is in the *multiplication*, not in the *stored datum*. **That instruction
+was not carried out**; `CLAUDE.md` §*When spec and reality diverge* applies.
+
+**Blast radius, measured rather than assumed.** All sixteen E6 cells were
+re-scored under the corrected margin from their recorded operating points:
+**zero verdicts change.** Margins rise (the largest, 42.12 -> 72.78, is on a cell
+already rejected), and a margin that rises can only remove candidates from the
+feasible set -- with every recommended plan surviving, the ranking cannot move.
+The default `plan` path applies no automatic margin at all, so golden output is
+untouched.
+
+**Where.** `planner/predictor/calibration.py` (`margin_from_error`),
+`tests/test_accuracy_domain.py` and eight other test modules whose pinned values
+moved, `docs/deviations.md` D22.
+
 ## D40 — `EnvelopeCache` dedups candidates the simulator does not treat as equivalent · Open (measured, not fixed)
 
 **What the key does on purpose.** `EnvelopeCache._path` hashes a placement

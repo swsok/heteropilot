@@ -121,4 +121,6 @@ def test_a_replicated_candidate_is_judged_per_card_not_per_deployment() -> None:
     )
     decision = AccuracyDomainMargin({"A40": domain}).decide(candidate, sim, metrics, {"i0": "A40"})
     assert decision.status == "in_domain", "40 per card is inside [10, 60]"
-    assert decision.tpot_percent == pytest.approx(1.0 + 30 / 50 * 9.0)
+    # error -(1.0 + 30/50 * 9.0) = -6.4 %, margin -e/(1+e) = 6.4/93.6 (D70)
+    error = 1.0 + 30 / 50 * 9.0
+    assert decision.tpot_percent == pytest.approx(error / (100.0 - error) * 100.0)

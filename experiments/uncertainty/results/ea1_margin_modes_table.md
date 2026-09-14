@@ -49,20 +49,20 @@ Operating points filled from the cached per-island served concurrency: 324 candi
 | `mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp3)-s256-t8192` | 20.41 | slo_violated | 18.00 % | feasible | 0.39 % |
 | `mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp3)-s32-t2048` | 19.60 | slo_violated | 18.00 % | feasible | 0.38 % |
 | `mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp3)-s32-t8192` | 19.40 | slo_violated | 18.00 % | feasible | 0.38 % |
-| `mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp4)-s128-t2048` | 17.27 | slo_violated | 18.00 % | feasible | 0.36 % |
+| `mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp4)-s128-t2048` | 17.27 | slo_violated | 18.00 % | feasible | 0.37 % |
 | `mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp4)-s128-t8192` | 17.51 | slo_violated | 18.00 % | feasible | 0.37 % |
-| `mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp4)-s256-t2048` | 17.27 | slo_violated | 18.00 % | feasible | 0.36 % |
+| `mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp4)-s256-t2048` | 17.27 | slo_violated | 18.00 % | feasible | 0.37 % |
 | `mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp4)-s256-t8192` | 17.51 | slo_violated | 18.00 % | feasible | 0.37 % |
 | `mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp4)-s32-t2048` | 17.59 | slo_violated | 18.00 % | feasible | 0.37 % |
 | `mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp4)-s32-t8192` | 17.72 | slo_violated | 18.00 % | feasible | 0.37 % |
-| `mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s128-t2048` | 50.28 | slo_violated | 18.00 % | feasible | 0.59 % |
-| `mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s128-t8192` | 50.23 | slo_violated | 18.00 % | feasible | 0.59 % |
-| `mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s256-t2048` | 50.28 | slo_violated | 18.00 % | feasible | 0.59 % |
-| `mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s256-t8192` | 50.23 | slo_violated | 18.00 % | feasible | 0.59 % |
-| `mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s128-t2048` | 50.28 | slo_violated | 18.00 % | feasible | 0.59 % |
-| `mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s128-t8192` | 50.23 | slo_violated | 18.00 % | feasible | 0.59 % |
-| `mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s256-t2048` | 50.28 | slo_violated | 18.00 % | feasible | 0.59 % |
-| `mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s256-t8192` | 50.23 | slo_violated | 18.00 % | feasible | 0.59 % |
+| `mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s128-t2048` | 50.28 | slo_violated | 18.00 % | feasible | 0.60 % |
+| `mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s128-t8192` | 50.23 | slo_violated | 18.00 % | feasible | 0.60 % |
+| `mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s256-t2048` | 50.28 | slo_violated | 18.00 % | feasible | 0.60 % |
+| `mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s256-t8192` | 50.23 | slo_violated | 18.00 % | feasible | 0.60 % |
+| `mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s128-t2048` | 50.28 | slo_violated | 18.00 % | feasible | 0.60 % |
+| `mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s128-t8192` | 50.23 | slo_violated | 18.00 % | feasible | 0.60 % |
+| `mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s256-t2048` | 50.28 | slo_violated | 18.00 % | feasible | 0.60 % |
+| `mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s256-t8192` | 50.23 | slo_violated | 18.00 % | feasible | 0.60 % |
 
 ## (c) vs (d): what refusing extrapolation changes
 
@@ -70,36 +70,36 @@ Operating points filled from the cached per-island served concurrency: 324 candi
 
 | candidate | served L | c_accuracy_domain verdict | tpot margin | d_refuse verdict | tpot margin |
 | --- | ---: | --- | ---: | --- | ---: |
-| `cuda-a40-node_a40a-tp1-dp1-s128-t2048` | 172.36 | slo_violated | 1.43 % | outside_calibration_domain | 0.00 % |
-| `cuda-a40-node_a40a-tp1-dp1-s256-t2048` | 197.88 | slo_violated | 1.61 % | outside_calibration_domain | 0.00 % |
-| `cuda-a40-node_a40a-tp1-dp1-s256-t8192` | 192.40 | slo_violated | 1.57 % | outside_calibration_domain | 0.00 % |
-| `cuda-a40-node_a40a-tp2-dp1-s256-t2048` | 188.62 | slo_violated | 1.54 % | outside_calibration_domain | 0.00 % |
-| `cuda-a40-node_a40a-tp2-dp1-s256-t8192` | 186.88 | slo_violated | 1.53 % | outside_calibration_domain | 0.00 % |
-| `cuda-a40-node_a40b-tp1-dp1-s128-t2048` | 172.36 | slo_violated | 1.43 % | outside_calibration_domain | 0.00 % |
-| `cuda-a40-node_a40b-tp1-dp1-s256-t2048` | 197.88 | slo_violated | 1.61 % | outside_calibration_domain | 0.00 % |
-| `cuda-a40-node_a40b-tp1-dp1-s256-t8192` | 192.40 | slo_violated | 1.57 % | outside_calibration_domain | 0.00 % |
-| `cuda-a40-node_a40b-tp2-dp1-s256-t2048` | 188.62 | slo_violated | 1.54 % | outside_calibration_domain | 0.00 % |
-| `cuda-a40-node_a40b-tp2-dp1-s256-t8192` | 186.88 | slo_violated | 1.53 % | outside_calibration_domain | 0.00 % |
-| `furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t2048` | 144.61 | slo_violated | 37.87 % | outside_calibration_domain | 0.00 % |
-| `furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t8192` | 143.87 | slo_violated | 37.66 % | outside_calibration_domain | 0.00 % |
-| `furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t2048` | 177.56 | slo_violated | 47.42 % | outside_calibration_domain | 0.00 % |
-| `furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t8192` | 175.41 | slo_violated | 46.79 % | outside_calibration_domain | 0.00 % |
-| `furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t2048` | 139.84 | slo_violated | 36.49 % | outside_calibration_domain | 0.00 % |
-| `furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t8192` | 139.81 | slo_violated | 36.48 % | outside_calibration_domain | 0.00 % |
-| `furiosa-rngd-card-node_rngd1-tp1-dp1-s128-t2048` | 144.61 | slo_violated | 37.87 % | outside_calibration_domain | 0.00 % |
-| `furiosa-rngd-card-node_rngd1-tp1-dp1-s128-t8192` | 143.87 | slo_violated | 37.66 % | outside_calibration_domain | 0.00 % |
-| `furiosa-rngd-card-node_rngd1-tp1-dp1-s256-t2048` | 177.56 | slo_violated | 47.42 % | outside_calibration_domain | 0.00 % |
-| `furiosa-rngd-card-node_rngd1-tp1-dp1-s256-t8192` | 175.41 | slo_violated | 46.79 % | outside_calibration_domain | 0.00 % |
-| `furiosa-rngd-card-node_rngd1-tp1-dp1-s32-t2048` | 139.84 | slo_violated | 36.49 % | outside_calibration_domain | 0.00 % |
-| `furiosa-rngd-card-node_rngd1-tp1-dp1-s32-t8192` | 139.81 | slo_violated | 36.48 % | outside_calibration_domain | 0.00 % |
-| `mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t2048` | 87.32 | slo_violated | 21.28 % | outside_calibration_domain | 0.00 % |
-| `mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t8192` | 85.96 | slo_violated | 20.89 % | outside_calibration_domain | 0.00 % |
-| `mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t2048` | 100.60 | slo_violated | 25.13 % | outside_calibration_domain | 0.00 % |
-| `mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192` | 99.21 | slo_violated | 24.72 % | outside_calibration_domain | 0.00 % |
-| `mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t2048` | 87.32 | slo_violated | 21.28 % | outside_calibration_domain | 0.00 % |
-| `mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t8192` | 85.96 | slo_violated | 20.89 % | outside_calibration_domain | 0.00 % |
-| `mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t2048` | 100.60 | slo_violated | 25.13 % | outside_calibration_domain | 0.00 % |
-| `mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192` | 99.21 | slo_violated | 24.72 % | outside_calibration_domain | 0.00 % |
+| `cuda-a40-node_a40a-tp1-dp1-s128-t2048` | 172.36 | slo_violated | 1.45 % | outside_calibration_domain | 0.00 % |
+| `cuda-a40-node_a40a-tp1-dp1-s256-t2048` | 197.88 | slo_violated | 1.63 % | outside_calibration_domain | 0.00 % |
+| `cuda-a40-node_a40a-tp1-dp1-s256-t8192` | 192.40 | slo_violated | 1.60 % | outside_calibration_domain | 0.00 % |
+| `cuda-a40-node_a40a-tp2-dp1-s256-t2048` | 188.62 | slo_violated | 1.57 % | outside_calibration_domain | 0.00 % |
+| `cuda-a40-node_a40a-tp2-dp1-s256-t8192` | 186.88 | slo_violated | 1.56 % | outside_calibration_domain | 0.00 % |
+| `cuda-a40-node_a40b-tp1-dp1-s128-t2048` | 172.36 | slo_violated | 1.45 % | outside_calibration_domain | 0.00 % |
+| `cuda-a40-node_a40b-tp1-dp1-s256-t2048` | 197.88 | slo_violated | 1.63 % | outside_calibration_domain | 0.00 % |
+| `cuda-a40-node_a40b-tp1-dp1-s256-t8192` | 192.40 | slo_violated | 1.60 % | outside_calibration_domain | 0.00 % |
+| `cuda-a40-node_a40b-tp2-dp1-s256-t2048` | 188.62 | slo_violated | 1.57 % | outside_calibration_domain | 0.00 % |
+| `cuda-a40-node_a40b-tp2-dp1-s256-t8192` | 186.88 | slo_violated | 1.56 % | outside_calibration_domain | 0.00 % |
+| `furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t2048` | 144.61 | slo_violated | 60.96 % | outside_calibration_domain | 0.00 % |
+| `furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t8192` | 143.87 | slo_violated | 60.41 % | outside_calibration_domain | 0.00 % |
+| `furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t2048` | 177.56 | slo_violated | 90.18 % | outside_calibration_domain | 0.00 % |
+| `furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t8192` | 175.41 | slo_violated | 87.95 % | outside_calibration_domain | 0.00 % |
+| `furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t2048` | 139.84 | slo_violated | 57.46 % | outside_calibration_domain | 0.00 % |
+| `furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t8192` | 139.81 | slo_violated | 57.44 % | outside_calibration_domain | 0.00 % |
+| `furiosa-rngd-card-node_rngd1-tp1-dp1-s128-t2048` | 144.61 | slo_violated | 60.96 % | outside_calibration_domain | 0.00 % |
+| `furiosa-rngd-card-node_rngd1-tp1-dp1-s128-t8192` | 143.87 | slo_violated | 60.41 % | outside_calibration_domain | 0.00 % |
+| `furiosa-rngd-card-node_rngd1-tp1-dp1-s256-t2048` | 177.56 | slo_violated | 90.18 % | outside_calibration_domain | 0.00 % |
+| `furiosa-rngd-card-node_rngd1-tp1-dp1-s256-t8192` | 175.41 | slo_violated | 87.95 % | outside_calibration_domain | 0.00 % |
+| `furiosa-rngd-card-node_rngd1-tp1-dp1-s32-t2048` | 139.84 | slo_violated | 57.46 % | outside_calibration_domain | 0.00 % |
+| `furiosa-rngd-card-node_rngd1-tp1-dp1-s32-t8192` | 139.81 | slo_violated | 57.44 % | outside_calibration_domain | 0.00 % |
+| `mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t2048` | 87.32 | slo_violated | 27.03 % | outside_calibration_domain | 0.00 % |
+| `mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t8192` | 85.96 | slo_violated | 26.40 % | outside_calibration_domain | 0.00 % |
+| `mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t2048` | 100.60 | slo_violated | 33.56 % | outside_calibration_domain | 0.00 % |
+| `mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192` | 99.21 | slo_violated | 32.84 % | outside_calibration_domain | 0.00 % |
+| `mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t2048` | 87.32 | slo_violated | 27.03 % | outside_calibration_domain | 0.00 % |
+| `mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t8192` | 85.96 | slo_violated | 26.40 % | outside_calibration_domain | 0.00 % |
+| `mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t2048` | 100.60 | slo_violated | 33.56 % | outside_calibration_domain | 0.00 % |
+| `mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192` | 99.21 | slo_violated | 32.84 % | outside_calibration_domain | 0.00 % |
 
 ## Notes and suggestions emitted
 
@@ -114,6 +114,6 @@ Operating points filled from the cached per-island served concurrency: 324 candi
 ## Provenance
 
 - cache: {'hits': 2592, 'misses': 0}
-- git: f0b6b3d9abfba65d4e6ce6e41b0145a244c8e4e1
-- node: {'cuda': None, 'rngd_cards': None, 'atom_devices': 0}
+- git: 1a695e70507c3c0249a33e748a3c2c0473433510
+- node: {'cuda': None, 'rngd_cards': 3, 'atom_devices': 4}
 

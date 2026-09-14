@@ -24,7 +24,7 @@ RNGD card the simulator's TPOT error is **+11.6 %** at served concurrency 3.9 an
 **−18 %** at 76 — not merely different in size but opposite in sign (D29). One
 global margin is therefore too loose somewhere and too tight everywhere else, and
 D22 is what "too loose at the top" looks like: a winner passed a 50 ms TPOT SLO
-at a predicted 48.41 ms, and 48.41 × 1.18 = 57.1 ms. The configuration was
+at a predicted 48.41 ms, and 48.41 × 1.18 = 57.1 ms (that product is the pre-D70 arithmetic; the corrected margin gives 59.04 — same verdict). The configuration was
 infeasible and nothing in the pipeline could see it.
 
 Two things follow, and they are the two halves of this work:
@@ -293,7 +293,39 @@ at the top, because a retracted measurement is evidence about method.
 
 ### E-B1 – E-B3 — truth degradation
 
-**Not run.** STEP B4 is outstanding; see §6.
+**Run 2026-09-14 on the reconciled architecture** (PRs #82, #86). All three
+re-ran after D33, so the 2026-09-11 numbers do not carry over — the margin
+policy, the `refuse` default and the partial-coverage rule all changed, and so
+did the truth itself (D33 dropped the E-A2 domain as D32-mispaired; truth is now
+the nine-point D32 RNGD-CARD domain, 50 of 324 candidates feasible).
+
+**E-B1** — `experiments/uncertainty/results/eb1_regret_vs_budget.md`. Over the
+37 of 231 degraded sets that actually move the plan, `ours` reaches zero regret
+in **0.041 h against `random`'s 0.452 and `round_robin`'s 1.097**, matching the
+oracle at every budget. The write-up says plainly why matching an oracle is less
+impressive than it sounds: the pool is 11 items and exactly one of them, the
+cheapest, carries essentially all the decision regret, so any rule that ranks it
+first ties the oracle.
+
+**E-B2** — `eb2_flip_detection.md`. Recall **0.983**, precision **0.773**,
+identical at m = 3, 5 and 9 — the grid density does not matter, because a flip is
+decided by whether the interval *contains* the crossing. The error is not where
+the work order looks for it: the **approximate** rules are perfect over 224
+cases, while every false positive and the single false negative come from an
+**exact** rule, all of them on `sim_error`.
+
+**E-B3** — `eb3_closed_form_vs_resim.md`. Closed form **0.287 s** against
+**2,090.8 s** of resimulation over 1,104 runs, a **7,285× speed-up**. The
+ordering survives — same item first, three inert inputs at exactly zero — and the
+magnitude does not: **30.5 % low** on the one item where there was anything to
+get wrong. Its Spearman of 1.000 is over four items three of which are tied at
+zero and is close to vacuous; the `--top 1` run's 1.000 is tautological and is
+committed as evidence of nothing.
+
+**What they do not establish.** The E-A1 truth cache was built with
+`enable_pd=False`, so there are no P/D candidates and `link_bw` flips nothing —
+one input kind carries the whole decision. `WORK_ORDER_uq_stage_b_plus.md` exists
+to re-run all three on a fixture where two or more kinds are active.
 
 ---
 
@@ -306,9 +338,12 @@ are scalings, not re-simulations. `PROFILE`'s energy term carries an extra
 offset on top of that: the measured ×1.3878 against a ×1.38876 multiplier is the
 idle/standby, DRAM and link terms, which do not scale with operator time (D34).
 Items scored by an approximate rule are marked `approximation=True` and printed
-as "(approx)" wherever they are quoted. `--resimulate-top N` (the escape hatch
-§2.7 leaves for checking one by really simulating both ends of its range) is
-**not implemented on `main`**.
+as "(approx)" wherever they are quoted. `--resimulate-top N` — the escape hatch
+§2.7 leaves for checking one by really simulating both ends of its range — **is
+implemented** (`planner/uncertainty/resimulate.py`) and E-B3 is what it measures:
+the closed form keeps the order and is 30.5 % low on magnitude. That gap is not
+yet separated from D40, whose mirror defect the ×1.0 identity control finds in
+the same run.
 
 **The grid is uniformly weighted.** `ΔR_i` is the unweighted mean over grid
 points, so it assumes every point in an input's range is equally likely. Nothing
@@ -331,15 +366,22 @@ measurement.
 
 ## 6. What is not built
 
-* **STEP B4** — the truth-degradation experiments E-B1 – E-B3, which are the
-  quantitative basis for the patent's §6 effect claim. Prior work exists on the
-  `feat/uq-b4-wip` branch and **does not run against `main`**: it was built on the
-  deleted `predictor/accuracy_domain.py`, on the dropped E-A2 domain yaml (one end
-  of its scalar↔domain degradation), and on a cache whose key scheme has since
-  changed — `main`'s 162-entry E-A1 cache and that branch's share zero entry
-  names. Treat it as a design reference, not as code to resume.
-* **`--resimulate-top N`** — §2.7's escape hatch for checking an approximate rule
-  by really simulating both ends of its range.
+* ~~**STEP B4**~~ and ~~**`--resimulate-top N`**~~ — **both done**, PRs #82 and
+  #86; see §4. The `feat/uq-b4-wip` branch this entry warned against was ported
+  rather than resumed: its two B4 commits were cherry-picked onto the reconciled
+  `main` and the eighteen below them, the pre-D33 A1–B3, were dropped as
+  superseded. Two of its changes were deliberately not carried over because D33
+  had reversed them — `--accuracy-domain` mutually exclusive with the manual
+  margins (D33 §3 keeps those as floors), and a pass resting on one unmargined
+  metric rejected as `UNMEASURED` (D33 §5 makes partial coverage a caveat, and the
+  old rule empties every search on the committed TPOT-only domains).
+* **A fixture where more than one input kind is active.** E-B1–E-B3 all ran on a
+  truth cache built with `enable_pd=False`, so `link_bw` flips nothing and one
+  input carries the whole decision. That makes `ours = oracle` a fact about the
+  fixture rather than about the ranking rule.
+  `WORK_ORDER_uq_stage_b_plus.md` is the follow-up: a P/D fixture with a 4 s TTFT
+  SLO, stratified degradation sets, and E-B3 re-run with the D40 mirror pairs
+  excluded so the magnitude error can be separated from the cache defect.
 * **Stage C** (closed-loop replanning against a live A40) and **Stage D**
   (conformal surrogate bounds, multi-dimensional domains) — separate work orders.
 

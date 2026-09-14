@@ -143,8 +143,10 @@ def test_in_domain_candidates_are_margined_and_the_registry_is_emitted(
     plan = output.recommended.plan if output.recommended else None
     if plan is not None:
         # Linear between (20, -2) and (120, -20): weight (60-20)/100 = 0.4,
-        # so -2 - 0.4 * 18 = -9.2 %, charged as a 9.2 % margin.
-        assert plan.robust_margin_tpot_percent == pytest.approx(9.2)
+        # so the ERROR is -2 - 0.4 * 18 = -9.2 %. The margin is -e/(1+e) of that,
+        # 9.2/90.8 = 10.13 % -- not 9.2 %, because the error's denominator is the
+        # measurement and the margin multiplies a prediction (D70).
+        assert plan.robust_margin_tpot_percent == pytest.approx(10.1322, abs=1e-4)
         assert plan.margin_source == "accuracy_domain"
         assert plan.margin_basis and "in domain" in plan.margin_basis
         assert plan.operating_point[0].hardware == "A40"
