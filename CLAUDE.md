@@ -403,6 +403,7 @@ So each concurrent work order owns a block and takes numbers only from it:
 | D60–D69 | `WORK_ORDER_cxl_kv_pool.md` |
 | D70–D79 | `WORK_ORDER_uq_stage_b_plus.md` (claimed 2026-09-14, STEP C0) |
 | D80–D89 | one-off work with no work order |
+| D90–D99 | `WORK_ORDER_npu_exec_model_spike.md` (claimed 2026-09-15) |
 
 D37–D39 are left free on purpose: they are the only numbers a stream may take
 **without** a block, and only for an entry that must sit immediately after the last
@@ -431,6 +432,7 @@ work order:
 | --- | --- |
 | `E-A*`, `E-B*` | `WORK_ORDER_uncertainty_planner.md` (Stage A, Stage B) |
 | bare `E1`–`E7` | **history, do not extend** — `cxl_kv_pool`, `rps_aware`, `tiered_profiles`, read as scoped to the file that defines them |
+| `E-N*` | `WORK_ORDER_npu_exec_model_spike.md` (claimed 2026-09-15) |
 | anything else | unclaimed — add the row here in the same commit that first uses it |
 
 **The existing bare ids do not move.** There are ~460 `E<n>` references across `docs/`,

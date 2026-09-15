@@ -4,7 +4,7 @@
 > 이 문서는 **분해(decomposition)** 가 목적이다. 실행 모델을 완성하는 것은 후속 작업지시서의 일이다.
 > 대상 저장소: `github.com/swsok/heteropilot` · 기준 `main` = `fcf8ba5` 이후(UQ Stage B+ 머지 후의 `main`에서 시작할 것 — 시작 시 sha를 §STEP 0에 기록) · 작성일: 2026-09-15 · 도구: Claude Code CLI · 노드: 시뮬레이션은 아무 노드, STEP C는 **NPU 노드**
 > 예산: **5일** (STEP 0 0.5 · A 1.5 · B 2 · C 1(NPU) · D 0.5). STEP C는 노드 일정에 맞춰 A·B와 병행 가능.
-> D-번호: 이 작업지시서는 **D70–D79 블록**을 쓴다(CLAUDE.md의 "unassigned" 행을 이 문서 이름으로 바꾸는 커밋을 STEP 0에서). 실험 id 태그: **`E-N*`** (CLAUDE.md 표에 같은 커밋으로 추가).
+> D-번호: 이 작업지시서는 **D90–D99 블록**을 쓴다. 초안은 D70–D79라고 적었으나 그 블록은 `WORK_ORDER_uq_stage_b_plus.md`가 2026-09-14 STEP C0에서 claim했고 D70–D73이 이미 기록되어 있다(D80–D89는 작업지시서 없는 일회성 작업 몫이므로 비어 있어도 쓰지 않는다). 블록과 실험 id 태그 **`E-N*`** 는 CLAUDE.md 표에 **이미 등록되어 있다**(2026-09-15) — STEP 0에서 다시 추가하지 말고 존재만 확인할 것. **블록 안의 개별 번호는 이 문서에 미리 적지 않는다**: `tests/test_deviations_numbering.py`가 아직 항목이 없는 `D<n>` 인용을 실패로 잡으므로, 번호는 항목을 쓰는 커밋에서 정한다.
 
 ---
 
@@ -92,8 +92,8 @@ TTFT는 같은 표를 별도로(closed-loop 측정이라 D19 caveat 명시, TPOT
 
 1. UQ Stage B+ 머지 후 `main` sha, 게이트 결과, `whichnode.sh` 출력을 `docs/npu_exec_spike.md` §0에 기록.
 2. **CLI가 이미 만든 두 조사를 커밋**: `furiosa_artifact_buckets.py`를 `experiments/scripts/`로, 결과를 `experiments/results/rngd_artifact_buckets.md`(아티팩트 sha `d6ae6a43`, furiosa-llm 빌드 `b62dbc1`, 분류 규칙 출처 `config_types.py`, 세 아티팩트·두 스키마 표)와 `experiments/results/rngd_pipeline_hit_rate.md`(§1.2 표 + 두 스택의 통계 정의 차이 + H-a/H-b)로. 격자는 **A7**대로 `profiler/perf/RNGD-CARD/meta-llama/Llama-3.1-8B/bf16/artifact_buckets.yaml`에 기계가 읽는 형태로도 저장(출처·sha 헤더). prefix cache hit(7.6–9.0 %)이 서비스 spec `prefix_share_ratio: 0.07`과 맞는 것을 교차 확인으로 한 줄.
-3. `CLAUDE.md`: D70–D79 블록을 이 문서에 배정, `E-N*` 태그 행 추가. 같은 커밋.
-4. `deviations.md` **D70** — "RNGD 런타임은 c8 이상에서 kernelwise 경로만 탄다; composed(wire) 파이프라인은 c1 전용" (측정 사실, §1.2). D17의 "혼합 스텝 결정 불가" 문장 위에 "Resolved by artifact buckets 2026-09-15: 구조적으로 불가능(D70/§1.1)" 표기.
+3. `CLAUDE.md`: D90–D99 블록 배정과 `E-N*` 태그 행은 2026-09-15에 이미 들어갔다. 두 행이 그대로 있는지 확인만 하고, 없으면 추가한다.
+4. `deviations.md` **새 항목(블록 D90–D99의 첫 번호, 쓰는 커밋에서 확정)** — "RNGD 런타임은 c8 이상에서 kernelwise 경로만 탄다; composed(wire) 파이프라인은 c1 전용" (측정 사실, §1.2). D17의 "혼합 스텝 결정 불가" 문장 위에 "Resolved by artifact buckets 2026-09-15: 구조적으로 불가능(이 항목/§1.1)" 표기.
 
 ---
 
@@ -165,7 +165,7 @@ sharegpt와 토큰 분포가 다른 워크로드 하나(`planner/util/workload.p
 
 ## B.4 산출물
 
-프로토타입 diff(`git diff --stat`을 PR에), E-N4·E-N5 표, `docs/npu_exec_spike.md` §B. **D71** — "실행 모델 프로토타입이 설명한 오차와 남긴 잔차"(숫자 표 포함). PR은 do-not-merge.
+프로토타입 diff(`git diff --stat`을 PR에), E-N4·E-N5 표, `docs/npu_exec_spike.md` §B. `deviations.md` **블록의 다음 번호** — "실행 모델 프로토타입이 설명한 오차와 남긴 잔차"(숫자 표 포함). PR은 do-not-merge.
 
 ## 완료 조건
 - [ ] 기본 경로 byte-identical(R1·R2)
@@ -212,13 +212,13 @@ c3·c5·c6·c12에서 TPOT 4점. 2의 거듭제곱 사이가 평평한 계단이
 2. **결론 세 가지 중 하나**: (i) 실행 모델이 오차의 대부분(잔여 폭이 현행의 1/3 이하, hold-out에서도)을 설명 → 후속 작업지시서 `WORK_ORDER_npu_exec_model.md`(정식 opt-in 구현, 테스트, calibration domain 재측정, upstream PR 초안) 작성; (ii) 일부(특정 메커니즘만) → 그 메커니즘만 정식화하고 나머지는 accuracy domain에 남긴다는 결정과 이유; (iii) 설명 못 함 → 무엇이 남는지(잔차의 운영점 의존성)와 다음 가설.
 3. **accuracy domain과의 관계** 한 단락: 프로토타입 아래에서 domain을 다시 측정하면 어떻게 바뀌는지(예상이 아니라 B.2의 숫자), 그리고 planner의 margin이 얼마나 줄어드는지(E5의 winner `hp-00323`이 프로토타입 sim에서는 몇 ms로 예측되고 domain이 몇 % 청구하는지 — **재계산 1회**).
 4. `docs/CLAIMS.md` §2에 "시뮬레이터 오차의 n %는 vLLM-vs-bucketed 실행 모델 차이로 설명된다(스파이크, 프로토타입, 미머지)" 한 줄 — 라벨은 `sim-on-measured, prototype`. `PAPER_OUTLINE.md`의 시뮬레이터 fidelity 절에 포인터.
-5. `docs/HANDOVER.md` §2에 후속 항목. D72(있으면: hold-out 결과), Open items summary.
+5. `docs/HANDOVER.md` §2에 후속 항목. 블록의 다음 번호(있으면: hold-out 결과), Open items summary.
 
 ---
 
 # 3. 전체 완료 조건
 
-- [ ] STEP 0 산출물 커밋(격자 yaml, 두 결과 문서, D70, CLAUDE.md 블록·태그)
+- [ ] STEP 0 산출물 커밋(격자 yaml, 두 결과 문서, 블록 첫 deviation 항목; CLAUDE.md 블록·태그는 확인만)
 - [ ] 분해 표(sharegpt 9점 + hold-out 2점) — 각 셀에 숫자 또는 "미결"
 - [ ] `main`의 `serving/`·`planner/` 무변경; 프로토타입은 스파이크 브랜치에만
 - [ ] 결론 (i)/(ii)/(iii) 명시, 후속 작업지시서 필요 여부 결정
