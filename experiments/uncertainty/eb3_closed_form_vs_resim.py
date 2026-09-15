@@ -193,6 +193,130 @@ def identity_gate(controls: list[dict], expected: set[str]) -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# Sharding: one item is one independent resimulation, so N nodes can share
+# ---------------------------------------------------------------------------
+
+#: Fields every shard must agree on before their refinements may be merged.
+#: A shard is a resimulation of ONE world; merging two that disagree about the
+#: corpus, the incumbent or the penalty would produce a table whose rows were
+#: scored against different baselines, which is the failure this experiment is
+#: least able to notice from the inside.
+SHARD_INVARIANTS = ("corpus_size", "slo_penalty", "incumbent", "grid",
+                    "fixture_path", "include_mirrors")
+
+
+def _as_record(row: dict):
+    """A refinement dict from a shard, in the shape the gates read."""
+    from types import SimpleNamespace
+
+    return SimpleNamespace(
+        input_id=row["input_id"], kind=row.get("kind", ""),
+        closed_form=row["closed_form"], resimulated=row["resimulated"],
+        skipped=row.get("skipped") or "",
+    )
+
+
+def merge_shards(paths: list[Path]) -> dict:
+    """One payload from several single-node runs of disjoint items.
+
+    Every shard recomputes the closed form -- it is 0.7 s and deterministic --
+    so the merge checks rather than assumes that they describe the same world:
+    the §2.3 invariants must match, and any item appearing in two shards must
+    carry the same closed-form dR. A shard from a node with a different corpus
+    is a different experiment and is refused rather than averaged.
+
+    Item ownership is exclusive: a refinement for the same input in two shards
+    means the split was wrong, and the run is stopped so the duplicate cannot
+    quietly take the last writer's value.
+    """
+    shards = [(path, json.loads(path.read_text())) for path in paths]
+    if not shards:
+        raise SystemExit("--merge needs at least one shard")
+    head_path, head = shards[0]
+    for path, shard in shards[1:]:
+        for field in SHARD_INVARIANTS:
+            if shard.get(field) != head.get(field):
+                raise SystemExit(
+                    f"{path} and {head_path} disagree on {field!r}: "
+                    f"{shard.get(field)!r} vs {head.get(field)!r}. These are "
+                    f"different worlds and their refinements cannot be merged."
+                )
+
+    closed_by_id: dict[str, float] = {}
+    for path, shard in shards:
+        for row in shard.get("closed", []):
+            prior = closed_by_id.get(row["input_id"])
+            value = row.get("delta_regret")
+            if prior is not None and value is not None and prior != value:
+                raise SystemExit(
+                    f"{path}: closed-form dR for {row['input_id']} is {value}, "
+                    f"but another shard computed {prior}. The closed form is "
+                    f"deterministic, so this is not the same world."
+                )
+            if value is not None:
+                closed_by_id[row["input_id"]] = value
+
+    refinements: dict[str, dict] = {}
+    owner: dict[str, Path] = {}
+    controls: list[dict] = []
+    link_checks: list[dict] = []
+    for path, shard in shards:
+        for row in shard.get("refinements", []):
+            key = row["input_id"]
+            if key in refinements:
+                raise SystemExit(
+                    f"{key} was resimulated by both {owner[key]} and {path}. "
+                    f"Shards must own disjoint items; re-run the split."
+                )
+            refinements[key], owner[key] = row, path
+        controls.extend(shard.get("identity_controls", []))
+        link_checks.extend(shard.get("link_exactness_checks", []))
+
+    records = [_as_record(r) for r in refinements.values()]
+    checked = [r for r in records if not r.skipped]
+    active = active_records(records)
+    note = spearman_refusal(len(active), len(checked))
+    rho = None if note else spearman(
+        [r.closed_form for r in checked], [r.resimulated for r in checked]
+    )
+    # Each shard already worked out which candidates D40 entitles to deviate --
+    # the mirrors still IN its corpus, which is empty whenever the mirrors were
+    # excluded at build. Union those rather than re-deriving it here: the
+    # excluded lists name candidates that are absent and so cannot deviate at
+    # all, and using them as the expectation would excuse a deviation by a
+    # candidate that is not even present.
+    expected = {c for _, shard in shards
+                for c in shard.get("identity_control_verdict", {})
+                .get("expected_from_d40_mirrors", [])}
+    verdict = identity_gate(controls, expected)
+    return {
+        "merged_from": [str(path) for path in paths],
+        "shards": [
+            {"path": str(path), "items": [r["input_id"]
+                                          for r in shard.get("refinements", [])],
+             "resimulate_seconds": shard.get("resimulate_seconds"),
+             "provenance": shard.get("provenance")}
+            for path, shard in shards
+        ],
+        **{field: head.get(field) for field in SHARD_INVARIANTS},
+        "closed_form_delta_regret": closed_by_id,
+        "resimulate_seconds_total": sum(
+            shard.get("resimulate_seconds") or 0.0 for _, shard in shards),
+        "resimulate_seconds_wall_clock_max": max(
+            (shard.get("resimulate_seconds") or 0.0 for _, shard in shards),
+            default=0.0),
+        "spearman_delta_regret_on_checked": rho,
+        "spearman_not_computed_because": note,
+        "active_checked_items": [r.input_id for r in active],
+        "identity_control_verdict": verdict,
+        "link_exactness_checks": link_checks,
+        "refinements": list(refinements.values()),
+        "identity_controls": controls,
+        "provenance": prov.collect(random_seed=0),
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cache-dir", type=Path, required=True)
@@ -219,6 +343,12 @@ def main() -> int:
     )
     parser.add_argument("--out-json", type=Path, default=None)
     parser.add_argument(
+        "--merge", type=Path, nargs="+", default=None,
+        help="Shard JSONs to merge into one result. Each shard is an ordinary "
+             "run over a disjoint --degrade subset, so the items can be split "
+             "across machines; this only combines them. Nothing else runs.",
+    )
+    parser.add_argument(
         "--exclude", type=Path, default=None,
         help="C1's mirror_pairs.json. Drops every non-representative member "
              "from the corpus, the truth and the context before either side "
@@ -231,6 +361,31 @@ def main() -> int:
              "on its own it makes a corpus that is known to double-count.",
     )
     args = parser.parse_args()
+
+    if args.merge:
+        payload = merge_shards(list(args.merge))
+        out = args.out_json or Path(
+            "outputs/uncertainty/eb3/eb3_merged.json")
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(payload, indent=2, default=str))
+        print(f"merged {len(args.merge)} shard(s) -> {out}")
+        print(f"  resimulated {payload['resimulate_seconds_total']:,.0f}s of "
+              f"work; slowest shard {payload['resimulate_seconds_wall_clock_max']:,.0f}s")
+        for r in payload["refinements"]:
+            if r.get("skipped"):
+                print(f"  SKIPPED {r['input_id']}: {str(r['skipped'])[:80]}")
+            else:
+                print(f"  {r['input_id']}: closed={r['closed_form']:,.4g} "
+                      f"resim={r['resimulated']:,.4g}")
+        note = payload["spearman_not_computed_because"]
+        print(f"  spearman = {payload['spearman_delta_regret_on_checked']}"
+              + (f"  [{note}]" if note else ""))
+        unexplained = payload["identity_control_verdict"]["unexplained"]
+        if unexplained:
+            print(f"\nSTOP: {len(unexplained)} candidate(s) fail the x1.0 "
+                  f"identity control and are not explained by D40.")
+            return 3
+        return 0
 
     kwargs = {"fixture_path": args.fixture} if args.fixture else {}
     if args.include_mirrors:

@@ -11,13 +11,17 @@ rows, which is exactly why they were lifted out of `main`.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
+
+import pytest
 
 from experiments.uncertainty.eb1_regret_vs_budget import World
 from experiments.uncertainty.eb3_closed_form_vs_resim import (
     MIN_ACTIVE_FOR_SPEARMAN,
     active_records,
     identity_gate,
+    merge_shards,
     mirror_members,
     restrict,
     spearman_refusal,
@@ -174,3 +178,106 @@ def test_restrict_keeps_the_truth_a_judged_metrics() -> None:
     came back as a dict would fail much later and somewhere else."""
     world, _ = restrict(_world(["a", "b"]), {"a"})
     assert isinstance(world.truth, JudgedMetrics)
+
+
+# ---------------------------------------------------------------------------
+# Sharding: one item is one independent resimulation
+# ---------------------------------------------------------------------------
+
+_WORLD = {
+    "corpus_size": 223, "slo_penalty": 207990.0, "grid": 5,
+    "incumbent": "pd(a40a-tp2+a40b-tp4)", "fixture_path": "f2.json",
+    "include_mirrors": False,
+}
+
+
+def _shard(tmp_path: Path, name: str, refinements: list[dict], **over) -> Path:
+    payload = {
+        **_WORLD, **over,
+        "refinements": refinements,
+        "closed": [{"input_id": r["input_id"], "delta_regret": r["closed_form"]}
+                   for r in refinements],
+        "identity_controls": over.get("identity_controls", []),
+        "link_exactness_checks": [],
+        "resimulate_seconds": over.get("resimulate_seconds", 100.0),
+        "identity_control_verdict": {"expected_from_d40_mirrors": []},
+        "excluded_mirror_at_build": [], "dropped_by_exclude": [],
+        "provenance": {"hostname": name},
+    }
+    path = tmp_path / f"{name}.json"
+    path.write_text(json.dumps(payload))
+    return path
+
+
+def _ref(input_id: str, closed: float, resim: float, kind: str = "profile") -> dict:
+    return {"input_id": input_id, "kind": kind, "closed_form": closed,
+            "resimulated": resim, "skipped": ""}
+
+
+def test_two_nodes_merge_into_one_table(tmp_path: Path) -> None:
+    """The point of the split: each item is a separate `resimulate` call, so a
+    64-core node and a 20-core node can take different items and the result is
+    the table one node would have produced."""
+    a = _shard(tmp_path, "npu", [_ref("profile:a40a", 30_381.0, 44_000.0)],
+               resimulate_seconds=900.0)
+    b = _shard(tmp_path, "a5000", [_ref("profile:a40b", 30_381.0, 30_381.0)],
+               resimulate_seconds=3_600.0)
+    merged = merge_shards([a, b])
+    assert {r["input_id"] for r in merged["refinements"]} == {
+        "profile:a40a", "profile:a40b"}
+    assert merged["resimulate_seconds_total"] == 4_500.0
+    # Wall clock is the slowest shard, not the sum: that is what sharding buys.
+    assert merged["resimulate_seconds_wall_clock_max"] == 3_600.0
+    assert merged["corpus_size"] == 223
+
+
+def test_shards_from_different_worlds_are_refused(tmp_path: Path) -> None:
+    """A node on a stale checkout would produce a different corpus, and its rows
+    would be scored against a different baseline. Averaging them silently is the
+    one failure this experiment cannot detect from the inside."""
+    a = _shard(tmp_path, "one", [_ref("profile:a40a", 1.0, 2.0)])
+    b = _shard(tmp_path, "two", [_ref("profile:a40b", 1.0, 2.0)], corpus_size=505)
+    with pytest.raises(SystemExit, match="corpus_size"):
+        merge_shards([a, b])
+
+
+def test_a_closed_form_that_differs_between_shards_is_refused(
+    tmp_path: Path,
+) -> None:
+    """The closed form is deterministic and every shard recomputes it, which
+    makes it a free checksum on "same world" that the invariants alone miss."""
+    a = _shard(tmp_path, "one", [_ref("profile:a40a", 30_381.0, 44_000.0)])
+    b = _shard(tmp_path, "two", [_ref("profile:a40a", 12_000.0, 12_000.0)])
+    with pytest.raises(SystemExit, match="not the same world"):
+        merge_shards([a, b])
+
+
+def test_the_same_item_in_two_shards_is_refused(tmp_path: Path) -> None:
+    """Overlapping shards mean the split was wrong. Taking the last writer would
+    hide that one node's hours were wasted, or worse, that the two disagreed."""
+    a = _shard(tmp_path, "one", [_ref("profile:a40a", 30_381.0, 44_000.0)])
+    b = _shard(tmp_path, "two", [_ref("profile:a40a", 30_381.0, 44_000.0)])
+    with pytest.raises(SystemExit, match="disjoint items"):
+        merge_shards([a, b])
+
+
+def test_the_merge_applies_the_same_spearman_rule(tmp_path: Path) -> None:
+    """Splitting the work must not change what the result is allowed to claim.
+    Two active items across two shards is still two active items."""
+    a = _shard(tmp_path, "one", [_ref("profile:a40a", 30_381.0, 44_000.0)])
+    b = _shard(tmp_path, "two", [_ref("profile:a40b", 30_381.0, 40_000.0)])
+    merged = merge_shards([a, b])
+    assert merged["spearman_delta_regret_on_checked"] is None
+    assert "2 item(s)" in merged["spearman_not_computed_because"]
+
+
+def test_the_merge_gates_on_identity_across_shards(tmp_path: Path) -> None:
+    """A deviation found on one node must fail the merged run. The gate is about
+    the corpus, not about which machine noticed."""
+    a = _shard(tmp_path, "one", [_ref("profile:a40a", 1.0, 2.0)],
+               identity_controls=[{"deviating_candidates": ["mix(a+b)"]}])
+    b = _shard(tmp_path, "two", [_ref("profile:a40b", 1.0, 2.0)],
+               identity_controls=[{"deviating_candidates": []}])
+    merged = merge_shards([a, b])
+    assert merged["identity_control_verdict"]["passed"] is False
+    assert merged["identity_control_verdict"]["unexplained"] == ["mix(a+b)"]
