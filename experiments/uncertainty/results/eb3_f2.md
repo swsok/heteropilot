@@ -5,9 +5,10 @@ built, to answer the question PR #86 could not: the closed form was 30.5 % low o
 E-A1, but that corpus carried D40's mirrored placements, so the error was the
 rule's error *plus* whatever D40 contributed and the two were not separated.
 
-On F2 they are. C1 excluded 282 mirror members at build, the ×1.0 identity
-control comes back at exactly zero over all 223 candidates, and the magnitude
-below carries no D40 contribution at all.
+On F2 they are, and the answer to the second part is **nothing**. The same item
+was resimulated with the mirrors excluded and with them present; the ΔR is
+bit-identical. D40 is real, it reproduces on the ×1.0 control at 7.869e-02, and
+it contributes **0 pp** to the magnitude error below.
 
 Raw: `outputs/uncertainty/eb3_f2/eb3_f2_closed_form_vs_resim.json`, merged from
 five shards kept beside it.
@@ -69,6 +70,47 @@ orderings were identical by construction.
 `approximation` flipped `True → False` on **4 items** — every PROFILE item, once
 its ΔR came from simulation rather than from the first-order scaling. The six
 link items were already exact and did not move.
+
+## D40's contribution, measured rather than argued: it is zero
+
+§2.5 asks for the magnitude before and after the mirror exclusion, the difference
+being D40's contribution. Both halves were run on `profile:cuda-a40-node_a40a`.
+
+| | mirrors excluded | mirrors present |
+| --- | ---: | ---: |
+| corpus | 223 | **460** |
+| runs | 422 | **676** |
+| closed form | 33,041.082832 | 33,041.082832 |
+| **resimulated** | **21,615.372406** | **21,615.372406** |
+| ×1.0 control, worst deviation | 0.000e+00 | **7.869e-02** |
+| candidates failing that control | 0 | **69** |
+
+**Bit-identical, so D40 contributes exactly 0.000000 J — 0 pp of the 52.86 %.**
+
+The second column is not a null result for D40; the defect is plainly there. With
+the mirrors back in the corpus the ×1.0 control fails on 69 candidates, worst at
+`mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s128-t2048`, on
+`p99_ttft_ms`, by **7.869e-02** — the same candidate and the same magnitude E-A1
+reported. D40 reproduces on demand. It simply does not reach this ΔR.
+
+The reason is what ΔR is: a regret integral over the *recommendation*. D40
+corrupts mirrored placements, and on this fixture those placements are nowhere
+near the argmax — the winner is a P/D split across the two A40 nodes, and the
+mirrored `mix(...)` candidates it damages lose by a wide margin either way. A
+defect in a candidate that was never going to be recommended moves no regret.
+
+**So PR #86's worry was reasonable and, by this measurement, unfounded.** E-B3 on
+E-A1 could not separate the rule's error from D40's and said so. Separated here,
+D40's share of the magnitude error is zero. This is measured on F2 only: the E-A1
+fixture was not re-run both ways, so its −30.5 % is not retroactively certified —
+but the mechanism that would have contaminated it is now known to contribute
+nothing to a ΔR, which is the quantity that was in doubt.
+
+The run needed one flag to be possible at all. `--include-mirrors` builds the
+corpus without C1's exclusion, and then the ×1.0 control fails by design — the
+deviation is the measurement. `--expect-mirrors` declares which candidates D40
+entitles to deviate without removing them, so the gate still fires on anything
+*else*. It found nothing else: all 69 deviants are mirror members.
 
 ## The identity controls
 
@@ -144,6 +186,12 @@ corpus, the penalty, the incumbent or any item's closed-form ΔR.
 | `shard_node49` | 4 | 6,859 s | i9-10900X helper |
 | `shard_node49b` | 2 | 5,468 s | i9-10900X helper |
 | `shard_simerror` | 1 | 0 s | A5000 node (closed form only) |
+| `shard_mirrors_a40a` | 1 | 7,971 s | A5000 node (`--include-mirrors`, not merged) |
+
+The last is the before-exclusion half of the D40 measurement and is deliberately
+**not** part of the merged result: its corpus is the 460-candidate one that
+double-counts mirrored placements, which is a corpus this project has decided not
+to reason over. It is committed beside the others as the evidence for the 0 pp.
 
 **25,962 s of CPU work inside a 7,456 s slowest shard — 3.5× on wall clock.**
 Against the closed form's 0.71 s for all eleven items, the resimulation costs
@@ -177,10 +225,16 @@ nothing to measure.
 E-A1 it was 30.5 % low. The magnitude is not a saving, and it is not even
 reliably signed.
 
-**Does not: reading the two fixtures as a trend.** They differ in more than D40 —
-F2 enables P/D and tightens TTFT to 8,000 ms. What is attributable is narrower and
-firmer: **F2's +52.9 % contains no D40 contribution**, where E-A1's −30.5 % did,
-of a size that run could not report.
+**Does not: reading the two fixtures as a trend.** They differ in more than the
+mirror exclusion — F2 enables P/D and tightens TTFT to 8,000 ms — so the sign flip
+from −30.5 % to +52.9 % is a difference between two fixtures, not a correction of
+one by the other. What is firm is narrower: **F2's +52.9 % is the closed form's
+own error, with D40's share measured at 0 pp.**
+
+**Does not: treating D40 as harmless.** 0 pp here means it does not reach *this*
+ΔR on *this* fixture, because the placements it corrupts are far from the argmax.
+A fixture whose winner is one of the mirrored `mix(...)` candidates would be a
+different measurement, and the cache key is still the thing that should be fixed.
 
 **`sim_error` is SKIPPED, not checked**, and it is the largest ΔR on the fixture
 (41,118 against the profiles' 30,381). A SIM_ERROR moves the margin rather than

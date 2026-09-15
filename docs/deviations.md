@@ -2368,9 +2368,33 @@ card re-check and the surrogate regret tables. That is a decision about what to
 re-run, not a patch. Recorded so the next person does not rediscover it from a
 7.9e-2 residual.
 
+**What it costs a ΔR: nothing, measured 2026-09-15** (STEP C4,
+`experiments/uncertainty/results/eb3_f2.md`). `profile:cuda-a40-node_a40a` was
+resimulated on F2 twice, with the mirrors excluded (223 candidates, 422 runs) and
+with them present (460 candidates, 676 runs). The ΔR is **bit-identical** —
+21,615.372406 J both times — so D40 contributes **0 pp** of that item's 52.9 %
+magnitude error.
+
+The defect is not absent from the second run; it is loud. The ×1.0 identity
+control fails on **69** candidates there, worst at
+`mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s128-t2048` on
+`p99_ttft_ms` by **7.869e-02** — the same candidate and magnitude E-A1 reported,
+so it reproduces on demand. It simply does not reach a ΔR, because ΔR is a regret
+integral over the *recommendation* and the placements D40 corrupts are far from
+the argmax: F2's winner is a P/D split across the two A40 nodes, and the mirrored
+`mix(...)` candidates lose by a wide margin whichever prediction they read.
+
+**This narrows the entry, it does not close it.** 0 pp is a statement about this
+item on this fixture. A fixture whose recommendation *is* one of the mirrored
+placements would be a different measurement, and the cache key is still what
+should be fixed. What it does settle is PR #86's open worry that E-B3's magnitude
+error was partly D40's: on the one fixture where both halves were run, it is not.
+
 **Where.** `planner/envelope.py` (`_path`, `key_for`),
 `experiments/uncertainty/eb3_closed_form_vs_resim.py` (the identity control that
-found it).
+found it, and `--include-mirrors` / `--expect-mirrors`, which make the
+before-exclusion half runnable: with the mirrors back in the corpus the control
+fails by design, so the expected set has to be declared rather than inferred).
 
 ## D33 — two accuracy-domain implementations, one kept; `refuse` becomes the default · Decided 2026-09-11
 
