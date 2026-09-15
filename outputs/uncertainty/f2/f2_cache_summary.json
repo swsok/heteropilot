@@ -1,0 +1,34 @@
+{
+  "fixture": "experiments/uncertainty/fixtures/f2.json",
+  "generated": 528,
+  "mirror_groups": 198,
+  "excluded_mirror": 282,
+  "kept": 246,
+  "seeded_from": "outputs/uncertainty/ea1/cache",
+  "entries_present_before_run": 223,
+  "seeded_entries": 0,
+  "cache_hits_before_run": 223,
+  "to_simulate": 23,
+  "dry_run": false,
+  "wall_seconds": 36.25741078611463,
+  "cache_stats": {
+    "hits": 446,
+    "misses": 46
+  },
+  "evaluated": 246,
+  "feasible": 31,
+  "feasible_pd": 12,
+  "infeasible": 178,
+  "unmeasured": 14,
+  "rejected_summary": {
+    "outside_calibration_domain": 14,
+    "sim_error": 23,
+    "slo_violated": 178
+  },
+  "recommended_candidate": "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s256-t8192",
+  "objective": -79550.0,
+  "operating_point_backfilled": {
+    "per_island": 162,
+    "run_level": 0
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "candidate_id": "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s256-t8192",
+  "key": {
+    "dtype": "bfloat16",
+    "model": "meta-llama/Llama-3.1-8B",
+    "network_class": "lt25",
+    "placement": "A40|decode|2|1|1|1;RNGD-CARD|prefill|1|1|1|1",
+    "scheduler_config_hash": "ad7ea42b9d4cf028245ed6b15308d569520a1c24af105e957b16f9a372fec530",
+    "workload_bucket": "in_lt1024-out_ge512-rps_lt20"
+  },
+  "metrics": {
+    "average_power_w": 1107.2712676056342,
+    "completed_requests": 300,
+    "completed_tokens": 190920,
+    "p50_tpot_ms": 62.72469,
+    "p50_ttft_ms": 325.66524400000003,
+    "p95_tpot_ms": 68.21191175,
+    "p95_ttft_ms": 816.86198945,
+    "p99_tpot_ms": 70.09177306,
+    "p99_ttft_ms": 1025.77001368,
+    "peak_power_w": 1472.83,
+    "served_concurrency": 160.54759544837094,
+    "served_concurrency_per_island": {
+      "cuda-a40-node_a40a": 160.54759544837094
+    },
+    "sim_wall_seconds": 76.6,
+    "slo_attainment": 0.12333333333333334,
+    "slo_goodput_rps": 0.5157212572745037,
+    "throughput_tps": 6321.585725959637,
+    "tokens_per_joule": 2.403928481490808,
+    "total_energy_j": 79420.0
+  },
+  "metrics_schema": "44b33e454ef8d016",
+  "operating_point": {
+    "A40": {
+      "concurrency": 159.05906288630607,
+      "phase": "decode",
+      "requests": 300,
+      "wall_s": 71.744182498
+    },
+    "RNGD-CARD": {
+      "concurrency": 1.4885325620649041,
+      "phase": "prefill",
+      "requests": 300,
+      "wall_s": 71.744182498
+    }
+  },
+  "provenance": {
+    "git_commit": "1a695e70507c3c0249a33e748a3c2c0473433510",
+    "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
+    "timestamp": "2026-09-14T07:12:52.113869+00:00"
+  },
+  "trace_digest": "e9dd5a8476087bdbeb6cdcfb0cfa762092abea25b417e13cd158e0bded37d540"
+}

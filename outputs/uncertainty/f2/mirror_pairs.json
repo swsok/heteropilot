@@ -1,0 +1,1164 @@
+{
+  "representative_to_members": {
+    "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t2048": [
+      "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t2048",
+      "furiosa-rngd-card-node_rngd1-tp1-dp1-s32-t2048"
+    ],
+    "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t8192": [
+      "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t8192",
+      "furiosa-rngd-card-node_rngd1-tp1-dp1-s32-t8192"
+    ],
+    "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t2048": [
+      "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t2048",
+      "furiosa-rngd-card-node_rngd1-tp1-dp1-s128-t2048"
+    ],
+    "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t8192": [
+      "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t8192",
+      "furiosa-rngd-card-node_rngd1-tp1-dp1-s128-t8192"
+    ],
+    "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t2048": [
+      "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t2048",
+      "furiosa-rngd-card-node_rngd1-tp1-dp1-s256-t2048"
+    ],
+    "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t8192": [
+      "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t8192",
+      "furiosa-rngd-card-node_rngd1-tp1-dp1-s256-t8192"
+    ],
+    "cuda-a40-node_a40a-tp1-dp1-s32-t2048": [
+      "cuda-a40-node_a40a-tp1-dp1-s32-t2048",
+      "cuda-a40-node_a40b-tp1-dp1-s32-t2048"
+    ],
+    "cuda-a40-node_a40a-tp1-dp1-s32-t8192": [
+      "cuda-a40-node_a40a-tp1-dp1-s32-t8192",
+      "cuda-a40-node_a40b-tp1-dp1-s32-t8192"
+    ],
+    "cuda-a40-node_a40a-tp1-dp1-s128-t2048": [
+      "cuda-a40-node_a40a-tp1-dp1-s128-t2048",
+      "cuda-a40-node_a40b-tp1-dp1-s128-t2048"
+    ],
+    "cuda-a40-node_a40a-tp1-dp1-s128-t8192": [
+      "cuda-a40-node_a40a-tp1-dp1-s128-t8192",
+      "cuda-a40-node_a40b-tp1-dp1-s128-t8192"
+    ],
+    "cuda-a40-node_a40a-tp1-dp1-s256-t2048": [
+      "cuda-a40-node_a40a-tp1-dp1-s256-t2048",
+      "cuda-a40-node_a40b-tp1-dp1-s256-t2048"
+    ],
+    "cuda-a40-node_a40a-tp1-dp1-s256-t8192": [
+      "cuda-a40-node_a40a-tp1-dp1-s256-t8192",
+      "cuda-a40-node_a40b-tp1-dp1-s256-t8192"
+    ],
+    "cuda-a40-node_a40a-tp1-dp2-s32-t2048": [
+      "cuda-a40-node_a40a-tp1-dp2-s32-t2048",
+      "cuda-a40-node_a40b-tp1-dp2-s32-t2048"
+    ],
+    "cuda-a40-node_a40a-tp1-dp2-s32-t8192": [
+      "cuda-a40-node_a40a-tp1-dp2-s32-t8192",
+      "cuda-a40-node_a40b-tp1-dp2-s32-t8192"
+    ],
+    "cuda-a40-node_a40a-tp1-dp2-s128-t2048": [
+      "cuda-a40-node_a40a-tp1-dp2-s128-t2048",
+      "cuda-a40-node_a40b-tp1-dp2-s128-t2048"
+    ],
+    "cuda-a40-node_a40a-tp1-dp2-s128-t8192": [
+      "cuda-a40-node_a40a-tp1-dp2-s128-t8192",
+      "cuda-a40-node_a40b-tp1-dp2-s128-t8192"
+    ],
+    "cuda-a40-node_a40a-tp1-dp2-s256-t2048": [
+      "cuda-a40-node_a40a-tp1-dp2-s256-t2048",
+      "cuda-a40-node_a40b-tp1-dp2-s256-t2048"
+    ],
+    "cuda-a40-node_a40a-tp1-dp2-s256-t8192": [
+      "cuda-a40-node_a40a-tp1-dp2-s256-t8192",
+      "cuda-a40-node_a40b-tp1-dp2-s256-t8192"
+    ],
+    "cuda-a40-node_a40a-tp1-dp3-s32-t2048": [
+      "cuda-a40-node_a40a-tp1-dp3-s32-t2048",
+      "cuda-a40-node_a40b-tp1-dp3-s32-t2048"
+    ],
+    "cuda-a40-node_a40a-tp1-dp3-s32-t8192": [
+      "cuda-a40-node_a40a-tp1-dp3-s32-t8192",
+      "cuda-a40-node_a40b-tp1-dp3-s32-t8192"
+    ],
+    "cuda-a40-node_a40a-tp1-dp3-s128-t2048": [
+      "cuda-a40-node_a40a-tp1-dp3-s128-t2048",
+      "cuda-a40-node_a40b-tp1-dp3-s128-t2048"
+    ],
+    "cuda-a40-node_a40a-tp1-dp3-s128-t8192": [
+      "cuda-a40-node_a40a-tp1-dp3-s128-t8192",
+      "cuda-a40-node_a40b-tp1-dp3-s128-t8192"
+    ],
+    "cuda-a40-node_a40a-tp1-dp3-s256-t2048": [
+      "cuda-a40-node_a40a-tp1-dp3-s256-t2048",
+      "cuda-a40-node_a40b-tp1-dp3-s256-t2048"
+    ],
+    "cuda-a40-node_a40a-tp1-dp3-s256-t8192": [
+      "cuda-a40-node_a40a-tp1-dp3-s256-t8192",
+      "cuda-a40-node_a40b-tp1-dp3-s256-t8192"
+    ],
+    "cuda-a40-node_a40a-tp1-dp4-s32-t2048": [
+      "cuda-a40-node_a40a-tp1-dp4-s32-t2048",
+      "cuda-a40-node_a40b-tp1-dp4-s32-t2048"
+    ],
+    "cuda-a40-node_a40a-tp1-dp4-s32-t8192": [
+      "cuda-a40-node_a40a-tp1-dp4-s32-t8192",
+      "cuda-a40-node_a40b-tp1-dp4-s32-t8192"
+    ],
+    "cuda-a40-node_a40a-tp1-dp4-s128-t2048": [
+      "cuda-a40-node_a40a-tp1-dp4-s128-t2048",
+      "cuda-a40-node_a40b-tp1-dp4-s128-t2048"
+    ],
+    "cuda-a40-node_a40a-tp1-dp4-s128-t8192": [
+      "cuda-a40-node_a40a-tp1-dp4-s128-t8192",
+      "cuda-a40-node_a40b-tp1-dp4-s128-t8192"
+    ],
+    "cuda-a40-node_a40a-tp1-dp4-s256-t2048": [
+      "cuda-a40-node_a40a-tp1-dp4-s256-t2048",
+      "cuda-a40-node_a40b-tp1-dp4-s256-t2048"
+    ],
+    "cuda-a40-node_a40a-tp1-dp4-s256-t8192": [
+      "cuda-a40-node_a40a-tp1-dp4-s256-t8192",
+      "cuda-a40-node_a40b-tp1-dp4-s256-t8192"
+    ],
+    "cuda-a40-node_a40a-tp2-dp1-s32-t2048": [
+      "cuda-a40-node_a40a-tp2-dp1-s32-t2048",
+      "cuda-a40-node_a40b-tp2-dp1-s32-t2048"
+    ],
+    "cuda-a40-node_a40a-tp2-dp1-s32-t8192": [
+      "cuda-a40-node_a40a-tp2-dp1-s32-t8192",
+      "cuda-a40-node_a40b-tp2-dp1-s32-t8192"
+    ],
+    "cuda-a40-node_a40a-tp2-dp1-s128-t2048": [
+      "cuda-a40-node_a40a-tp2-dp1-s128-t2048",
+      "cuda-a40-node_a40b-tp2-dp1-s128-t2048"
+    ],
+    "cuda-a40-node_a40a-tp2-dp1-s128-t8192": [
+      "cuda-a40-node_a40a-tp2-dp1-s128-t8192",
+      "cuda-a40-node_a40b-tp2-dp1-s128-t8192"
+    ],
+    "cuda-a40-node_a40a-tp2-dp1-s256-t2048": [
+      "cuda-a40-node_a40a-tp2-dp1-s256-t2048",
+      "cuda-a40-node_a40b-tp2-dp1-s256-t2048"
+    ],
+    "cuda-a40-node_a40a-tp2-dp1-s256-t8192": [
+      "cuda-a40-node_a40a-tp2-dp1-s256-t8192",
+      "cuda-a40-node_a40b-tp2-dp1-s256-t8192"
+    ],
+    "cuda-a40-node_a40a-tp2-dp2-s32-t2048": [
+      "cuda-a40-node_a40a-tp2-dp2-s32-t2048",
+      "cuda-a40-node_a40b-tp2-dp2-s32-t2048"
+    ],
+    "cuda-a40-node_a40a-tp2-dp2-s32-t8192": [
+      "cuda-a40-node_a40a-tp2-dp2-s32-t8192",
+      "cuda-a40-node_a40b-tp2-dp2-s32-t8192"
+    ],
+    "cuda-a40-node_a40a-tp2-dp2-s128-t2048": [
+      "cuda-a40-node_a40a-tp2-dp2-s128-t2048",
+      "cuda-a40-node_a40b-tp2-dp2-s128-t2048"
+    ],
+    "cuda-a40-node_a40a-tp2-dp2-s128-t8192": [
+      "cuda-a40-node_a40a-tp2-dp2-s128-t8192",
+      "cuda-a40-node_a40b-tp2-dp2-s128-t8192"
+    ],
+    "cuda-a40-node_a40a-tp2-dp2-s256-t2048": [
+      "cuda-a40-node_a40a-tp2-dp2-s256-t2048",
+      "cuda-a40-node_a40b-tp2-dp2-s256-t2048"
+    ],
+    "cuda-a40-node_a40a-tp2-dp2-s256-t8192": [
+      "cuda-a40-node_a40a-tp2-dp2-s256-t8192",
+      "cuda-a40-node_a40b-tp2-dp2-s256-t8192"
+    ],
+    "cuda-a40-node_a40a-tp4-dp1-s32-t2048": [
+      "cuda-a40-node_a40a-tp4-dp1-s32-t2048",
+      "cuda-a40-node_a40b-tp4-dp1-s32-t2048"
+    ],
+    "cuda-a40-node_a40a-tp4-dp1-s32-t8192": [
+      "cuda-a40-node_a40a-tp4-dp1-s32-t8192",
+      "cuda-a40-node_a40b-tp4-dp1-s32-t8192"
+    ],
+    "cuda-a40-node_a40a-tp4-dp1-s128-t2048": [
+      "cuda-a40-node_a40a-tp4-dp1-s128-t2048",
+      "cuda-a40-node_a40b-tp4-dp1-s128-t2048"
+    ],
+    "cuda-a40-node_a40a-tp4-dp1-s128-t8192": [
+      "cuda-a40-node_a40a-tp4-dp1-s128-t8192",
+      "cuda-a40-node_a40b-tp4-dp1-s128-t8192"
+    ],
+    "cuda-a40-node_a40a-tp4-dp1-s256-t2048": [
+      "cuda-a40-node_a40a-tp4-dp1-s256-t2048",
+      "cuda-a40-node_a40b-tp4-dp1-s256-t2048"
+    ],
+    "cuda-a40-node_a40a-tp4-dp1-s256-t8192": [
+      "cuda-a40-node_a40a-tp4-dp1-s256-t8192",
+      "cuda-a40-node_a40b-tp4-dp1-s256-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp2)-s32-t2048": [
+      "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp2)-s32-t2048",
+      "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp1)-s32-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp2)-s32-t8192": [
+      "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp2)-s32-t8192",
+      "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp1)-s32-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp2)-s128-t2048": [
+      "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp2)-s128-t2048",
+      "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp1)-s128-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp2)-s128-t8192": [
+      "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp2)-s128-t8192",
+      "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp1)-s128-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp2)-s256-t2048": [
+      "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp2)-s256-t2048",
+      "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp1)-s256-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp2)-s256-t8192": [
+      "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp2)-s256-t8192",
+      "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp1)-s256-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp3)-s32-t2048": [
+      "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp3)-s32-t2048",
+      "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp1)-s32-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp3)-s32-t8192": [
+      "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp3)-s32-t8192",
+      "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp1)-s32-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp3)-s128-t2048": [
+      "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp3)-s128-t2048",
+      "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp1)-s128-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp3)-s128-t8192": [
+      "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp3)-s128-t8192",
+      "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp1)-s128-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp3)-s256-t2048": [
+      "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp3)-s256-t2048",
+      "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp1)-s256-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp3)-s256-t8192": [
+      "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp3)-s256-t8192",
+      "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp1)-s256-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp4)-s32-t2048": [
+      "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp4)-s32-t2048",
+      "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp1)-s32-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp4)-s32-t8192": [
+      "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp4)-s32-t8192",
+      "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp1)-s32-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp4)-s128-t2048": [
+      "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp4)-s128-t2048",
+      "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp1)-s128-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp4)-s128-t8192": [
+      "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp4)-s128-t8192",
+      "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp1)-s128-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp4)-s256-t2048": [
+      "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp4)-s256-t2048",
+      "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp1)-s256-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp4)-s256-t8192": [
+      "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp4)-s256-t8192",
+      "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp1)-s256-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp3)-s32-t2048": [
+      "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp3)-s32-t2048",
+      "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp2)-s32-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp3)-s32-t8192": [
+      "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp3)-s32-t8192",
+      "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp2)-s32-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp3)-s128-t2048": [
+      "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp3)-s128-t2048",
+      "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp2)-s128-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp3)-s128-t8192": [
+      "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp3)-s128-t8192",
+      "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp2)-s128-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp3)-s256-t2048": [
+      "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp3)-s256-t2048",
+      "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp2)-s256-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp3)-s256-t8192": [
+      "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp3)-s256-t8192",
+      "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp2)-s256-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp4)-s32-t2048": [
+      "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp4)-s32-t2048",
+      "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp2)-s32-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp4)-s32-t8192": [
+      "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp4)-s32-t8192",
+      "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp2)-s32-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp4)-s128-t2048": [
+      "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp4)-s128-t2048",
+      "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp2)-s128-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp4)-s128-t8192": [
+      "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp4)-s128-t8192",
+      "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp2)-s128-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp4)-s256-t2048": [
+      "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp4)-s256-t2048",
+      "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp2)-s256-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp4)-s256-t8192": [
+      "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp4)-s256-t8192",
+      "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp2)-s256-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp4)-s32-t2048": [
+      "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp4)-s32-t2048",
+      "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp3)-s32-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp4)-s32-t8192": [
+      "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp4)-s32-t8192",
+      "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp3)-s32-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp4)-s128-t2048": [
+      "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp4)-s128-t2048",
+      "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp3)-s128-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp4)-s128-t8192": [
+      "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp4)-s128-t8192",
+      "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp3)-s128-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp4)-s256-t2048": [
+      "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp4)-s256-t2048",
+      "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp3)-s256-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp4)-s256-t8192": [
+      "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp4)-s256-t8192",
+      "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp3)-s256-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s32-t2048": [
+      "mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s32-t2048",
+      "mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s32-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s32-t8192": [
+      "mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s32-t8192",
+      "mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s32-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s128-t2048": [
+      "mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s128-t2048",
+      "mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s128-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s128-t8192": [
+      "mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s128-t8192",
+      "mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s128-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s256-t2048": [
+      "mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s256-t2048",
+      "mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s256-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s256-t8192": [
+      "mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s256-t8192",
+      "mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s256-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t2048": [
+      "mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t2048",
+      "mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t2048",
+      "mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t2048",
+      "mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t8192": [
+      "mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t8192",
+      "mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t8192",
+      "mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t8192",
+      "mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t2048": [
+      "mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t2048",
+      "mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t2048",
+      "mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t2048",
+      "mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t8192": [
+      "mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t8192",
+      "mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t8192",
+      "mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t8192",
+      "mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t2048": [
+      "mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t2048",
+      "mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t2048",
+      "mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t2048",
+      "mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t8192": [
+      "mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t8192",
+      "mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+      "mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t8192",
+      "mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp2+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t2048": [
+      "mix(cuda-a40-node_a40a-tp1-dp2+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t2048",
+      "mix(cuda-a40-node_a40a-tp1-dp2+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t2048",
+      "mix(cuda-a40-node_a40b-tp1-dp2+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t2048",
+      "mix(cuda-a40-node_a40b-tp1-dp2+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp2+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t8192": [
+      "mix(cuda-a40-node_a40a-tp1-dp2+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t8192",
+      "mix(cuda-a40-node_a40a-tp1-dp2+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t8192",
+      "mix(cuda-a40-node_a40b-tp1-dp2+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t8192",
+      "mix(cuda-a40-node_a40b-tp1-dp2+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp2+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t2048": [
+      "mix(cuda-a40-node_a40a-tp1-dp2+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t2048",
+      "mix(cuda-a40-node_a40a-tp1-dp2+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t2048",
+      "mix(cuda-a40-node_a40b-tp1-dp2+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t2048",
+      "mix(cuda-a40-node_a40b-tp1-dp2+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp2+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t8192": [
+      "mix(cuda-a40-node_a40a-tp1-dp2+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t8192",
+      "mix(cuda-a40-node_a40a-tp1-dp2+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t8192",
+      "mix(cuda-a40-node_a40b-tp1-dp2+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t8192",
+      "mix(cuda-a40-node_a40b-tp1-dp2+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp2+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t2048": [
+      "mix(cuda-a40-node_a40a-tp1-dp2+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t2048",
+      "mix(cuda-a40-node_a40a-tp1-dp2+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t2048",
+      "mix(cuda-a40-node_a40b-tp1-dp2+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t2048",
+      "mix(cuda-a40-node_a40b-tp1-dp2+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp2+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t8192": [
+      "mix(cuda-a40-node_a40a-tp1-dp2+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t8192",
+      "mix(cuda-a40-node_a40a-tp1-dp2+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+      "mix(cuda-a40-node_a40b-tp1-dp2+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t8192",
+      "mix(cuda-a40-node_a40b-tp1-dp2+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp3+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t2048": [
+      "mix(cuda-a40-node_a40a-tp1-dp3+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t2048",
+      "mix(cuda-a40-node_a40a-tp1-dp3+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t2048",
+      "mix(cuda-a40-node_a40b-tp1-dp3+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t2048",
+      "mix(cuda-a40-node_a40b-tp1-dp3+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp3+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t8192": [
+      "mix(cuda-a40-node_a40a-tp1-dp3+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t8192",
+      "mix(cuda-a40-node_a40a-tp1-dp3+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t8192",
+      "mix(cuda-a40-node_a40b-tp1-dp3+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t8192",
+      "mix(cuda-a40-node_a40b-tp1-dp3+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp3+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t2048": [
+      "mix(cuda-a40-node_a40a-tp1-dp3+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t2048",
+      "mix(cuda-a40-node_a40a-tp1-dp3+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t2048",
+      "mix(cuda-a40-node_a40b-tp1-dp3+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t2048",
+      "mix(cuda-a40-node_a40b-tp1-dp3+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp3+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t8192": [
+      "mix(cuda-a40-node_a40a-tp1-dp3+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t8192",
+      "mix(cuda-a40-node_a40a-tp1-dp3+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t8192",
+      "mix(cuda-a40-node_a40b-tp1-dp3+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t8192",
+      "mix(cuda-a40-node_a40b-tp1-dp3+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp3+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t2048": [
+      "mix(cuda-a40-node_a40a-tp1-dp3+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t2048",
+      "mix(cuda-a40-node_a40a-tp1-dp3+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t2048",
+      "mix(cuda-a40-node_a40b-tp1-dp3+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t2048",
+      "mix(cuda-a40-node_a40b-tp1-dp3+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp3+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t8192": [
+      "mix(cuda-a40-node_a40a-tp1-dp3+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t8192",
+      "mix(cuda-a40-node_a40a-tp1-dp3+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+      "mix(cuda-a40-node_a40b-tp1-dp3+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t8192",
+      "mix(cuda-a40-node_a40b-tp1-dp3+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp4+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t2048": [
+      "mix(cuda-a40-node_a40a-tp1-dp4+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t2048",
+      "mix(cuda-a40-node_a40a-tp1-dp4+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t2048",
+      "mix(cuda-a40-node_a40b-tp1-dp4+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t2048",
+      "mix(cuda-a40-node_a40b-tp1-dp4+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp4+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t8192": [
+      "mix(cuda-a40-node_a40a-tp1-dp4+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t8192",
+      "mix(cuda-a40-node_a40a-tp1-dp4+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t8192",
+      "mix(cuda-a40-node_a40b-tp1-dp4+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t8192",
+      "mix(cuda-a40-node_a40b-tp1-dp4+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp4+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t2048": [
+      "mix(cuda-a40-node_a40a-tp1-dp4+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t2048",
+      "mix(cuda-a40-node_a40a-tp1-dp4+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t2048",
+      "mix(cuda-a40-node_a40b-tp1-dp4+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t2048",
+      "mix(cuda-a40-node_a40b-tp1-dp4+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp4+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t8192": [
+      "mix(cuda-a40-node_a40a-tp1-dp4+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t8192",
+      "mix(cuda-a40-node_a40a-tp1-dp4+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t8192",
+      "mix(cuda-a40-node_a40b-tp1-dp4+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t8192",
+      "mix(cuda-a40-node_a40b-tp1-dp4+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t8192"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp4+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t2048": [
+      "mix(cuda-a40-node_a40a-tp1-dp4+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t2048",
+      "mix(cuda-a40-node_a40a-tp1-dp4+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t2048",
+      "mix(cuda-a40-node_a40b-tp1-dp4+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t2048",
+      "mix(cuda-a40-node_a40b-tp1-dp4+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t2048"
+    ],
+    "mix(cuda-a40-node_a40a-tp1-dp4+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t8192": [
+      "mix(cuda-a40-node_a40a-tp1-dp4+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t8192",
+      "mix(cuda-a40-node_a40a-tp1-dp4+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+      "mix(cuda-a40-node_a40b-tp1-dp4+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t8192",
+      "mix(cuda-a40-node_a40b-tp1-dp4+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s32-t2048": [
+      "pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s32-t2048",
+      "pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s32-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s32-t8192": [
+      "pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s32-t8192",
+      "pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s32-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s128-t2048": [
+      "pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s128-t2048",
+      "pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s128-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s128-t8192": [
+      "pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s128-t8192",
+      "pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s128-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s256-t2048": [
+      "pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s256-t2048",
+      "pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s256-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s256-t8192": [
+      "pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s256-t8192",
+      "pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s256-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp1-dp2 D)-s32-t2048": [
+      "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp1-dp2 D)-s32-t2048",
+      "pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp1-dp2 D)-s32-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp1-dp2 D)-s32-t8192": [
+      "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp1-dp2 D)-s32-t8192",
+      "pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp1-dp2 D)-s32-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp1-dp2 D)-s128-t2048": [
+      "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp1-dp2 D)-s128-t2048",
+      "pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp1-dp2 D)-s128-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp1-dp2 D)-s128-t8192": [
+      "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp1-dp2 D)-s128-t8192",
+      "pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp1-dp2 D)-s128-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp1-dp2 D)-s256-t2048": [
+      "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp1-dp2 D)-s256-t2048",
+      "pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp1-dp2 D)-s256-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp1-dp2 D)-s256-t8192": [
+      "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp1-dp2 D)-s256-t8192",
+      "pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp1-dp2 D)-s256-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp3 P + cuda-a40-node_a40b-tp1-dp3 D)-s32-t2048": [
+      "pd(cuda-a40-node_a40a-tp1-dp3 P + cuda-a40-node_a40b-tp1-dp3 D)-s32-t2048",
+      "pd(cuda-a40-node_a40b-tp1-dp3 P + cuda-a40-node_a40a-tp1-dp3 D)-s32-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp3 P + cuda-a40-node_a40b-tp1-dp3 D)-s32-t8192": [
+      "pd(cuda-a40-node_a40a-tp1-dp3 P + cuda-a40-node_a40b-tp1-dp3 D)-s32-t8192",
+      "pd(cuda-a40-node_a40b-tp1-dp3 P + cuda-a40-node_a40a-tp1-dp3 D)-s32-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp3 P + cuda-a40-node_a40b-tp1-dp3 D)-s128-t2048": [
+      "pd(cuda-a40-node_a40a-tp1-dp3 P + cuda-a40-node_a40b-tp1-dp3 D)-s128-t2048",
+      "pd(cuda-a40-node_a40b-tp1-dp3 P + cuda-a40-node_a40a-tp1-dp3 D)-s128-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp3 P + cuda-a40-node_a40b-tp1-dp3 D)-s128-t8192": [
+      "pd(cuda-a40-node_a40a-tp1-dp3 P + cuda-a40-node_a40b-tp1-dp3 D)-s128-t8192",
+      "pd(cuda-a40-node_a40b-tp1-dp3 P + cuda-a40-node_a40a-tp1-dp3 D)-s128-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp3 P + cuda-a40-node_a40b-tp1-dp3 D)-s256-t2048": [
+      "pd(cuda-a40-node_a40a-tp1-dp3 P + cuda-a40-node_a40b-tp1-dp3 D)-s256-t2048",
+      "pd(cuda-a40-node_a40b-tp1-dp3 P + cuda-a40-node_a40a-tp1-dp3 D)-s256-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp3 P + cuda-a40-node_a40b-tp1-dp3 D)-s256-t8192": [
+      "pd(cuda-a40-node_a40a-tp1-dp3 P + cuda-a40-node_a40b-tp1-dp3 D)-s256-t8192",
+      "pd(cuda-a40-node_a40b-tp1-dp3 P + cuda-a40-node_a40a-tp1-dp3 D)-s256-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s32-t2048": [
+      "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s32-t2048",
+      "pd(cuda-a40-node_a40b-tp1-dp4 P + cuda-a40-node_a40a-tp1-dp4 D)-s32-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s32-t8192": [
+      "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s32-t8192",
+      "pd(cuda-a40-node_a40b-tp1-dp4 P + cuda-a40-node_a40a-tp1-dp4 D)-s32-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s128-t2048": [
+      "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s128-t2048",
+      "pd(cuda-a40-node_a40b-tp1-dp4 P + cuda-a40-node_a40a-tp1-dp4 D)-s128-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s128-t8192": [
+      "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s128-t8192",
+      "pd(cuda-a40-node_a40b-tp1-dp4 P + cuda-a40-node_a40a-tp1-dp4 D)-s128-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s256-t2048": [
+      "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s256-t2048",
+      "pd(cuda-a40-node_a40b-tp1-dp4 P + cuda-a40-node_a40a-tp1-dp4 D)-s256-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s256-t8192": [
+      "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s256-t8192",
+      "pd(cuda-a40-node_a40b-tp1-dp4 P + cuda-a40-node_a40a-tp1-dp4 D)-s256-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s32-t2048": [
+      "pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s32-t2048",
+      "pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s32-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s32-t8192": [
+      "pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s32-t8192",
+      "pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s32-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s128-t2048": [
+      "pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s128-t2048",
+      "pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s128-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s128-t8192": [
+      "pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s128-t8192",
+      "pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s128-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s256-t2048": [
+      "pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s256-t2048",
+      "pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s256-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s256-t8192": [
+      "pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s256-t8192",
+      "pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s256-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s32-t2048": [
+      "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s32-t2048",
+      "pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s32-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s32-t8192": [
+      "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s32-t8192",
+      "pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s32-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s128-t2048": [
+      "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s128-t2048",
+      "pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s128-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s128-t8192": [
+      "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s128-t8192",
+      "pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s128-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s256-t2048": [
+      "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s256-t2048",
+      "pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s256-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s256-t8192": [
+      "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s256-t8192",
+      "pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s256-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s32-t2048": [
+      "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s32-t2048",
+      "pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s32-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s32-t8192": [
+      "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s32-t8192",
+      "pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s32-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s128-t2048": [
+      "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s128-t2048",
+      "pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s128-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s128-t8192": [
+      "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s128-t8192",
+      "pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s128-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s256-t2048": [
+      "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s256-t2048",
+      "pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s256-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s256-t8192": [
+      "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s256-t8192",
+      "pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s256-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp2-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s32-t2048": [
+      "pd(cuda-a40-node_a40a-tp2-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s32-t2048",
+      "pd(cuda-a40-node_a40b-tp2-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s32-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp2-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s32-t8192": [
+      "pd(cuda-a40-node_a40a-tp2-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s32-t8192",
+      "pd(cuda-a40-node_a40b-tp2-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s32-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp2-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s128-t2048": [
+      "pd(cuda-a40-node_a40a-tp2-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s128-t2048",
+      "pd(cuda-a40-node_a40b-tp2-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s128-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp2-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s128-t8192": [
+      "pd(cuda-a40-node_a40a-tp2-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s128-t8192",
+      "pd(cuda-a40-node_a40b-tp2-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s128-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp2-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s256-t2048": [
+      "pd(cuda-a40-node_a40a-tp2-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s256-t2048",
+      "pd(cuda-a40-node_a40b-tp2-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s256-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp2-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s256-t8192": [
+      "pd(cuda-a40-node_a40a-tp2-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s256-t8192",
+      "pd(cuda-a40-node_a40b-tp2-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s256-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s32-t2048": [
+      "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s32-t2048",
+      "pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s32-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s32-t8192": [
+      "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s32-t8192",
+      "pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s32-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s128-t2048": [
+      "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s128-t2048",
+      "pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s128-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s128-t8192": [
+      "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s128-t8192",
+      "pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s128-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s256-t2048": [
+      "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s256-t2048",
+      "pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s256-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s256-t8192": [
+      "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s256-t8192",
+      "pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s256-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s32-t2048": [
+      "pd(cuda-a40-node_a40a-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s32-t2048",
+      "pd(cuda-a40-node_a40b-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s32-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s32-t8192": [
+      "pd(cuda-a40-node_a40a-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s32-t8192",
+      "pd(cuda-a40-node_a40b-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s32-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s128-t2048": [
+      "pd(cuda-a40-node_a40a-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s128-t2048",
+      "pd(cuda-a40-node_a40b-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s128-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s128-t8192": [
+      "pd(cuda-a40-node_a40a-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s128-t8192",
+      "pd(cuda-a40-node_a40b-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s128-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s256-t2048": [
+      "pd(cuda-a40-node_a40a-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s256-t2048",
+      "pd(cuda-a40-node_a40b-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s256-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s256-t8192": [
+      "pd(cuda-a40-node_a40a-tp4-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s256-t8192",
+      "pd(cuda-a40-node_a40b-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s256-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s32-t2048": [
+      "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s32-t2048",
+      "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s32-t2048",
+      "pd(cuda-a40-node_a40b-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s32-t2048",
+      "pd(cuda-a40-node_a40b-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s32-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s32-t8192": [
+      "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s32-t8192",
+      "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s32-t8192",
+      "pd(cuda-a40-node_a40b-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s32-t8192",
+      "pd(cuda-a40-node_a40b-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s32-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s128-t2048": [
+      "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s128-t2048",
+      "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s128-t2048",
+      "pd(cuda-a40-node_a40b-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s128-t2048",
+      "pd(cuda-a40-node_a40b-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s128-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s128-t8192": [
+      "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s128-t8192",
+      "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s128-t8192",
+      "pd(cuda-a40-node_a40b-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s128-t8192",
+      "pd(cuda-a40-node_a40b-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s128-t8192"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s256-t2048": [
+      "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s256-t2048",
+      "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s256-t2048",
+      "pd(cuda-a40-node_a40b-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s256-t2048",
+      "pd(cuda-a40-node_a40b-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s256-t2048"
+    ],
+    "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s256-t8192": [
+      "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s256-t8192",
+      "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s256-t8192",
+      "pd(cuda-a40-node_a40b-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s256-t8192",
+      "pd(cuda-a40-node_a40b-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s256-t8192"
+    ],
+    "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s32-t2048": [
+      "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s32-t2048",
+      "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s32-t2048",
+      "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s32-t2048",
+      "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s32-t2048"
+    ],
+    "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s32-t8192": [
+      "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s32-t8192",
+      "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s32-t8192",
+      "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s32-t8192",
+      "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s32-t8192"
+    ],
+    "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s128-t2048": [
+      "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s128-t2048",
+      "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s128-t2048",
+      "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s128-t2048",
+      "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s128-t2048"
+    ],
+    "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s128-t8192": [
+      "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s128-t8192",
+      "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s128-t8192",
+      "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s128-t8192",
+      "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s128-t8192"
+    ],
+    "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s256-t2048": [
+      "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s256-t2048",
+      "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s256-t2048",
+      "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s256-t2048",
+      "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s256-t2048"
+    ],
+    "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s256-t8192": [
+      "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s256-t8192",
+      "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s256-t8192",
+      "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s256-t8192",
+      "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s256-t8192"
+    ],
+    "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s32-t2048": [
+      "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s32-t2048",
+      "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s32-t2048",
+      "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s32-t2048",
+      "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s32-t2048"
+    ],
+    "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s32-t8192": [
+      "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s32-t8192",
+      "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s32-t8192",
+      "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s32-t8192",
+      "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s32-t8192"
+    ],
+    "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s128-t2048": [
+      "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s128-t2048",
+      "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s128-t2048",
+      "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s128-t2048",
+      "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s128-t2048"
+    ],
+    "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s128-t8192": [
+      "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s128-t8192",
+      "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s128-t8192",
+      "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s128-t8192",
+      "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s128-t8192"
+    ],
+    "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s256-t2048": [
+      "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s256-t2048",
+      "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s256-t2048",
+      "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s256-t2048",
+      "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s256-t2048"
+    ],
+    "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s256-t8192": [
+      "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s256-t8192",
+      "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s256-t8192",
+      "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s256-t8192",
+      "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s256-t8192"
+    ],
+    "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s32-t2048": [
+      "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s32-t2048",
+      "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s32-t2048"
+    ],
+    "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s32-t8192": [
+      "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s32-t8192",
+      "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s32-t8192"
+    ],
+    "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s128-t2048": [
+      "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s128-t2048",
+      "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s128-t2048"
+    ],
+    "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s128-t8192": [
+      "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s128-t8192",
+      "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s128-t8192"
+    ],
+    "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s256-t2048": [
+      "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s256-t2048",
+      "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s256-t2048"
+    ],
+    "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s256-t8192": [
+      "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s256-t8192",
+      "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s256-t8192"
+    ]
+  },
+  "excluded": [
+    "cuda-a40-node_a40b-tp1-dp1-s128-t2048",
+    "cuda-a40-node_a40b-tp1-dp1-s128-t8192",
+    "cuda-a40-node_a40b-tp1-dp1-s256-t2048",
+    "cuda-a40-node_a40b-tp1-dp1-s256-t8192",
+    "cuda-a40-node_a40b-tp1-dp1-s32-t2048",
+    "cuda-a40-node_a40b-tp1-dp1-s32-t8192",
+    "cuda-a40-node_a40b-tp1-dp2-s128-t2048",
+    "cuda-a40-node_a40b-tp1-dp2-s128-t8192",
+    "cuda-a40-node_a40b-tp1-dp2-s256-t2048",
+    "cuda-a40-node_a40b-tp1-dp2-s256-t8192",
+    "cuda-a40-node_a40b-tp1-dp2-s32-t2048",
+    "cuda-a40-node_a40b-tp1-dp2-s32-t8192",
+    "cuda-a40-node_a40b-tp1-dp3-s128-t2048",
+    "cuda-a40-node_a40b-tp1-dp3-s128-t8192",
+    "cuda-a40-node_a40b-tp1-dp3-s256-t2048",
+    "cuda-a40-node_a40b-tp1-dp3-s256-t8192",
+    "cuda-a40-node_a40b-tp1-dp3-s32-t2048",
+    "cuda-a40-node_a40b-tp1-dp3-s32-t8192",
+    "cuda-a40-node_a40b-tp1-dp4-s128-t2048",
+    "cuda-a40-node_a40b-tp1-dp4-s128-t8192",
+    "cuda-a40-node_a40b-tp1-dp4-s256-t2048",
+    "cuda-a40-node_a40b-tp1-dp4-s256-t8192",
+    "cuda-a40-node_a40b-tp1-dp4-s32-t2048",
+    "cuda-a40-node_a40b-tp1-dp4-s32-t8192",
+    "cuda-a40-node_a40b-tp2-dp1-s128-t2048",
+    "cuda-a40-node_a40b-tp2-dp1-s128-t8192",
+    "cuda-a40-node_a40b-tp2-dp1-s256-t2048",
+    "cuda-a40-node_a40b-tp2-dp1-s256-t8192",
+    "cuda-a40-node_a40b-tp2-dp1-s32-t2048",
+    "cuda-a40-node_a40b-tp2-dp1-s32-t8192",
+    "cuda-a40-node_a40b-tp2-dp2-s128-t2048",
+    "cuda-a40-node_a40b-tp2-dp2-s128-t8192",
+    "cuda-a40-node_a40b-tp2-dp2-s256-t2048",
+    "cuda-a40-node_a40b-tp2-dp2-s256-t8192",
+    "cuda-a40-node_a40b-tp2-dp2-s32-t2048",
+    "cuda-a40-node_a40b-tp2-dp2-s32-t8192",
+    "cuda-a40-node_a40b-tp4-dp1-s128-t2048",
+    "cuda-a40-node_a40b-tp4-dp1-s128-t8192",
+    "cuda-a40-node_a40b-tp4-dp1-s256-t2048",
+    "cuda-a40-node_a40b-tp4-dp1-s256-t8192",
+    "cuda-a40-node_a40b-tp4-dp1-s32-t2048",
+    "cuda-a40-node_a40b-tp4-dp1-s32-t8192",
+    "furiosa-rngd-card-node_rngd1-tp1-dp1-s128-t2048",
+    "furiosa-rngd-card-node_rngd1-tp1-dp1-s128-t8192",
+    "furiosa-rngd-card-node_rngd1-tp1-dp1-s256-t2048",
+    "furiosa-rngd-card-node_rngd1-tp1-dp1-s256-t8192",
+    "furiosa-rngd-card-node_rngd1-tp1-dp1-s32-t2048",
+    "furiosa-rngd-card-node_rngd1-tp1-dp1-s32-t8192",
+    "mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t2048",
+    "mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t8192",
+    "mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t2048",
+    "mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+    "mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t2048",
+    "mix(cuda-a40-node_a40a-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t8192",
+    "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp1)-s128-t2048",
+    "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp1)-s128-t8192",
+    "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp1)-s256-t2048",
+    "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp1)-s256-t8192",
+    "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp1)-s32-t2048",
+    "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp1)-s32-t8192",
+    "mix(cuda-a40-node_a40a-tp1-dp2+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t2048",
+    "mix(cuda-a40-node_a40a-tp1-dp2+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t8192",
+    "mix(cuda-a40-node_a40a-tp1-dp2+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t2048",
+    "mix(cuda-a40-node_a40a-tp1-dp2+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+    "mix(cuda-a40-node_a40a-tp1-dp2+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t2048",
+    "mix(cuda-a40-node_a40a-tp1-dp2+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t8192",
+    "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp1)-s128-t2048",
+    "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp1)-s128-t8192",
+    "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp1)-s256-t2048",
+    "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp1)-s256-t8192",
+    "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp1)-s32-t2048",
+    "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp1)-s32-t8192",
+    "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp2)-s128-t2048",
+    "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp2)-s128-t8192",
+    "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp2)-s256-t2048",
+    "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp2)-s256-t8192",
+    "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp2)-s32-t2048",
+    "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp2)-s32-t8192",
+    "mix(cuda-a40-node_a40a-tp1-dp3+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t2048",
+    "mix(cuda-a40-node_a40a-tp1-dp3+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t8192",
+    "mix(cuda-a40-node_a40a-tp1-dp3+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t2048",
+    "mix(cuda-a40-node_a40a-tp1-dp3+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+    "mix(cuda-a40-node_a40a-tp1-dp3+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t2048",
+    "mix(cuda-a40-node_a40a-tp1-dp3+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t8192",
+    "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp1)-s128-t2048",
+    "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp1)-s128-t8192",
+    "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp1)-s256-t2048",
+    "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp1)-s256-t8192",
+    "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp1)-s32-t2048",
+    "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp1)-s32-t8192",
+    "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp2)-s128-t2048",
+    "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp2)-s128-t8192",
+    "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp2)-s256-t2048",
+    "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp2)-s256-t8192",
+    "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp2)-s32-t2048",
+    "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp2)-s32-t8192",
+    "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp3)-s128-t2048",
+    "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp3)-s128-t8192",
+    "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp3)-s256-t2048",
+    "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp3)-s256-t8192",
+    "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp3)-s32-t2048",
+    "mix(cuda-a40-node_a40a-tp1-dp4+cuda-a40-node_a40b-tp1-dp3)-s32-t8192",
+    "mix(cuda-a40-node_a40a-tp1-dp4+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t2048",
+    "mix(cuda-a40-node_a40a-tp1-dp4+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t8192",
+    "mix(cuda-a40-node_a40a-tp1-dp4+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t2048",
+    "mix(cuda-a40-node_a40a-tp1-dp4+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+    "mix(cuda-a40-node_a40a-tp1-dp4+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t2048",
+    "mix(cuda-a40-node_a40a-tp1-dp4+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t8192",
+    "mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s128-t2048",
+    "mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s128-t8192",
+    "mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s256-t2048",
+    "mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s256-t8192",
+    "mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s32-t2048",
+    "mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s32-t8192",
+    "mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t2048",
+    "mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t8192",
+    "mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t2048",
+    "mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t8192",
+    "mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t2048",
+    "mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t8192",
+    "mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t2048",
+    "mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t8192",
+    "mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t2048",
+    "mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+    "mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t2048",
+    "mix(cuda-a40-node_a40b-tp1-dp1+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t8192",
+    "mix(cuda-a40-node_a40b-tp1-dp2+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t2048",
+    "mix(cuda-a40-node_a40b-tp1-dp2+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t8192",
+    "mix(cuda-a40-node_a40b-tp1-dp2+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t2048",
+    "mix(cuda-a40-node_a40b-tp1-dp2+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t8192",
+    "mix(cuda-a40-node_a40b-tp1-dp2+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t2048",
+    "mix(cuda-a40-node_a40b-tp1-dp2+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t8192",
+    "mix(cuda-a40-node_a40b-tp1-dp2+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t2048",
+    "mix(cuda-a40-node_a40b-tp1-dp2+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t8192",
+    "mix(cuda-a40-node_a40b-tp1-dp2+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t2048",
+    "mix(cuda-a40-node_a40b-tp1-dp2+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+    "mix(cuda-a40-node_a40b-tp1-dp2+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t2048",
+    "mix(cuda-a40-node_a40b-tp1-dp2+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t8192",
+    "mix(cuda-a40-node_a40b-tp1-dp3+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t2048",
+    "mix(cuda-a40-node_a40b-tp1-dp3+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t8192",
+    "mix(cuda-a40-node_a40b-tp1-dp3+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t2048",
+    "mix(cuda-a40-node_a40b-tp1-dp3+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t8192",
+    "mix(cuda-a40-node_a40b-tp1-dp3+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t2048",
+    "mix(cuda-a40-node_a40b-tp1-dp3+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t8192",
+    "mix(cuda-a40-node_a40b-tp1-dp3+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t2048",
+    "mix(cuda-a40-node_a40b-tp1-dp3+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t8192",
+    "mix(cuda-a40-node_a40b-tp1-dp3+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t2048",
+    "mix(cuda-a40-node_a40b-tp1-dp3+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+    "mix(cuda-a40-node_a40b-tp1-dp3+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t2048",
+    "mix(cuda-a40-node_a40b-tp1-dp3+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t8192",
+    "mix(cuda-a40-node_a40b-tp1-dp4+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t2048",
+    "mix(cuda-a40-node_a40b-tp1-dp4+furiosa-rngd-card-node_rngd0-tp1-dp1)-s128-t8192",
+    "mix(cuda-a40-node_a40b-tp1-dp4+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t2048",
+    "mix(cuda-a40-node_a40b-tp1-dp4+furiosa-rngd-card-node_rngd0-tp1-dp1)-s256-t8192",
+    "mix(cuda-a40-node_a40b-tp1-dp4+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t2048",
+    "mix(cuda-a40-node_a40b-tp1-dp4+furiosa-rngd-card-node_rngd0-tp1-dp1)-s32-t8192",
+    "mix(cuda-a40-node_a40b-tp1-dp4+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t2048",
+    "mix(cuda-a40-node_a40b-tp1-dp4+furiosa-rngd-card-node_rngd1-tp1-dp1)-s128-t8192",
+    "mix(cuda-a40-node_a40b-tp1-dp4+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t2048",
+    "mix(cuda-a40-node_a40b-tp1-dp4+furiosa-rngd-card-node_rngd1-tp1-dp1)-s256-t8192",
+    "mix(cuda-a40-node_a40b-tp1-dp4+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t2048",
+    "mix(cuda-a40-node_a40b-tp1-dp4+furiosa-rngd-card-node_rngd1-tp1-dp1)-s32-t8192",
+    "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s128-t2048",
+    "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s128-t8192",
+    "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s256-t2048",
+    "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s256-t8192",
+    "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s32-t2048",
+    "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s32-t8192",
+    "pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s128-t2048",
+    "pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s128-t8192",
+    "pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s256-t2048",
+    "pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s256-t8192",
+    "pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s32-t2048",
+    "pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s32-t8192",
+    "pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s128-t2048",
+    "pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s128-t8192",
+    "pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s256-t2048",
+    "pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s256-t8192",
+    "pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s32-t2048",
+    "pd(cuda-a40-node_a40b-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s32-t8192",
+    "pd(cuda-a40-node_a40b-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s128-t2048",
+    "pd(cuda-a40-node_a40b-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s128-t8192",
+    "pd(cuda-a40-node_a40b-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s256-t2048",
+    "pd(cuda-a40-node_a40b-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s256-t8192",
+    "pd(cuda-a40-node_a40b-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s32-t2048",
+    "pd(cuda-a40-node_a40b-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s32-t8192",
+    "pd(cuda-a40-node_a40b-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s128-t2048",
+    "pd(cuda-a40-node_a40b-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s128-t8192",
+    "pd(cuda-a40-node_a40b-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s256-t2048",
+    "pd(cuda-a40-node_a40b-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s256-t8192",
+    "pd(cuda-a40-node_a40b-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s32-t2048",
+    "pd(cuda-a40-node_a40b-tp1-dp1 P + furiosa-rngd-card-node_rngd1-tp1-dp1 D)-s32-t8192",
+    "pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp1-dp2 D)-s128-t2048",
+    "pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp1-dp2 D)-s128-t8192",
+    "pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp1-dp2 D)-s256-t2048",
+    "pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp1-dp2 D)-s256-t8192",
+    "pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp1-dp2 D)-s32-t2048",
+    "pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp1-dp2 D)-s32-t8192",
+    "pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s128-t2048",
+    "pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s128-t8192",
+    "pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s256-t2048",
+    "pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s256-t8192",
+    "pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s32-t2048",
+    "pd(cuda-a40-node_a40b-tp1-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s32-t8192",
+    "pd(cuda-a40-node_a40b-tp1-dp3 P + cuda-a40-node_a40a-tp1-dp3 D)-s128-t2048",
+    "pd(cuda-a40-node_a40b-tp1-dp3 P + cuda-a40-node_a40a-tp1-dp3 D)-s128-t8192",
+    "pd(cuda-a40-node_a40b-tp1-dp3 P + cuda-a40-node_a40a-tp1-dp3 D)-s256-t2048",
+    "pd(cuda-a40-node_a40b-tp1-dp3 P + cuda-a40-node_a40a-tp1-dp3 D)-s256-t8192",
+    "pd(cuda-a40-node_a40b-tp1-dp3 P + cuda-a40-node_a40a-tp1-dp3 D)-s32-t2048",
+    "pd(cuda-a40-node_a40b-tp1-dp3 P + cuda-a40-node_a40a-tp1-dp3 D)-s32-t8192",
+    "pd(cuda-a40-node_a40b-tp1-dp4 P + cuda-a40-node_a40a-tp1-dp4 D)-s128-t2048",
+    "pd(cuda-a40-node_a40b-tp1-dp4 P + cuda-a40-node_a40a-tp1-dp4 D)-s128-t8192",
+    "pd(cuda-a40-node_a40b-tp1-dp4 P + cuda-a40-node_a40a-tp1-dp4 D)-s256-t2048",
+    "pd(cuda-a40-node_a40b-tp1-dp4 P + cuda-a40-node_a40a-tp1-dp4 D)-s256-t8192",
+    "pd(cuda-a40-node_a40b-tp1-dp4 P + cuda-a40-node_a40a-tp1-dp4 D)-s32-t2048",
+    "pd(cuda-a40-node_a40b-tp1-dp4 P + cuda-a40-node_a40a-tp1-dp4 D)-s32-t8192",
+    "pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s128-t2048",
+    "pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s128-t8192",
+    "pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s256-t2048",
+    "pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s256-t8192",
+    "pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s32-t2048",
+    "pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s32-t8192",
+    "pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s128-t2048",
+    "pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s128-t8192",
+    "pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s256-t2048",
+    "pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s256-t8192",
+    "pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s32-t2048",
+    "pd(cuda-a40-node_a40b-tp2-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s32-t8192",
+    "pd(cuda-a40-node_a40b-tp2-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s128-t2048",
+    "pd(cuda-a40-node_a40b-tp2-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s128-t8192",
+    "pd(cuda-a40-node_a40b-tp2-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s256-t2048",
+    "pd(cuda-a40-node_a40b-tp2-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s256-t8192",
+    "pd(cuda-a40-node_a40b-tp2-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s32-t2048",
+    "pd(cuda-a40-node_a40b-tp2-dp2 P + cuda-a40-node_a40a-tp2-dp2 D)-s32-t8192",
+    "pd(cuda-a40-node_a40b-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s128-t2048",
+    "pd(cuda-a40-node_a40b-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s128-t8192",
+    "pd(cuda-a40-node_a40b-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s256-t2048",
+    "pd(cuda-a40-node_a40b-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s256-t8192",
+    "pd(cuda-a40-node_a40b-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s32-t2048",
+    "pd(cuda-a40-node_a40b-tp4-dp1 P + cuda-a40-node_a40a-tp4-dp1 D)-s32-t8192",
+    "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s128-t2048",
+    "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s128-t8192",
+    "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s256-t2048",
+    "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s256-t8192",
+    "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s32-t2048",
+    "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s32-t8192",
+    "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s128-t2048",
+    "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s128-t8192",
+    "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s256-t2048",
+    "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s256-t8192",
+    "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s32-t2048",
+    "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s32-t8192",
+    "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s128-t2048",
+    "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s128-t8192",
+    "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s256-t2048",
+    "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s256-t8192",
+    "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s32-t2048",
+    "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40a-tp1-dp1 D)-s32-t8192",
+    "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s128-t2048",
+    "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s128-t8192",
+    "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s256-t2048",
+    "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s256-t8192",
+    "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s32-t2048",
+    "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s32-t8192",
+    "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s128-t2048",
+    "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s128-t8192",
+    "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s256-t2048",
+    "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s256-t8192",
+    "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s32-t2048",
+    "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40b-tp1-dp1 D)-s32-t8192",
+    "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s128-t2048",
+    "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s128-t8192",
+    "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s256-t2048",
+    "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s256-t8192",
+    "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s32-t2048",
+    "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s32-t8192",
+    "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s128-t2048",
+    "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s128-t8192",
+    "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s256-t2048",
+    "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s256-t8192",
+    "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s32-t2048",
+    "pd(furiosa-rngd-card-node_rngd1-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s32-t8192"
+  ]
+}

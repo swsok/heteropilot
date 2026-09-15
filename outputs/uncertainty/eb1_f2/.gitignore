@@ -1,0 +1,5 @@
+# Simulator work dirs and the sweep's console log: regenerable from the command
+# in experiments/uncertainty/results/eb1_f2.md. The result JSONs are committed;
+# these are not.
+work/
+run.log

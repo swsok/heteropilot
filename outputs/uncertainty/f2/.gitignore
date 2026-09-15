@@ -1,0 +1,8 @@
+# Simulator run artifacts: per-candidate ASTRA-Sim input trees and work dirs,
+# regenerable from the build command in experiments/uncertainty/results/f2_truth.md.
+# The envelope cache, the mirror list and the summary are committed; this is not.
+work/
+build.log
+run.log
+*.stdout
+*.stderr
