@@ -1,0 +1,6 @@
+# Simulator work dirs and the console log: regenerable from the command in
+# experiments/uncertainty/results/eb3_f2.md, and a resimulation writes one
+# directory per candidate per endpoint. The result JSON is committed; these
+# are not.
+work/
+run.log
