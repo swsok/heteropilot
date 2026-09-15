@@ -2722,3 +2722,76 @@ paid once.
 **Where.** `experiments/uncertainty/build_truth_cache.py`,
 `experiments/uncertainty/results/f2_truth.md`; the D-number comes from the
 `D70–D79` block `WORK_ORDER_uq_stage_b_plus.md` claims in STEP C0 (PR #87).
+
+## D72 — a `sim_error` item is swept as a flat margin and restored as a domain swap, so E-B2's second criterion is not defined for it · Recorded 2026-09-15
+
+`WORK_ORDER_uq_stage_b_plus.md` §2.4 asks E-B2 to report its precision and recall
+two ways: (1) against the **realised** transition — restore an input to the one
+value truth turned out to have, and see whether the recommendation moved — and
+(2) against the **possible** transition, restoring it to every grid point of its
+range instead. (2) is meant to be the detector's own accuracy, with (1) reading
+partly as a statement about where this fixture's truth happened to sit.
+
+`--truth-sweep` implemented (2) and then scored **identically to (1) on all 1,848
+E-A1 cases**. That is not the two criteria agreeing. It is one criterion computed
+twice, for the only kind of input the E-A1 corpus has false positives in.
+
+**The two paths compute different functions of the same item.** For
+`sim_error:domain`:
+
+| | what a point of the range means |
+| --- | --- |
+| sweep (`analyze` → `perturb` → `_plans_at`) | a **flat one-sided margin** of `v × 100 %` on every candidate whose decision is not `unmeasured`. Its truth value, `v = 0`, is therefore *no margin at all* |
+| restore (`_state`, and `realisable_flip` as first written) | swap `policy_truth` for `policy_scalar` — the **measured accuracy domain** against that domain collapsed to its fitted point. Truth is the domain, whose margin is +11.6 % at served concurrency 3.9 and −18 % at 76 (D29), and is nowhere zero |
+
+The item's `range` is `[0, 0.4725]` in simulator-error fractions
+(`WORST_MEASURED_ERROR`), but the restore has only two states to offer, so the
+first implementation mapped the range onto them by a midpoint test. Every grid
+point below the midpoint became `policy_truth` and every point above it
+`policy_scalar` — which are exactly the two states criterion (1) already
+compares. Criterion (2) could not return a different answer, and did not.
+
+**This is also what the `delta` category is detecting**, and the two were found
+together. On the E-A1 corpus all 19 false positives are `sim_error:domain` with
+`approximation=False` — an *exact* rule — and the sweep grid puts the crossing at
+value 0, which *is* the truth value, while restoring to that same value produces
+no flip. Two computations of one point cannot disagree unless they are computing
+different functions. They are: 0 means "no margin" to one and "the measured
+domain" to the other. Read as `beta`, that would have accused the closed-form
+rules of misplacing one crossing in six; separated, `beta` is 0, which is what
+§2.4 predicted for it.
+
+**Decision: scope, do not collapse.** `RESTORE_MATCHES_SWEEP` in
+`experiments/uncertainty/eb2_flip_detection.py` lists the kinds whose restore
+path and sweep path are both `perturb` — `profile`, `link_bw`, `link_lat`,
+`power` — and `sim_error` is not among them. `realisable_flip` returns `None`
+there rather than a number, `score(against="realisable")` drops those rows
+instead of counting them as true negatives, and `realisable_by_kind` in the
+payload shows per kind how many rows the figure actually covers. The consequence
+has to travel with the number: **on the E-A1 corpus the realisable score
+describes the link and profile rules and nothing else**, because every false
+positive it has is scoped out.
+
+**What was not done.** Making the restore walk the sweep's flat-margin model
+would have produced a number for `sim_error`, but that number answers "is the
+detector self-consistent with its own model of the input", not "what happens when
+you measure the domain" — and measuring an accuracy domain yields a domain, not a
+scalar error. Making the *sweep* walk the restore's model is the honest repair,
+and it is out of C3's scope: `_state`'s SIM_ERROR degradation is what E-B1 was
+built on, so changing it invalidates the results C2 committed
+(`eb1_regret_vs_budget.md`, `eb1_f2.md`). Either repair belongs in its own work
+order, and until one runs, **criterion (2) must not be quoted as a precision
+figure for `sim_error`.**
+
+**A smaller consequence worth recording.** `perturb` returns
+`approximation=False` for a SIM_ERROR item, and D34 checked that claim against
+the margin arithmetic, which is exact. It is not a claim that a flat scalar is a
+faithful stand-in for refitting a concurrency-dependent domain — the same
+distinction D29 draws when it rejects one error number for every candidate. The
+flag is about the rule, not about the modelling choice above it.
+
+**Where.** `experiments/uncertainty/eb2_flip_detection.py`
+(`RESTORE_MATCHES_SWEEP`, `realisable_flip`, `score`, `classify_false_positive`'s
+`delta`), `tests/test_uq_eb2_classification.py`,
+`experiments/uncertainty/results/eb2_f2.md`; the D-number comes from the
+`D70–D79` block `WORK_ORDER_uq_stage_b_plus.md` claims in STEP C0 (PR #87).

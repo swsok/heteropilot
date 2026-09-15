@@ -18,6 +18,14 @@ lives at a part of the range truth does not sit at. Precision is therefore a
 LOWER bound on the rule's correctness, and this file says so wherever it quotes
 one, rather than reporting the friendlier number.
 
+`--truth-sweep` adds §2.4's second criterion, and `RESTORE_MATCHES_SWEEP` says
+which kinds it can honestly be asked about. `sim_error` is not one of them (D72):
+the sweep spends its range as a flat margin while the restore swaps the accuracy
+domain, so asking "is the flip anywhere in the range" by the restore's model just
+returns the first criterion's answer. On the E-A1 corpus that is also the only
+kind with false positives, so the realisable score there describes the link and
+profile rules and nothing else. Read it next to `realisable_by_kind`.
+
 The grid size is the variable: m = 3, 5, 9 (§2.5's grid is the m = 5 shape).
 A coarser grid can miss a flip that lives between its points; a finer one costs
 proportionally more sweep. Items whose perturbation rule is a first-order
@@ -60,6 +68,33 @@ GRIDS = (3, 5, 9)
 #: not a distinction the planner itself makes.
 TIE_TOL = 1e-6
 
+#: Kinds whose restore path and sweep path are the SAME function of the input.
+#:
+#: Criterion (2) of §2.4 asks whether a predicted flip exists anywhere in an
+#: item's range, and answers it by restoring the input to each grid point of that
+#: range. The answer only means something when "restore to v" and "sweep to v"
+#: compute the same thing. For every kind listed here they do: both go through
+#: `perturb`, so the two implementations agreeing is a control.
+#:
+#: `SIM_ERROR` is deliberately absent, and that is D72. Its range is declared in
+#: simulator-error fractions, and `perturb` spends a point of it as a FLAT
+#: one-sided margin of `v x 100 %` on every candidate -- so its truth value, 0,
+#: means "no margin at all". The harness restores it by putting the MEASURED
+#: accuracy domain back, which is a per-candidate, concurrency-interpolated
+#: margin: +11.6 % at served concurrency 3.9 and -18 % at 76 (D29), and nowhere
+#: zero. The two paths do not disagree about where a crossing lies; they disagree
+#: about what the input MEANS, which is what the `delta` category detects.
+#:
+#: Sweeping a SIM_ERROR item by the restore's own model is what this file did
+#: first, and it is worse than useless: the item's whole range collapses onto the
+#: two policy states the restore already uses, so criterion (2) returns
+#: criterion (1) and reports it as though it were independent evidence. It scored
+#: identically on all 1,848 E-A1 cases for that reason. `realisable` is left
+#: `None` for these kinds instead, and `score(against="realisable")` skips them.
+RESTORE_MATCHES_SWEEP = frozenset(
+    k for k in UncertainKind if k is not UncertainKind.SIM_ERROR
+)
+
 
 @dataclass
 class Case:
@@ -80,7 +115,8 @@ class Case:
     #: outcome disagree. None where they agree - there is nothing to explain.
     category: str | None = None
     #: §2.4's second criterion: does the flip exist ANYWHERE in the range?
-    #: None unless --truth-sweep asked for it.
+    #: None unless --truth-sweep asked for it, and None for a kind outside
+    #: `RESTORE_MATCHES_SWEEP` even then (D72). Scoring drops these rows.
     realisable: bool | None = None
 
 
@@ -168,7 +204,7 @@ def equivalents_of(world: World, incumbent: str | None) -> set[str]:
 
 def realisable_flip(
     world: World, degraded: list[Degraded], item: Degraded, grid: int
-) -> bool:
+) -> bool | None:
     """Does restoring this input to ANY value in its range move the winner?
 
     §2.4's second scoring criterion. The first asks whether the flip happens at
@@ -181,11 +217,19 @@ def realisable_flip(
     policy -- while `analyze` reaches its verdict through `_plans_at`. Two
     implementations agreeing is a control; reading the answer off the thing
     being scored would be none.
+
+    `None` where the criterion does not apply: a kind outside
+    `RESTORE_MATCHES_SWEEP` (D72), or an unbounded range with no grid to walk.
+    `None` is not `False` -- it is dropped from the scoring rather than counted
+    as "no flip there", which would quietly credit the detector with true
+    negatives it never earned.
     """
-    incumbent = _winner(world, degraded, set())
+    if item.item.kind not in RESTORE_MATCHES_SWEEP:
+        return None
     lo, hi = item.item.range.lo, item.item.range.hi
     if lo is None or hi is None:
-        return False
+        return None
+    incumbent = _winner(world, degraded, set())
     others = [d for d in degraded if d.id != item.id]
     for i in range(grid):
         value = lo + (hi - lo) * i / (grid - 1) if grid > 1 else lo
@@ -199,15 +243,12 @@ def realisable_flip(
             metrics = JudgedMetrics.trusted(
                 perturb(rebased, d.degraded_value, metrics, world.context).metrics
             )
-        if item.item.kind is UncertainKind.SIM_ERROR:
-            # The domain is not a metric perturbation: it is scalar mode or it is
-            # not, so the only two points its "range" has are the two policies.
-            policy = world.policy_scalar if value > (lo + hi) / 2 else world.policy_truth
-        else:
-            rebased = item.item.model_copy(update={"nominal": item.truth_value})
-            metrics = JudgedMetrics.trusted(
-                perturb(rebased, value, metrics, world.context).metrics
-            )
+        # The swept item is in `RESTORE_MATCHES_SWEEP`, so this is `perturb` --
+        # the same rule the sweep used. A SIM_ERROR item never reaches here.
+        rebased = item.item.model_copy(update={"nominal": item.truth_value})
+        metrics = JudgedMetrics.trusted(
+            perturb(rebased, value, metrics, world.context).metrics
+        )
         best = _best(world, metrics, policy)
         if (best.plan.candidate.id if best else None) != incumbent:
             return True
@@ -273,6 +314,13 @@ def score(cases: list[Case], *, against: str = "actual") -> dict:
     the range? That is what the measurement plan claims, so it is the detector's
     own accuracy. Cases where it was not computed are skipped rather than
     counted as negatives.
+
+    That skip is not uniform across kinds, and the asymmetry has to travel with
+    the number: `SIM_ERROR` is outside `RESTORE_MATCHES_SWEEP` (D72), so on a
+    corpus whose false positives are all `sim_error` the realisable score is
+    computed over rows that had no false positive to begin with. It is then a
+    statement about the link and profile rules only. `realisable_by_kind` in the
+    payload is what makes that visible; quote the two together or neither.
     """
     if against == "realisable":
         cases = [c for c in cases if c.realisable is not None]
@@ -361,6 +409,29 @@ def main() -> int:
             str(g): score([c for c in cases if c.grid == g], against="realisable")
             for g in GRIDS
         } if args.truth_sweep else None,
+        # D72: which kinds the realisable score actually covers. `n` 0 for a kind
+        # means it was scoped out, not that it never appeared.
+        "realisable_by_kind": {
+            str(g): {
+                kind: score([c for c in cases
+                             if c.grid == g and c.kind == kind],
+                            against="realisable")
+                for kind in sorted({c.kind for c in cases})
+            }
+            for g in GRIDS
+        } if args.truth_sweep else None,
+        "realisable_scope": {
+            "in_scope_kinds": sorted(k.value for k in RESTORE_MATCHES_SWEEP),
+            "excluded_kinds": sorted(
+                k.value for k in UncertainKind if k not in RESTORE_MATCHES_SWEEP
+            ),
+            "reason": (
+                "D72: a SIM_ERROR item's range is swept as a flat margin by "
+                "`perturb` but restored as an accuracy-domain policy swap; the "
+                "two are different functions, so criterion (2) is not defined "
+                "for it and is left null rather than collapsed onto criterion (1)."
+            ),
+        } if args.truth_sweep else None,
         "categories": {
             str(g): categories([c for c in cases if c.grid == g]) for g in GRIDS
         },
@@ -404,6 +475,9 @@ def main() -> int:
         print(f"        categories {payload['categories'][str(g)]}")
         if args.truth_sweep:
             print(f"        realisable {payload['realisable'][str(g)]}")
+            for kind, sc in payload["realisable_by_kind"][str(g)].items():
+                scope = "" if sc["n"] else "  (scoped out, D72)"
+                print(f"          {kind}: {sc}{scope}")
     return 0
 
 
