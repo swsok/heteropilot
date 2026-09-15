@@ -20,6 +20,8 @@ from experiments.uncertainty.eb1_regret_vs_budget import World
 from experiments.uncertainty.eb3_closed_form_vs_resim import (
     MIN_ACTIVE_FOR_SPEARMAN,
     active_records,
+    coverage_gate,
+    endpoint_coverage,
     identity_gate,
     merge_shards,
     mirror_members,
@@ -281,3 +283,86 @@ def test_the_merge_gates_on_identity_across_shards(tmp_path: Path) -> None:
     merged = merge_shards([a, b])
     assert merged["identity_control_verdict"]["passed"] is False
     assert merged["identity_control_verdict"]["unexplained"] == ["mix(a+b)"]
+
+
+# ---------------------------------------------------------------------------
+# D73: an endpoint whose runs all crashed looks exactly like an inert one
+# ---------------------------------------------------------------------------
+
+class _Endpoint:
+    def __init__(self, value, metrics):
+        self.value = value
+        self.metrics = metrics
+
+
+def test_a_crashed_candidate_keeps_the_baseline_object_and_is_counted_missing(
+) -> None:
+    """`_endpoint` builds its metrics as `dict(baseline)` updated with whatever
+    came back, so a crashed run leaves the baseline's own object in place. That
+    is the signature, and it is what the gate reads."""
+    kept, fresh = object(), object()
+    baseline = {"a": kept, "b": object()}
+    endpoint = _Endpoint(35.0, {"a": kept, "b": fresh})
+    cov = endpoint_coverage(endpoint, baseline, {"a", "b"})
+    assert cov["resimulated"] == 1
+    assert cov["missing"] == ["a"]
+
+
+def test_identity_not_equality_so_a_genuinely_inert_candidate_still_counts() -> None:
+    """A candidate the input really does not move comes back with unchanged
+    NUMBERS but a fresh object. Comparing by equality would call that a crash --
+    the opposite error, and it would condemn exactly the inert links this
+    experiment exists to confirm."""
+    class _M:
+        def __eq__(self, other):   # equal to everything, like unchanged metrics
+            return True
+        __hash__ = None
+    baseline = {"a": _M()}
+    endpoint = _Endpoint(35.0, {"a": _M()})     # different object, equal value
+    assert endpoint_coverage(endpoint, baseline, {"a"})["resimulated"] == 1
+
+
+def test_an_endpoint_with_no_successful_run_fails_the_gate() -> None:
+    """The 2026-09-15 failure: two nodes were missing an ASTRA-Sim input
+    template, every run raised, and four link items were reported as
+    `closed=0 resim=0 -> agrees`. A clean pass made entirely of failure."""
+    coverages = [
+        {"input_id": "link_bw:x", "value": 13.0, "touched": 61,
+         "resimulated": 0, "missing": [f"c{i}" for i in range(61)]},
+    ]
+    verdict = coverage_gate(coverages)
+    assert verdict["passed"] is False
+    assert verdict["endpoints_with_no_successful_run"] == 1
+
+
+def test_a_partially_failed_endpoint_is_recorded_but_does_not_stop_the_run() -> None:
+    """D71 already puts holes in this corpus -- 23 candidates raise in the
+    simulator for a real reason. A hole is a corpus with something missing; an
+    empty endpoint is no corpus at all, and only the second is fatal."""
+    coverages = [
+        {"input_id": "profile:a40a", "value": 1.0, "touched": 211,
+         "resimulated": 188, "missing": [f"c{i}" for i in range(23)]},
+    ]
+    verdict = coverage_gate(coverages)
+    assert verdict["passed"] is True
+    assert verdict["endpoints_partially_failed"] == 1
+    assert verdict["total_resimulated"] == 188
+
+
+def test_the_merge_fails_when_one_shard_simulated_nothing(tmp_path: Path) -> None:
+    """A node with a broken install must not be averaged into a result by the
+    two that worked."""
+    good = _shard(tmp_path, "good", [_ref("profile:a40a", 30_381.0, 44_000.0)])
+    bad = _shard(tmp_path, "bad", [_ref("link_bw:x", 0.0, 0.0, kind="link_bw")])
+    for path, detail in (
+        (good, [{"input_id": "profile:a40a", "value": 1.0, "touched": 211,
+                 "resimulated": 211, "missing": []}]),
+        (bad, [{"input_id": "link_bw:x", "value": 13.0, "touched": 61,
+                "resimulated": 0, "missing": ["c0"]}]),
+    ):
+        payload = json.loads(path.read_text())
+        payload["resimulation_coverage_detail"] = detail
+        path.write_text(json.dumps(payload))
+    merged = merge_shards([good, bad])
+    assert merged["resimulation_coverage"]["passed"] is False
+    assert merged["resimulation_coverage"]["endpoints_with_no_successful_run"] == 1

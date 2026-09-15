@@ -1,0 +1,651 @@
+{
+  "merged_from": [
+    "outputs/uncertainty/eb3_f2/shard_a5000.json",
+    "outputs/uncertainty/eb3_f2/shard_a5000b.json",
+    "outputs/uncertainty/eb3_f2/shard_node49.json",
+    "outputs/uncertainty/eb3_f2/shard_node49b.json",
+    "outputs/uncertainty/eb3_f2/shard_simerror.json"
+  ],
+  "shards": [
+    {
+      "path": "outputs/uncertainty/eb3_f2/shard_a5000.json",
+      "items": [
+        "profile:cuda-a40-node_a40a",
+        "link_bw:fabric-a40a-a40b"
+      ],
+      "resimulate_seconds": 7455.673318696907,
+      "provenance": {
+        "git_commit": "949a511e0105357eed6be051c8f1dd73c29138d2",
+        "git_dirty": true,
+        "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
+        "vllm_version": null,
+        "backend_version": null,
+        "model_revision": null,
+        "hardware_profile_hash": null,
+        "cluster_spec_hash": null,
+        "service_spec_hash": null,
+        "dataset_hash": null,
+        "random_seed": 0,
+        "command": "eb3_closed_form_vs_resim.py --fixture experiments/uncertainty/fixtures/f2.json --cache-dir outputs/uncertainty/f2/cache --work-dir outputs/uncertainty/eb3_f2/work --degrade profile:cuda-a40-node_a40a link_bw:fabric-a40a-a40b --top 10 --workers 16 --out-json outputs/uncertainty/eb3_f2/shard_a5000.json",
+        "timestamp": "2026-09-15T06:36:06.997655+00:00",
+        "python_version": "3.10.12",
+        "platform": "Linux-6.8.0-124-generic-x86_64-with-glibc2.35",
+        "hostname": "node02-ai",
+        "cpu_count": 20,
+        "accelerators": {
+          "cuda": {
+            "count": 1,
+            "model": "NVIDIA RTX A5000"
+          },
+          "rngd_cards": null,
+          "atom_devices": 0
+        }
+      }
+    },
+    {
+      "path": "outputs/uncertainty/eb3_f2/shard_a5000b.json",
+      "items": [
+        "link_bw:fabric-rngd0-rngd1",
+        "link_bw:fabric-rngd1-a40b"
+      ],
+      "resimulate_seconds": 6178.9368225700455,
+      "provenance": {
+        "git_commit": "949a511e0105357eed6be051c8f1dd73c29138d2",
+        "git_dirty": true,
+        "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
+        "vllm_version": null,
+        "backend_version": null,
+        "model_revision": null,
+        "hardware_profile_hash": null,
+        "cluster_spec_hash": null,
+        "service_spec_hash": null,
+        "dataset_hash": null,
+        "random_seed": 0,
+        "command": "eb3_closed_form_vs_resim.py --fixture experiments/uncertainty/fixtures/f2.json --cache-dir outputs/uncertainty/f2/cache --work-dir outputs/uncertainty/eb3_f2/work --degrade link_bw:fabric-rngd1-a40b link_bw:fabric-rngd0-rngd1 --top 10 --workers 16 --out-json outputs/uncertainty/eb3_f2/shard_a5000b.json",
+        "timestamp": "2026-09-15T08:19:11.129883+00:00",
+        "python_version": "3.10.12",
+        "platform": "Linux-6.8.0-124-generic-x86_64-with-glibc2.35",
+        "hostname": "node02-ai",
+        "cpu_count": 20,
+        "accelerators": {
+          "cuda": {
+            "count": 1,
+            "model": "NVIDIA RTX A5000"
+          },
+          "rngd_cards": null,
+          "atom_devices": 0
+        }
+      }
+    },
+    {
+      "path": "outputs/uncertainty/eb3_f2/shard_node49.json",
+      "items": [
+        "profile:cuda-a40-node_a40b",
+        "link_bw:fabric-rngd0-a40a",
+        "profile:furiosa-rngd-card-node_rngd0",
+        "profile:furiosa-rngd-card-node_rngd1"
+      ],
+      "resimulate_seconds": 6858.892487188999,
+      "provenance": {
+        "git_commit": "949a511e0105357eed6be051c8f1dd73c29138d2",
+        "git_dirty": true,
+        "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
+        "vllm_version": null,
+        "backend_version": null,
+        "model_revision": null,
+        "hardware_profile_hash": null,
+        "cluster_spec_hash": null,
+        "service_spec_hash": null,
+        "dataset_hash": null,
+        "random_seed": 0,
+        "command": "eb3_closed_form_vs_resim.py --fixture experiments/uncertainty/fixtures/f2.json --cache-dir outputs/uncertainty/f2/cache --work-dir outputs/uncertainty/eb3_f2/work --degrade profile:cuda-a40-node_a40b profile:furiosa-rngd-card-node_rngd0 profile:furiosa-rngd-card-node_rngd1 link_bw:fabric-rngd0-a40a --top 10 --workers 16 --out-json outputs/uncertainty/eb3_f2/shard_node49.json",
+        "timestamp": "2026-09-15T06:23:19.567469+00:00",
+        "python_version": "3.10.12",
+        "platform": "Linux-5.15.0-173-generic-x86_64-with-glibc2.35",
+        "hostname": "i9-10900x-node01",
+        "cpu_count": 20,
+        "accelerators": {
+          "cuda": {
+            "count": 1,
+            "model": "NVIDIA GeForce GTX 1050"
+          },
+          "rngd_cards": null,
+          "atom_devices": 0
+        }
+      }
+    },
+    {
+      "path": "outputs/uncertainty/eb3_f2/shard_node49b.json",
+      "items": [
+        "link_bw:fabric-rngd0-a40b",
+        "link_bw:fabric-rngd1-a40a"
+      ],
+      "resimulate_seconds": 5468.073883483999,
+      "provenance": {
+        "git_commit": "949a511e0105357eed6be051c8f1dd73c29138d2",
+        "git_dirty": true,
+        "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
+        "vllm_version": null,
+        "backend_version": null,
+        "model_revision": null,
+        "hardware_profile_hash": null,
+        "cluster_spec_hash": null,
+        "service_spec_hash": null,
+        "dataset_hash": null,
+        "random_seed": 0,
+        "command": "eb3_closed_form_vs_resim.py --fixture experiments/uncertainty/fixtures/f2.json --cache-dir outputs/uncertainty/f2/cache --work-dir outputs/uncertainty/eb3_f2/work --degrade link_bw:fabric-rngd0-a40b link_bw:fabric-rngd1-a40a --top 10 --workers 16 --out-json outputs/uncertainty/eb3_f2/shard_node49b.json",
+        "timestamp": "2026-09-15T08:05:53.664330+00:00",
+        "python_version": "3.10.12",
+        "platform": "Linux-5.15.0-173-generic-x86_64-with-glibc2.35",
+        "hostname": "i9-10900x-node01",
+        "cpu_count": 20,
+        "accelerators": {
+          "cuda": {
+            "count": 1,
+            "model": "NVIDIA GeForce GTX 1050"
+          },
+          "rngd_cards": null,
+          "atom_devices": 0
+        }
+      }
+    },
+    {
+      "path": "outputs/uncertainty/eb3_f2/shard_simerror.json",
+      "items": [
+        "sim_error:domain"
+      ],
+      "resimulate_seconds": 3.49909532815218e-05,
+      "provenance": {
+        "git_commit": "949a511e0105357eed6be051c8f1dd73c29138d2",
+        "git_dirty": true,
+        "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
+        "vllm_version": null,
+        "backend_version": null,
+        "model_revision": null,
+        "hardware_profile_hash": null,
+        "cluster_spec_hash": null,
+        "service_spec_hash": null,
+        "dataset_hash": null,
+        "random_seed": 0,
+        "command": "eb3_closed_form_vs_resim.py --fixture experiments/uncertainty/fixtures/f2.json --cache-dir outputs/uncertainty/f2/cache --work-dir outputs/uncertainty/eb3_f2/work_se --degrade sim_error:domain --top 10 --workers 4 --out-json outputs/uncertainty/eb3_f2/shard_simerror.json",
+        "timestamp": "2026-09-15T08:12:22.381498+00:00",
+        "python_version": "3.10.12",
+        "platform": "Linux-6.8.0-124-generic-x86_64-with-glibc2.35",
+        "hostname": "node02-ai",
+        "cpu_count": 20,
+        "accelerators": {
+          "cuda": {
+            "count": 1,
+            "model": "NVIDIA RTX A5000"
+          },
+          "rngd_cards": null,
+          "atom_devices": 0
+        }
+      }
+    }
+  ],
+  "corpus_size": 223,
+  "slo_penalty": 207990.0,
+  "incumbent": "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s256-t8192",
+  "grid": 5,
+  "fixture_path": "experiments/uncertainty/fixtures/f2.json",
+  "include_mirrors": false,
+  "closed_form_delta_regret": {
+    "profile:cuda-a40-node_a40a": 30381.218319787986,
+    "link_bw:fabric-a40a-a40b": 0.0,
+    "link_bw:fabric-rngd0-rngd1": 0.0,
+    "link_bw:fabric-rngd1-a40b": 0.0,
+    "profile:cuda-a40-node_a40b": 30381.218319787986,
+    "link_bw:fabric-rngd0-a40a": 0.0,
+    "profile:furiosa-rngd-card-node_rngd0": 0.0,
+    "profile:furiosa-rngd-card-node_rngd1": 0.0,
+    "link_bw:fabric-rngd0-a40b": 0.0,
+    "link_bw:fabric-rngd1-a40a": 0.0,
+    "sim_error:domain": 41118.38218974412
+  },
+  "resimulate_seconds_total": 25961.576546930904,
+  "resimulate_seconds_wall_clock_max": 7455.673318696907,
+  "spearman_delta_regret_on_checked": null,
+  "spearman_not_computed_because": "not computed: 2 item(s) with a non-zero dR among the 10 checked, below the 3 \u00a72.5 requires. A correlation over items tied at zero measures the ties.",
+  "active_checked_items": [
+    "profile:cuda-a40-node_a40a",
+    "profile:cuda-a40-node_a40b"
+  ],
+  "identity_control_verdict": {
+    "tolerance": 1e-06,
+    "controls_run": 4,
+    "deviating_candidates": [],
+    "expected_from_d40_mirrors": [],
+    "unexplained": [],
+    "passed": true
+  },
+  "resimulation_coverage": {
+    "endpoints": 20,
+    "endpoints_with_no_successful_run": 0,
+    "endpoints_partially_failed": 13,
+    "total_touched": 1528,
+    "total_resimulated": 1478,
+    "passed": true
+  },
+  "resimulation_coverage_detail": [
+    {
+      "input_id": "profile:cuda-a40-node_a40a",
+      "value": 1.0,
+      "touched": 211,
+      "resimulated": 208,
+      "missing": [
+        "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s32-t8192",
+        "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s32-t2048",
+        "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s32-t8192"
+      ]
+    },
+    {
+      "input_id": "profile:cuda-a40-node_a40a",
+      "value": 1.3887581100642001,
+      "touched": 211,
+      "resimulated": 209,
+      "missing": [
+        "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s32-t2048",
+        "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s32-t8192"
+      ]
+    },
+    {
+      "input_id": "link_bw:fabric-a40a-a40b",
+      "value": 12.9,
+      "touched": 61,
+      "resimulated": 58,
+      "missing": [
+        "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s32-t8192",
+        "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s32-t2048",
+        "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s32-t8192"
+      ]
+    },
+    {
+      "input_id": "link_bw:fabric-a40a-a40b",
+      "value": 35.0,
+      "touched": 61,
+      "resimulated": 41,
+      "missing": [
+        "pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s128-t2048",
+        "pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s128-t8192",
+        "pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s256-t2048",
+        "pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s256-t8192",
+        "pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s32-t2048",
+        "pd(cuda-a40-node_a40a-tp1-dp1 P + cuda-a40-node_a40b-tp2-dp1 D)-s32-t8192",
+        "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s128-t2048",
+        "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s128-t8192",
+        "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s256-t2048",
+        "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s256-t8192",
+        "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s32-t2048",
+        "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s32-t8192",
+        "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s32-t2048",
+        "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s32-t8192",
+        "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s128-t2048",
+        "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s128-t8192",
+        "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s256-t2048",
+        "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s256-t8192",
+        "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s32-t2048",
+        "pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s32-t8192"
+      ]
+    },
+    {
+      "input_id": "link_bw:fabric-rngd0-rngd1",
+      "value": 13.1,
+      "touched": 61,
+      "resimulated": 58,
+      "missing": [
+        "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s32-t8192",
+        "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s32-t2048",
+        "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s32-t8192"
+      ]
+    },
+    {
+      "input_id": "link_bw:fabric-rngd0-rngd1",
+      "value": 35.0,
+      "touched": 61,
+      "resimulated": 58,
+      "missing": [
+        "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s32-t8192",
+        "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s32-t2048",
+        "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s32-t8192"
+      ]
+    },
+    {
+      "input_id": "link_bw:fabric-rngd1-a40b",
+      "value": 13.0,
+      "touched": 61,
+      "resimulated": 58,
+      "missing": [
+        "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s32-t8192",
+        "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s32-t2048",
+        "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s32-t8192"
+      ]
+    },
+    {
+      "input_id": "link_bw:fabric-rngd1-a40b",
+      "value": 35.0,
+      "touched": 61,
+      "resimulated": 58,
+      "missing": [
+        "pd(cuda-a40-node_a40a-tp1-dp2 P + cuda-a40-node_a40b-tp2-dp2 D)-s32-t8192",
+        "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s32-t2048",
+        "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s32-t8192"
+      ]
+    },
+    {
+      "input_id": "profile:cuda-a40-node_a40b",
+      "value": 1.0,
+      "touched": 138,
+      "resimulated": 138,
+      "missing": []
+    },
+    {
+      "input_id": "profile:cuda-a40-node_a40b",
+      "value": 1.3887581100642001,
+      "touched": 138,
+      "resimulated": 138,
+      "missing": []
+    },
+    {
+      "input_id": "link_bw:fabric-rngd0-a40a",
+      "value": 13.0,
+      "touched": 61,
+      "resimulated": 60,
+      "missing": [
+        "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s32-t2048"
+      ]
+    },
+    {
+      "input_id": "link_bw:fabric-rngd0-a40a",
+      "value": 35.0,
+      "touched": 61,
+      "resimulated": 55,
+      "missing": [
+        "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s128-t2048",
+        "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s128-t8192",
+        "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s256-t2048",
+        "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s256-t8192",
+        "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s32-t2048",
+        "pd(furiosa-rngd-card-node_rngd0-tp1-dp1 P + cuda-a40-node_a40a-tp2-dp1 D)-s32-t8192"
+      ]
+    },
+    {
+      "input_id": "profile:furiosa-rngd-card-node_rngd0",
+      "value": 1.0,
+      "touched": 43,
+      "resimulated": 43,
+      "missing": []
+    },
+    {
+      "input_id": "profile:furiosa-rngd-card-node_rngd0",
+      "value": 1.3887581100642001,
+      "touched": 43,
+      "resimulated": 42,
+      "missing": [
+        "pd(cuda-a40-node_a40a-tp1-dp1 P + furiosa-rngd-card-node_rngd0-tp1-dp1 D)-s128-t2048"
+      ]
+    },
+    {
+      "input_id": "profile:furiosa-rngd-card-node_rngd1",
+      "value": 1.0,
+      "touched": 6,
+      "resimulated": 6,
+      "missing": []
+    },
+    {
+      "input_id": "profile:furiosa-rngd-card-node_rngd1",
+      "value": 1.3887581100642001,
+      "touched": 6,
+      "resimulated": 6,
+      "missing": []
+    },
+    {
+      "input_id": "link_bw:fabric-rngd0-a40b",
+      "value": 13.0,
+      "touched": 61,
+      "resimulated": 60,
+      "missing": [
+        "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s32-t2048"
+      ]
+    },
+    {
+      "input_id": "link_bw:fabric-rngd0-a40b",
+      "value": 35.0,
+      "touched": 61,
+      "resimulated": 60,
+      "missing": [
+        "pd(cuda-a40-node_a40a-tp1-dp4 P + cuda-a40-node_a40b-tp1-dp4 D)-s32-t2048"
+      ]
+    },
+    {
+      "input_id": "link_bw:fabric-rngd1-a40a",
+      "value": 13.0,
+      "touched": 61,
+      "resimulated": 61,
+      "missing": []
+    },
+    {
+      "input_id": "link_bw:fabric-rngd1-a40a",
+      "value": 35.0,
+      "touched": 61,
+      "resimulated": 61,
+      "missing": []
+    }
+  ],
+  "link_exactness_checks": [
+    {
+      "input_id": "link_bw:fabric-a40a-a40b",
+      "kind": "link_bw",
+      "closed_form": 0.0,
+      "resimulated": 0.0,
+      "relative_difference": 0.0,
+      "agrees": true
+    },
+    {
+      "input_id": "link_bw:fabric-rngd0-rngd1",
+      "kind": "link_bw",
+      "closed_form": 0.0,
+      "resimulated": 0.0,
+      "relative_difference": 0.0,
+      "agrees": true
+    },
+    {
+      "input_id": "link_bw:fabric-rngd1-a40b",
+      "kind": "link_bw",
+      "closed_form": 0.0,
+      "resimulated": 0.0,
+      "relative_difference": 0.0,
+      "agrees": true
+    },
+    {
+      "input_id": "link_bw:fabric-rngd0-a40a",
+      "kind": "link_bw",
+      "closed_form": 0.0,
+      "resimulated": 0.0,
+      "relative_difference": 0.0,
+      "agrees": true
+    },
+    {
+      "input_id": "link_bw:fabric-rngd0-a40b",
+      "kind": "link_bw",
+      "closed_form": 0.0,
+      "resimulated": 0.0,
+      "relative_difference": 0.0,
+      "agrees": true
+    },
+    {
+      "input_id": "link_bw:fabric-rngd1-a40a",
+      "kind": "link_bw",
+      "closed_form": 0.0,
+      "resimulated": 0.0,
+      "relative_difference": 0.0,
+      "agrees": true
+    }
+  ],
+  "refinements": [
+    {
+      "input_id": "profile:cuda-a40-node_a40a",
+      "kind": "profile",
+      "closed_form": 33041.082831515174,
+      "resimulated": 21615.372405566857,
+      "seconds": 4681.1846274490235,
+      "simulated": 422,
+      "skipped": ""
+    },
+    {
+      "input_id": "link_bw:fabric-a40a-a40b",
+      "kind": "link_bw",
+      "closed_form": 0.0,
+      "resimulated": 0.0,
+      "seconds": 2773.9375597130274,
+      "simulated": 122,
+      "skipped": ""
+    },
+    {
+      "input_id": "link_bw:fabric-rngd0-rngd1",
+      "kind": "link_bw",
+      "closed_form": 0.0,
+      "resimulated": 0.0,
+      "seconds": 3085.034694868955,
+      "simulated": 122,
+      "skipped": ""
+    },
+    {
+      "input_id": "link_bw:fabric-rngd1-a40b",
+      "kind": "link_bw",
+      "closed_form": 0.0,
+      "resimulated": 0.0,
+      "seconds": 3093.7556505249813,
+      "simulated": 122,
+      "skipped": ""
+    },
+    {
+      "input_id": "profile:cuda-a40-node_a40b",
+      "kind": "profile",
+      "closed_form": 33041.082831515174,
+      "resimulated": 21615.372405566857,
+      "seconds": 3318.661896947,
+      "simulated": 276,
+      "skipped": ""
+    },
+    {
+      "input_id": "link_bw:fabric-rngd0-a40a",
+      "kind": "link_bw",
+      "closed_form": 0.0,
+      "resimulated": 0.0,
+      "seconds": 2619.7863756390007,
+      "simulated": 122,
+      "skipped": ""
+    },
+    {
+      "input_id": "profile:furiosa-rngd-card-node_rngd0",
+      "kind": "profile",
+      "closed_form": 0.0,
+      "resimulated": 0.0,
+      "seconds": 794.3230109670003,
+      "simulated": 86,
+      "skipped": ""
+    },
+    {
+      "input_id": "profile:furiosa-rngd-card-node_rngd1",
+      "kind": "profile",
+      "closed_form": 0.0,
+      "resimulated": 0.0,
+      "seconds": 125.57881925899983,
+      "simulated": 12,
+      "skipped": ""
+    },
+    {
+      "input_id": "link_bw:fabric-rngd0-a40b",
+      "kind": "link_bw",
+      "closed_form": 0.0,
+      "resimulated": 0.0,
+      "seconds": 2736.0681871439992,
+      "simulated": 122,
+      "skipped": ""
+    },
+    {
+      "input_id": "link_bw:fabric-rngd1-a40a",
+      "kind": "link_bw",
+      "closed_form": 0.0,
+      "resimulated": 0.0,
+      "seconds": 2731.899219127001,
+      "simulated": 122,
+      "skipped": ""
+    },
+    {
+      "input_id": "sim_error:domain",
+      "kind": "sim_error",
+      "closed_form": 41118.38218974412,
+      "resimulated": 41118.38218974412,
+      "seconds": 0.0,
+      "simulated": 0,
+      "skipped": "sim_error:domain: a SIM_ERROR moves the margin, not the prediction (\u00a72.7), so no simulator input changes and its closed form is exact by construction - there is nothing a resimulation could disagree with"
+    }
+  ],
+  "identity_controls": [
+    {
+      "input_id": "profile:cuda-a40-node_a40a",
+      "value": 1.0,
+      "candidates": 223,
+      "worst_relative_deviation_from_cache": 0.0,
+      "worst_at": "",
+      "deviating_candidates": [],
+      "deviations": {}
+    },
+    {
+      "input_id": "profile:cuda-a40-node_a40b",
+      "value": 1.0,
+      "candidates": 223,
+      "worst_relative_deviation_from_cache": 0.0,
+      "worst_at": "",
+      "deviating_candidates": [],
+      "deviations": {}
+    },
+    {
+      "input_id": "profile:furiosa-rngd-card-node_rngd0",
+      "value": 1.0,
+      "candidates": 223,
+      "worst_relative_deviation_from_cache": 0.0,
+      "worst_at": "",
+      "deviating_candidates": [],
+      "deviations": {}
+    },
+    {
+      "input_id": "profile:furiosa-rngd-card-node_rngd1",
+      "value": 1.0,
+      "candidates": 223,
+      "worst_relative_deviation_from_cache": 0.0,
+      "worst_at": "",
+      "deviating_candidates": [],
+      "deviations": {}
+    }
+  ],
+  "provenance": {
+    "git_commit": "949a511e0105357eed6be051c8f1dd73c29138d2",
+    "git_dirty": true,
+    "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
+    "vllm_version": null,
+    "backend_version": null,
+    "model_revision": null,
+    "hardware_profile_hash": null,
+    "cluster_spec_hash": null,
+    "service_spec_hash": null,
+    "dataset_hash": null,
+    "random_seed": 0,
+    "command": "eb3_closed_form_vs_resim.py --merge outputs/uncertainty/eb3_f2/shard_a5000.json outputs/uncertainty/eb3_f2/shard_a5000b.json outputs/uncertainty/eb3_f2/shard_node49.json outputs/uncertainty/eb3_f2/shard_node49b.json outputs/uncertainty/eb3_f2/shard_simerror.json --out-json outputs/uncertainty/eb3_f2/eb3_f2_closed_form_vs_resim.json",
+    "timestamp": "2026-09-15T08:22:13.359309+00:00",
+    "python_version": "3.10.12",
+    "platform": "Linux-6.8.0-124-generic-x86_64-with-glibc2.35",
+    "hostname": "node02-ai",
+    "cpu_count": 20,
+    "accelerators": {
+      "cuda": {
+        "count": 1,
+        "model": "NVIDIA RTX A5000"
+      },
+      "rngd_cards": null,
+      "atom_devices": 0
+    }
+  }
+}

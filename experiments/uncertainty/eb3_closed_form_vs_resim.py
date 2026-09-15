@@ -143,6 +143,59 @@ def restrict(world: World, drop: set[str]) -> tuple[World, list[str]]:
     return world, removed
 
 
+def endpoint_coverage(endpoint, baseline, touched_ids: set[str]) -> dict:
+    """How many of the candidates this endpoint claimed to simulate came back.
+
+    `_endpoint` reports `simulated=len(touched)` -- the number of runs it
+    STARTED -- and builds its metric set as `dict(baseline)` updated with
+    whatever the evaluation produced. A candidate whose run crashed is simply
+    absent from that update, so it keeps the baseline's value and the endpoint
+    is indistinguishable from one where the input moved nothing.
+
+    That is not hypothetical. On 2026-09-15 two helper nodes were missing
+    `astra-sim/inputs/system/system.json`, every run on them raised before the
+    simulator started, and the harness reported four link items as
+    `closed=0 resim=0 ... agrees` -- a clean pass produced entirely by failure.
+
+    The discriminator is object IDENTITY, not equality: a candidate that really
+    was re-simulated gets a fresh `PredictedMetrics` from `judged_metrics`, even
+    when its numbers are unchanged, while one that crashed still holds the very
+    object the baseline had. Equality would call a genuinely inert candidate a
+    crash, which is the opposite error and just as wrong.
+    """
+    ran = sorted(
+        cid for cid in touched_ids
+        if endpoint.metrics.get(cid) is not baseline.get(cid)
+    )
+    return {
+        "value": endpoint.value,
+        "touched": len(touched_ids),
+        "resimulated": len(ran),
+        "missing": sorted(touched_ids - set(ran)),
+    }
+
+
+def coverage_gate(coverages: list[dict]) -> dict:
+    """Endpoints that simulated nothing at all, and whether any did.
+
+    Zero is the bright line: a partially failed endpoint is a real corpus with
+    holes, which D71 already describes and `f2_truth.md` already lists, but an
+    endpoint with no successful run at all carries no information and any dR
+    computed from it is the baseline compared with itself.
+    """
+    empty = [c for c in coverages if c["touched"] and not c["resimulated"]]
+    partial = [c for c in coverages
+               if c["resimulated"] and c["missing"]]
+    return {
+        "endpoints": len(coverages),
+        "endpoints_with_no_successful_run": len(empty),
+        "endpoints_partially_failed": len(partial),
+        "total_touched": sum(c["touched"] for c in coverages),
+        "total_resimulated": sum(c["resimulated"] for c in coverages),
+        "passed": not empty,
+    }
+
+
 def active_records(records) -> list:
     """Checked refinements whose dR is non-zero on at least one side.
 
@@ -261,6 +314,7 @@ def merge_shards(paths: list[Path]) -> dict:
     owner: dict[str, Path] = {}
     controls: list[dict] = []
     link_checks: list[dict] = []
+    coverages: list[dict] = []
     for path, shard in shards:
         for row in shard.get("refinements", []):
             key = row["input_id"]
@@ -272,6 +326,7 @@ def merge_shards(paths: list[Path]) -> dict:
             refinements[key], owner[key] = row, path
         controls.extend(shard.get("identity_controls", []))
         link_checks.extend(shard.get("link_exactness_checks", []))
+        coverages.extend(shard.get("resimulation_coverage_detail", []))
 
     records = [_as_record(r) for r in refinements.values()]
     checked = [r for r in records if not r.skipped]
@@ -290,6 +345,10 @@ def merge_shards(paths: list[Path]) -> dict:
                 for c in shard.get("identity_control_verdict", {})
                 .get("expected_from_d40_mirrors", [])}
     verdict = identity_gate(controls, expected)
+    # A shard whose runs all crashed must fail the merged result too. The first
+    # sharded run of this experiment produced exactly that on two of three
+    # nodes, and its rows looked like clean zeros.
+    coverage_verdict = coverage_gate(coverages)
     return {
         "merged_from": [str(path) for path in paths],
         "shards": [
@@ -310,6 +369,8 @@ def merge_shards(paths: list[Path]) -> dict:
         "spearman_not_computed_because": note,
         "active_checked_items": [r.input_id for r in active],
         "identity_control_verdict": verdict,
+        "resimulation_coverage": coverage_verdict,
+        "resimulation_coverage_detail": coverages,
         "link_exactness_checks": link_checks,
         "refinements": list(refinements.values()),
         "identity_controls": controls,
@@ -319,7 +380,9 @@ def merge_shards(paths: list[Path]) -> dict:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--cache-dir", type=Path, required=True)
+    # Not `required`: `--merge` combines finished shards and reads no cache.
+    # Checked below instead, so the error names the actual mistake.
+    parser.add_argument("--cache-dir", type=Path, default=None)
     parser.add_argument("--work-dir", type=Path,
                         default=Path("outputs/uncertainty/eb3/work"))
     parser.add_argument("--top", type=int, default=3)
@@ -355,6 +418,14 @@ def main() -> int:
              "runs (D40).",
     )
     parser.add_argument(
+        "--expect-mirrors", type=Path, default=None,
+        help="C1's mirror_pairs.json, used ONLY to tell the x1.0 identity gate "
+             "which candidates D40 entitles to deviate. Unlike --exclude it "
+             "removes nothing. Needed with --include-mirrors: there the mirrors "
+             "are in the corpus on purpose, so their deviation is the thing "
+             "being measured and must not stop the run.",
+    )
+    parser.add_argument(
         "--include-mirrors", action="store_true",
         help="Build the corpus WITHOUT C1's mirror exclusion, so D40's "
              "duplicates are present. The 'before' half of §2.5's comparison; "
@@ -380,6 +451,14 @@ def main() -> int:
         note = payload["spearman_not_computed_because"]
         print(f"  spearman = {payload['spearman_delta_regret_on_checked']}"
               + (f"  [{note}]" if note else ""))
+        cov = payload["resimulation_coverage"]
+        print(f"  coverage: {cov['total_resimulated']}/{cov['total_touched']} "
+              f"runs came back across {cov['endpoints']} endpoint(s)")
+        if not cov["passed"]:
+            print(f"\nSTOP: {cov['endpoints_with_no_successful_run']} endpoint(s) "
+                  f"produced no successful simulation at all; their dR is the "
+                  f"baseline compared with itself.")
+            return 4
         unexplained = payload["identity_control_verdict"]["unexplained"]
         if unexplained:
             print(f"\nSTOP: {len(unexplained)} candidate(s) fail the x1.0 "
@@ -387,6 +466,8 @@ def main() -> int:
             return 3
         return 0
 
+    if args.cache_dir is None:
+        raise SystemExit("--cache-dir is required unless --merge is given")
     kwargs = {"fixture_path": args.fixture} if args.fixture else {}
     if args.include_mirrors:
         kwargs["exclude_mirrors"] = False
@@ -406,7 +487,10 @@ def main() -> int:
     # is the one cause known to do that, so the only deviations allowed are
     # mirror members still in the corpus. Anything else is a NEW defect and the
     # magnitude comparison below would silently carry it.
-    expected_deviants = (mirrors | set(world.excluded_mirror)) & set(world.candidates)
+    declared = mirror_members(args.expect_mirrors) if args.expect_mirrors else set()
+    expected_deviants = (
+        (mirrors | declared | set(world.excluded_mirror)) & set(world.candidates)
+    )
     if args.degrade:
         chosen = [d for d in world.pool if d.id in set(args.degrade)]
         missing = set(args.degrade) - {d.id for d in chosen}
@@ -479,9 +563,17 @@ def main() -> int:
     #: rather than assumed: a copy that quietly perturbed something would make
     #: every disagreement below unattributable.
     controls: list[dict] = []
+    coverages: list[dict] = []
+    corpus = list(world.candidates.values())
 
     def runner(item):
         result = base(item)
+        touched_ids = {c.id for c in resim._touched(item, corpus)}
+        for endpoint in (result.lo, result.hi):
+            coverages.append(
+                {"input_id": item.id,
+                 **endpoint_coverage(endpoint, world.truth, touched_ids)}
+            )
         for endpoint in (result.lo, result.hi):
             if abs(endpoint.value - 1.0) > 1e-12:
                 continue
@@ -546,6 +638,7 @@ def main() -> int:
     # The x1.0 identity control, as a gate (§2.5).
     identity_verdict = identity_gate(controls, expected_deviants)
     unexplained = identity_verdict["unexplained"]
+    coverage_verdict = coverage_gate(coverages)
 
     # The second identity control: LINK_BW and LINK_LAT re-price a term the
     # planner adds itself, so their closed form is exact and the resimulation
@@ -577,6 +670,8 @@ def main() -> int:
         "spearman_not_computed_because": spearman_note,
         "active_checked_items": [r.input_id for r in active],
         "identity_control_verdict": identity_verdict,
+        "resimulation_coverage": coverage_verdict,
+        "resimulation_coverage_detail": coverages,
         "link_exactness_checks": link_checks,
         "corpus_size": len(world.candidates),
         "excluded_mirror_at_build": world.excluded_mirror,
@@ -621,6 +716,16 @@ def main() -> int:
     # the deviating list IS the finding, but the run does not report success --
     # a candidate that fails this control is reading another candidate's cache
     # entry, and every magnitude below it would carry that.
+    if not coverage_verdict["passed"]:
+        n = coverage_verdict["endpoints_with_no_successful_run"]
+        print(f"\nSTOP: {n} endpoint(s) produced no successful simulation at "
+              f"all, so their dR is the baseline compared with itself. Nothing "
+              f"in {out} may be quoted. Check a sim log under the work dir; the "
+              f"first time this fired it was a missing ASTRA-Sim input template.")
+        for c in coverages:
+            if c["touched"] and not c["resimulated"]:
+                print(f"  {c['input_id']} at {c['value']}: 0 of {c['touched']}")
+        return 4
     if unexplained:
         print(f"\nSTOP: {len(unexplained)} candidate(s) fail the x1.0 identity "
               f"control and are NOT D40 mirrors. This is a cause other than "
