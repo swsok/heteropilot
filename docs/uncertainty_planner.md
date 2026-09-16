@@ -307,12 +307,18 @@ impressive than it sounds: the pool is 11 items and exactly one of them, the
 cheapest, carries essentially all the decision regret, so any rule that ranks it
 first ties the oracle.
 
-**E-B2** — `eb2_flip_detection.md`. Recall **0.983**, precision **0.773**,
+**E-B2** — `eb2_flip_detection.md`. Recall **0.990**, precision **0.843**,
 identical at m = 3, 5 and 9 — the grid density does not matter, because a flip is
 decided by whether the interval *contains* the crossing. The error is not where
 the work order looks for it: the **approximate** rules are perfect over 224
 cases, while every false positive and the single false negative come from an
-**exact** rule, all of them on `sim_error`.
+**exact** rule, all of them on `sim_error`. (Re-run 2026-09-15 on the D70 margin;
+the earlier 0.983 / 0.773 are superseded and kept only for comparison in
+`eb2_f2.md`.) STEP C3 then classified those false positives: **none** is α, β or
+γ — all are one modelling mismatch in the `sim_error` item, which **D72** records,
+and β = 0 means no closed-form rule misplaced a crossing. The same detector on the
+F2 corpus keeps precision but loses recall, 0.271, for a reason C5 takes up:
+`eb2_f2.md`.
 
 **E-B3** — `eb3_closed_form_vs_resim.md`. Closed form **0.287 s** against
 **2,090.8 s** of resimulation over 1,104 runs, a **7,285× speed-up**. The
