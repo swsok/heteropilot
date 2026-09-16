@@ -1,0 +1,182 @@
+{
+  "base": {
+    "candidate": "cuda-a40-node_a40a-tp4-dp1-s128-t2048",
+    "predicted_p99_tpot_ms": 36.794523899999994,
+    "predicted_p99_ttft_ms": 16159.514659550001,
+    "predicted_concurrency": 127.2796960700026,
+    "rules": {
+      "a_margin0": {
+        "label": "(a) no margin",
+        "tpot_margin_pct": 0.0,
+        "ttft_margin_pct": 0.0,
+        "robust_tpot_ms": 36.794523899999994,
+        "robust_ttft_ms": 16159.514659550001
+      },
+      "b_global18": {
+        "label": "(b) global 18 %",
+        "tpot_margin_pct": 18.0,
+        "ttft_margin_pct": 18.0,
+        "robust_tpot_ms": 43.41753820199999,
+        "robust_ttft_ms": 19068.227298269
+      },
+      "c_accuracy_domain": {
+        "label": "(c) per-point",
+        "tpot_margin_pct": 1.1347326222173688,
+        "ttft_margin_pct": 6.476301142210604,
+        "robust_tpot_ms": 37.21204336588286,
+        "robust_ttft_ms": 17206.05349202213
+      },
+      "d_refuse": {
+        "label": "(d) per-point + refuse",
+        "tpot_margin_pct": 1.1347326222173688,
+        "ttft_margin_pct": 6.476301142210604,
+        "robust_tpot_ms": 37.21204336588286,
+        "robust_ttft_ms": 17206.05349202213
+      }
+    }
+  },
+  "ttft_slo_ms": 25000.0,
+  "slo_grid_ms": [
+    38.0,
+    40.0,
+    42.0,
+    44.0,
+    46.0,
+    50.0
+  ],
+  "measured_p99_tpot_ms": null,
+  "sweep": [
+    {
+      "tpot_slo_ms": 38.0,
+      "measured_satisfies": null,
+      "rules": {
+        "a_margin0": {
+          "verdict": "feasible",
+          "bound_by": null
+        },
+        "b_global18": {
+          "verdict": "rejected",
+          "bound_by": "tpot"
+        },
+        "c_accuracy_domain": {
+          "verdict": "feasible",
+          "bound_by": null
+        },
+        "d_refuse": {
+          "verdict": "feasible",
+          "bound_by": null
+        }
+      }
+    },
+    {
+      "tpot_slo_ms": 40.0,
+      "measured_satisfies": null,
+      "rules": {
+        "a_margin0": {
+          "verdict": "feasible",
+          "bound_by": null
+        },
+        "b_global18": {
+          "verdict": "rejected",
+          "bound_by": "tpot"
+        },
+        "c_accuracy_domain": {
+          "verdict": "feasible",
+          "bound_by": null
+        },
+        "d_refuse": {
+          "verdict": "feasible",
+          "bound_by": null
+        }
+      }
+    },
+    {
+      "tpot_slo_ms": 42.0,
+      "measured_satisfies": null,
+      "rules": {
+        "a_margin0": {
+          "verdict": "feasible",
+          "bound_by": null
+        },
+        "b_global18": {
+          "verdict": "rejected",
+          "bound_by": "tpot"
+        },
+        "c_accuracy_domain": {
+          "verdict": "feasible",
+          "bound_by": null
+        },
+        "d_refuse": {
+          "verdict": "feasible",
+          "bound_by": null
+        }
+      }
+    },
+    {
+      "tpot_slo_ms": 44.0,
+      "measured_satisfies": null,
+      "rules": {
+        "a_margin0": {
+          "verdict": "feasible",
+          "bound_by": null
+        },
+        "b_global18": {
+          "verdict": "feasible",
+          "bound_by": null
+        },
+        "c_accuracy_domain": {
+          "verdict": "feasible",
+          "bound_by": null
+        },
+        "d_refuse": {
+          "verdict": "feasible",
+          "bound_by": null
+        }
+      }
+    },
+    {
+      "tpot_slo_ms": 46.0,
+      "measured_satisfies": null,
+      "rules": {
+        "a_margin0": {
+          "verdict": "feasible",
+          "bound_by": null
+        },
+        "b_global18": {
+          "verdict": "feasible",
+          "bound_by": null
+        },
+        "c_accuracy_domain": {
+          "verdict": "feasible",
+          "bound_by": null
+        },
+        "d_refuse": {
+          "verdict": "feasible",
+          "bound_by": null
+        }
+      }
+    },
+    {
+      "tpot_slo_ms": 50.0,
+      "measured_satisfies": null,
+      "rules": {
+        "a_margin0": {
+          "verdict": "feasible",
+          "bound_by": null
+        },
+        "b_global18": {
+          "verdict": "feasible",
+          "bound_by": null
+        },
+        "c_accuracy_domain": {
+          "verdict": "feasible",
+          "bound_by": null
+        },
+        "d_refuse": {
+          "verdict": "feasible",
+          "bound_by": null
+        }
+      }
+    }
+  ]
+}
