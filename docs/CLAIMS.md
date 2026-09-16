@@ -131,6 +131,44 @@ P/D disaggregation, and it is not a statement about heterogeneity; §2's first r
 stands. And every one of these numbers is simulator output calibrated on the
 measured TPOT error, not a hardware measurement.
 
+### 1.5 What to measure next — the measurement planner (added 2026-09-16)
+
+Stage A/B of `WORK_ORDER_uncertainty_planner.md` and `WORK_ORDER_uq_stage_b_plus.md`.
+The full evidence map, with the citation rule the filing follows, is
+`experiments/uncertainty/results/patent3_evidence.md`; these are the rows that
+clear the bar for a paper.
+
+| claim | number | label | artifact |
+| --- | --- | --- | --- |
+| Some inputs carry large uncertainty and change no decision | `link_bw`: **336 of 336 cases true-negative** on both fixtures, with the link priced into 54 candidates **including the winner** on F2 | sim-on-measured | `eb2_f2.md`, `eb1_f2.md` |
+| Perturbing cached predictions in closed form replaces resimulation for ranking | **0.71 s against 25,962 s** over 1,528 simulator runs — **36,566×** — same item ranked first, every inert input at exactly zero | sim-on-measured | `eb3_f2.md` |
+| The closed form's **magnitude** is not usable | **30.5 % low** on E-A1, **52.9 % high** on F2 — opposite signs on two fixtures | sim-on-measured | `eb3_f2.md`, `eb3_closed_form_vs_resim.md` |
+| That magnitude error is the rule's own, not the D40 cache defect | resimulating the same item with the mirrors present gives a **bit-identical** ΔR; D40's share is **0 pp** while its ×1.0 control fails on 69 candidates at 7.869e-02 | sim-on-measured | `eb3_f2.md`, D40 |
+| Flip prediction is right about *where* a crossing is | **0 α, 0 β, 0 γ** — every false positive on both corpora is one modelling mismatch in the `sim_error` item (**D72**), so no closed-form rule ever misplaced a crossing | sim-on-measured | `eb2_f2.md` |
+| Grid density does not change a flip verdict | m = 3, 5, 9 agree **case for case** across 5,544 cases | sim-on-measured | `eb2_f2.md` |
+| The ranking beats round-robin, widest-first and random on budget to zero regret | `ours` **1.952 h** against 1.988 / 1.989 / 2.136; `oracle` 1.857 | sim-on-measured | `eb1_f2.md` |
+
+**What this does not license, and it is a long list.**
+
+- **ΔR is not a saving.** It was wrong by a third in one direction and by half in
+  the other. Use it to order what to measure, never to quote energy.
+- **The budget-to-zero-regret win is one fixture, and `ours` loses in the middle
+  of it.** At every intermediate budget `ours` is worse than `random`, because on
+  **42 % of F2's degradation sets nothing is feasible while degraded** and the
+  planner then has no signal at all — which is where an operator most wants one.
+  The same gap accounts for **82 of 97** false negatives in flip detection.
+- **E-A1's much prettier numbers** (`ours` 0.041 h against `random` 0.452) are a
+  **single-active-item** case: one input carries all the regret and it is also the
+  cheapest, so any rule that ranks it first ties the oracle.
+- **Two of five input kinds have no result at all** (`link_lat`, `power`), and a
+  third (`link_bw`) has never been shown to matter on any fixture.
+- **Flip detection's "possible transition" precision of 1.000 excludes
+  `sim_error`** (D72) — which is the only kind with false positives. It describes
+  the link and profile rules and nothing else.
+- Every figure is a cache replay against committed accuracy domains. **None is a
+  hardware measurement**, and none was produced on the node that measured the
+  domains.
+
 ---
 
 ## 2. Not established — and why
