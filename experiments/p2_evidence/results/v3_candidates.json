@@ -1,0 +1,600 @@
+{
+  "fixture": "experiments/configs/clusters/pd-rngd-gpu-card.yaml",
+  "service": "examples/service_specs/llama31-8b.yaml",
+  "slo": {
+    "tpot_ms": 50.0,
+    "ttft_ms": 25000.0
+  },
+  "rules": {
+    "a_margin0": "(a) no margin",
+    "b_global18": "(b) global 18 % (D22)",
+    "c_accuracy_domain": "(c) accuracy domain (committed policy: widen)",
+    "d_refuse": "(d) accuracy domain, outside_domain: refuse"
+  },
+  "groups": {
+    "P1": {
+      "count": 8,
+      "primary": {
+        "candidate_id": "cuda-a40-node_a40a-tp4-dp1-s128-t2048",
+        "accelerators": 4,
+        "single_island": true,
+        "cached": true,
+        "p99_tpot_ms": 36.794523899999994,
+        "p99_ttft_ms": 16159.514659550001,
+        "served_concurrency": 127.2796960700026,
+        "tokens_per_joule": 2.5449213543055187,
+        "verdicts": {
+          "a_margin0": "feasible",
+          "b_global18": "feasible",
+          "c_accuracy_domain": "feasible",
+          "d_refuse": "feasible"
+        },
+        "stages": {
+          "a_margin0": null,
+          "b_global18": null,
+          "c_accuracy_domain": null,
+          "d_refuse": null
+        },
+        "tpot_margin_pct": {
+          "a_margin0": 0.0,
+          "b_global18": 18.0,
+          "c_accuracy_domain": 1.1347326222173688,
+          "d_refuse": 1.1347326222173688
+        },
+        "operating_point": {
+          "a_margin0": 127.2796960700026,
+          "b_global18": 127.2796960700026,
+          "c_accuracy_domain": 127.2796960700026,
+          "d_refuse": 127.2796960700026
+        },
+        "basis": "A40[total]: L=127.3 in domain [4.043, 170.6]; ttft: interpolated between L=10.8 and L=170.6; tpot: interpolated between L=10.8 and L=170.6",
+        "ttft_margin_pct": {
+          "a_margin0": 0.0,
+          "b_global18": 18.0,
+          "c_accuracy_domain": 6.476301142210604,
+          "d_refuse": 6.476301142210604
+        },
+        "reasons": {
+          "a_margin0": "",
+          "b_global18": "",
+          "c_accuracy_domain": "",
+          "d_refuse": ""
+        }
+      },
+      "alternates": [
+        {
+          "candidate_id": "cuda-a40-node_a40a-tp4-dp1-s128-t8192",
+          "accelerators": 4,
+          "single_island": true,
+          "cached": true,
+          "p99_tpot_ms": 35.58226791,
+          "p99_ttft_ms": 15070.10466225,
+          "served_concurrency": 125.25991854774533,
+          "tokens_per_joule": 2.5954323001631323,
+          "verdicts": {
+            "a_margin0": "feasible",
+            "b_global18": "feasible",
+            "c_accuracy_domain": "feasible",
+            "d_refuse": "feasible"
+          },
+          "stages": {
+            "a_margin0": null,
+            "b_global18": null,
+            "c_accuracy_domain": null,
+            "d_refuse": null
+          },
+          "tpot_margin_pct": {
+            "a_margin0": 0.0,
+            "b_global18": 18.0,
+            "c_accuracy_domain": 1.1205103904525906,
+            "d_refuse": 1.1205103904525906
+          },
+          "operating_point": {
+            "a_margin0": 125.25991854774533,
+            "b_global18": 125.25991854774533,
+            "c_accuracy_domain": 125.25991854774533,
+            "d_refuse": 125.25991854774533
+          },
+          "basis": "A40[total]: L=125.3 in domain [4.043, 170.6]; ttft: interpolated between L=10.8 and L=170.6; tpot: interpolated between L=10.8 and L=170.6",
+          "ttft_margin_pct": {
+            "a_margin0": 0.0,
+            "b_global18": 18.0,
+            "c_accuracy_domain": 6.694323747689318,
+            "d_refuse": 6.694323747689318
+          },
+          "reasons": {
+            "a_margin0": "",
+            "b_global18": "",
+            "c_accuracy_domain": "",
+            "d_refuse": ""
+          }
+        },
+        {
+          "candidate_id": "mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp2)-s128-t2048",
+          "accelerators": 8,
+          "single_island": false,
+          "cached": true,
+          "p99_tpot_ms": 38.517335759999995,
+          "p99_ttft_ms": 534.57480516,
+          "served_concurrency": 32.94356806032057,
+          "tokens_per_joule": 1.4819529612667854,
+          "verdicts": {
+            "a_margin0": "feasible",
+            "b_global18": "feasible",
+            "c_accuracy_domain": "feasible",
+            "d_refuse": "feasible"
+          },
+          "stages": {
+            "a_margin0": null,
+            "b_global18": null,
+            "c_accuracy_domain": null,
+            "d_refuse": null
+          },
+          "tpot_margin_pct": {
+            "a_margin0": 0.0,
+            "b_global18": 18.0,
+            "c_accuracy_domain": 0.4747085642871399,
+            "d_refuse": 0.4747085642871399
+          },
+          "operating_point": {
+            "a_margin0": 32.94356806032057,
+            "b_global18": 32.94356806032057,
+            "c_accuracy_domain": 32.94356806032057,
+            "d_refuse": 32.94356806032057
+          },
+          "basis": "A40[total]: L=32.94 in domain [4.043, 170.6]; ttft: interpolated between L=10.8 and L=170.6; tpot: interpolated between L=10.8 and L=170.6",
+          "ttft_margin_pct": {
+            "a_margin0": 0.0,
+            "b_global18": 18.0,
+            "c_accuracy_domain": 17.710723623501305,
+            "d_refuse": 17.710723623501305
+          },
+          "reasons": {
+            "a_margin0": "",
+            "b_global18": "",
+            "c_accuracy_domain": "",
+            "d_refuse": ""
+          }
+        }
+      ]
+    },
+    "P2": {
+      "count": 6,
+      "primary": {
+        "candidate_id": "mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s32-t8192",
+        "accelerators": 6,
+        "single_island": false,
+        "cached": true,
+        "p99_tpot_ms": 30.57248391,
+        "p99_ttft_ms": 24063.812093909997,
+        "served_concurrency": 39.75317596074822,
+        "tokens_per_joule": 1.3391316546257979,
+        "verdicts": {
+          "a_margin0": "feasible",
+          "b_global18": "rejected",
+          "c_accuracy_domain": "rejected",
+          "d_refuse": "rejected"
+        },
+        "stages": {
+          "a_margin0": null,
+          "b_global18": "slo_violated",
+          "c_accuracy_domain": "slo_violated",
+          "d_refuse": "slo_violated"
+        },
+        "tpot_margin_pct": {
+          "a_margin0": 0.0,
+          "b_global18": 18.0,
+          "c_accuracy_domain": 0.5220634605123403,
+          "d_refuse": 0.5220634605123403
+        },
+        "operating_point": {
+          "a_margin0": 39.75317596074822,
+          "b_global18": 39.75317596074822,
+          "c_accuracy_domain": 39.75317596074822,
+          "d_refuse": 39.75317596074822
+        },
+        "basis": "A40[total]: L=39.75 in domain [4.043, 170.6]; ttft: interpolated between L=10.8 and L=170.6; tpot: interpolated between L=10.8 and L=170.6",
+        "ttft_margin_pct": {
+          "a_margin0": 0.0,
+          "b_global18": 18.0,
+          "c_accuracy_domain": 16.820984440633673,
+          "d_refuse": 16.820984440633673
+        },
+        "reasons": {
+          "a_margin0": "",
+          "b_global18": "p99_ttft_ms=28395.3 vs target 25000.0",
+          "c_accuracy_domain": "p99_ttft_ms=28111.6 vs target 25000.0",
+          "d_refuse": "p99_ttft_ms=28111.6 vs target 25000.0"
+        }
+      },
+      "alternates": [
+        {
+          "candidate_id": "mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s32-t2048",
+          "accelerators": 6,
+          "single_island": false,
+          "cached": true,
+          "p99_tpot_ms": 30.72277129,
+          "p99_ttft_ms": 23746.54242771,
+          "served_concurrency": 39.81465889066201,
+          "tokens_per_joule": 1.3442230514679998,
+          "verdicts": {
+            "a_margin0": "feasible",
+            "b_global18": "rejected",
+            "c_accuracy_domain": "rejected",
+            "d_refuse": "rejected"
+          },
+          "stages": {
+            "a_margin0": null,
+            "b_global18": "slo_violated",
+            "c_accuracy_domain": "slo_violated",
+            "d_refuse": "slo_violated"
+          },
+          "tpot_margin_pct": {
+            "a_margin0": 0.0,
+            "b_global18": 18.0,
+            "c_accuracy_domain": 0.5224912241128244,
+            "d_refuse": 0.5224912241128244
+          },
+          "operating_point": {
+            "a_margin0": 39.81465889066201,
+            "b_global18": 39.81465889066201,
+            "c_accuracy_domain": 39.81465889066201,
+            "d_refuse": 39.81465889066201
+          },
+          "basis": "A40[total]: L=39.81 in domain [4.043, 170.6]; ttft: interpolated between L=10.8 and L=170.6; tpot: interpolated between L=10.8 and L=170.6",
+          "ttft_margin_pct": {
+            "a_margin0": 0.0,
+            "b_global18": 18.0,
+            "c_accuracy_domain": 16.81301238427468,
+            "d_refuse": 16.81301238427468
+          },
+          "reasons": {
+            "a_margin0": "",
+            "b_global18": "p99_ttft_ms=28020.9 vs target 25000.0",
+            "c_accuracy_domain": "p99_ttft_ms=27739.1 vs target 25000.0",
+            "d_refuse": "p99_ttft_ms=27739.1 vs target 25000.0"
+          }
+        },
+        {
+          "candidate_id": "mix(cuda-a40-node_a40a-tp4-dp1+cuda-a40-node_a40b-tp4-dp1)-s256-t8192",
+          "accelerators": 8,
+          "single_island": false,
+          "cached": true,
+          "p99_tpot_ms": 49.90285192999999,
+          "p99_ttft_ms": 518.78460078,
+          "served_concurrency": 77.96332008690331,
+          "tokens_per_joule": 2.054228534538412,
+          "verdicts": {
+            "a_margin0": "feasible",
+            "b_global18": "rejected",
+            "c_accuracy_domain": "rejected",
+            "d_refuse": "rejected"
+          },
+          "stages": {
+            "a_margin0": null,
+            "b_global18": "slo_violated",
+            "c_accuracy_domain": "slo_violated",
+            "d_refuse": "slo_violated"
+          },
+          "tpot_margin_pct": {
+            "a_margin0": 0.0,
+            "b_global18": 18.0,
+            "c_accuracy_domain": 0.7886119146272117,
+            "d_refuse": 0.7886119146272117
+          },
+          "operating_point": {
+            "a_margin0": 77.96332008690331,
+            "b_global18": 77.96332008690331,
+            "c_accuracy_domain": 77.96332008690331,
+            "d_refuse": 77.96332008690331
+          },
+          "basis": "A40[total]: L=77.96 in domain [4.043, 170.6]; ttft: interpolated between L=10.8 and L=170.6; tpot: interpolated between L=10.8 and L=170.6",
+          "ttft_margin_pct": {
+            "a_margin0": 0.0,
+            "b_global18": 18.0,
+            "c_accuracy_domain": 12.067805913341937,
+            "d_refuse": 12.067805913341937
+          },
+          "reasons": {
+            "a_margin0": "",
+            "b_global18": "p99_tpot_ms=58.9 vs target 50.0",
+            "c_accuracy_domain": "p99_tpot_ms=50.3 vs target 50.0",
+            "d_refuse": "p99_tpot_ms=50.3 vs target 50.0"
+          }
+        }
+      ]
+    },
+    "P3": {
+      "count": 40,
+      "primary": {
+        "candidate_id": "mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp4)-s32-t2048",
+        "accelerators": 5,
+        "single_island": false,
+        "cached": true,
+        "p99_tpot_ms": 49.16014071,
+        "p99_ttft_ms": 14754.56842926,
+        "served_concurrency": 28.093796332755733,
+        "tokens_per_joule": 1.1514383933417767,
+        "verdicts": {
+          "a_margin0": "feasible",
+          "b_global18": "rejected",
+          "c_accuracy_domain": "feasible",
+          "d_refuse": "feasible"
+        },
+        "stages": {
+          "a_margin0": null,
+          "b_global18": "slo_violated",
+          "c_accuracy_domain": null,
+          "d_refuse": null
+        },
+        "tpot_margin_pct": {
+          "a_margin0": 0.0,
+          "b_global18": 18.0,
+          "c_accuracy_domain": 0.44100981704018155,
+          "d_refuse": 0.44100981704018155
+        },
+        "operating_point": {
+          "a_margin0": 28.093796332755733,
+          "b_global18": 28.093796332755733,
+          "c_accuracy_domain": 28.093796332755733,
+          "d_refuse": 28.093796332755733
+        },
+        "basis": "A40[total]: L=28.09 in domain [4.043, 170.6]; ttft: interpolated between L=10.8 and L=170.6; tpot: interpolated between L=10.8 and L=170.6",
+        "ttft_margin_pct": {
+          "a_margin0": 0.0,
+          "b_global18": 18.0,
+          "c_accuracy_domain": 18.352700251896724,
+          "d_refuse": 18.352700251896724
+        },
+        "reasons": {
+          "a_margin0": "",
+          "b_global18": "p99_tpot_ms=58.0 vs target 50.0",
+          "c_accuracy_domain": "",
+          "d_refuse": ""
+        }
+      },
+      "alternates": [
+        {
+          "candidate_id": "mix(cuda-a40-node_a40a-tp1-dp2+cuda-a40-node_a40b-tp1-dp3)-s32-t2048",
+          "accelerators": 5,
+          "single_island": false,
+          "cached": true,
+          "p99_tpot_ms": 49.15691368,
+          "p99_ttft_ms": 14791.64394147,
+          "served_concurrency": 28.09342830986493,
+          "tokens_per_joule": 1.1513689542877819,
+          "verdicts": {
+            "a_margin0": "feasible",
+            "b_global18": "rejected",
+            "c_accuracy_domain": "feasible",
+            "d_refuse": "feasible"
+          },
+          "stages": {
+            "a_margin0": null,
+            "b_global18": "slo_violated",
+            "c_accuracy_domain": null,
+            "d_refuse": null
+          },
+          "tpot_margin_pct": {
+            "a_margin0": 0.0,
+            "b_global18": 18.0,
+            "c_accuracy_domain": 0.4410072606826422,
+            "d_refuse": 0.4410072606826422
+          },
+          "operating_point": {
+            "a_margin0": 28.09342830986493,
+            "b_global18": 28.09342830986493,
+            "c_accuracy_domain": 28.09342830986493,
+            "d_refuse": 28.09342830986493
+          },
+          "basis": "A40[total]: L=28.09 in domain [4.043, 170.6]; ttft: interpolated between L=10.8 and L=170.6; tpot: interpolated between L=10.8 and L=170.6",
+          "ttft_margin_pct": {
+            "a_margin0": 0.0,
+            "b_global18": 18.0,
+            "c_accuracy_domain": 18.35274923373428,
+            "d_refuse": 18.35274923373428
+          },
+          "reasons": {
+            "a_margin0": "",
+            "b_global18": "p99_tpot_ms=58.0 vs target 50.0",
+            "c_accuracy_domain": "",
+            "d_refuse": ""
+          }
+        },
+        {
+          "candidate_id": "mix(cuda-a40-node_a40a-tp1-dp3+cuda-a40-node_a40b-tp1-dp2)-s32-t2048",
+          "accelerators": 5,
+          "single_island": false,
+          "cached": false,
+          "p99_tpot_ms": 58.0,
+          "p99_ttft_ms": null,
+          "served_concurrency": null,
+          "tokens_per_joule": null,
+          "verdicts": {
+            "a_margin0": "feasible",
+            "b_global18": "rejected",
+            "c_accuracy_domain": "feasible",
+            "d_refuse": "feasible"
+          },
+          "stages": {
+            "a_margin0": null,
+            "b_global18": "slo_violated",
+            "c_accuracy_domain": null,
+            "d_refuse": null
+          },
+          "tpot_margin_pct": {
+            "a_margin0": 0.0,
+            "b_global18": 18.0,
+            "c_accuracy_domain": 0.4410072606826422,
+            "d_refuse": 0.4410072606826422
+          },
+          "operating_point": {
+            "a_margin0": 28.09342830986493,
+            "b_global18": 28.09342830986493,
+            "c_accuracy_domain": 28.09342830986493,
+            "d_refuse": 28.09342830986493
+          },
+          "basis": "A40[total]: L=28.09 in domain [4.043, 170.6]; ttft: interpolated between L=10.8 and L=170.6; tpot: interpolated between L=10.8 and L=170.6",
+          "ttft_margin_pct": {
+            "a_margin0": 0.0,
+            "b_global18": 18.0,
+            "c_accuracy_domain": 18.35274923373428,
+            "d_refuse": 18.35274923373428
+          },
+          "reasons": {
+            "a_margin0": "",
+            "b_global18": "p99_tpot_ms=58.0 vs target 50.0",
+            "c_accuracy_domain": "",
+            "d_refuse": ""
+          }
+        }
+      ]
+    },
+    "P4": {
+      "count": 10,
+      "primary": {
+        "candidate_id": "cuda-a40-node_a40a-tp2-dp1-s256-t8192",
+        "accelerators": 2,
+        "single_island": true,
+        "cached": true,
+        "p99_tpot_ms": 90.42535801000001,
+        "p99_ttft_ms": 29812.30545965,
+        "served_concurrency": 186.87734997577132,
+        "tokens_per_joule": 2.7494239631336406,
+        "verdicts": {
+          "a_margin0": "rejected",
+          "b_global18": "rejected",
+          "c_accuracy_domain": "rejected",
+          "d_refuse": "rejected"
+        },
+        "stages": {
+          "a_margin0": "slo_violated",
+          "b_global18": "slo_violated",
+          "c_accuracy_domain": "slo_violated",
+          "d_refuse": "outside_calibration_domain"
+        },
+        "tpot_margin_pct": {
+          "a_margin0": 0.0,
+          "b_global18": 18.0,
+          "c_accuracy_domain": 1.5561966913129932,
+          "d_refuse": 0.0
+        },
+        "operating_point": {
+          "a_margin0": 186.87734997577132,
+          "b_global18": 186.87734997577132,
+          "c_accuracy_domain": 186.87734997577132,
+          "d_refuse": 186.87734997577132
+        },
+        "basis": "A40[total]: L=186.9 outside the measured domain [4.043, 170.6]; policy widen_error_bars, so the margin is EXTRAPOLATED from the nearest point's slope",
+        "ttft_margin_pct": {
+          "a_margin0": 0.0,
+          "b_global18": 18.0,
+          "c_accuracy_domain": 3.648891039476719,
+          "d_refuse": 0.0
+        },
+        "reasons": {
+          "a_margin0": "p99_ttft_ms=29812.3 vs target 25000.0; p99_tpot_ms=90.4 vs target 50.0",
+          "b_global18": "p99_ttft_ms=35178.5 vs target 25000.0; p99_tpot_ms=106.7 vs target 50.0",
+          "c_accuracy_domain": "p99_ttft_ms=30900.1 vs target 25000.0; p99_tpot_ms=91.8 vs target 50.0",
+          "d_refuse": "unmeasured: served concurrency 186.9 on A40 outside its accuracy domain [4.043, 170.6] (policy refuse); measure the envelope at c>=187 or set outside_domain: widen_error_bars to accept an extrapolation"
+        }
+      },
+      "alternates": [
+        {
+          "candidate_id": "cuda-a40-node_a40b-tp2-dp1-s256-t8192",
+          "accelerators": 2,
+          "single_island": true,
+          "cached": false,
+          "p99_tpot_ms": 91.8,
+          "p99_ttft_ms": 30900.1,
+          "served_concurrency": null,
+          "tokens_per_joule": null,
+          "verdicts": {
+            "a_margin0": "rejected",
+            "b_global18": "rejected",
+            "c_accuracy_domain": "rejected",
+            "d_refuse": "rejected"
+          },
+          "stages": {
+            "a_margin0": "slo_violated",
+            "b_global18": "slo_violated",
+            "c_accuracy_domain": "slo_violated",
+            "d_refuse": "outside_calibration_domain"
+          },
+          "tpot_margin_pct": {
+            "a_margin0": 0.0,
+            "b_global18": 18.0,
+            "c_accuracy_domain": 1.5561966913129932,
+            "d_refuse": 0.0
+          },
+          "operating_point": {
+            "a_margin0": 186.87734997577132,
+            "b_global18": 186.87734997577132,
+            "c_accuracy_domain": 186.87734997577132,
+            "d_refuse": 186.87734997577132
+          },
+          "basis": "A40[total]: L=186.9 outside the measured domain [4.043, 170.6]; policy widen_error_bars, so the margin is EXTRAPOLATED from the nearest point's slope",
+          "ttft_margin_pct": {
+            "a_margin0": 0.0,
+            "b_global18": 18.0,
+            "c_accuracy_domain": 3.648891039476719,
+            "d_refuse": 0.0
+          },
+          "reasons": {
+            "a_margin0": "p99_ttft_ms=29812.3 vs target 25000.0; p99_tpot_ms=90.4 vs target 50.0",
+            "b_global18": "p99_ttft_ms=35178.5 vs target 25000.0; p99_tpot_ms=106.7 vs target 50.0",
+            "c_accuracy_domain": "p99_ttft_ms=30900.1 vs target 25000.0; p99_tpot_ms=91.8 vs target 50.0",
+            "d_refuse": "unmeasured: served concurrency 186.9 on A40 outside its accuracy domain [4.043, 170.6] (policy refuse); measure the envelope at c>=187 or set outside_domain: widen_error_bars to accept an extrapolation"
+          }
+        },
+        {
+          "candidate_id": "cuda-a40-node_a40a-tp2-dp1-s256-t2048",
+          "accelerators": 2,
+          "single_island": true,
+          "cached": true,
+          "p99_tpot_ms": 92.8385351,
+          "p99_ttft_ms": 31222.1765968,
+          "served_concurrency": 188.62274357131133,
+          "tokens_per_joule": 2.7042492917847025,
+          "verdicts": {
+            "a_margin0": "rejected",
+            "b_global18": "rejected",
+            "c_accuracy_domain": "rejected",
+            "d_refuse": "rejected"
+          },
+          "stages": {
+            "a_margin0": "slo_violated",
+            "b_global18": "slo_violated",
+            "c_accuracy_domain": "slo_violated",
+            "d_refuse": "outside_calibration_domain"
+          },
+          "tpot_margin_pct": {
+            "a_margin0": 0.0,
+            "b_global18": 18.0,
+            "c_accuracy_domain": 1.568592757165444,
+            "d_refuse": 0.0
+          },
+          "operating_point": {
+            "a_margin0": 188.62274357131133,
+            "b_global18": 188.62274357131133,
+            "c_accuracy_domain": 188.62274357131133,
+            "d_refuse": 188.62274357131133
+          },
+          "basis": "A40[total]: L=188.6 outside the measured domain [4.043, 170.6]; policy widen_error_bars, so the margin is EXTRAPOLATED from the nearest point's slope",
+          "ttft_margin_pct": {
+            "a_margin0": 0.0,
+            "b_global18": 18.0,
+            "c_accuracy_domain": 3.82736447667587,
+            "d_refuse": 0.0
+          },
+          "reasons": {
+            "a_margin0": "p99_ttft_ms=31222.2 vs target 25000.0; p99_tpot_ms=92.8 vs target 50.0",
+            "b_global18": "p99_ttft_ms=36842.2 vs target 25000.0; p99_tpot_ms=109.5 vs target 50.0",
+            "c_accuracy_domain": "p99_ttft_ms=32417.2 vs target 25000.0; p99_tpot_ms=94.3 vs target 50.0",
+            "d_refuse": "unmeasured: served concurrency 188.6 on A40 outside its accuracy domain [4.043, 170.6] (policy refuse); measure the envelope at c>=189 or set outside_domain: widen_error_bars to accept an extrapolation"
+          }
+        }
+      ]
+    }
+  }
+}

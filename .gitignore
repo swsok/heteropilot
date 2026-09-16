@@ -33,6 +33,14 @@ outputs/phase0_bench/
 # each is a copy of a committed config with link_bw overridden.
 outputs/.pd_sim_sweep/
 
+# STEP V2/V3 of WORK_ORDER_p2_regular_spec_evidence.md. Simulator work dirs and
+# the open-loop driver's raw client records. The re-simulation that matters is
+# its CONCLUSION, which is committed in experiments/p2_evidence/results/, and
+# the runs themselves are deterministic from the committed trace seed. V2's
+# MEASURED client records are the exception and are added with `git add -f`,
+# because a measurement is not re-runnable.
+outputs/p2_evidence/
+
 # RNGD profiling intermediates. The measured bundle itself lives in
 # profiler/perf/RNGD/, and outputs/rngd_profile/ keeps only what stays
 # auditable: the compute/DMA breakdown behind every union-based time_us, the
