@@ -404,6 +404,7 @@ So each concurrent work order owns a block and takes numbers only from it:
 | D70–D79 | `WORK_ORDER_uq_stage_b_plus.md` (claimed 2026-09-14, STEP C0) |
 | D80–D89 | one-off work with no work order |
 | D90–D99 | `WORK_ORDER_npu_exec_model_spike.md` (claimed 2026-09-15) |
+| D100–D109 | `WORK_ORDER_p2_regular_spec_evidence.md` (claimed 2026-09-16, STEP V0) |
 
 D37–D39 are left free on purpose: they are the only numbers a stream may take
 **without** a block, and only for an entry that must sit immediately after the last

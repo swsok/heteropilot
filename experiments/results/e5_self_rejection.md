@@ -44,6 +44,14 @@ the measured operating point is **74.75** and the robust TPOT **56.97 ms**. The
 simulation actually ran at. The 0.13 ms difference in the robust figure follows
 from that and changes no verdict.
 
+**Both robust figures here are pre-D70 arithmetic and are left as the run
+produced them.** 57.1 and 56.97 are `prediction x (1 + |e|)`; the corrected margin
+`-e/(1+e)` gives **59.04** at conc 76 and **58.78** at conc 74.75 (recomputed
+through `AccuracyDomain` on the committed domain, against this winner's p99 of
+48.4097 ms). D100 adds
+that the underlying 18 % compares a simulated p50 against a measured mean. No
+verdict moves under either correction — see `docs/deviations.md` D70 and D100.
+
 **The domain was not adjusted to close the gap.** The work order forbids it in as
 many words, and the regression test asserts the margin with a ±0.5 pp tolerance
 for exactly this reason: tightening it by moving a calibration point would be
