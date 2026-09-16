@@ -1,0 +1,1371 @@
+{
+  "thresholds": {
+    "ratio_max": 2.0,
+    "n_min": 100,
+    "tolerance": 0.05,
+    "slack_pp": 0.0,
+    "margin_quantile": 100.0,
+    "saturation_conc": 44.0
+  },
+  "bases": {
+    "committed": {
+      "points": [
+        {
+          "conc": 1.02,
+          "e_pct": 2.25,
+          "r_pct": -2.2004889975550124,
+          "margin_pct": 0.0,
+          "n": 600,
+          "prediction_ms": 16.0631955,
+          "measured_ms": 15.71,
+          "mode": "unsaturated",
+          "basis": "committed",
+          "measured_requests": null
+        },
+        {
+          "conc": 2.194,
+          "e_pct": 11.0,
+          "r_pct": -9.909909909909908,
+          "margin_pct": 0.0,
+          "n": 600,
+          "prediction_ms": 19.990958499999998,
+          "measured_ms": 18.01,
+          "mode": "unsaturated",
+          "basis": "committed",
+          "measured_requests": null
+        },
+        {
+          "conc": 4.311,
+          "e_pct": 10.79,
+          "r_pct": -9.739146132322412,
+          "margin_pct": 0.0,
+          "n": 600,
+          "prediction_ms": 21.5819585,
+          "measured_ms": 19.48,
+          "mode": "unsaturated",
+          "basis": "committed",
+          "measured_requests": null
+        },
+        {
+          "conc": 8.211,
+          "e_pct": 7.33,
+          "r_pct": -6.8294046398956505,
+          "margin_pct": 0.0,
+          "n": 600,
+          "prediction_ms": 23.4626375,
+          "measured_ms": 21.86,
+          "mode": "unsaturated",
+          "basis": "committed",
+          "measured_requests": null
+        },
+        {
+          "conc": 14.832,
+          "e_pct": 3.26,
+          "r_pct": -3.1570792175091995,
+          "margin_pct": 0.0,
+          "n": 128,
+          "prediction_ms": 26.547231500000002,
+          "measured_ms": 25.71,
+          "mode": "unsaturated",
+          "basis": "committed",
+          "measured_requests": null
+        },
+        {
+          "conc": 15.212,
+          "e_pct": 2.47,
+          "r_pct": -2.4104615985166395,
+          "margin_pct": 0.0,
+          "n": 600,
+          "prediction_ms": 26.692481,
+          "measured_ms": 26.05,
+          "mode": "unsaturated",
+          "basis": "committed",
+          "measured_requests": null
+        },
+        {
+          "conc": 16.6,
+          "e_pct": -3.1,
+          "r_pct": 3.1991744066047474,
+          "margin_pct": 3.1991744066047474,
+          "n": 5,
+          "prediction_ms": null,
+          "measured_ms": null,
+          "mode": "unsaturated",
+          "basis": "committed",
+          "measured_requests": null
+        },
+        {
+          "conc": 25.181,
+          "e_pct": -3.28,
+          "r_pct": 3.3912324234904876,
+          "margin_pct": 3.3912324234904876,
+          "n": 128,
+          "prediction_ms": 30.157721000000002,
+          "measured_ms": 31.18,
+          "mode": "unsaturated",
+          "basis": "committed",
+          "measured_requests": null
+        },
+        {
+          "conc": 76.0,
+          "e_pct": -18.0,
+          "r_pct": 21.95121951219512,
+          "margin_pct": 21.95121951219512,
+          "n": 556,
+          "prediction_ms": 43.151739,
+          "measured_ms": 52.71492642561743,
+          "mode": "saturated",
+          "basis": "committed",
+          "measured_requests": null
+        }
+      ],
+      "placements": {
+        "A": {
+          "placement": "A",
+          "basis": "committed",
+          "calibration_points": [
+            1.02,
+            2.194,
+            4.311,
+            8.211,
+            14.832,
+            15.212,
+            16.6,
+            25.181,
+            76.0
+          ],
+          "validation_points": [],
+          "intervals": [
+            {
+              "lo": 1.02,
+              "hi": 2.194,
+              "registered": false,
+              "stage1": {
+                "checks": {
+                  "concurrency_ratio": {
+                    "value": 2.151,
+                    "limit": 2.0,
+                    "pass": false
+                  },
+                  "sample_count": {
+                    "value": 600,
+                    "limit": 100,
+                    "pass": true
+                  },
+                  "same_operating_mode": {
+                    "value": "unsaturated/unsaturated",
+                    "pass": true
+                  }
+                },
+                "pass": false
+              },
+              "stage2": {
+                "validation_points": [],
+                "n_inside": 0,
+                "exceedances": [],
+                "exceedance_rate": 0.0,
+                "tolerance": 0.05,
+                "pass": false,
+                "vacuous": true
+              },
+              "margin_pct": 0.0,
+              "min_slack_to_register_pp": null
+            },
+            {
+              "lo": 2.194,
+              "hi": 4.311,
+              "registered": false,
+              "stage1": {
+                "checks": {
+                  "concurrency_ratio": {
+                    "value": 1.9649,
+                    "limit": 2.0,
+                    "pass": true
+                  },
+                  "sample_count": {
+                    "value": 600,
+                    "limit": 100,
+                    "pass": true
+                  },
+                  "same_operating_mode": {
+                    "value": "unsaturated/unsaturated",
+                    "pass": true
+                  }
+                },
+                "pass": true
+              },
+              "stage2": {
+                "validation_points": [],
+                "n_inside": 0,
+                "exceedances": [],
+                "exceedance_rate": 0.0,
+                "tolerance": 0.05,
+                "pass": false,
+                "vacuous": true
+              },
+              "margin_pct": 0.0,
+              "min_slack_to_register_pp": null
+            },
+            {
+              "lo": 4.311,
+              "hi": 8.211,
+              "registered": false,
+              "stage1": {
+                "checks": {
+                  "concurrency_ratio": {
+                    "value": 1.9047,
+                    "limit": 2.0,
+                    "pass": true
+                  },
+                  "sample_count": {
+                    "value": 600,
+                    "limit": 100,
+                    "pass": true
+                  },
+                  "same_operating_mode": {
+                    "value": "unsaturated/unsaturated",
+                    "pass": true
+                  }
+                },
+                "pass": true
+              },
+              "stage2": {
+                "validation_points": [],
+                "n_inside": 0,
+                "exceedances": [],
+                "exceedance_rate": 0.0,
+                "tolerance": 0.05,
+                "pass": false,
+                "vacuous": true
+              },
+              "margin_pct": 0.0,
+              "min_slack_to_register_pp": null
+            },
+            {
+              "lo": 8.211,
+              "hi": 14.832,
+              "registered": false,
+              "stage1": {
+                "checks": {
+                  "concurrency_ratio": {
+                    "value": 1.8064,
+                    "limit": 2.0,
+                    "pass": true
+                  },
+                  "sample_count": {
+                    "value": 128,
+                    "limit": 100,
+                    "pass": true
+                  },
+                  "same_operating_mode": {
+                    "value": "unsaturated/unsaturated",
+                    "pass": true
+                  }
+                },
+                "pass": true
+              },
+              "stage2": {
+                "validation_points": [],
+                "n_inside": 0,
+                "exceedances": [],
+                "exceedance_rate": 0.0,
+                "tolerance": 0.05,
+                "pass": false,
+                "vacuous": true
+              },
+              "margin_pct": 0.0,
+              "min_slack_to_register_pp": null
+            },
+            {
+              "lo": 14.832,
+              "hi": 15.212,
+              "registered": false,
+              "stage1": {
+                "checks": {
+                  "concurrency_ratio": {
+                    "value": 1.0256,
+                    "limit": 2.0,
+                    "pass": true
+                  },
+                  "sample_count": {
+                    "value": 128,
+                    "limit": 100,
+                    "pass": true
+                  },
+                  "same_operating_mode": {
+                    "value": "unsaturated/unsaturated",
+                    "pass": true
+                  }
+                },
+                "pass": true
+              },
+              "stage2": {
+                "validation_points": [],
+                "n_inside": 0,
+                "exceedances": [],
+                "exceedance_rate": 0.0,
+                "tolerance": 0.05,
+                "pass": false,
+                "vacuous": true
+              },
+              "margin_pct": 0.0,
+              "min_slack_to_register_pp": null
+            },
+            {
+              "lo": 15.212,
+              "hi": 16.6,
+              "registered": false,
+              "stage1": {
+                "checks": {
+                  "concurrency_ratio": {
+                    "value": 1.0912,
+                    "limit": 2.0,
+                    "pass": true
+                  },
+                  "sample_count": {
+                    "value": 5,
+                    "limit": 100,
+                    "pass": false
+                  },
+                  "same_operating_mode": {
+                    "value": "unsaturated/unsaturated",
+                    "pass": true
+                  }
+                },
+                "pass": false
+              },
+              "stage2": {
+                "validation_points": [],
+                "n_inside": 0,
+                "exceedances": [],
+                "exceedance_rate": 0.0,
+                "tolerance": 0.05,
+                "pass": false,
+                "vacuous": true
+              },
+              "margin_pct": 3.1992,
+              "min_slack_to_register_pp": null
+            },
+            {
+              "lo": 16.6,
+              "hi": 25.181,
+              "registered": false,
+              "stage1": {
+                "checks": {
+                  "concurrency_ratio": {
+                    "value": 1.5169,
+                    "limit": 2.0,
+                    "pass": true
+                  },
+                  "sample_count": {
+                    "value": 5,
+                    "limit": 100,
+                    "pass": false
+                  },
+                  "same_operating_mode": {
+                    "value": "unsaturated/unsaturated",
+                    "pass": true
+                  }
+                },
+                "pass": false
+              },
+              "stage2": {
+                "validation_points": [],
+                "n_inside": 0,
+                "exceedances": [],
+                "exceedance_rate": 0.0,
+                "tolerance": 0.05,
+                "pass": false,
+                "vacuous": true
+              },
+              "margin_pct": 3.3912,
+              "min_slack_to_register_pp": null
+            },
+            {
+              "lo": 25.181,
+              "hi": 76.0,
+              "registered": false,
+              "stage1": {
+                "checks": {
+                  "concurrency_ratio": {
+                    "value": 3.0181,
+                    "limit": 2.0,
+                    "pass": false
+                  },
+                  "sample_count": {
+                    "value": 128,
+                    "limit": 100,
+                    "pass": true
+                  },
+                  "same_operating_mode": {
+                    "value": "unsaturated/saturated",
+                    "pass": false
+                  }
+                },
+                "pass": false
+              },
+              "stage2": {
+                "validation_points": [],
+                "n_inside": 0,
+                "exceedances": [],
+                "exceedance_rate": 0.0,
+                "tolerance": 0.05,
+                "pass": false,
+                "vacuous": true
+              },
+              "margin_pct": 21.9512,
+              "min_slack_to_register_pp": null
+            }
+          ],
+          "validation_region": [],
+          "covered": 0,
+          "disclosure_verdicts": [
+            {
+              "candidate": "A",
+              "conc": 20.0,
+              "verdict": "unmeasured",
+              "why": "no registered interval covers this operating point"
+            },
+            {
+              "candidate": "B",
+              "conc": 76.0,
+              "verdict": "unmeasured",
+              "why": "no registered interval covers this operating point"
+            },
+            {
+              "candidate": "C",
+              "conc": 110.0,
+              "verdict": "unmeasured",
+              "why": "no registered interval covers this operating point"
+            }
+          ]
+        },
+        "B": {
+          "placement": "B",
+          "basis": "committed",
+          "calibration_points": [
+            1.02,
+            76.0
+          ],
+          "validation_points": [
+            2.194,
+            4.311,
+            8.211,
+            14.832,
+            15.212,
+            16.6,
+            25.181
+          ],
+          "intervals": [
+            {
+              "lo": 1.02,
+              "hi": 76.0,
+              "registered": false,
+              "stage1": {
+                "checks": {
+                  "concurrency_ratio": {
+                    "value": 74.5098,
+                    "limit": 2.0,
+                    "pass": false
+                  },
+                  "sample_count": {
+                    "value": 556,
+                    "limit": 100,
+                    "pass": true
+                  },
+                  "same_operating_mode": {
+                    "value": "unsaturated/saturated",
+                    "pass": false
+                  }
+                },
+                "pass": false
+              },
+              "stage2": {
+                "validation_points": [
+                  2.194,
+                  4.311,
+                  8.211,
+                  14.832,
+                  15.212,
+                  16.6,
+                  25.181
+                ],
+                "n_inside": 7,
+                "exceedances": [],
+                "exceedance_rate": 0.0,
+                "tolerance": 0.05,
+                "pass": true,
+                "vacuous": false
+              },
+              "margin_pct": 21.9512,
+              "min_slack_to_register_pp": null
+            }
+          ],
+          "validation_region": [],
+          "covered": 0,
+          "disclosure_verdicts": [
+            {
+              "candidate": "A",
+              "conc": 20.0,
+              "verdict": "unmeasured",
+              "why": "no registered interval covers this operating point"
+            },
+            {
+              "candidate": "B",
+              "conc": 76.0,
+              "verdict": "unmeasured",
+              "why": "no registered interval covers this operating point"
+            },
+            {
+              "candidate": "C",
+              "conc": 110.0,
+              "verdict": "unmeasured",
+              "why": "no registered interval covers this operating point"
+            }
+          ]
+        },
+        "C": {
+          "placement": "C",
+          "basis": "committed",
+          "calibration_points": [
+            1.02,
+            4.311,
+            14.832,
+            16.6,
+            76.0
+          ],
+          "validation_points": [
+            2.194,
+            8.211,
+            15.212,
+            25.181
+          ],
+          "intervals": [
+            {
+              "lo": 1.02,
+              "hi": 4.311,
+              "registered": false,
+              "stage1": {
+                "checks": {
+                  "concurrency_ratio": {
+                    "value": 4.2265,
+                    "limit": 2.0,
+                    "pass": false
+                  },
+                  "sample_count": {
+                    "value": 600,
+                    "limit": 100,
+                    "pass": true
+                  },
+                  "same_operating_mode": {
+                    "value": "unsaturated/unsaturated",
+                    "pass": true
+                  }
+                },
+                "pass": false
+              },
+              "stage2": {
+                "validation_points": [
+                  2.194
+                ],
+                "n_inside": 1,
+                "exceedances": [],
+                "exceedance_rate": 0.0,
+                "tolerance": 0.05,
+                "pass": true,
+                "vacuous": false
+              },
+              "margin_pct": 0.0,
+              "min_slack_to_register_pp": null
+            },
+            {
+              "lo": 4.311,
+              "hi": 14.832,
+              "registered": false,
+              "stage1": {
+                "checks": {
+                  "concurrency_ratio": {
+                    "value": 3.4405,
+                    "limit": 2.0,
+                    "pass": false
+                  },
+                  "sample_count": {
+                    "value": 128,
+                    "limit": 100,
+                    "pass": true
+                  },
+                  "same_operating_mode": {
+                    "value": "unsaturated/unsaturated",
+                    "pass": true
+                  }
+                },
+                "pass": false
+              },
+              "stage2": {
+                "validation_points": [
+                  8.211
+                ],
+                "n_inside": 1,
+                "exceedances": [],
+                "exceedance_rate": 0.0,
+                "tolerance": 0.05,
+                "pass": true,
+                "vacuous": false
+              },
+              "margin_pct": 0.0,
+              "min_slack_to_register_pp": null
+            },
+            {
+              "lo": 14.832,
+              "hi": 16.6,
+              "registered": false,
+              "stage1": {
+                "checks": {
+                  "concurrency_ratio": {
+                    "value": 1.1192,
+                    "limit": 2.0,
+                    "pass": true
+                  },
+                  "sample_count": {
+                    "value": 5,
+                    "limit": 100,
+                    "pass": false
+                  },
+                  "same_operating_mode": {
+                    "value": "unsaturated/unsaturated",
+                    "pass": true
+                  }
+                },
+                "pass": false
+              },
+              "stage2": {
+                "validation_points": [
+                  15.212
+                ],
+                "n_inside": 1,
+                "exceedances": [],
+                "exceedance_rate": 0.0,
+                "tolerance": 0.05,
+                "pass": true,
+                "vacuous": false
+              },
+              "margin_pct": 3.1992,
+              "min_slack_to_register_pp": null
+            },
+            {
+              "lo": 16.6,
+              "hi": 76.0,
+              "registered": false,
+              "stage1": {
+                "checks": {
+                  "concurrency_ratio": {
+                    "value": 4.5783,
+                    "limit": 2.0,
+                    "pass": false
+                  },
+                  "sample_count": {
+                    "value": 5,
+                    "limit": 100,
+                    "pass": false
+                  },
+                  "same_operating_mode": {
+                    "value": "unsaturated/saturated",
+                    "pass": false
+                  }
+                },
+                "pass": false
+              },
+              "stage2": {
+                "validation_points": [
+                  25.181
+                ],
+                "n_inside": 1,
+                "exceedances": [],
+                "exceedance_rate": 0.0,
+                "tolerance": 0.05,
+                "pass": true,
+                "vacuous": false
+              },
+              "margin_pct": 21.9512,
+              "min_slack_to_register_pp": null
+            }
+          ],
+          "validation_region": [],
+          "covered": 0,
+          "disclosure_verdicts": [
+            {
+              "candidate": "A",
+              "conc": 20.0,
+              "verdict": "unmeasured",
+              "why": "no registered interval covers this operating point"
+            },
+            {
+              "candidate": "B",
+              "conc": 76.0,
+              "verdict": "unmeasured",
+              "why": "no registered interval covers this operating point"
+            },
+            {
+              "candidate": "C",
+              "conc": 110.0,
+              "verdict": "unmeasured",
+              "why": "no registered interval covers this operating point"
+            }
+          ]
+        }
+      }
+    },
+    "p99": {
+      "points": [
+        {
+          "conc": 1.02,
+          "e_pct": 6.6776984525070775,
+          "r_pct": -6.259694902847937,
+          "margin_pct": 0.0,
+          "n": 600,
+          "prediction_ms": 17.066995759999998,
+          "measured_ms": 15.998653896342004,
+          "mode": "unsaturated",
+          "basis": "p99",
+          "measured_requests": null
+        },
+        {
+          "conc": 2.194,
+          "e_pct": 3.0893990458312017,
+          "r_pct": -2.996815457676424,
+          "margin_pct": 0.0,
+          "n": 600,
+          "prediction_ms": 20.5367675,
+          "measured_ms": 19.92131847705293,
+          "mode": "unsaturated",
+          "basis": "p99",
+          "measured_requests": null
+        },
+        {
+          "conc": 4.311,
+          "e_pct": 2.5929182656722753,
+          "r_pct": -2.5273852323390527,
+          "margin_pct": 0.0,
+          "n": 600,
+          "prediction_ms": 22.28809064,
+          "measured_ms": 21.724784728594297,
+          "mode": "unsaturated",
+          "basis": "p99",
+          "measured_requests": null
+        },
+        {
+          "conc": 8.211,
+          "e_pct": 0.6105358170885915,
+          "r_pct": -0.6068308971125593,
+          "margin_pct": 0.0,
+          "n": 600,
+          "prediction_ms": 24.487082519999998,
+          "measured_ms": 24.33848733746719,
+          "mode": "unsaturated",
+          "basis": "p99",
+          "measured_requests": null
+        },
+        {
+          "conc": 14.832,
+          "e_pct": -6.895133424381829,
+          "r_pct": 7.405771231927731,
+          "margin_pct": 7.405771231927731,
+          "n": 128,
+          "prediction_ms": 27.36628027,
+          "measured_ms": 29.392964381484376,
+          "mode": "unsaturated",
+          "basis": "p99",
+          "measured_requests": null
+        },
+        {
+          "conc": 15.212,
+          "e_pct": -3.1105963206561698,
+          "r_pct": 3.210460796054345,
+          "margin_pct": 3.210460796054345,
+          "n": 600,
+          "prediction_ms": 27.584100749999998,
+          "measured_ms": 28.46967749052288,
+          "mode": "unsaturated",
+          "basis": "p99",
+          "measured_requests": null
+        },
+        {
+          "conc": 25.181,
+          "e_pct": -11.996052440379495,
+          "r_pct": 13.631266293199479,
+          "margin_pct": 13.631266293199479,
+          "n": 128,
+          "prediction_ms": 31.254738399999997,
+          "measured_ms": 35.51515502054687,
+          "mode": "unsaturated",
+          "basis": "p99",
+          "measured_requests": null
+        },
+        {
+          "conc": 76.0,
+          "e_pct": -17.310824512260865,
+          "r_pct": 20.934813305554915,
+          "margin_pct": 20.934813305554915,
+          "n": 556,
+          "prediction_ms": 48.409747059999994,
+          "measured_ms": 58.54423722870235,
+          "mode": "saturated",
+          "basis": "p99",
+          "measured_requests": null
+        }
+      ],
+      "placements": {
+        "A": {
+          "placement": "A",
+          "basis": "p99",
+          "calibration_points": [
+            1.02,
+            2.194,
+            4.311,
+            8.211,
+            14.832,
+            15.212,
+            25.181,
+            76.0
+          ],
+          "validation_points": [],
+          "intervals": [
+            {
+              "lo": 1.02,
+              "hi": 2.194,
+              "registered": false,
+              "stage1": {
+                "checks": {
+                  "concurrency_ratio": {
+                    "value": 2.151,
+                    "limit": 2.0,
+                    "pass": false
+                  },
+                  "sample_count": {
+                    "value": 600,
+                    "limit": 100,
+                    "pass": true
+                  },
+                  "same_operating_mode": {
+                    "value": "unsaturated/unsaturated",
+                    "pass": true
+                  }
+                },
+                "pass": false
+              },
+              "stage2": {
+                "validation_points": [],
+                "n_inside": 0,
+                "exceedances": [],
+                "exceedance_rate": 0.0,
+                "tolerance": 0.05,
+                "pass": false,
+                "vacuous": true
+              },
+              "margin_pct": 0.0,
+              "min_slack_to_register_pp": null
+            },
+            {
+              "lo": 2.194,
+              "hi": 4.311,
+              "registered": false,
+              "stage1": {
+                "checks": {
+                  "concurrency_ratio": {
+                    "value": 1.9649,
+                    "limit": 2.0,
+                    "pass": true
+                  },
+                  "sample_count": {
+                    "value": 600,
+                    "limit": 100,
+                    "pass": true
+                  },
+                  "same_operating_mode": {
+                    "value": "unsaturated/unsaturated",
+                    "pass": true
+                  }
+                },
+                "pass": true
+              },
+              "stage2": {
+                "validation_points": [],
+                "n_inside": 0,
+                "exceedances": [],
+                "exceedance_rate": 0.0,
+                "tolerance": 0.05,
+                "pass": false,
+                "vacuous": true
+              },
+              "margin_pct": 0.0,
+              "min_slack_to_register_pp": null
+            },
+            {
+              "lo": 4.311,
+              "hi": 8.211,
+              "registered": false,
+              "stage1": {
+                "checks": {
+                  "concurrency_ratio": {
+                    "value": 1.9047,
+                    "limit": 2.0,
+                    "pass": true
+                  },
+                  "sample_count": {
+                    "value": 600,
+                    "limit": 100,
+                    "pass": true
+                  },
+                  "same_operating_mode": {
+                    "value": "unsaturated/unsaturated",
+                    "pass": true
+                  }
+                },
+                "pass": true
+              },
+              "stage2": {
+                "validation_points": [],
+                "n_inside": 0,
+                "exceedances": [],
+                "exceedance_rate": 0.0,
+                "tolerance": 0.05,
+                "pass": false,
+                "vacuous": true
+              },
+              "margin_pct": 0.0,
+              "min_slack_to_register_pp": null
+            },
+            {
+              "lo": 8.211,
+              "hi": 14.832,
+              "registered": false,
+              "stage1": {
+                "checks": {
+                  "concurrency_ratio": {
+                    "value": 1.8064,
+                    "limit": 2.0,
+                    "pass": true
+                  },
+                  "sample_count": {
+                    "value": 128,
+                    "limit": 100,
+                    "pass": true
+                  },
+                  "same_operating_mode": {
+                    "value": "unsaturated/unsaturated",
+                    "pass": true
+                  }
+                },
+                "pass": true
+              },
+              "stage2": {
+                "validation_points": [],
+                "n_inside": 0,
+                "exceedances": [],
+                "exceedance_rate": 0.0,
+                "tolerance": 0.05,
+                "pass": false,
+                "vacuous": true
+              },
+              "margin_pct": 7.4058,
+              "min_slack_to_register_pp": null
+            },
+            {
+              "lo": 14.832,
+              "hi": 15.212,
+              "registered": false,
+              "stage1": {
+                "checks": {
+                  "concurrency_ratio": {
+                    "value": 1.0256,
+                    "limit": 2.0,
+                    "pass": true
+                  },
+                  "sample_count": {
+                    "value": 128,
+                    "limit": 100,
+                    "pass": true
+                  },
+                  "same_operating_mode": {
+                    "value": "unsaturated/unsaturated",
+                    "pass": true
+                  }
+                },
+                "pass": true
+              },
+              "stage2": {
+                "validation_points": [],
+                "n_inside": 0,
+                "exceedances": [],
+                "exceedance_rate": 0.0,
+                "tolerance": 0.05,
+                "pass": false,
+                "vacuous": true
+              },
+              "margin_pct": 7.4058,
+              "min_slack_to_register_pp": null
+            },
+            {
+              "lo": 15.212,
+              "hi": 25.181,
+              "registered": false,
+              "stage1": {
+                "checks": {
+                  "concurrency_ratio": {
+                    "value": 1.6553,
+                    "limit": 2.0,
+                    "pass": true
+                  },
+                  "sample_count": {
+                    "value": 128,
+                    "limit": 100,
+                    "pass": true
+                  },
+                  "same_operating_mode": {
+                    "value": "unsaturated/unsaturated",
+                    "pass": true
+                  }
+                },
+                "pass": true
+              },
+              "stage2": {
+                "validation_points": [],
+                "n_inside": 0,
+                "exceedances": [],
+                "exceedance_rate": 0.0,
+                "tolerance": 0.05,
+                "pass": false,
+                "vacuous": true
+              },
+              "margin_pct": 13.6313,
+              "min_slack_to_register_pp": null
+            },
+            {
+              "lo": 25.181,
+              "hi": 76.0,
+              "registered": false,
+              "stage1": {
+                "checks": {
+                  "concurrency_ratio": {
+                    "value": 3.0181,
+                    "limit": 2.0,
+                    "pass": false
+                  },
+                  "sample_count": {
+                    "value": 128,
+                    "limit": 100,
+                    "pass": true
+                  },
+                  "same_operating_mode": {
+                    "value": "unsaturated/saturated",
+                    "pass": false
+                  }
+                },
+                "pass": false
+              },
+              "stage2": {
+                "validation_points": [],
+                "n_inside": 0,
+                "exceedances": [],
+                "exceedance_rate": 0.0,
+                "tolerance": 0.05,
+                "pass": false,
+                "vacuous": true
+              },
+              "margin_pct": 20.9348,
+              "min_slack_to_register_pp": null
+            }
+          ],
+          "validation_region": [],
+          "covered": 0,
+          "disclosure_verdicts": [
+            {
+              "candidate": "A",
+              "conc": 20.0,
+              "verdict": "unmeasured",
+              "why": "no registered interval covers this operating point"
+            },
+            {
+              "candidate": "B",
+              "conc": 76.0,
+              "verdict": "unmeasured",
+              "why": "no registered interval covers this operating point"
+            },
+            {
+              "candidate": "C",
+              "conc": 110.0,
+              "verdict": "unmeasured",
+              "why": "no registered interval covers this operating point"
+            }
+          ]
+        },
+        "B": {
+          "placement": "B",
+          "basis": "p99",
+          "calibration_points": [
+            1.02,
+            76.0
+          ],
+          "validation_points": [
+            2.194,
+            4.311,
+            8.211,
+            14.832,
+            15.212,
+            25.181
+          ],
+          "intervals": [
+            {
+              "lo": 1.02,
+              "hi": 76.0,
+              "registered": false,
+              "stage1": {
+                "checks": {
+                  "concurrency_ratio": {
+                    "value": 74.5098,
+                    "limit": 2.0,
+                    "pass": false
+                  },
+                  "sample_count": {
+                    "value": 556,
+                    "limit": 100,
+                    "pass": true
+                  },
+                  "same_operating_mode": {
+                    "value": "unsaturated/saturated",
+                    "pass": false
+                  }
+                },
+                "pass": false
+              },
+              "stage2": {
+                "validation_points": [
+                  2.194,
+                  4.311,
+                  8.211,
+                  14.832,
+                  15.212,
+                  25.181
+                ],
+                "n_inside": 6,
+                "exceedances": [],
+                "exceedance_rate": 0.0,
+                "tolerance": 0.05,
+                "pass": true,
+                "vacuous": false
+              },
+              "margin_pct": 20.9348,
+              "min_slack_to_register_pp": null
+            }
+          ],
+          "validation_region": [],
+          "covered": 0,
+          "disclosure_verdicts": [
+            {
+              "candidate": "A",
+              "conc": 20.0,
+              "verdict": "unmeasured",
+              "why": "no registered interval covers this operating point"
+            },
+            {
+              "candidate": "B",
+              "conc": 76.0,
+              "verdict": "unmeasured",
+              "why": "no registered interval covers this operating point"
+            },
+            {
+              "candidate": "C",
+              "conc": 110.0,
+              "verdict": "unmeasured",
+              "why": "no registered interval covers this operating point"
+            }
+          ]
+        },
+        "C": {
+          "placement": "C",
+          "basis": "p99",
+          "calibration_points": [
+            1.02,
+            4.311,
+            14.832,
+            25.181
+          ],
+          "validation_points": [
+            2.194,
+            8.211,
+            15.212,
+            76.0
+          ],
+          "intervals": [
+            {
+              "lo": 1.02,
+              "hi": 4.311,
+              "registered": false,
+              "stage1": {
+                "checks": {
+                  "concurrency_ratio": {
+                    "value": 4.2265,
+                    "limit": 2.0,
+                    "pass": false
+                  },
+                  "sample_count": {
+                    "value": 600,
+                    "limit": 100,
+                    "pass": true
+                  },
+                  "same_operating_mode": {
+                    "value": "unsaturated/unsaturated",
+                    "pass": true
+                  }
+                },
+                "pass": false
+              },
+              "stage2": {
+                "validation_points": [
+                  2.194
+                ],
+                "n_inside": 1,
+                "exceedances": [],
+                "exceedance_rate": 0.0,
+                "tolerance": 0.05,
+                "pass": true,
+                "vacuous": false
+              },
+              "margin_pct": 0.0,
+              "min_slack_to_register_pp": null
+            },
+            {
+              "lo": 4.311,
+              "hi": 14.832,
+              "registered": false,
+              "stage1": {
+                "checks": {
+                  "concurrency_ratio": {
+                    "value": 3.4405,
+                    "limit": 2.0,
+                    "pass": false
+                  },
+                  "sample_count": {
+                    "value": 128,
+                    "limit": 100,
+                    "pass": true
+                  },
+                  "same_operating_mode": {
+                    "value": "unsaturated/unsaturated",
+                    "pass": true
+                  }
+                },
+                "pass": false
+              },
+              "stage2": {
+                "validation_points": [
+                  8.211
+                ],
+                "n_inside": 1,
+                "exceedances": [],
+                "exceedance_rate": 0.0,
+                "tolerance": 0.05,
+                "pass": true,
+                "vacuous": false
+              },
+              "margin_pct": 7.4058,
+              "min_slack_to_register_pp": null
+            },
+            {
+              "lo": 14.832,
+              "hi": 25.181,
+              "registered": true,
+              "stage1": {
+                "checks": {
+                  "concurrency_ratio": {
+                    "value": 1.6977,
+                    "limit": 2.0,
+                    "pass": true
+                  },
+                  "sample_count": {
+                    "value": 128,
+                    "limit": 100,
+                    "pass": true
+                  },
+                  "same_operating_mode": {
+                    "value": "unsaturated/unsaturated",
+                    "pass": true
+                  }
+                },
+                "pass": true
+              },
+              "stage2": {
+                "validation_points": [
+                  15.212
+                ],
+                "n_inside": 1,
+                "exceedances": [],
+                "exceedance_rate": 0.0,
+                "tolerance": 0.05,
+                "pass": true,
+                "vacuous": false
+              },
+              "margin_pct": 13.6313,
+              "min_slack_to_register_pp": null
+            }
+          ],
+          "validation_region": [
+            [
+              14.832,
+              25.181
+            ]
+          ],
+          "covered": 10.349,
+          "disclosure_verdicts": [
+            {
+              "candidate": "A",
+              "conc": 20.0,
+              "margin_pct": 13.6313,
+              "robust_tpot_ms": 55.0086,
+              "verdict": "SLO_VIOLATED",
+              "why": "registered interval [14.832, 25.181]"
+            },
+            {
+              "candidate": "B",
+              "conc": 76.0,
+              "verdict": "unmeasured",
+              "why": "no registered interval covers this operating point"
+            },
+            {
+              "candidate": "C",
+              "conc": 110.0,
+              "verdict": "unmeasured",
+              "why": "no registered interval covers this operating point"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "committed_domain_control": [
+    {
+      "candidate": "A",
+      "conc": 20.0,
+      "margin_pct": 3.2752,
+      "robust_tpot_ms": 49.9952,
+      "verdict": "feasible",
+      "in_domain": true
+    },
+    {
+      "candidate": "B",
+      "conc": 76.0,
+      "margin_pct": 21.9512,
+      "robust_tpot_ms": 59.0362,
+      "verdict": "SLO_VIOLATED",
+      "in_domain": true
+    },
+    {
+      "candidate": "C",
+      "conc": 110.0,
+      "margin_pct": 38.5968,
+      "robust_tpot_ms": 67.0943,
+      "verdict": "SLO_VIOLATED",
+      "in_domain": false
+    }
+  ]
+}

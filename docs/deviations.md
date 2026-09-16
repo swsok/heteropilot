@@ -2996,8 +2996,12 @@ pair is not measured like-for-like**, and D70 did not check it.
 "tpot_p50"` and compares `pt.tpot_p50` against `m["tpot_p50_ms"]` (lines 198,
 317-318); it produced six of the nine RNGD points and two of the three A40 ones.
 The exceptions are c16.6 (a bucket mean error from the EDF fit), A40 c170.56 (p95
-absolute error signed by the mean diff) and **c76, which is the only one whose
-two sides use different aggregations.**
+absolute error signed by the mean diff) and c76.
+
+**Corrected by D101:** c76 is *not* the only point pairing a simulated p50 against
+a measured mean. c14.832 and c25.181 do as well, because the performance
+envelope's `tpot_p50` field holds a mean for the four points measured 2026-08-31.
+Every number in this entry stands; the uniqueness claim does not.
 
 | basis at c76 | measured ref @76 | file `e` % | disclosure `r` % | robust from p99 48.41 |
 | --- | ---: | ---: | ---: | ---: |
@@ -3039,3 +3043,72 @@ for TPOT the transfer is untested, and that work order's STEP V2 measures it.
 annotations added to `docs/deviations.md` D22, `docs/patent_future_ideas.md`,
 `planner/predictor/calibration.py` and `experiments/results/e5_self_rejection.md`.
 Nothing in `profiles/calibration/` was changed.
+
+## D101 — the performance envelope's `tpot_p50` field holds a mean for four of its nine points · Open (measured, not changed)
+
+*`WORK_ORDER_p2_regular_spec_evidence.md` STEP V1, percentile-pair audit. Second
+entry from the `D100–D109` block. It corrects D100 and is the cause D100 named
+but did not find.*
+
+**What D100 saw and what it missed.** D100 established that the c76
+accuracy-domain point pairs a simulated p50 against a measured mean, and claimed
+c76 was the only such point. The audit that the V1 percentile item required went
+to the raw records for all nine and found the claim wrong — and the cause one
+layer down, in the envelope rather than in the domain.
+
+**`profiles/envelopes/RNGD-CARD/meta-llama/Llama-3.1-8B/bf16/tp1.yaml` has a
+field named `tpot_p50` that does not always hold a p50.**
+
+| envelope conc | stored `tpot_p50` | raw mean | raw p50 | what it is |
+| ---: | ---: | ---: | ---: | --- |
+| 1.00 | 15.71 | 15.6987 | **15.7124** | p50 (mean of two repeats' p50) |
+| 1.99 | 18.01 | — | **18.0103** | p50 |
+| 3.98 | 19.48 | — | **19.4805** | p50 |
+| 7.88 | 21.86 | — | **21.8554** | p50 |
+| 15.59 | 26.05 | — | **26.0489** | p50 |
+| **15.3** | **25.71** | **25.7147** | 25.4357 | **mean** |
+| **29.3** | **31.18** | **31.1754** | 31.8615 | **mean** |
+| **59.2** | **44.54** | **44.5418** | 45.1225 | **mean** |
+| **107.2** | **67.88** | **67.8762** | 70.3958 | **mean** |
+
+The five low-load rows come from `outputs/rngd_envelope_lowload/point_c*.json`,
+which record `tpot_ms: {p50, p95, p99}` explicitly, and every one reproduces to
+four decimals as the average of the two repeats' p50. The four rows measured
+2026-08-31 come from `outputs/rngd_envelope/edf/real_c{16,32,64,128}.json` and
+reproduce as the **mean** — they are the `TPOT avg` column of
+`experiments/results/rngd_concurrency_envelope.md`, copied into a field whose
+name says p50. The `tpot_p99` column is a genuine p99 throughout.
+
+**How it reaches the accuracy domain.** `experiments/scripts/lowload_sim_error.py`
+declares `"compared_metric": "tpot_p50"` and compares a genuine simulated p50
+against `pt.tpot_p50` — so every domain point whose measured side is one of those
+four rows is a p50-against-mean comparison. That is **c14.832** (measured c15.3),
+**c25.181** (measured c29.3) and **c76** (interpolated from c59.2 and c107.2).
+
+**Who else reads the field.** `planner/perf_envelope.py:339`
+(`tpot_p50_ms=env.metric_at(conc, "tpot_p50")`) and
+`experiments/scripts/e6b_measured_curve.py:105` both take it at its name. Any
+consumer asking this envelope for a p50 above concurrency 15 gets a mean.
+Whether that changed an E6 result has **not** been established here.
+
+**And none of the nine is on the basis the verdict uses.** Separately from the
+mislabelling: `planner/optimizer/feasibility.py:67` judges
+`p99_tpot × (1 + m)`, and **no committed RNGD-CARD point pairs a p99 against a
+p99** — five are p50/p50, three are p50/mean, one is a five-sample bucket mean.
+Recomputed on p99 from the same raw artifacts, two points change sign — c14.832
+from +3.26 % to −6.90 % and c15.212 from +2.47 % to −3.11 % — and because the
+margin is one-sided, that is the difference between charging nothing and
+charging 7.41 % and 3.21 %. The domain's zero crossing moves from between 15.212
+and 16.6 down to between 8.211 and 14.832.
+
+**Why nothing is changed.** Rule A3 forbids rewriting a measured artifact, and
+re-fitting the domain on p99 invalidates the E-A1 corpus, `outputs/e6*/` and the
+pinned values in `tests/test_margin_policy.py` and `tests/test_accuracy_domain.py`
+— D100 §2.5's blast radius, for the same reason. Renaming the envelope field is
+also not free: it is read by the planner and by committed experiment scripts. Two
+of the recomputed p99 rows rest on n = 128, so a re-fit should re-measure them
+rather than adopt this audit's numbers.
+
+**Where.** `experiments/p2_evidence/{v1_percentile_audit.py,results/v1_percentile_audit.md}`;
+D100 and `experiments/p2_evidence/results/v0_source_reconciliation.md` annotated
+with the correction. No profile, calibration file or envelope was modified.
