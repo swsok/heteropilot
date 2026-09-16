@@ -2074,6 +2074,14 @@ like: the winner passed a 50 ms TPOT SLO at a predicted 48.41 ms, and
 nothing in the pipeline could see it because the 18 % was a fact about the
 simulator that the simulator did not carry.
 
+*That product is the pre-D70 arithmetic. The corrected margin `-e/(1+e)` gives
+**59.04 ms**, and 57.1 was never a measurement (D70). The 18 % itself compares a
+simulated p50 against a measured MEAN, where every other point in the file
+compares p50 against p50; like-for-like it is -20.05 %, and on the p99 the
+feasibility check actually reads, -17.31 % against a measured p99 of 58.54 ms
+(D100, `experiments/p2_evidence/results/v0_source_reconciliation.md`). The
+verdict is the same under all of them, which is why none of it was visible.*
+
 **What replaces it.** `planner/util/operating_point.py` reads the served
 concurrency each hardware kind actually ran at, out of the simulation's own CSV by
 Little's law. `AccuracyDomain.tpot_error_at(conc)` prices the simulator's error
@@ -2956,3 +2964,78 @@ work.
 `experiments/uncertainty/results/{f2_truth,eb1_f2,eb2_f2,eb3_f2}.md`; the
 D-number comes from the `D70–D79` block `WORK_ORDER_uq_stage_b_plus.md` claims in
 STEP C0 (PR #87).
+
+## D100 — the c76 accuracy-domain point compares a simulated p50 against a measured mean · Open (measured, not changed)
+
+*`WORK_ORDER_p2_regular_spec_evidence.md` STEP V0. First entry from that work
+order's `D100–D109` block. D70 is its sibling: same number, different defect.*
+
+**What D70 settled and what it left.** D70 established that 57.1 ms is not a
+measurement — it is `48.41 × 1.18`, one expression repeated across seven
+documents — and that the margin multiplier is `-e/(1+e)`, not `-e`. It put the
+52.7/43.2 pair in 57.1's place as "the only measurement behind the 18 %". **That
+pair is not measured like-for-like**, and D70 did not check it.
+
+**The two sides are different aggregations.** Recomputed from the raw records by
+`experiments/p2_evidence/v0_convert.py`:
+
+- **52.7 is a MEAN.** `rngd_concurrency_envelope.md` interpolates its `TPOT avg`
+  column between c64 and c128 to eff 76. From
+  `outputs/rngd_envelope/edf/real_c{64,128}.json` (n = 256, 300; eff 59.185,
+  107.192) the mean interpolates to **52.7149**, reproducing the committed 52.7.
+- **43.2 is a p50.** It is the card fixture's winner `s256-t8192`
+  (`pd_slo_sweep_margin.md:41`), whose cached metrics reproduce three figures the
+  sweep quotes — p99 TTFT 480.09 ms, goodput 5.5519 rps, and 190 920 tokens /
+  54.0 s makespan / 2 cards = 1767.78 output tok/s per card. That run's TPOT is
+  **p50 43.1517**, p95 47.4974, **p99 48.4097** at served concurrency 74.750. The
+  predictor emits no mean at all (`llmservingsim.py:600`), so mean-against-mean
+  was never available.
+
+**Every other committed point pairs p50 against p50.**
+`experiments/scripts/lowload_sim_error.py` records `"compared_metric":
+"tpot_p50"` and compares `pt.tpot_p50` against `m["tpot_p50_ms"]` (lines 198,
+317-318); it produced six of the nine RNGD points and two of the three A40 ones.
+The exceptions are c16.6 (a bucket mean error from the EDF fit), A40 c170.56 (p95
+absolute error signed by the mean diff) and **c76, which is the only one whose
+two sides use different aggregations.**
+
+| basis at c76 | measured ref @76 | file `e` % | disclosure `r` % | robust from p99 48.41 |
+| --- | ---: | ---: | ---: | ---: |
+| mean — **committed** | 52.7149 | −18.14 | +22.16 | 59.14 ms |
+| p50 — consistent with the other eight | 53.9748 | **−20.05** | +25.08 | **60.55 ms** |
+| p99 — what the feasibility check reads | 58.5442 | −26.29 | +35.67 | 65.68 ms |
+
+And sim **p99** against measured **p99**: `e` = **−17.31 %**, `r` = +20.93 %, and
+48.41 × 1.2093 = **58.54 ms**, which reconstructs the measured p99 by
+construction.
+
+**Why it stayed invisible.** Every row breaches the 50 ms SLO, so no verdict
+moves — the same reason 57.1 survived seven documents and the same reason D70's
+own blast radius was zero. Three arithmetic defects in one number have now each
+been found by inspection rather than by a test, because the test that would catch
+them would have to compare verdicts, and the verdicts agree.
+
+**The A40 file declares its seam; this one does not.**
+`profiles/calibration/a40.accuracy.yaml` carries a `METHODOLOGY SEAM` note saying
+its 170.56 point is a p95-absolute-error-signed-by-the-mean while the others are
+p50 errors, and quantifies the difference at 0.1 pp. `rngd_card_edf.yaml`'s c76
+note says only "interpolated c64/c128 … Not re-measured here".
+
+**Why it is not fixed here.** Changing the stored `-18.0` invalidates the E-A1
+corpus, `outputs/e6*/`, and the pinned values in `tests/test_margin_policy.py`
+and `tests/test_accuracy_domain.py` — a decision about what to re-run, not a
+patch, exactly as D40 reasons about the envelope cache key. STEP V0's scope is to
+determine the basis. **What a follow-on must decide is p50 or p99**, and the
+argument for p99 is that `feasibility.py:67` applies the margin to `p99_tpot`, so
+a margin fitted on any other statistic compares distributions at different
+points.
+
+**A further caveat for whoever changes it.** The envelope was measured
+closed-loop (a request pool) while the simulated side is an open-loop Poisson
+process at 9.9 rps. D19 establishes that closed-loop TTFT does not transfer;
+for TPOT the transfer is untested, and that work order's STEP V2 measures it.
+
+**Where.** `experiments/p2_evidence/{v0_convert.py,results/v0_source_reconciliation.md}`;
+annotations added to `docs/deviations.md` D22, `docs/patent_future_ideas.md`,
+`planner/predictor/calibration.py` and `experiments/results/e5_self_rejection.md`.
+Nothing in `profiles/calibration/` was changed.

@@ -139,7 +139,10 @@ class AccuracyDomain(_Strict):
     the card fixture's winner passed a 50 ms TPOT SLO at a predicted 48.41 ms, and
     48.41 x 1.18 = 57.1. The winner was not optimistic, it was infeasible, and
     nothing in the pipeline could see it because the 18 % was a fact about the
-    simulator that the simulator did not carry.
+    simulator that the simulator did not carry. (57.1 is that product, not a
+    measurement: the corrected margin below gives 59.04 -- D70. And the 18 %
+    compares a simulated p50 against a measured mean, unlike every other point
+    in the committed domains -- D100.)
 
     Outside the measured points there are two policies. `refuse`, the default
     (deviations D33; uncertainty work order rule A2 and rps design §5 agree on

@@ -32,12 +32,12 @@ DEVIATIONS = ROOT / "docs/deviations.md"
 _HEADING = re.compile(r"^## (D\d+[a-z]?)\b", re.M)
 #: A reference is the bare id in prose or in a comment. Bounded on both sides so
 #: `D3` does not match inside `D30`, and a stray `3D` does not match at all.
-_REFERENCE = re.compile(r"(?<![0-9A-Za-z_])D(\d{1,2}[a-z]?)(?![0-9A-Za-z_])")
+_REFERENCE = re.compile(r"(?<![0-9A-Za-z_])D(\d{1,3}[a-z]?)(?![0-9A-Za-z_])")
 #: `D40-D49` names a RESERVED RANGE, not two citations -- CLAUDE.md's block table
 #: is written that way and would otherwise report every block as dangling. Both
 #: endpoints are dropped before scanning. Skipping a range that really was a
 #: citation only loses coverage; it cannot invent a failure.
-_RANGE = re.compile(r"D\d{1,2}\s*[-\u2013\u2014]\s*D\d{1,2}")
+_RANGE = re.compile("D\\d{1,3}\\s*[-\u2013\u2014]\\s*D\\d{1,3}")
 
 #: Where a D-number may be cited. `outputs/` is excluded: it holds captured
 #: stdout and result JSON, where a retracted id can legitimately survive as a
@@ -111,8 +111,26 @@ def test_every_cited_deviation_exists() -> None:
 #: Below this, numbering is history and must be dense. At and above it, a gap is
 #: a reservation -- CLAUDE.md's D37-D39 escape hatch and the D40+ blocks.
 HISTORY_CEILING = 37
-#: The blocks CLAUDE.md assigns, plus the block-free D37-D39.
-BLOCK_RANGE = (37, 89)
+#: D37-D39, the only numbers CLAUDE.md lets a stream take without a block.
+BLOCK_FREE = range(37, 40)
+#: A row of CLAUDE.md's block table: `| D40-D49 | owner |`, either dash.
+_BLOCK_ROW = re.compile(r"^\|\s*D(\d{1,3})\s*[-\u2013\u2014]\s*D(\d{1,3})\s*\|", re.M)
+
+
+def _claimed_blocks() -> set[int]:
+    """Every number CLAUDE.md's block table assigns, read from the table itself.
+
+    This used to be `BLOCK_RANGE = (37, 89)`, a literal, and it went stale the
+    moment a block was claimed without touching this file: CLAUDE.md assigned
+    D90-D99 on 2026-09-15 and the constant still ended at 89, so the first entry
+    from that block would have failed a test whose own message says to claim the
+    block in CLAUDE.md. Reading the table makes that message true.
+    """
+    text = (ROOT / "CLAUDE.md").read_text()
+    blocks = {n for lo, hi in _BLOCK_ROW.findall(text)
+              for n in range(int(lo), int(hi) + 1)}
+    assert blocks, "CLAUDE.md has no D-number block table"
+    return blocks | set(BLOCK_FREE)
 
 
 def test_the_numbering_is_dense_so_a_gap_means_a_reservation() -> None:
@@ -129,7 +147,7 @@ def test_the_numbering_is_dense_so_a_gap_means_a_reservation() -> None:
     D36-D39 as holes and failed. Density is therefore checked through the
     historical range only, and the range above it is checked for something
     stronger instead: that every number there falls in a block CLAUDE.md
-    actually documents, so `D95` cannot be invented either.
+    actually documents, so a number in no block cannot be invented either.
     """
     numbers = sorted({int(re.match(r"D(\d+)", e).group(1)) for e in _entries()})
     assert numbers[0] == 1
@@ -141,12 +159,12 @@ def test_the_numbering_is_dense_so_a_gap_means_a_reservation() -> None:
         f"say in docs/deviations.md that the number is retired, or reuse it."
     )
 
-    lo, hi = BLOCK_RANGE
-    stray = [n for n in numbers if n >= HISTORY_CEILING and not lo <= n <= hi]
+    claimed = _claimed_blocks()
+    stray = [n for n in numbers if n >= HISTORY_CEILING and n not in claimed]
     assert not stray, (
         f"D{stray} is above the historical range but outside every block "
-        f"CLAUDE.md assigns (D{lo}-D{hi}). Claim a block in CLAUDE.md in the same "
-        f"commit, or take a number from the one your work order already owns."
+        f"CLAUDE.md assigns. Claim a block in CLAUDE.md in the same commit, or "
+        f"take a number from the one your work order already owns."
     )
 
 
