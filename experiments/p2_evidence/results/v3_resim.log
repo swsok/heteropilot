@@ -1,0 +1,21 @@
+--- P3 mix(cuda-a40-node_a40a-tp1-dp1+cuda-a40-node_a40b-tp1-dp4)-s32-t2048
+    outcome=OK
+    p99_tpot_ms            cached=           49.16014071 resim=           49.16014071 Δ=+0.0000%
+    p99_ttft_ms            cached=        14754.56842926 resim=        14754.56842926 Δ=+0.0000%
+    p50_tpot_ms            cached=            43.4766585 resim=            43.4766585 Δ=+0.0000%
+    p95_tpot_ms            cached=           47.24414765 resim=           47.24414765 Δ=+0.0000%
+    served_concurrency     cached=    28.093796332755733 resim=    28.093796332755733 Δ=+0.0000%
+    throughput_tps         cached=     6263.189607846205 resim=     6263.189607846205 Δ=+0.0000%
+    total_energy_j         cached=              165810.0 resim=              165810.0 Δ=+0.0000%
+    tokens_per_joule       cached=    1.1514383933417767 resim=    1.1514383933417767 Δ=+0.0000%
+--- P2 mix(cuda-a40-node_a40a-tp2-dp1+cuda-a40-node_a40b-tp2-dp2)-s32-t8192
+    outcome=OK
+    p99_tpot_ms            cached=           30.57248391 resim=           30.57248391 Δ=+0.0000%
+    p99_ttft_ms            cached=    24063.812093909997 resim=    24063.812093909997 Δ=+0.0000%
+    p50_tpot_ms            cached=             28.377952 resim=             28.377952 Δ=+0.0000%
+    p95_tpot_ms            cached=           30.27510025 resim=           30.27510025 Δ=+0.0000%
+    served_concurrency     cached=     39.75317596074822 resim=     39.75317596074822 Δ=+0.0000%
+    throughput_tps         cached=     6484.247850482217 resim=     6484.247850482217 Δ=+0.0000%
+    total_energy_j         cached=              142570.0 resim=              142570.0 Δ=+0.0000%
+    tokens_per_joule       cached=    1.3391316546257979 resim=    1.3391316546257979 Δ=+0.0000%
+wrote experiments/p2_evidence/results/v3_resimulation.json

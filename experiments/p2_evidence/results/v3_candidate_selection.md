@@ -31,17 +31,51 @@ RNGD card on this node. That exclusion is not neutral and §4 says why.
 
 ## The selection
 
-| group | candidate | GPUs | predicted p99 TPOT / TTFT | L | a | b | c | d | decided by |
-| --- | --- | ---: | ---: | ---: | --- | --- | --- | --- | --- |
-| **P1** | `cuda-a40-node_a40a-tp4-dp1-s128-t2048` | 4 | 36.79 ms / 16 159 ms | 127.3 | ✓ | ✓ | ✓ | ✓ | — (agreed) |
-| **P2** | `mix(a40a-tp2-dp1+a40b-tp2-dp2)-s32-t8192` | 6 | 30.57 ms / 24 064 ms | 39.8 | ✓ | ✗ | ✗ | ✗ | **TTFT by 3 111.6 ms** |
-| **P3** | `mix(a40a-tp1-dp1+a40b-tp1-dp4)-s32-t2048` | 5 | 49.16 ms / 14 755 ms | 28.1 | ✓ | ✗ | ✓ | ✓ | **TPOT by 8.00 ms** |
-| **P4** | `cuda-a40-node_a40a-tp2-dp1-s256-t8192` | 2 | 90.43 ms / 29 812 ms | 186.9 | ✗ | ✗ | ✗ | **held** | — (outside domain) |
+**SLOs for every row: TPOT `50.0 ms`, TTFT `25 000 ms`.** Both are the fixture's
+own (`examples/service_specs/llama31-8b.yaml`), and both are quoted here because
+the deciding metric differs by row — P2 turns on TTFT and P3 on TPOT, so a table
+that names only the TPOT SLO would misread as P2 passing.
+
+| group | candidate | GPUs | predicted p99 TPOT / TTFT | L | a | b | c | d | deciding metric | separation |
+| --- | --- | ---: | ---: | ---: | --- | --- | --- | --- | --- | ---: |
+| **P1** | `cuda-a40-node_a40a-tp4-dp1-s128-t2048` | 4 | 36.79 ms / 16 159 ms | 127.3 | ✓ | ✓ | ✓ | ✓ | — (agreed) | — |
+| **P2** | `mix(a40a-tp2-dp1+a40b-tp2-dp2)-s32-t8192` | 6 | 30.57 ms / 24 064 ms | 39.8 | ✓ | ✗ | ✗ | ✗ | **TTFT** vs 25 000 ms | **+3 111.6 ms** over |
+| **P3** | `mix(a40a-tp1-dp1+a40b-tp1-dp4)-s32-t2048` | 5 | 49.16 ms / 14 755 ms | 28.1 | ✓ | ✗ | ✓ | ✓ | **TPOT** vs 50.0 ms | (b) **+8.009 ms** over; (c) **0.623 ms** under |
+| ~~P4~~ | ~~`cuda-a40-node_a40a-tp2-dp1-s256-t8192`~~ | 2 | 90.43 ms / 29 812 ms | 186.9 | ✗ | ✗ | ✗ | held | — | — |
+
+**P4 is excluded from V3** (user decision, 2026-09-16), for the reason §3 gives:
+no rule wanted the candidate, so a measurement cannot show the refusal was wrong.
+Its finding — *all 30 held candidates are also rejected under rule (a), so holding
+costs nothing on this fixture* — carries into `v3_verdict_accuracy.md` as a side
+result instead of a deployment.
+
+### P3's margin headroom, and why it is in the table
+
+Rule (c) leaves P3 feasible by **0.623 ms**:
+
+```
+predicted p99 TPOT  49.160141 ms
+per-point margin    0.441010 %
+robust              49.160141 x 1.00441010 = 49.376942 ms
+headroom to the 50 ms SLO                   =  0.623058 ms
+```
+
+*(The approval named 0.55 ms; the computed figure is **0.6231 ms**. The table
+carries the computed one.)*
+
+**That headroom is smaller than the separation the verdict rests on**, so the
+result has to be read against measurement repeatability, not on its own: rule (b)
+is wrong by 8.009 ms if the hardware comes in under 50, but rule (c) is only
+right by 0.623 ms. **V2's run-to-run p99 spread decides whether the second half
+of that sentence means anything**, and the V3 result must be recorded with that
+spread beside it (user instruction, 2026-09-16). If the spread exceeds ~0.6 ms,
+V3 can report that (b) over-rejected and must report that (c)'s pass is inside
+the noise.
 
 Alternates, two per group, are in `v3_candidates.json` — the work order asks for
 them in advance so a deployment failure (HANDOVER §2.7, KV allocation) does not
 stall the run. Counts of usable candidates per group: P1 **8**, P2 **6**,
-P3 **40**, P4 **10**.
+P3 **40**, P4 **10** (excluded).
 
 ### What each one settles
 
@@ -103,6 +137,14 @@ stands.
 and use that prediction, not the cached one. It is CPU work and needs no GPU. The
 alternative — deploying against a possibly-mirrored prediction — would make a
 disagreement uninterpretable, which is the one outcome V3 cannot afford.
+
+**Done, 2026-09-16 — and D40 did not fire.** Both the P3 and the P2 candidates
+were re-simulated with the cache disabled (`v3_resimulate.py`, raw in
+`v3_resimulation.json`) and reproduced their cached metrics **byte-identically**,
+worst |Δ| = 0.000000 % across p99/p95/p50 TPOT, p99 TTFT, served concurrency,
+throughput, energy and tokens/J. So each prediction is that candidate's own and
+V3 may use it. This does not close D40: the mirrors may still share the key, in
+which case it is the mirror's cached value that is wrong, not this one's.
 
 ## 3. Holding costs nothing on this fixture
 
