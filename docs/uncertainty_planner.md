@@ -331,7 +331,48 @@ committed as evidence of nothing.
 **What they do not establish.** The E-A1 truth cache was built with
 `enable_pd=False`, so there are no P/D candidates and `link_bw` flips nothing —
 one input kind carries the whole decision. `WORK_ORDER_uq_stage_b_plus.md` exists
-to re-run all three on a fixture where two or more kinds are active.
+to re-run all three on a fixture where two or more kinds are active. That is F2,
+and it is below.
+
+### E-B1 – E-B3 on F2 — P/D on, TTFT 8,000 ms, D40's mirrors excluded
+
+**Run 2026-09-15/16** (PRs #88–#91). F2 is defined in **D74**: the same cluster,
+trace and seed as E-A1 with `enable_pd=True` and the TTFT SLO at 8,000 ms, which
+is `d23_revalidation.md`'s middle regime — the first budget at which a KV
+transfer can change a P/D candidate's verdict. Corpus 223 candidates (61 P/D)
+after excluding 282 D40 mirrors and 23 D71 crashes. Truth winner
+`pd(cuda-a40-node_a40a-tp2-dp1 P + cuda-a40-node_a40b-tp4-dp1 D)-s256-t8192`.
+
+**§2.3's gate is met, barely.** Two kinds carry regret rather than one —
+`sim_error:domain` (52 of 186 sets) and the two RNGD profiles (7 each). Three of
+eleven inputs are ever active, and one of them carries 52 of the 66 activations.
+
+**E-B1 on F2** — `eb1_f2.md`. `ours` wins the metric the work order names, mean
+budget to zero regret **1.952 h against 1.988–2.136** for the baselines, with
+`oracle` strictly better at 1.857 — so the fixture is not degenerate in §2.3's
+sense. But at every *intermediate* budget `ours` is worse than `random`, and the
+cause is not noise: on **78 of 186 sets (42 %) nothing is feasible while
+degraded**, `analyze` short-circuits and returns ΔR = None for every input, and
+`_rank` falls through to alphabetical order — which puts the six inert
+`link_bw:fabric-*` items first. See §5.
+
+**E-B2 on F2** — `eb2_f2.md`. Precision **0.706**, recall **0.271** against
+E-A1's 0.990. All 15 false positives are `sim_error` and all are the `delta`
+category (D72); α, β and γ are **zero on both corpora**, so no closed-form rule
+misplaced a crossing. The recall collapse is the same defect E-B1 hit, measured
+from the other side: **82 of the 97 false negatives** sit in the 87 sets with no
+feasible plan, and in all 82 restoring that one input brings a real winner back.
+`link_bw` produces 336 true negatives and not one predicted flip.
+
+**E-B3 on F2** — `eb3_f2.md`. Both A40 profiles: closed form **33,041.1** against
+a resimulated **21,615.4**, **+52.86 %** — the closed form *over*estimates here,
+where on E-A1 it underestimated by 30.5 %. **D40's share of that is 0 pp**,
+measured rather than argued: the same item resimulated with the mirrors present
+(460 candidates, 676 runs) gives a bit-identical ΔR, while the ×1.0 identity
+control fails on 69 candidates at 7.869e-02 — so the defect reproduces and simply
+does not reach a regret integral over the recommendation. Spearman is **not
+computed**: two active items, below §2.5's floor of three. Closed form 0.71 s
+against 25,962 s of resimulation, **36,566×**.
 
 ---
 
@@ -346,10 +387,28 @@ idle/standby, DRAM and link terms, which do not scale with operator time (D34).
 Items scored by an approximate rule are marked `approximation=True` and printed
 as "(approx)" wherever they are quoted. `--resimulate-top N` — the escape hatch
 §2.7 leaves for checking one by really simulating both ends of its range — **is
-implemented** (`planner/uncertainty/resimulate.py`) and E-B3 is what it measures:
-the closed form keeps the order and is 30.5 % low on magnitude. That gap is not
-yet separated from D40, whose mirror defect the ×1.0 identity control finds in
-the same run.
+implemented** (`planner/uncertainty/resimulate.py`) and E-B3 is what it measures.
+
+**The order survives; the magnitude is not usable and is not even reliably
+signed.** E-B3 puts the same items first on both fixtures and correctly calls the
+inert ones inert. On magnitude it was **30.5 % low on E-A1** and is **52.9 % high
+on F2**. The F2 figure is clean — D40's contribution to it was measured at
+**0 pp** by resimulating the same item with the mirrors present and getting a
+bit-identical ΔR — so the two numbers are a difference between fixtures, not one
+correcting the other. **Do not quote ΔR as an amount of energy saved.** Use it to
+order what to measure next, which is what it is for.
+
+**The plan is silent exactly where measuring is worth most.** When the degraded
+state has no feasible candidate, `analyze` short-circuits — *"no recommendation
+to flip"* — and returns ΔR = None for every input, so the ranking degenerates to
+alphabetical. On F2 that is **42 % of degradation sets**, and it is not a
+misconfiguration: the verdicts are real `slo_violated`, not `unmeasured`. Two
+experiments measure the cost from opposite sides — it is why `ours` loses to
+`random` at intermediate budgets (`eb1_f2.md`), and it accounts for **82 of
+E-B2's 97 false negatives**, in every one of which restoring the single input
+brings a real winner back (`eb2_f2.md`). *"Which measurement would make something
+feasible again?"* is not a question the closed-form sensitivity asks, and it is
+the question an operator with nothing feasible actually has. Stage D.
 
 **The grid is uniformly weighted.** `ΔR_i` is the unweighted mean over grid
 points, so it assumes every point in an input's range is equally likely. Nothing
@@ -366,7 +425,25 @@ are Stage D.
 **The penalty dominates the ranking.** `--slo-penalty` decides how much an
 infeasible or unmeasured recommendation costs, and therefore how a `sim_error`
 item ranks against a `profile` one. The default is a defensible convention, not a
-measurement.
+measurement. On F2 it is at least not the knob that decides the *order*: at the
+default and at a tenth of it the ΔR values scale by exactly 10 and the ranking is
+identical in all 186 sets, Spearman 1.0, zero inversions.
+
+**One kind has never been shown to matter.** `link_bw` is inert on both fixtures,
+and on F2 for a reason stronger than E-A1's: it is priced into 54 candidates
+including the winner, and the decision is insensitive to it at *both* ends of its
+range. So the registry's evidence covers `profile` and `sim_error`; `link_lat`
+and `power` have no result at all. D74 records what a fixture would need for a
+link to decide something — a tighter TTFT or a larger KV working set — and notes
+that D71 removes precisely the `tp1-dp1` P/D family where a transfer weighs most.
+
+**Criterion (2) does not cover `sim_error`.** E-B2 scores flip detection two
+ways, and the second — is the flip anywhere in the range, not only at truth — is
+**not defined** for the accuracy domain: the sweep spends its range as a flat
+margin while the harness restores it as a policy swap, which are different
+functions (D72). Since every false positive on both corpora is `sim_error`, the
+possible-transition precision of 1.000 describes the link and profile rules and
+nothing else. Quote it with that sentence attached or not at all.
 
 ---
 

@@ -2890,3 +2890,69 @@ line no reader has reason to check.
 `merge_shards`), `tests/test_uq_eb3_gates.py`,
 `experiments/uncertainty/results/eb3_f2.md`; the D-number comes from the
 `D70–D79` block `WORK_ORDER_uq_stage_b_plus.md` claims in STEP C0 (PR #87).
+
+## D74 — F2, the fixture built to make more than one input kind matter, and the three choices behind it · Recorded 2026-09-16
+
+`WORK_ORDER_uq_stage_b_plus.md` exists because E-A1's corpus was degenerate for
+the question Stage B asks. Its truth cache was built with `enable_pd=False`, so
+it enumerates no P/D candidate; with no candidate whose prediction crosses a
+fabric link, `perturb` reports `affected=0` for all six `link_bw` items and no
+measurement strategy can be right or wrong about a link. Of the eleven registry
+items, exactly one — `sim_error:domain` — carried essentially all the decision
+regret, and any rule that ranks the cheapest item first ties the oracle. E-B1's
+"`ours` = oracle at every budget" was therefore evidence about the fixture.
+
+F2 is the replacement corpus. Three choices in it are not obvious and are
+recorded here rather than inside a result document.
+
+**1. The TTFT SLO is 8,000 ms, and the work order's 4,000 is wrong.** §2.1 asks
+for 4,000 ms, citing a three-regime table. That table is in
+`pd_slo_sweep.md`, which is **superseded**; `docs/d23_revalidation.md` is the
+current one and its middle regime — where the KV transfer across a link can
+actually change a P/D candidate's TTFT verdict — is at **8,000 ms**. The fixture
+uses 8,000 and `experiments/uncertainty/fixtures/f2.json` records why in its
+`note`. At E-A1's 25,000 ms the transfer never enters a verdict at all.
+
+Everything else in the service spec is `examples/service_specs/llama31-8b.yaml`
+unchanged, and the TTFT SLO enters neither the `EnvelopeKey` nor the trace
+digest — which is what makes E-A1's 162 aggregated simulations reusable rather
+than re-run.
+
+**2. Degradation sets are stratified by kind, and the seed is recorded.** E-B1's
+uniform sampling over an 11-item pool draws mostly link-only sets, because six of
+the eleven are links. A sweep whose sets are mostly one kind cannot show a
+ranking rule choosing *between* kinds, which is the whole point of F2. STEP C2's
+`--stratified` requires at least two kinds in every k ∈ {2,3} set (k = 1 stays
+exhaustive), giving 11 / 34 / 141 sets against 11 / 55 / 165 unstratified. The
+flag and the seed are in the provenance of every run that uses it. **E-B2 and
+E-B3 do not stratify** — they sweep the full combination space and the full pool
+respectively, so their `n` is the unstratified one.
+
+**3. D40's mirrors are excluded at build, and that is why `enable_pd` gates it.**
+`_corpus(..., exclude_mirrors=enable_pd)`: a P/D corpus contains mirror-symmetric
+splits that `EnvelopeCache` collapses onto one entry (D40), so keeping both would
+count one simulation twice. 282 of F2's 528 generated candidates are excluded as
+mirror members, leaving 246, of which 23 more have no cache entry (D71) — the
+223 the experiments use. E-A1 keeps its mirrors because `enable_pd=False` there
+and the committed result must reproduce; it has mirrored *aggregated* placements
+all the same, which is where the ×1.0 identity control finds D40.
+
+**Did it work? Partly, and the shortfall is the result.** F2 has two active
+kinds rather than one (`sim_error` and `profile`), so §2.3's gate is met. But
+`link_bw` is still inert, now for a third distinct reason: on E-A1 it could not
+matter, on F2 it is priced into 54 candidates including the winner and the
+decision is insensitive to it anyway (`eb1_f2.md`), and under flip detection the
+sweep finds no crossing anywhere in its range (`eb2_f2.md`). Three experiments
+agree that a measured 13 GB/s link does not decide anything on this cluster at
+300 requests. A fixture where it does needs a tighter TTFT or a larger KV working
+set, not merely P/D candidates — and the 23 candidates D71 removed are exactly
+the `tp1-dp1` P/D family where a transfer is largest relative to the engine's own
+work.
+
+**Where.** `experiments/uncertainty/fixtures/f2.json`,
+`experiments/uncertainty/fixtures/llama31-8b-ttft8000.yaml`,
+`experiments/uncertainty/build_truth_cache.py`,
+`experiments/uncertainty/eb1_regret_vs_budget.py` (`_corpus`, `stratified_subsets`),
+`experiments/uncertainty/results/{f2_truth,eb1_f2,eb2_f2,eb3_f2}.md`; the
+D-number comes from the `D70–D79` block `WORK_ORDER_uq_stage_b_plus.md` claims in
+STEP C0 (PR #87).
