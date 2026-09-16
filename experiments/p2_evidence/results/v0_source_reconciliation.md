@@ -1,3 +1,10 @@
+> **CORRECTED 2026-09-16 by V1 (D101).** §2.3 below says c76 is the only point
+> whose two sides use different aggregations. **It is not** — c14.832 and
+> c25.181 do too, because the performance envelope's `tpot_p50` field holds a
+> MEAN for the four points measured 2026-08-31. Every *number* in this file
+> stands; only the uniqueness claim is withdrawn. See
+> `v1_percentile_audit.md` §1 and `docs/deviations.md` D101.
+
 # V0 — where 57.1 ms came from, what aggregation the 18 % compares, and what the disclosure must say
 
 *`WORK_ORDER_p2_regular_spec_evidence.md` STEP V0. Run 2026-09-16 on the **A40
@@ -107,10 +114,10 @@ of the nine RNGD points and two of the three A40 points. So:
 
 | basis | points |
 | --- | --- |
-| sim p50 vs measured p50 | 6 RNGD low-load + 2 A40 low-load = **8** |
+| sim p50 vs measured p50 | ~~6~~ **4** RNGD low-load + 2 A40 low-load (D101) |
 | bucket mean error | RNGD c16.6 (EDF bundle fit) |
 | p95 abs error signed by the mean diff | A40 c170.56 |
-| **sim p50 vs measured MEAN** | **RNGD c76 — alone** |
+| **sim p50 vs measured MEAN** | **RNGD c76** — and, per D101, c14.832 and c25.181 |
 
 The A40 file already **declares its seam** and quantifies it: *"that point's
 magnitudes are p95 absolute errors signed by the mean; the new points are p50
