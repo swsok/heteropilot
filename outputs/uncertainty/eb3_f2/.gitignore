@@ -1,0 +1,8 @@
+# Simulator work dirs and console logs: regenerable from the commands in
+# experiments/uncertainty/results/eb3_f2.md, and a resimulation writes one
+# directory per candidate per endpoint. The shard and merged JSONs are
+# committed; these are not. `work*` because a sharded run uses one work dir
+# per variant (work, work_se, work_mirrors).
+work*/
+run.log
+*.log

@@ -2368,9 +2368,33 @@ card re-check and the surrogate regret tables. That is a decision about what to
 re-run, not a patch. Recorded so the next person does not rediscover it from a
 7.9e-2 residual.
 
+**What it costs a ΔR: nothing, measured 2026-09-15** (STEP C4,
+`experiments/uncertainty/results/eb3_f2.md`). `profile:cuda-a40-node_a40a` was
+resimulated on F2 twice, with the mirrors excluded (223 candidates, 422 runs) and
+with them present (460 candidates, 676 runs). The ΔR is **bit-identical** —
+21,615.372406 J both times — so D40 contributes **0 pp** of that item's 52.9 %
+magnitude error.
+
+The defect is not absent from the second run; it is loud. The ×1.0 identity
+control fails on **69** candidates there, worst at
+`mix(cuda-a40-node_a40a-tp2-dp2+cuda-a40-node_a40b-tp2-dp1)-s128-t2048` on
+`p99_ttft_ms` by **7.869e-02** — the same candidate and magnitude E-A1 reported,
+so it reproduces on demand. It simply does not reach a ΔR, because ΔR is a regret
+integral over the *recommendation* and the placements D40 corrupts are far from
+the argmax: F2's winner is a P/D split across the two A40 nodes, and the mirrored
+`mix(...)` candidates lose by a wide margin whichever prediction they read.
+
+**This narrows the entry, it does not close it.** 0 pp is a statement about this
+item on this fixture. A fixture whose recommendation *is* one of the mirrored
+placements would be a different measurement, and the cache key is still what
+should be fixed. What it does settle is PR #86's open worry that E-B3's magnitude
+error was partly D40's: on the one fixture where both halves were run, it is not.
+
 **Where.** `planner/envelope.py` (`_path`, `key_for`),
 `experiments/uncertainty/eb3_closed_form_vs_resim.py` (the identity control that
-found it).
+found it, and `--include-mirrors` / `--expect-mirrors`, which make the
+before-exclusion half runnable: with the mirrors back in the corpus the control
+fails by design, so the expected set has to be declared rather than inferred).
 
 ## D33 — two accuracy-domain implementations, one kept; `refuse` becomes the default · Decided 2026-09-11
 
@@ -2794,4 +2818,75 @@ flag is about the rule, not about the modelling choice above it.
 (`RESTORE_MATCHES_SWEEP`, `realisable_flip`, `score`, `classify_false_positive`'s
 `delta`), `tests/test_uq_eb2_classification.py`,
 `experiments/uncertainty/results/eb2_f2.md`; the D-number comes from the
+`D70–D79` block `WORK_ORDER_uq_stage_b_plus.md` claims in STEP C0 (PR #87).
+
+## D73 — a resimulated endpoint whose every run crashed is indistinguishable from one the input did not move · Recorded 2026-09-15
+
+`planner/uncertainty/resimulate.py::_endpoint` evaluates the candidates an
+uncertain input can touch and returns
+
+```python
+merged = dict(baseline)
+merged.update(judged_metrics(evaluation))
+...
+return Endpoint(..., seconds=elapsed, simulated=len(touched))
+```
+
+Both halves of that are reasonable on their own and wrong together. A candidate
+whose simulator run raised never reaches `judged_metrics`, so it is simply absent
+from the update and **keeps the baseline's value**; and `simulated` reports the
+number of runs *started*, not the number that came back. An endpoint at which
+every run failed therefore returns the baseline unchanged, claims to have
+simulated the whole touched set, and is byte-identical to an endpoint where the
+input genuinely moved nothing.
+
+**It fired on the first sharded run of E-B3** (STEP C4, 2026-09-15). Two helper
+nodes were given a copy of the repository whose rsync excluded
+`astra-sim/inputs` — 14 GB, believed to be generated per-run artifacts. It is
+almost all generated, but it also holds the ASTRA-Sim config templates, so every
+run on those nodes raised `FileNotFoundError: ASTRA-Sim system config template
+'.../astra-sim/inputs/system/system.json' not found` before the simulator
+started. The harness reported:
+
+```
+link_bw:fabric-rngd0-a40b: closed=0 resim=0 in 10s (122 runs)
+link exactness link_bw:fabric-rngd0-a40b: ... rel=0.000e+00 -> agrees
+```
+
+A clean pass, an exact-rule agreement, and a `resim` that matched the closed form
+to the digit — produced entirely by failure. **Link items are the worst case for
+this**, because their true ΔR on this fixture really is 0: total failure and the
+correct answer are the same number. The only visible symptom was that 122
+simulations had taken ten seconds.
+
+**Why `simulated` cannot be fixed into the answer.** Counting successes there
+would be a `planner/` change that C4's A4 does not allow, and it would still not
+distinguish the two cases for a caller that only reads ΔR. The discriminator
+belongs where the comparison is made.
+
+**What was done instead.** `endpoint_coverage()` in
+`experiments/uncertainty/eb3_closed_form_vs_resim.py` counts, per endpoint, how
+many touched candidates actually came back, using **object identity** against the
+baseline: a candidate that was really re-simulated gets a fresh
+`PredictedMetrics` out of `judged_metrics` even when its numbers are unchanged,
+while a crashed one still holds the very object the baseline had. Equality would
+be the opposite error — it would call a genuinely inert candidate a crash, and
+inert candidates are exactly what the link items are there to confirm.
+
+`coverage_gate()` then fails the run when any endpoint has **zero** successful
+runs: the artifact is written, `STOP` names the endpoints, and the exit code is 4.
+Partial failure is recorded and allowed through — D71 already puts 23 real holes
+in this corpus, and a corpus with holes is not the same as no corpus at all. The
+same gate runs over the union of shards in `--merge`, so a node with a broken
+install cannot be averaged in by the nodes that worked.
+
+**The near miss is the point.** Nothing in the result would have looked wrong.
+Four link items would have entered `eb3_f2.md` as confirmed zeros with an exact-
+rule agreement beside them, and the only evidence to the contrary was a timing
+line no reader has reason to check.
+
+**Where.** `experiments/uncertainty/eb3_closed_form_vs_resim.py`
+(`endpoint_coverage`, `coverage_gate`, and the coverage union in
+`merge_shards`), `tests/test_uq_eb3_gates.py`,
+`experiments/uncertainty/results/eb3_f2.md`; the D-number comes from the
 `D70–D79` block `WORK_ORDER_uq_stage_b_plus.md` claims in STEP C0 (PR #87).

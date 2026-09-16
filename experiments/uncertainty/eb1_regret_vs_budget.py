@@ -205,8 +205,16 @@ class World:
 
 def build_world(
     cache_dir: Path, work_dir: Path, workers: int, *, keep_predictor: bool = False,
-    fixture_path: Path = FIXTURE,
+    fixture_path: Path = FIXTURE, exclude_mirrors: bool | None = None,
 ) -> World:
+    """The corpus, its truth, and the pool of inputs that can be degraded.
+
+    `exclude_mirrors` defaults to the fixture's `enable_pd`, which is what C1
+    chose and what every committed result was built on. Passing `False` on a P/D
+    fixture deliberately puts D40's mirrored placements back in the corpus, which
+    E-B3 needs in order to measure what D40 contributes rather than assuming it
+    (STEP C4). Nothing else should pass it.
+    """
     fixture = json.loads(fixture_path.read_text())
     spec = load_service_spec(fixture["service"])
     cluster = load_cluster_spec(fixture["cluster"])
@@ -244,8 +252,9 @@ def build_world(
         spec, cluster, islands, profiles, enable_prefix_caching=False,
         enable_pd=enable_pd,
     ).generate()
+    drop_mirrors = enable_pd if exclude_mirrors is None else exclude_mirrors
     corpus, excluded_mirror, excluded_uncached = _corpus(
-        generation.candidates, cache, exclude_mirrors=enable_pd)
+        generation.candidates, cache, exclude_mirrors=drop_mirrors)
     try:
         evaluation = exhaustive.evaluate_candidates(
             corpus, spec, cluster, by_id, profiles, predictor,
