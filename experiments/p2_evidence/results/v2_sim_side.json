@@ -1,0 +1,142 @@
+{
+  "candidate_id": "cuda-a40-node0-0-tp1-dp1-s128-t2048",
+  "cluster": "experiments/configs/clusters/a40x8.yaml",
+  "service": "examples/service_specs/llama31-8b.yaml",
+  "stages": [
+    {
+      "offered_rps": 0.5,
+      "outcome": "OK",
+      "trace": "outputs/p2_evidence/v2_sim/trace_rps0.5.jsonl",
+      "metrics": {
+        "p50_ttft_ms": 131.8125415,
+        "p95_ttft_ms": 281.5996767000002,
+        "p99_ttft_ms": 451.20270989999926,
+        "p50_tpot_ms": 35.962059499999995,
+        "p95_tpot_ms": 39.0974956,
+        "p99_tpot_ms": 40.44492123,
+        "throughput_tps": 724.4134591014003,
+        "slo_goodput_rps": 0.479752485100002,
+        "slo_attainment": 1.0,
+        "completed_requests": 300,
+        "completed_tokens": 195753,
+        "total_energy_j": 353850.0,
+        "average_power_w": 565.0246645367422,
+        "peak_power_w": 658.85,
+        "tokens_per_joule": 0.5532089868588385,
+        "sim_wall_seconds": 98.07,
+        "served_concurrency": 11.352597668883666,
+        "served_concurrency_per_island": {
+          "cuda-a40-node0-0": 11.352597668883666
+        }
+      }
+    },
+    {
+      "offered_rps": 0.75,
+      "outcome": "OK",
+      "trace": "outputs/p2_evidence/v2_sim/trace_rps0.75.jsonl",
+      "metrics": {
+        "p50_ttft_ms": 148.137247,
+        "p95_ttft_ms": 331.2251797,
+        "p99_ttft_ms": 481.76361552999936,
+        "p50_tpot_ms": 40.6604205,
+        "p95_tpot_ms": 44.176352550000004,
+        "p99_tpot_ms": 44.653050019999995,
+        "throughput_tps": 1060.7660025374787,
+        "slo_goodput_rps": 0.7025064477104311,
+        "slo_attainment": 1.0,
+        "completed_requests": 300,
+        "completed_tokens": 195753,
+        "total_energy_j": 241590.0,
+        "average_power_w": 564.840960187354,
+        "peak_power_w": 656.45,
+        "tokens_per_joule": 0.8102694647957283,
+        "sim_wall_seconds": 59.8,
+        "served_concurrency": 18.57404852528888,
+        "served_concurrency_per_island": {
+          "cuda-a40-node0-0": 18.57404852528888
+        }
+      }
+    },
+    {
+      "offered_rps": 0.9,
+      "outcome": "OK",
+      "trace": "outputs/p2_evidence/v2_sim/trace_rps0.9.jsonl",
+      "metrics": {
+        "p50_ttft_ms": 159.2502455,
+        "p95_ttft_ms": 345.7404316500003,
+        "p99_ttft_ms": 498.7128355799995,
+        "p50_tpot_ms": 43.239667,
+        "p95_tpot_ms": 45.729281750000006,
+        "p99_tpot_ms": 46.49163815,
+        "throughput_tps": 1254.7403022910355,
+        "slo_goodput_rps": 0.8309685175175515,
+        "slo_attainment": 1.0,
+        "completed_requests": 300,
+        "completed_tokens": 195753,
+        "total_energy_j": 204220.0,
+        "average_power_w": 564.6689196675898,
+        "peak_power_w": 659.63,
+        "tokens_per_joule": 0.958539810008814,
+        "sim_wall_seconds": 50.85,
+        "served_concurrency": 23.21774461340856,
+        "served_concurrency_per_island": {
+          "cuda-a40-node0-0": 23.21774461340856
+        }
+      }
+    },
+    {
+      "offered_rps": 1.0,
+      "outcome": "OK",
+      "trace": "outputs/p2_evidence/v2_sim/trace_rps1.0.jsonl",
+      "metrics": {
+        "p50_ttft_ms": 169.644065,
+        "p95_ttft_ms": 346.82401325000006,
+        "p99_ttft_ms": 515.8037974899995,
+        "p50_tpot_ms": 45.107425500000005,
+        "p95_tpot_ms": 47.6803221,
+        "p99_tpot_ms": 48.313820039999996,
+        "throughput_tps": 1381.234188755768,
+        "slo_goodput_rps": 0.9147407826776861,
+        "slo_attainment": 1.0,
+        "completed_requests": 300,
+        "completed_tokens": 195753,
+        "total_energy_j": 185500.0,
+        "average_power_w": 564.6026829268291,
+        "peak_power_w": 657.56,
+        "tokens_per_joule": 1.0552722371967656,
+        "sim_wall_seconds": 41.77,
+        "served_concurrency": 26.606002414723342,
+        "served_concurrency_per_island": {
+          "cuda-a40-node0-0": 26.606002414723342
+        }
+      }
+    },
+    {
+      "offered_rps": 10.0,
+      "outcome": "OK",
+      "trace": "outputs/p2_evidence/v2_sim/trace_rps10.0.jsonl",
+      "metrics": {
+        "p50_ttft_ms": 42874.6930555,
+        "p95_ttft_ms": 100068.87182735001,
+        "p99_ttft_ms": 107475.56231883,
+        "p50_tpot_ms": 96.8153075,
+        "p95_tpot_ms": 113.78293085000001,
+        "p99_tpot_ms": 116.02440478,
+        "throughput_tps": 2548.03193759151,
+        "slo_goodput_rps": 0.0,
+        "slo_attainment": 0.0,
+        "completed_requests": 300,
+        "completed_tokens": 195753,
+        "total_energy_j": 100440.0,
+        "average_power_w": 564.5562711864412,
+        "peak_power_w": 679.87,
+        "tokens_per_joule": 1.9489545997610513,
+        "sim_wall_seconds": 13.67,
+        "served_concurrency": 169.3692321286501,
+        "served_concurrency_per_island": {
+          "cuda-a40-node0-0": 169.3692321286501
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "deployment_id": "a40-live-llama-tp1",
+  "backend": "vllm-cuda",
+  "pid": 752484,
+  "host": "local",
+  "port": 8100,
+  "base_url": "http://127.0.0.1:8100",
+  "plan_id": "a40-live-llama-tp1",
+  "started_at": "2026-09-16T07:05:10.607744+00:00",
+  "extra": {
+    "island_id": "cuda-a40-node0-0",
+    "node_id": "node0",
+    "device_indices": [
+      0,
+      1
+    ],
+    "cuda_visible_devices": "0,1",
+    "argv": [
+      "vllm",
+      "serve",
+      "NousResearch/Meta-Llama-3.1-8B",
+      "--tensor-parallel-size",
+      "1",
+      "--dtype",
+      "bfloat16",
+      "--kv-cache-dtype",
+      "auto",
+      "--block-size",
+      "16",
+      "--max-num-seqs",
+      "128",
+      "--max-num-batched-tokens",
+      "2048",
+      "--host",
+      "0.0.0.0",
+      "--port",
+      "8100",
+      "--no-enable-prefix-caching",
+      "--enable-chunked-prefill"
+    ],
+    "log": "outputs/deployments/a40-live-llama-tp1/vllm.log"
+  }
+}

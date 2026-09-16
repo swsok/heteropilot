@@ -3112,3 +3112,45 @@ rather than adopt this audit's numbers.
 **Where.** `experiments/p2_evidence/{v1_percentile_audit.py,results/v1_percentile_audit.md}`;
 D100 and `experiments/p2_evidence/results/v0_source_reconciliation.md` annotated
 with the correction. No profile, calibration file or envelope was modified.
+
+## D102 — the open-loop A40 domain cannot live where the work order put it · Resolved 2026-09-16
+
+*`WORK_ORDER_p2_regular_spec_evidence.md` STEP V2. Third entry from the
+`D100–D109` block. A small path change, recorded because the work order names a
+path the code forbids.*
+
+**What the work order asks for.** V2's side product is a new accuracy domain from
+open-loop measurement, at `profiles/calibration/a40.accuracy.openloop.yaml` — a
+new file rather than an extension of `a40.accuracy.yaml`, per rule A3.
+
+**Why that path does not work.** `load_accuracy_domains` globs
+`profiles/calibration/*.yaml` and raises on two domains for the same hardware
+label:
+
+```
+two accuracy domains for A40: profiles/calibration/a40.accuracy.yaml and
+profiles/calibration/a40.accuracy.openloop.yaml; refusing to choose between them
+```
+
+Placing the file there broke 2 tests and errored 25 more — every test that loads
+the committed tree. **The guard is correct** (uncertainty work order §2.4.1: a
+margin policy must never silently pick between two measurements of one device),
+and the ambiguity it refuses is real: both files measure hardware `A40`, through
+different harnesses, and one of them is not yet meant for planning.
+
+**How we adapt.** The file lives at
+`profiles/calibration/openloop/a40.accuracy.openloop.yaml`. The glob is not
+recursive, so the subdirectory keeps the file where the work order wants it
+without asking the planner to choose. A consumer that wants it passes it
+explicitly through the loader's `paths=` argument.
+
+**What this defers rather than settles.** Whether the two A40 domains should ever
+be merged is open, and V2 measured the reason to be careful: the open-loop
+points' TPOT agrees with the committed file at both anchors (−0.26 % against
+−0.32 % at L 11.35, −1.44 % against −1.41 % at L 169.37) but its TTFT does not
+(−35.06 % against −17.10 % at the low end), and only +20.26 ms of that is the
+client-side transport V2 measured directly. Until the rest is explained the two
+must not be interpolated on one axis.
+
+**Where.** `profiles/calibration/openloop/a40.accuracy.openloop.yaml`,
+`experiments/p2_evidence/results/v2_openloop_concurrency.md` §5-6.

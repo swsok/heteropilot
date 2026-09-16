@@ -1,0 +1,125 @@
+=== 2026-09-16T16:10:01+09:00 stage rps0.5_r0 ===
+open loop: 300 requests -> http://127.0.0.1:8100/v1 (trace 10.280 rps, offering 0.500 rps, span 600.0s, no concurrency bound)
+warm-up: 254.1 ms (paid before the schedule starts)
+an error occurred during closing of asynchronous generator <async_generator object safe_async_iterate at 0x7fc8619359a0>
+asyncgen: <async_generator object safe_async_iterate at 0x7fc8619359a0>
+    yield chunk
+    await iterator.aclose()
+    raise exc
+    async with safe_async_iterate(self._connection._receive_response_body(**kwargs)) as iterator:
+an error occurred during closing of asynchronous generator <async_generator object PoolByteStream.__aiter__ at 0x7fc86190e200>
+asyncgen: <async_generator object PoolByteStream.__aiter__ at 0x7fc86190e200>
+    yield chunk
+    async with safe_async_iterate(self._stream) as iterator:
+done: 300/300 ok, 0 failed in 625.4s
+launch error (ms): mean=0.90 p99=3.69 max=9.43
+served concurrency (Little's law) = 11.464
+ttft_ms: mean=227.30 p50=202.97 p95=396.06 p99=566.55
+tpot_ms: mean=36.28 p50=36.06 p95=39.83 p99=41.14
+output tokens=195753, 313.0 tok/s
+wrote outputs/p2_evidence/v2/rps0.5_r0.json
+--- settle ---
+=== 2026-09-16T16:20:58+09:00 stage rps0.75_r0 ===
+open loop: 300 requests -> http://127.0.0.1:8100/v1 (trace 10.280 rps, offering 0.750 rps, span 400.0s, no concurrency bound)
+warm-up: 252.0 ms (paid before the schedule starts)
+an error occurred during closing of asynchronous generator <async_generator object PoolByteStream.__aiter__ at 0x7fe9676f4f40>
+asyncgen: <async_generator object PoolByteStream.__aiter__ at 0x7fe9676f4f40>
+    yield chunk
+    async with safe_async_iterate(self._stream) as iterator:
+done: 300/300 ok, 0 failed in 427.0s
+launch error (ms): mean=1.04 p99=5.79 max=15.58
+served concurrency (Little's law) = 18.941
+ttft_ms: mean=253.70 p50=232.19 p95=436.85 p99=592.84
+tpot_ms: mean=40.96 p50=41.23 p95=44.91 p99=45.18
+output tokens=195753, 458.4 tok/s
+wrote outputs/p2_evidence/v2/rps0.75_r0.json
+--- settle ---
+=== 2026-09-16T16:28:37+09:00 stage rps0.9_r0 ===
+open loop: 300 requests -> http://127.0.0.1:8100/v1 (trace 10.280 rps, offering 0.900 rps, span 333.3s, no concurrency bound)
+warm-up: 253.7 ms (paid before the schedule starts)
+an error occurred during closing of asynchronous generator <async_generator object PoolByteStream.__aiter__ at 0x7fb1e394a110>
+asyncgen: <async_generator object PoolByteStream.__aiter__ at 0x7fb1e394a110>
+    yield chunk
+    async with safe_async_iterate(self._stream) as iterator:
+done: 300/300 ok, 0 failed in 360.9s
+launch error (ms): mean=1.25 p99=7.35 max=11.62
+served concurrency (Little's law) = 23.701
+ttft_ms: mean=267.64 p50=242.11 p95=466.69 p99=613.14
+tpot_ms: mean=43.33 p50=43.76 p95=46.50 p99=47.78
+output tokens=195753, 542.5 tok/s
+wrote outputs/p2_evidence/v2/rps0.9_r0.json
+--- settle ---
+=== 2026-09-16T16:35:09+09:00 stage rps1.0_r0 ===
+open loop: 300 requests -> http://127.0.0.1:8100/v1 (trace 10.280 rps, offering 1.000 rps, span 300.0s, no concurrency bound)
+warm-up: 255.2 ms (paid before the schedule starts)
+an error occurred during closing of asynchronous generator <async_generator object PoolByteStream.__aiter__ at 0x7f44422e6200>
+asyncgen: <async_generator object PoolByteStream.__aiter__ at 0x7f44422e6200>
+    yield chunk
+    async with safe_async_iterate(self._stream) as iterator:
+done: 300/300 ok, 0 failed in 327.8s
+launch error (ms): mean=1.31 p99=8.36 max=13.85
+served concurrency (Little's law) = 27.394
+ttft_ms: mean=277.40 p50=245.30 p95=492.01 p99=682.33
+tpot_ms: mean=45.52 p50=46.21 p95=49.11 p99=49.87
+output tokens=195753, 597.1 tok/s
+wrote outputs/p2_evidence/v2/rps1.0_r0.json
+--- settle ---
+=== 2026-09-16T16:41:08+09:00 stage rps10.0_r0 ===
+open loop: 300 requests -> http://127.0.0.1:8100/v1 (trace 10.280 rps, offering 10.000 rps, span 30.0s, no concurrency bound)
+warm-up: 254.6 ms (paid before the schedule starts)
+an error occurred during closing of asynchronous generator <async_generator object safe_async_iterate at 0x7f7f58b434c0>
+asyncgen: <async_generator object safe_async_iterate at 0x7f7f58b434c0>
+    yield chunk
+    await iterator.aclose()
+    raise exc
+    async with safe_async_iterate(self._connection._receive_response_body(**kwargs)) as iterator:
+an error occurred during closing of asynchronous generator <async_generator object PoolByteStream.__aiter__ at 0x7f7f58b575b0>
+asyncgen: <async_generator object PoolByteStream.__aiter__ at 0x7f7f58b575b0>
+    yield chunk
+    async with safe_async_iterate(self._stream) as iterator:
+done: 300/300 ok, 0 failed in 180.3s
+launch error (ms): mean=3.96 p99=27.33 max=49.28
+served concurrency (Little's law) = 170.466
+ttft_ms: mean=40722.20 p50=44304.31 p95=102629.18 p99=110135.70
+tpot_ms: mean=94.50 p50=98.24 p95=115.39 p99=117.27
+output tokens=195753, 1085.9 tok/s
+wrote outputs/p2_evidence/v2/rps10.0_r0.json
+--- settle ---
+=== 2026-09-16T16:44:40+09:00 stage rps0.9_r1 ===
+open loop: 300 requests -> http://127.0.0.1:8100/v1 (trace 10.280 rps, offering 0.900 rps, span 333.3s, no concurrency bound)
+warm-up: 254.2 ms (paid before the schedule starts)
+done: 300/300 ok, 0 failed in 360.9s
+launch error (ms): mean=1.28 p99=7.36 max=13.63
+served concurrency (Little's law) = 23.704
+ttft_ms: mean=266.35 p50=241.31 p95=459.53 p99=623.47
+tpot_ms: mean=43.34 p50=43.76 p95=46.55 p99=47.77
+output tokens=195753, 542.5 tok/s
+wrote outputs/p2_evidence/v2/rps0.9_r1.json
+--- settle ---
+=== 2026-09-16T16:51:12+09:00 stage rps0.9_r2 ===
+open loop: 300 requests -> http://127.0.0.1:8100/v1 (trace 10.280 rps, offering 0.900 rps, span 333.3s, no concurrency bound)
+warm-up: 254.6 ms (paid before the schedule starts)
+an error occurred during closing of asynchronous generator <async_generator object PoolByteStream.__aiter__ at 0x7fbd343a6110>
+asyncgen: <async_generator object PoolByteStream.__aiter__ at 0x7fbd343a6110>
+    yield chunk
+    async with safe_async_iterate(self._stream) as iterator:
+done: 300/300 ok, 0 failed in 360.9s
+launch error (ms): mean=1.24 p99=7.44 max=12.79
+served concurrency (Little's law) = 23.699
+ttft_ms: mean=267.14 p50=242.53 p95=453.49 p99=620.57
+tpot_ms: mean=43.32 p50=43.79 p95=46.51 p99=47.79
+output tokens=195753, 542.5 tok/s
+wrote outputs/p2_evidence/v2/rps0.9_r2.json
+--- settle ---
+=== 2026-09-16T16:57:44+09:00 stage rps10.0_r1 ===
+open loop: 300 requests -> http://127.0.0.1:8100/v1 (trace 10.280 rps, offering 10.000 rps, span 30.0s, no concurrency bound)
+warm-up: 251.7 ms (paid before the schedule starts)
+done: 300/300 ok, 0 failed in 180.3s
+launch error (ms): mean=3.64 p99=23.36 max=29.40
+served concurrency (Little's law) = 170.463
+ttft_ms: mean=40718.15 p50=44313.71 p95=102618.37 p99=110128.61
+tpot_ms: mean=94.50 p50=98.22 p95=115.36 p99=117.25
+output tokens=195753, 1086.0 tok/s
+wrote outputs/p2_evidence/v2/rps10.0_r1.json
+--- settle ---
+=== 2026-09-16T17:01:16+09:00 ladder complete ===

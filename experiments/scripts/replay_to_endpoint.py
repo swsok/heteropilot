@@ -166,7 +166,8 @@ async def _one(client: AsyncOpenAI, model: str, row: dict, cap: int,
 
 
 async def _one_open_loop(client: AsyncOpenAI, model: str, row: dict, cap: int,
-                         index: int, due_s: float, t_base: float) -> dict:
+                         index: int, due_s: float, t_base: float,
+                         ignore_eos: bool = False) -> dict:
     """Open-loop request: fired at `due_s` after `t_base`, unbounded, streamed.
 
     `launch_error_s` is reported per request rather than asserted here. A driver
@@ -180,8 +181,10 @@ async def _one_open_loop(client: AsyncOpenAI, model: str, row: dict, cap: int,
     if delay > 0:
         await asyncio.sleep(delay)
     launched = time.monotonic()
+    extra = {"ignore_eos": True} if ignore_eos else None
 
     rec = {"index": index, "ok": False,
+           "ignore_eos": ignore_eos,
            "due_s": due_s,
            "arrival_s": launched - t_base,
            "launch_error_s": (launched - t_base) - due_s,
@@ -190,14 +193,19 @@ async def _one_open_loop(client: AsyncOpenAI, model: str, row: dict, cap: int,
     try:
         stream = await client.completions.create(
             model=model, prompt=prompt, max_tokens=max_tokens,
-            temperature=0.0, stream=True,
+            temperature=0.0, stream=True, extra_body=extra,
         )
         first = None
         chunks = 0
         try:
             async for chunk in stream:
-                text = chunk.choices[0].text if chunk.choices else ""
-                if not text:
+                # One chunk per generated token, and SOME OF THEM CARRY EMPTY
+                # TEXT: a token that renders as "" is still a decode step the
+                # engine spent time on. Counting only non-empty text lost 1-4
+                # tokens per request in the capacity probe (27 035 of 27 268,
+                # 99.15 %), which biases the TPOT denominator. The token event is
+                # the chunk, so the chunk is what is counted.
+                if not chunk.choices:
                     continue
                 chunks += 1
                 if first is None:
@@ -315,7 +323,8 @@ async def _run_open_loop(args: argparse.Namespace, rows: list[dict],
 
     t_base = time.monotonic()
     records = await asyncio.gather(*[
-        _one_open_loop(client, args.model, row, args.max_tokens_cap, i, due, t_base)
+        _one_open_loop(client, args.model, row, args.max_tokens_cap, i, due, t_base,
+                       ignore_eos=args.ignore_eos)
         for i, (row, due) in enumerate(zip(rows, offsets, strict=True))
     ])
     summary = summarise_open_loop(list(records), offered)
@@ -344,6 +353,7 @@ async def _run_open_loop(args: argparse.Namespace, rows: list[dict],
              "dataset": str(args.dataset), "mode": "open_loop",
              "trace_rps": source, "offered_rps": offered,
              "max_tokens_cap": args.max_tokens_cap, "warm_up_s": warm_s,
+             "ignore_eos": args.ignore_eos,
              "summary": summary, "per_request": list(records)}, indent=2) + "\n")
         print(f"wrote {args.out}")
     return 0 if summary["ok"] else 1
@@ -409,6 +419,12 @@ def build_parser() -> argparse.ArgumentParser:
                    help="open loop: the trace's own rate, instead of estimating it")
     p.add_argument("--out", type=Path, default=None,
                    help="open loop: write per-request records and the summary here")
+    p.add_argument("--ignore-eos", action="store_true",
+                   help="open loop: generate exactly `output_toks` tokens, as the "
+                        "simulator does. Without it the engine stops at EOS and "
+                        "the two sides run different workloads -- the 2026-08-19 "
+                        "live run produced 347.5 output tokens per request against "
+                        "the trace's 652.5.")
     p.add_argument("--no-warmup", dest="warmup", action="store_false",
                    help="open loop: skip the pre-schedule connection warm-up "
                         "(costs ~87 ms of launch accuracy on the first arrival)")
