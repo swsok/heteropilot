@@ -1,0 +1,111 @@
+# A40 accuracy domain — OPEN-LOOP points, measured 2026-09-16 on the A40 node.
+#
+# WORK_ORDER_p2_regular_spec_evidence.md STEP V2. A SEPARATE FILE, per rule A3:
+# a40.accuracy.yaml is not extended in place, and nothing here overwrites a
+# committed measurement.
+#
+# IN A SUBDIRECTORY, deliberately -- deviations D102. The work order names
+# `profiles/calibration/a40.accuracy.openloop.yaml`, but `load_accuracy_domains`
+# globs `profiles/calibration/*.yaml` and RAISES on two domains for one hardware
+# label: "refusing to choose between them" (uncertainty work order §2.4.1). That
+# guard is right, and the ambiguity it refuses is real here -- two files would
+# both claim hardware `A40`, measured through different harnesses. The glob is
+# not recursive, so `openloop/` keeps the file where the work order wants it
+# without making the planner choose. Load it explicitly with the loader's
+# `paths=` argument when it is time to plan with it.
+#
+# Sign: (sim - measured) / measured. Negative = the simulator is optimistic.
+#
+# ---- How these differ from a40.accuracy.yaml, and why they are kept apart ----
+#
+# Both files are open-loop, so D19 does not separate them. Two other things do:
+#
+# 1. THE HARNESS. a40.accuracy.yaml's points come from `python -m bench run`, an
+#    in-process AsyncLLM replay. These come from a DEPLOYED vLLM server driven
+#    over HTTP (`replay_to_endpoint.py --open-loop`), which is what a Phase 4
+#    deployment actually is. Measured against the server's own /metrics on a
+#    60-request stage: TPOT is transport-free (client 36.64 ms against the
+#    engine's 36.62, +0.06 %) but TTFT carries **+20.26 ms** of client-side
+#    transport (+9.5 % at this load) -- request serialisation of up to 3 998
+#    input token ids, plus the SSE first-chunk path. The ttft_err_pct values
+#    below are RAW client-side and that offset is NOT subtracted; a consumer
+#    comparing them with engine-side numbers must account for it.
+#
+# 2. THE AGGREGATION. tpot_err_pct/ttft_err_pct are **p50 against p50**, which is
+#    what a40.accuracy.yaml's low-load points use and what `lowload_sim_error.py`
+#    produces, so the two files sit on one axis. That is NOT the basis the
+#    feasibility check reads -- it applies the margin to a p99 (D101) -- so the
+#    p99 pairing is recorded per point in the notes and in
+#    experiments/p2_evidence/results/v2_openloop_concurrency.md.
+#
+# ---- What these points establish ----
+#
+# * The committed domain's two ANCHORS are confirmed by an independent harness:
+#   at L 11.35 this measures -0.26 % where the committed domain interpolates
+#   -0.32 %, and at L 169.37 it measures -1.44 % against -1.41 %.
+# * The INTERIOR is not. a40.accuracy.yaml's own SEAM 2 warns that "the
+#   interval between 10.8 and 170.56 is interpolated across a change of regime
+#   with nothing measured inside it. Any margin read in that interval is
+#   carrying this assumption." Measured inside it, the assumption is wrong in
+#   the under-conservative direction: at L 26.6 the error is **-2.38 %** where
+#   the committed domain interpolates -0.43 %, a factor of 5.5. The error is not
+#   monotone between the anchors -- it dips deeper in the middle and comes back.
+# * Little's law behaves as claim 2 predicts in DIRECTION: the simulator is
+#   optimistic, so L_pred < L_meas at every stage. But the gap is 0.64-2.88 %,
+#   under the 5 % the work order set as the threshold for the coordinate choice
+#   to matter. Looking the margin up at L_pred instead of L_meas moves it by
+#   0.0008-0.0078 pp and changes no verdict.
+#
+# Raw: outputs/p2_evidence/v2/rps{0.5,0.75,0.9,1.0,10.0}_r*.json (untracked,
+# regenerable is FALSE for these -- they are measurements; committed copies live
+# beside this file's results doc). Simulated side:
+# experiments/p2_evidence/results/v2_sim_side.json.
+hardware:
+  A40:
+    hardware: A40
+    accuracy_domain:
+      fitted_at_concurrency: 26.606
+      # `refuse` rather than widen: five points over a 15x concurrency range say
+      # nothing about what happens outside it, and the committed file's own
+      # interior turned out to be the place it was wrong.
+      outside_domain: refuse
+      source: measured
+      arrival_process: open_loop
+      points:
+        - {conc: 11.353, tpot_err_pct: -0.26, ttft_err_pct: -35.06,
+           note: "0.5 rps, 300 req, 1 run. p99 pairing: tpot -1.69 %, ttft -20.36 %"}
+        - {conc: 18.574, tpot_err_pct: -1.38, ttft_err_pct: -36.20,
+           note: "0.75 rps, 300 req, 1 run. p99 pairing: tpot -1.17 %, ttft -18.74 %"}
+        - {conc: 23.218, tpot_err_pct: -1.21, ttft_err_pct: -34.19,
+           note: "0.9 rps, 300 req, 3 runs. p99 pairing: tpot -2.70 %, ttft -19.44 %.
+                  Run-to-run p99 TPOT spread over the three: 0.0151 ms (0.032 %)"}
+        - {conc: 26.606, tpot_err_pct: -2.38, ttft_err_pct: -30.84,
+           note: "1.0 rps, 300 req, 1 run. p99 pairing: tpot -3.11 %, ttft -24.41 %.
+                  Deepest TPOT error measured; the committed domain reads -0.43 % here"}
+        - {conc: 169.369, tpot_err_pct: -1.44, ttft_err_pct: -3.24,
+           note: "10 rps, 300 req, 2 runs. Saturated: measured L 170.46 against the
+                  committed domain's 170.56 anchor, 0.05 % apart, by a different
+                  harness. p99 pairing: tpot -1.05 %, ttft -2.41 %"}
+      note: >
+        Five open-loop points from a deployed vLLM server, served concurrency
+        11.35 to 169.37 as the SIMULATOR computes it (the committed file's x-axis
+        convention). The TPOT error is NOT monotone across the range: -0.26 % at
+        11.35, deepening to -2.38 % at 26.6, back to -1.44 % at 169.4. A linear
+        interpolation between the two ends -- which is what a40.accuracy.yaml
+        does -- under-charges the middle by up to 5.5x. TTFT errors are raw
+        client-side and carry +20.26 ms of transport; see the header.
+provenance:
+  measured_on: A40 node, 8 x NVIDIA A40, single card TP=1
+  deployment: planner deploy, outputs/plans/a40-live-llama-tp1.yaml
+  model: NousResearch/Meta-Llama-3.1-8B
+  workload: workloads/sharegpt-llama-3.1-8b-300-sps10.jsonl, rescaled by a
+    constant factor per rate (a rescaled Poisson process is still Poisson)
+  driver: experiments/scripts/replay_to_endpoint.py --open-loop --ignore-eos
+  ignore_eos_note: >
+    --ignore-eos is not optional. The simulator generates exactly the trace's
+    output_toks; without it the engine stops at EOS and the two sides run
+    different workloads -- the 2026-08-19 live run delivered 347.5 output tokens
+    per request against the trace's 652.5. With it, every stage delivered
+    195 753 output tokens, the trace's exact total.
+  simulated_side: experiments/p2_evidence/v2_sim_side.py, same rescaled arrival
+    times, candidate cuda-a40-node0-0-tp1-dp1-s128-t2048

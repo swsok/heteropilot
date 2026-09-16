@@ -1,0 +1,20 @@
+=== ladder complete at 2026-09-16T17:01:27+09:00; starting simulator side ===
+rates measured on hardware: [0.5, 0.75, 0.9, 1.0, 10.0]
+rescaling traces:
+  rps   0.5: factor 20.5594, span 600.0s -> trace_rps0.5.jsonl
+  rps  0.75: factor 13.7063, span 400.0s -> trace_rps0.75.jsonl
+  rps   0.9: factor 11.4219, span 333.3s -> trace_rps0.9.jsonl
+  rps   1.0: factor 10.2797, span 300.0s -> trace_rps1.0.jsonl
+  rps  10.0: factor 1.0280, span 30.0s -> trace_rps10.0.jsonl
+--- simulating rps 0.5
+    outcome=OK L_pred=11.352597668883666 p99_ttft=451.20270989999926 p99_tpot=40.44492123
+--- simulating rps 0.75
+    outcome=OK L_pred=18.57404852528888 p99_ttft=481.76361552999936 p99_tpot=44.653050019999995
+--- simulating rps 0.9
+    outcome=OK L_pred=23.21774461340856 p99_ttft=498.7128355799995 p99_tpot=46.49163815
+--- simulating rps 1.0
+    outcome=OK L_pred=26.606002414723342 p99_ttft=515.8037974899995 p99_tpot=48.313820039999996
+--- simulating rps 10.0
+    outcome=OK L_pred=169.3692321286501 p99_ttft=107475.56231883 p99_tpot=116.02440478
+wrote experiments/p2_evidence/results/v2_sim_side.json
+=== sim side finished at 2026-09-16T17:05:52+09:00 rc=0 ===

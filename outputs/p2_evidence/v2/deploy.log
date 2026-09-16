@@ -1,0 +1,18 @@
+plan    : a40-live-llama-tp1 (NousResearch/Meta-Llama-3.1-8B)
+cluster : a40x8-node0
+backend : vllm-cuda (host=local, port=8100)
+
+resolved serve command(s):
+  [cuda-a40-node0-0] devices -> 0,1
+    CUDA_VISIBLE_DEVICES=0,1 vllm serve NousResearch/Meta-Llama-3.1-8B --tensor-parallel-size 1 --dtype bfloat16 --kv-cache-dtype auto --block-size 16 --max-num-seqs 128 --max-num-batched-tokens 2048 --host 0.0.0.0 --port 8100 --no-enable-prefix-caching --enable-chunked-prefill
+
+validation: OK
+
+launched:
+  deployment id : a40-live-llama-tp1
+  backend       : vllm-cuda
+  plan          : a40-live-llama-tp1
+  endpoint      : http://127.0.0.1:8100
+  pid           : 752484
+  started       : 2026-09-16T07:05:10.607744+00:00
+  CUDA devices  : 0,1
