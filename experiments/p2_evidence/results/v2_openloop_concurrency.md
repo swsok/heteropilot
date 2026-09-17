@@ -196,6 +196,48 @@ session. A restart, a different card, or a different driver would add variance
 this does not capture, so **0.015 ms is a lower bound** on true repeatability. It
 is the right bound for V3, which compares two verdicts on one deployment.
 
+## 7.1 NUMA re-check — the ladder is validated, not merely argued
+
+*Added 2026-09-17, after Appendix A.3 of `v3_verdict_accuracy.md` found that
+leaving the server's NUMA binding to chance is worth **1.93×** of throughput on
+this host. Every stage above ran **unbound**, so the ladder rested on GPUs 0–3
+having happened to land on the right node — an argument, not a check.*
+
+The five rates were run again with `numactl --cpunodebind=0 --membind=0`
+(GPU 0 is on NUMA node 0), one repeat each, fresh plan id, same workload and
+driver. Against the unbound stages above:
+
+| rps | `L` Δ | p99 TPOT Δ | p99 TTFT Δ | output tok/s Δ |
+| ---: | ---: | ---: | ---: | ---: |
+| 0.50 | −0.26 % | −0.46 % | −3.45 % | **+0.00 %** |
+| 0.75 | −0.24 % | −0.16 % | +3.28 % | **+0.01 %** |
+| 0.90 | −0.30 % | −0.24 % | +0.15 % | **+0.01 %** |
+| 1.00 | −0.37 % | −0.26 % | −4.08 % | **+0.00 %** |
+| 10.0 | −0.09 % | −0.39 % | −0.56 % | **+0.42 %** |
+
+**Throughput agrees to 0.42 % at worst**, against the 93 % that binding was worth
+on the TP=4 deployment. Served concurrency, which is what claim 2 rests on,
+agrees to **0.37 %**; p99 TPOT to **0.46 %**.
+
+**So every conclusion in this file stands**, including the two that would have
+been most at risk: `L_pred < L_meas` at 0.64–2.88 % (§3), and the L > 170 stage
+landing at 170.46 against the committed domain's 170.56 anchor (§2).
+
+**One column is not as clean and is reported rather than smoothed.** p99 TTFT
+differs by up to **4.08 %**. That is larger than the 1.67 % run-to-run spread
+measured at 0.9 rps over three repeats (§7), but each rate here is a **single**
+run on each side, so the comparison cannot separate a real difference from TTFT's
+own noise — and TTFT is the noisiest metric in the ladder by an order of
+magnitude. It is not resolvable with the data taken, and nothing in this file
+turns on a 4 % TTFT difference.
+
+**Why the exposure was small here, now that it is measured rather than assumed.**
+The ladder is TP=1 on one card: there is no collective, and the host-side traffic
+is one engine's. The TP=4 deployment that exposed the effect drives four workers
+whose all-reduce and KV movement cross the host bridge on every step. The
+difference is not that TP=1 is immune — it is that it asks far less of the path
+that NUMA placement governs.
+
 ## 8. Raw material
 
 | what | path |
@@ -208,3 +250,4 @@ is the right bound for V3, which compares two verdicts on one deployment.
 | ladder | `experiments/p2_evidence/v2_run_ladder.sh` |
 | simulator side | `experiments/p2_evidence/v2_sim_side.py` |
 | run logs | `outputs/p2_evidence/v2/{ladder,simside,deploy}.log` |
+| NUMA-bound re-check (§7.1) | `outputs/p2_evidence/v2_numa/rps*_numa.json`, runner `experiments/p2_evidence/v2_ladder_numa.sh`, log `outputs/p2_evidence/v2_numa_ladder.log` |
