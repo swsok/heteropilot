@@ -36,6 +36,39 @@ driver has re-enumerated three times now, and the card count has gone 4 → 3 �
 > `device: rngd:16, card: npu3`, correct when measured. Today that index is npu2.
 > **The card label is the durable fact; the index is not.**
 
+## NUMA — bind, and never leave it to the scheduler
+
+Two nodes, 48 CPUs each, **distance 10 local against 32 remote**. All three RNGD
+cards are on **node 0**:
+
+| card | PCI | NUMA node | local CPUs |
+| --- | --- | ---: | --- |
+| npu0 | `0000:03:00.0` | 0 | 0-23, 48-71 |
+| npu1 | `0000:04:00.0` | 0 | 0-23, 48-71 |
+| npu2 | `0000:45:00.0` | 0 | 0-23, 48-71 |
+
+Leaving placement to the kernel was measured at **1.93x of throughput** on this
+host (`WORK_ORDER_p2_regular_spec_evidence.md` Appendix A.3, on a TP=4 vLLM
+deployment). A single-engine RNGD run is far less exposed -- re-measuring the NPU
+spike's attention cost bound against unbound agreed to 0.24 % (D94) -- but the
+exposure is a property of the run, not of the hardware, and an unbound number is
+not comparable with a bound one.
+
+`measure_envelope.py` and `rebuild_rngd_bundle_from_edf.py collect` take
+`--numa-bind`, **default `auto`**, which pins the server and the bench client to
+the card's own node and records the choice in the artifact.
+
+> **`/sys/class/rngd_mgmt/*` cannot answer "which node".** Those are virtual
+> devices with no PCI parent, so there is no `device/numa_node` to follow and the
+> obvious sysfs walk silently finds nothing. Ask `furiosa-smi info` for the BDF
+> and read `/sys/bus/pci/devices/<bdf>/numa_node`.
+
+Verify a run is actually bound rather than trusting the flag:
+
+```bash
+taskset -cp $(pgrep -f "[f]uriosa-llm serve" | head -1)   # want node 0's list, not 0-95
+```
+
 ## Who holds the devices
 
 **This is a shared Kubernetes node and another tenant's workload owns most of it.**

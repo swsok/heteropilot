@@ -192,6 +192,17 @@ is proven byte-identical (R1/R2 anchors plus six identical CSVs).
   for a step-timestamp logging option, or find one.
 - **C.5's staircase**, not run.
 
+**NUMA: bind, and check that it took.** STEP C originally ran unbound, which the
+repo already knew was worth up to 1.93x of throughput here (`p2ev` Appendix A.3).
+Both harnesses now take `--numa-bind`, **default `auto`**, and `provenance`
+records the affinity mask. Re-measuring C.3 bound agreed to 0.24 % — the cost
+model was safe because it reads device cycles — but the wall-clock half of
+`measure_envelope.py` and the committed RNGD envelope and accuracy domain were
+all taken unbound and have **not** been re-taken. D94. Note the trap:
+`/sys/class/rngd_mgmt/*` are virtual devices with no PCI parent, so resolve the
+node through `furiosa-smi info` and the BDF, and verify with `taskset -cp` rather
+than trusting the flag.
+
 **Trap, and it cost a device slot.** `npu0` — the card every committed RNGD
 measurement was taken on — was held throughout by another tenant's pod, and all
 three vendor-level checks said it was free. `alloc_status` read all zeros,

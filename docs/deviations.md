@@ -3440,3 +3440,73 @@ small, quantified part and the accuracy domain keeps the rest.
 `workloads/{fixedlen-512in-128out-64,bucket1024-900in-100out-96,bucket2048-1900in-100out-96}.jsonl`,
 `outputs/npu_spike/{c1_fixedlen,c3_bucket1024,c3_bucket2048}`,
 `docs/npu_exec_spike.md` §C and §D.
+
+---
+
+## D94 — STEP C ran without NUMA binding; the harnesses now bind by default and the cost model survives the check · Recorded 2026-09-17
+
+**The debt.** Every measurement in `WORK_ORDER_npu_exec_model_spike.md` STEP C was
+taken with placement left to the kernel scheduler. `measure_envelope.py`,
+`rebuild_rngd_bundle_from_edf.py` and `bench_furiosa_endpoint.py` had no
+`numactl`, no `taskset` and no affinity handling of any kind, and
+`planner/util/provenance.py` recorded `cpu_count` but not where the process was
+allowed to run -- so no artifact said whether it was bound.
+
+This was **already known to matter in this repo** and the spike did not carry it
+over: `WORK_ORDER_p2_regular_spec_evidence.md` Appendix A.3 measured that leaving
+the server's binding to chance is worth **1.93x of throughput on this host**, and
+that every A40 measurement before it ran unbound. That work landed on `main`
+during this spike's session and was not read.
+
+**The host.** Two NUMA nodes, 48 CPUs each, distances 10 local / 32 remote. All
+three RNGD cards report `numa_node = 0` (PCI `03:00.0`, `04:00.0`, `45:00.0`), so
+the spike's `npu0`-against-`npu2` cross-check was not confounded by different
+nodes -- which was luck, not method.
+
+**The fix.** `--numa-bind` on both harnesses: `auto` resolves the card's node from
+its PCI address and pins the server **and** the bench client to it, a node number
+pins explicitly, `off` reproduces the old behaviour. The choice is recorded in
+each point's JSON, and `provenance.cpu_placement()` now records the affinity mask
+and which NUMA nodes it lands on.
+
+**The default is `auto`, against this repo's usual convention** that a new flag
+defaults to the old behaviour so committed invocations stay byte-identical. That
+argument does not transfer to a measurement whose old behaviour is
+*unreproducible*: an unbound run's number depends on where the scheduler put it.
+
+*Trap worth recording.* `/sys/class/rngd_mgmt/*` are **virtual** devices with no
+PCI parent, so `device/numa_node` cannot be followed and the obvious sysfs walk
+silently finds nothing. The resolver asks `furiosa-smi info` for the BDF and reads
+`/sys/bus/pci/devices/<bdf>/numa_node`. The first implementation used the sysfs
+guess, returned "unresolved" and bound nothing -- it failed safe by design, but a
+reader would have believed binding was on.
+
+**The check.** `bucket1024` re-collected on the same card with `--numa-bind auto`
+(server mask `0-23,48-71`, against `0-95` unbound), same workload, same
+concurrencies:
+
+| group size | unbound us | bound us | delta |
+| ---: | ---: | ---: | ---: |
+| 1 | 48.3 | 48.3 | +0.02 % |
+| 2 | 54.7 | 54.8 | +0.12 % |
+| 4 | 50.3 | 50.2 | -0.24 % |
+| 8 | 67.6 | 67.6 | -0.05 % |
+| 16 | 96.5 | 96.6 | +0.05 % |
+
+Least squares `43.7 + 3.20 x n` on both sides -- fixed term 0.05 %, slope 0.07 %.
+**D93's cost model stands and needs no correction.** The reason it survives is
+structural: these are EDF *device* cycles, and NUMA governs host memory and DMA
+staging rather than on-device kernel time. The RNGD artifact's `tp=8` is two fused
+quads inside one card, so from the host it is one engine -- the shape that showed
+0.42 % in the A40 check, not the four-worker shape that showed 93 %.
+
+**Not cleared by this.** The wall-clock half of `measure_envelope.py` -- served
+concurrency, throughput, TPOT, TTFT -- was not re-measured. C.1's hit rates are
+runtime counters and are unaffected. The committed RNGD envelope and accuracy
+domain were taken unbound by earlier sessions and re-taking them is outside this
+spike.
+
+**Where.** `experiments/scripts/measure_envelope.py`,
+`experiments/scripts/rebuild_rngd_bundle_from_edf.py`,
+`planner/util/provenance.py`, `experiments/results/npu_exec_attention_groups.md`,
+`outputs/npu_spike/c3_bucket1024_numa/`, `docs/nodes/npu.md`.

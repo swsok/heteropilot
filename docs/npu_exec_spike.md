@@ -638,6 +638,34 @@ should show more groups and more attention executions per layer. That is the
 experiment a follow-up work order should run, and it is the same axis B.3's
 hold-out was meant to probe.
 
+#### The whole of §C ran without NUMA binding, and that is now checked
+
+Every measurement above was taken with placement left to the kernel scheduler —
+no `numactl`, no affinity, and nothing in the artifacts saying so. The repo had
+already measured that leaving it to chance is worth **1.93× of throughput** on
+this host (`p2_regular_spec_evidence` Appendix A.3); that work landed on `main`
+during this session and this spike did not carry it over. **D94** records the debt
+and the fix: `--numa-bind` on both harnesses, defaulting to `auto`, plus the
+affinity mask in `provenance`.
+
+The check, on the same card and workload, server mask `0-23,48-71` against `0-95`:
+
+| group size | unbound | bound | Δ |
+| ---: | ---: | ---: | ---: |
+| 1 | 48.3 | 48.3 | +0.02 % |
+| 2 | 54.7 | 54.8 | +0.12 % |
+| 4 | 50.3 | 50.2 | −0.24 % |
+| 8 | 67.6 | 67.6 | −0.05 % |
+| 16 | 96.5 | 96.6 | +0.05 % |
+| **fit** | **43.7 + 3.20·n** | **43.7 + 3.20·n** | 0.05 % / 0.07 % |
+
+**The cost model stands.** It survives because these are EDF *device* cycles and
+NUMA governs host memory and DMA staging, and because `tp=8` here is two fused
+quads inside one card — from the host, one engine. That was the argument before
+the re-measurement; it is now a result. What is **not** cleared: the wall-clock
+half of `measure_envelope.py`, and the committed envelope and accuracy domain,
+which earlier sessions took unbound.
+
 #### R-attn, finally a number
 
 With the measured cost model in place of a ratio of group counts — re-grouping

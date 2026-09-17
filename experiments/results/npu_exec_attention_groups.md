@@ -35,3 +35,46 @@ Least squares over the group sizes above: **45.1 µs fixed + 3.15 µs per sequen
 
 Least squares over the group sizes above: **37.1 µs fixed + 8.54 µs per sequence**.
 
+
+## NUMA binding: the exposure was real and the numbers were not affected
+
+Everything above was measured **unbound** — no `numactl`, no affinity, placement
+left to the kernel scheduler. That is a method debt rather than a number debt, and
+this section is the check that says which.
+
+The host has two NUMA nodes at a distance of 32 against 10 local, and the repo had
+already measured what leaving placement to chance is worth: **1.93× of throughput**
+on a TP=4 vLLM deployment, with every A40 measurement before that one unbound.
+STEP C then ran unbound too.
+
+`bucket1024` was re-collected on the same card with `--numa-bind auto`, which
+resolves the card's node from its PCI address and pins the server *and* the bench
+client to it. Verified applied: the server's CPU mask became `0-23,48-71` — node
+0's CPU list — against the unrestricted `0-95` of the original runs. Same
+workload, same concurrencies, same artifact.
+
+| group size | unbound µs | bound µs | Δ |
+| ---: | ---: | ---: | ---: |
+| 1 | 48.3 | 48.3 | +0.02 % |
+| 2 | 54.7 | 54.8 | +0.12 % |
+| 4 | 50.3 | 50.2 | −0.24 % |
+| 8 | 67.6 | 67.6 | −0.05 % |
+| 16 | 96.5 | 96.6 | +0.05 % |
+| **least squares** | **43.7 + 3.20·n** | **43.7 + 3.20·n** | fixed 0.05 %, slope 0.07 % |
+
+Pooled over c4/c8/c16; worst single deviation **0.24 %**.
+
+**Why the exposure was small, now measured rather than argued.** These numbers are
+EDF *device* cycles for an on-device attention stage, and NUMA placement governs
+host-side memory and DMA staging, not how many cycles a kernel takes once its
+operands are resident. And the RNGD artifact's `tensor_parallel_size = 8` is two
+fused quads *inside one card* — the intra-card reduction is on the device, so from
+the host this is one engine, which is the shape that showed 0.42 % in the A40
+check, not the four-worker TP=4 shape that showed 93 %.
+
+**What this does not clear.** The wall-clock side of `measure_envelope.py` — served
+concurrency, throughput, TPOT, TTFT — is host-timed and was *not* re-measured here.
+C.1's hit rates are runtime counters and are unaffected; `point_c4.json`'s served
+concurrency is wall-clock and nothing in this spike rests on it. The committed
+RNGD envelope and accuracy domain were taken unbound by earlier sessions and are
+outside this spike's scope to re-take.
