@@ -1,0 +1,32 @@
+{
+  "trace": "workloads/sharegpt-llama-3.1-8b-300-sps10.jsonl",
+  "cache_used": false,
+  "candidates": [
+    {
+      "candidate_id": "cuda-a40-node_a40a-tp4-dp1-s128-t2048",
+      "outcome": "OK",
+      "metrics": {
+        "p50_ttft_ms": 7140.611465,
+        "p95_ttft_ms": 15322.012587200004,
+        "p99_ttft_ms": 16716.437878409997,
+        "p50_tpot_ms": 30.4825645,
+        "p95_tpot_ms": 35.67384815,
+        "p99_tpot_ms": 36.54736826,
+        "throughput_tps": 7703.735477319392,
+        "slo_goodput_rps": 5.101901674192519,
+        "slo_attainment": 1.0,
+        "completed_requests": 300,
+        "completed_tokens": 195753,
+        "total_energy_j": 76360.0,
+        "average_power_w": 1296.672931034483,
+        "peak_power_w": 1363.96,
+        "tokens_per_joule": 2.56355421686747,
+        "sim_wall_seconds": 51.75,
+        "served_concurrency": 127.87194609280543,
+        "served_concurrency_per_island": {
+          "cuda-a40-node_a40a": 127.87194609280543
+        }
+      }
+    }
+  ]
+}

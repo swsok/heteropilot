@@ -1,0 +1,18 @@
+plan    : p2ev-v3-p1 (NousResearch/Meta-Llama-3.1-8B)
+cluster : pd-rngd-gpu-card
+backend : vllm-cuda (host=local, port=8200)
+
+resolved serve command(s):
+  [cuda-a40-node_a40a] devices -> 0,1,2,3
+    CUDA_VISIBLE_DEVICES=0,1,2,3 vllm serve NousResearch/Meta-Llama-3.1-8B --tensor-parallel-size 4 --dtype bfloat16 --kv-cache-dtype auto --block-size 16 --max-num-seqs 128 --max-num-batched-tokens 2048 --host 0.0.0.0 --port 8200 --no-enable-prefix-caching --enable-chunked-prefill
+
+validation: OK
+
+launched:
+  deployment id : p2ev-v3-p1
+  backend       : vllm-cuda
+  plan          : p2ev-v3-p1
+  endpoint      : http://127.0.0.1:8200
+  pid           : 822707
+  started       : 2026-09-16T08:42:20.305613+00:00
+  CUDA devices  : 0,1,2,3

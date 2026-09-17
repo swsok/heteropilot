@@ -1,0 +1,51 @@
+=== 2026-09-17T09:52:30+09:00 deploying p2ev-v3-p1 ===
+  backend       : vllm-cuda
+  plan          : p2ev-v3-p1
+  endpoint      : http://127.0.0.1:8200
+  pid           : 1115837
+  started       : 2026-09-17T00:52:30.751950+00:00
+  CUDA devices  : 0,1,2,3
+healthy after ~70s
+=== 2026-09-17T09:53:30+09:00 p2ev-v3-p1 repeat 0 ===
+open loop: 300 requests -> http://127.0.0.1:8200/v1 (trace 10.280 rps, offering 10.280 rps, span 29.2s, no concurrency bound)
+warm-up: 251.0 ms (paid before the schedule starts)
+done: 300/300 ok, 0 failed in 101.4s
+launch error (ms): mean=5.19 p99=44.15 max=71.51
+served concurrency (Little's law) = 163.358
+ttft_ms: mean=20367.73 p50=22792.48 p95=49391.52 p99=53162.05
+tpot_ms: mean=53.32 p50=56.52 p95=65.39 p99=65.99
+output tokens=195753, 1930.7 tok/s
+wrote outputs/p2_evidence/v3/p2ev-v3-p1_r0.json
+=== 2026-09-17T09:55:43+09:00 p2ev-v3-p1 repeat 1 ===
+open loop: 300 requests -> http://127.0.0.1:8200/v1 (trace 10.280 rps, offering 10.280 rps, span 29.2s, no concurrency bound)
+warm-up: 255.1 ms (paid before the schedule starts)
+an error occurred during closing of asynchronous generator <async_generator object safe_async_iterate at 0x7f0ece4cf4c0>
+asyncgen: <async_generator object safe_async_iterate at 0x7f0ece4cf4c0>
+    yield chunk
+    await iterator.aclose()
+    raise exc
+    async with safe_async_iterate(self._connection._receive_response_body(**kwargs)) as iterator:
+an error occurred during closing of asynchronous generator <async_generator object PoolByteStream.__aiter__ at 0x7f0ece4df5b0>
+asyncgen: <async_generator object PoolByteStream.__aiter__ at 0x7f0ece4df5b0>
+    yield chunk
+    async with safe_async_iterate(self._stream) as iterator:
+done: 300/300 ok, 0 failed in 101.4s
+launch error (ms): mean=5.54 p99=24.94 max=76.08
+served concurrency (Little's law) = 163.425
+ttft_ms: mean=20373.59 p50=22825.01 p95=49406.75 p99=53170.34
+tpot_ms: mean=53.34 p50=56.56 p95=65.45 p99=66.03
+output tokens=195753, 1930.8 tok/s
+wrote outputs/p2_evidence/v3/p2ev-v3-p1_r1.json
+=== 2026-09-17T09:57:55+09:00 p2ev-v3-p1 repeat 2 ===
+open loop: 300 requests -> http://127.0.0.1:8200/v1 (trace 10.280 rps, offering 10.280 rps, span 29.2s, no concurrency bound)
+warm-up: 252.8 ms (paid before the schedule starts)
+done: 300/300 ok, 0 failed in 101.4s
+launch error (ms): mean=5.00 p99=30.42 max=69.75
+served concurrency (Little's law) = 163.366
+ttft_ms: mean=20358.24 p50=22783.34 p95=49403.97 p99=53196.06
+tpot_ms: mean=53.35 p50=56.58 p95=65.49 p99=66.01
+output tokens=195753, 1930.3 tok/s
+wrote outputs/p2_evidence/v3/p2ev-v3-p1_r2.json
+=== 2026-09-17T10:00:08+09:00 stopping p2ev-v3-p1 ===
+stopped deployment 'p2ev-v3-p1'.
+=== 2026-09-17T10:00:08+09:00 done ===
