@@ -46,6 +46,20 @@ hardware:
       fitted_at_concurrency: 16.6
       outside_domain: widen_error_bars
       source: measured
+      # Application-condition fields added 2026-09-17, recording the configuration
+      # these points were measured under (domain-scoping S1, D110). `points` are
+      # untouched -- rule A3. CARD-as-device: one accelerator is one RNGD card, so
+      # a single card is tp=1 on one island. (`rngd_perpe.yaml` models THE SAME
+      # SILICON as eight PEs at tp=8; the two files differ on this field and that
+      # is exactly the point of carrying it.)
+      parallelism: {tp: 1, pp: 1, dp: 1}
+      placement:
+        islands: 1
+        # UNKNOWN, not `unpinned`. Nothing in this file's provenance or in the
+        # furiosa-llm run logs records the host binding, and no A40-style survey
+        # exists for the NPU node. An unknown condition is skipped by the match
+        # test and flagged, never guessed (rule A1).
+        device_binding: unknown
       #
       # The x axis is the operating point AS COMPUTED FROM THE SIMULATION
       # (planner/util/operating_point.py), because that is what the planner knows

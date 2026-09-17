@@ -13,6 +13,7 @@ never prune an achievable configuration (§9).
 from __future__ import annotations
 
 import enum
+import json
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
@@ -508,12 +509,21 @@ def evaluate_candidates(
             # `closest_plan`, which is a claim about how narrowly something
             # missed. Charged to the same epistemic stage as a slab3d refusal
             # (D33): unmeasured, not infeasible.
+            # Two epistemic buckets, not one (domain-scoping S1, D110). A
+            # candidate whose CONFIGURATION no domain was measured under is a
+            # different gap from one whose OPERATING POINT ran past the end of
+            # the right domain, and the two call for different measurements.
+            # Both remain unmeasured rather than infeasible.
             result.unmeasured.append((candidate.id, decision))
             result.unmeasured_metrics[candidate.id] = metrics
             result.rejections.append(
                 Rejection(
                     candidate_id=candidate.id,
-                    stage=RejectionStage.OUTSIDE_CALIBRATION_DOMAIN,
+                    stage=(
+                        RejectionStage.CALIBRATION_CONDITION_MISMATCH
+                        if decision.refusal == "condition_mismatch"
+                        else RejectionStage.OUTSIDE_CALIBRATION_DOMAIN
+                    ),
                     reason=judgement.reason,
                 )
             )
@@ -603,12 +613,42 @@ def _unmeasured_suggestions(
         if best_value is None or (value > best_value if maximize else value < best_value):
             best_id, best_value, best_decision = candidate_id, value, decision
 
+    mismatched = [(cid, d) for cid, d in unmeasured if d.refusal == "condition_mismatch"]
     out = [
-        f"{len(unmeasured)} candidate(s) could not be judged: their operating point "
-        f"lies outside every measured accuracy domain (or their hardware has none), "
-        f"so no margin applies. They are undecidable, not infeasible "
-        f"(outside_calibration_domain)."
+        f"{len(unmeasured)} candidate(s) could not be judged: no margin applies to "
+        f"them, so they are undecidable, not infeasible."
     ]
+    if mismatched:
+        # The patent's "additional measurement condition" output: not "we do not
+        # know", but "here is the configuration a measurement would have to be
+        # taken at" (domain-scoping S1, D110).
+        fields: dict[str, int] = {}
+        for _cid, decision in mismatched:
+            for name in decision.mismatch_fields:
+                fields[name] = fields.get(name, 0) + 1
+        where = ", ".join(f"{k} ({v})" for k, v in sorted(fields.items()))
+        out.append(
+            f"{len(mismatched)} of them differ from every accuracy domain on a "
+            f"REQUIRED APPLICATION CONDITION ({where}), so no domain may be "
+            f"consulted for them at all (calibration_condition_mismatch). What "
+            f"would settle them is a measurement AT THEIR CONFIGURATION, not a "
+            f"wider load range."
+        )
+        needed = sorted({
+            json.dumps(d.required_measurement, sort_keys=True)
+            for _cid, d in mismatched if d.required_measurement is not None
+        })
+        for blob in needed[:5]:
+            out.append(f"  measure at: {blob}")
+        if len(needed) > 5:
+            out.append(f"  ... and {len(needed) - 5} further configuration(s)")
+    if len(mismatched) < len(unmeasured):
+        out.append(
+            f"{len(unmeasured) - len(mismatched)} of them have a domain that MAY be "
+            f"consulted, but their operating point lies past the end of its measured "
+            f"load axis, or their hardware carries no calibration at all "
+            f"(outside_calibration_domain)."
+        )
     if best_id is not None and best_decision is not None:
         where = (
             f"served concurrency {best_decision.concurrency:.4g}"

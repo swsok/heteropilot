@@ -163,6 +163,17 @@ class RejectionStage(str, enum.Enum):
     #: configuration as an infeasible one. STEP 4's envelope rejection joins this
     #: category.
     OUTSIDE_CALIBRATION_DOMAIN = "outside_calibration_domain"
+    #: The candidate's CONFIGURATION differs from the one the accuracy domain was
+    #: measured under - parallelism, island count, device binding, model,
+    #: precision, token mix or arrival process - so the domain may not be
+    #: consulted at all (domain-scoping S1, D110). Epistemic like the stage above
+    #: it and split OUT of it, because the two say different things about what to
+    #: do next: this one means "measure at THIS configuration", the one above
+    #: means "measure further along the load axis of the configuration we have".
+    #: V3 is why it exists - a domain fitted at tp=1 was consulted for a tp=4
+    #: candidate, contributed a 1.13 % margin where the measured error turned out
+    #: to be -44.6 %, and nothing in the pipeline could object.
+    CALIBRATION_CONDITION_MISMATCH = "calibration_condition_mismatch"
     #: The candidate's PREDICTED operating point falls outside the hardware's
     #: measured performance envelope, and the envelope's policy is `refuse`
     #: (STEP 4.4, A6). Like the stage above it is epistemic and, unlike stages

@@ -11,7 +11,7 @@ import enum
 import fnmatch
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -155,6 +155,18 @@ class Node(_Strict):
     #: Omit to run without energy output. Present means the compiler emits a
     #: `power:` block and the simulator reports energy (deviations D2).
     power: NodePower | None = None
+    #: How a serving process on this node is bound to it - `numa_pinned` when
+    #: the deployment pins CPU and memory to the NUMA node the accelerators sit
+    #: on, `unpinned` when it does not. An APPLICATION CONDITION of an accuracy
+    #: domain (domain-scoping S1, D110), not a performance input: nothing in the
+    #: compiler reads it, and it exists so a domain measured unbound is not
+    #: consulted for a deployment that pins, or the reverse. It is worth 1.93x
+    #: of throughput on the A40 node's second NUMA group
+    #: (experiments/p2_evidence/results/v3_verdict_accuracy.md A.3), which is why
+    #: it is a condition rather than a note. `unknown` - the default, and what
+    #: every committed cluster says today - means the match test skips it and
+    #: flags it rather than assuming either state.
+    device_binding: Literal["numa_pinned", "unpinned", "unknown"] = "unknown"
 
     @model_validator(mode="after")
     def _unique_ids(self) -> Node:

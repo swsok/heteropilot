@@ -71,6 +71,20 @@ hardware:
       outside_domain: refuse
       source: measured
       arrival_process: open_loop
+      # Application-condition fields added 2026-09-17, recording the configuration
+      # these points were measured under (domain-scoping S1, D110). `points` are
+      # untouched -- rule A3. TP=1 from `provenance.measured_on` below: "single
+      # card TP=1", candidate `cuda-a40-node0-0-tp1-dp1-s128-t2048`.
+      parallelism: {tp: 1, pp: 1, dp: 1}
+      placement:
+        islands: 1
+        # These stages ran UNBOUND (v3_verdict_accuracy.md A.3 point 3). The
+        # ladder was re-run bound on 2026-09-17 with `numactl --cpunodebind=0
+        # --membind=0` (PR #104) and agreed to 0.42 % on throughput, 0.37 % on
+        # served concurrency, 0.46 % on p99 TPOT -- so the value stays `unpinned`,
+        # which is what was measured, and the re-verification is recorded rather
+        # than used to relabel it.
+        device_binding: unpinned
       points:
         - {conc: 11.353, tpot_err_pct: -0.26, ttft_err_pct: -35.06,
            note: "0.5 rps, 300 req, 1 run. p99 pairing: tpot -1.69 %, ttft -20.36 %"}
