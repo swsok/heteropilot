@@ -667,11 +667,21 @@ Three things follow.
 2. **V3's headline survives.** Recomputed against the NUMA-bound measurement the
    simulator's TPOT error is **−43.44 %** where §6.3 reported −44.63 %. It was
    not a NUMA artefact.
-3. **There is a methodology debt.** Every A40 measurement before this one — V2's
-   eight ladder stages, V3's P1 — ran **unbound**, and GPUs 0–3 happened to land
-   well. The deploy backend has no affinity control at all. V2's stages were TP=1
-   on a single card, where the exposure is smallest, but **that is an argument,
-   not a check.** Future measurements bind explicitly and say so.
+3. **There was a methodology debt, and it is now discharged.** Every A40
+   measurement before this one — V2's eight ladder stages, V3's P1 — ran
+   **unbound**, and GPUs 0–3 happened to land well. The deploy backend has no
+   affinity control at all.
+
+   V3's P1 is re-checked above: bound, the simulator's error is −43.44 % against
+   the −44.63 % reported. **V2's ladder was re-run bound on 2026-09-17** — all
+   five rates, `numactl --cpunodebind=0 --membind=0` — and agrees with the
+   unbound stages to **0.42 % on throughput, 0.37 % on served concurrency and
+   0.46 % on p99 TPOT** (`v2_openloop_concurrency.md` §7.1). So the argument
+   that TP=1 on one card has little exposure is now a measurement.
+
+   **The debt was in the method, not in the numbers**: the exposure existed and
+   was never checked, and on the TP=4 deployment it was worth 1.93×. Future
+   measurements bind explicitly and say so.
 
 ## A.4 Re-simulating with the measured value — and why one value cannot serve
 
