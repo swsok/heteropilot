@@ -319,8 +319,9 @@ def _coverage_line(registry: UncertainInputRegistry) -> str:
 def render_uncertain_inputs(registry: UncertainInputRegistry, *, top_n: int = 40) -> str:
     """The "Uncertain inputs" section (§2.3, STEP A1).
 
-    Unbounded items come first and are marked: they are the ones no amount of
-    analysis can settle, so they head the operator's reading order.
+    Reading order is by how well the width is known: unbounded first - nothing
+    settles those but a measurement - then the ones ranked on their grade's
+    DEFAULT range (S2, D111), then the ones whose own width is sourced.
     """
     lines = [_rule("Uncertain inputs")]
     lines.append(f"  coverage: {_coverage_line(registry)}")
@@ -331,8 +332,16 @@ def render_uncertain_inputs(registry: UncertainInputRegistry, *, top_n: int = 40
     unbounded = registry.unbounded()
     if unbounded:
         lines.append(
-            f"  {len(unbounded)} input(s) have NO sourced range - a plan cannot be "
-            f"decided against them before measuring"
+            f"  {len(unbounded)} input(s) have NO range at all - neither a sourced "
+            f"width nor a default for their grade - so a plan cannot be decided "
+            f"against them before measuring"
+        )
+    defaulted = registry.defaulted()
+    if defaulted:
+        lines.append(
+            f"  {len(defaulted)} input(s) are ranked on their GRADE'S DEFAULT range: "
+            f"nothing measured their own width, so grades.yaml's default stands in "
+            f"(D111)"
         )
     lines.append("")
     lines.append(
@@ -342,14 +351,17 @@ def render_uncertain_inputs(registry: UncertainInputRegistry, *, top_n: int = 40
 
     def sort_key(item: UncertainInput) -> tuple:
         return (
-            0 if item.range.is_unbounded else 1,
+            0 if item.range.is_unbounded else (1 if item.range.range_source == "default" else 2),
             _KIND_ORDER.index(item.kind.value) if item.kind.value in _KIND_ORDER else 99,
             item.id,
         )
 
     ordered = sorted(registry.items, key=sort_key)
     for item in ordered[:top_n]:
-        mark = "**" if item.range.is_unbounded else "  "
+        if item.range.is_unbounded:
+            mark = "**"
+        else:
+            mark = "~ " if item.range.range_source == "default" else "  "
         affects = ", ".join(item.affects[:2]) + (
             f", +{len(item.affects) - 2}" if len(item.affects) > 2 else ""
         )
@@ -359,7 +371,14 @@ def render_uncertain_inputs(registry: UncertainInputRegistry, *, top_n: int = 40
         )
     if len(ordered) > top_n:
         lines.append(f"    ... {len(ordered) - top_n} more")
-    lines.append("  ** = unbounded (no sourced range)")
+    if unbounded:
+        lines.append(
+            "  ** = unbounded (no width of its own and no default for its grade)"
+        )
+    if defaulted:
+        lines.append(
+            "  ~  = the grade's default range from grades.yaml, not a measured width"
+        )
     return "\n".join(lines)
 
 
@@ -373,6 +392,11 @@ def render_measurement_plan(plan: MeasurementPlan, *, top_n: int = 20) -> str:
     lines = [_rule("Measurement plan")]
     if not plan.items and not plan.uncovered and not plan.undecidable:
         lines.append("  nothing to measure: no uncertain input moves the recommendation")
+        if plan.inert:
+            lines.append(
+                f"  ({len(plan.inert)} input(s) were swept over their range and moved "
+                f"the decision by nothing - measured, they would change no plan)"
+            )
         return "\n".join(lines)
 
     if plan.budget_hours is None:
@@ -400,12 +424,21 @@ def render_measurement_plan(plan: MeasurementPlan, *, top_n: int = 20) -> str:
             approx = " (approx)" if item.approximation else ""
             if item.resimulated:
                 approx = " (resimulated)"
+            default = " [default range]" if item.range_source == "default" else ""
             lines.append(
                 f"  {item.rank:>3} {item.input_id:<38} {item.delta_regret:>12,.4g} "
-                f"{per_hour:>12} {cost:>8}  {item.how_to_measure}{flag}{approx}"
+                f"{per_hour:>12} {cost:>8}  {item.how_to_measure}{flag}{approx}{default}"
             )
         if len(plan.items) > top_n:
             lines.append(f"      ... {len(plan.items) - top_n} more")
+        defaulted = [i for i in plan.items if i.range_source == "default"]
+        if defaulted:
+            lines.append(
+                f"      [default range] on {len(defaulted)} of them: nothing measured "
+                f"that input's own width, so the sweep used its GRADE'S default from "
+                f"grades.yaml. The rank is real, the dR behind it is only as good as "
+                f"that assumed interval (D111)."
+            )
 
     if plan.uncovered:
         lines.append("")
@@ -419,11 +452,19 @@ def render_measurement_plan(plan: MeasurementPlan, *, top_n: int = 20) -> str:
         if len(plan.uncovered) > 5:
             lines.append(f"      ... {len(plan.uncovered) - 5} more")
 
+    if plan.inert:
+        lines.append("")
+        lines.append(
+            f"  {len(plan.inert)} input(s) are swept and INERT: their range is known "
+            f"and moving across it changes no decision, so they are worth no hours."
+        )
+
     if plan.undecidable:
         lines.append("")
         lines.append(
             f"  {len(plan.undecidable)} input(s) CANNOT BE DECIDED BEFORE MEASURING - "
-            f"no sourced range, so no regret can be computed for them at all:"
+            f"no width of their own AND no default for their grade, so no regret can "
+            f"be computed for them at all:"
         )
         for input_id in plan.undecidable[:8]:
             lines.append(f"      {input_id}")

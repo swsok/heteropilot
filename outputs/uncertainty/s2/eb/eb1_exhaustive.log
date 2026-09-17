@@ -1,0 +1,235 @@
+truth winner: cuda-a40-node_a40a-tp4-dp1-s128-t8192  V=-73,560.0
+degradable pool: 11  penalty: 198,990.0
+  k=1 set=0 ['link_bw:fabric-rngd0-a40a'] done
+  k=1 set=1 ['link_bw:fabric-rngd0-a40b'] done
+  k=1 set=2 ['link_bw:fabric-rngd1-a40a'] done
+  k=1 set=3 ['link_bw:fabric-rngd1-a40b'] done
+  k=1 set=4 ['link_bw:fabric-rngd0-rngd1'] done
+  k=1 set=5 ['link_bw:fabric-a40a-a40b'] done
+  k=1 set=6 ['profile:cuda-a40-node_a40a'] done
+  k=1 set=7 ['profile:cuda-a40-node_a40b'] done
+  k=1 set=8 ['profile:furiosa-rngd-card-node_rngd0'] done
+  k=1 set=9 ['profile:furiosa-rngd-card-node_rngd1'] done
+  k=1 set=10 ['sim_error:domain'] done
+  k=2 set=0 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd0-a40b'] done
+  k=2 set=1 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd1-a40a'] done
+  k=2 set=2 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd1-a40b'] done
+  k=2 set=3 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd0-rngd1'] done
+  k=2 set=4 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-a40a-a40b'] done
+  k=2 set=5 ['link_bw:fabric-rngd0-a40a', 'profile:cuda-a40-node_a40a'] done
+  k=2 set=6 ['link_bw:fabric-rngd0-a40a', 'profile:cuda-a40-node_a40b'] done
+  k=2 set=7 ['link_bw:fabric-rngd0-a40a', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=2 set=8 ['link_bw:fabric-rngd0-a40a', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=2 set=9 ['link_bw:fabric-rngd0-a40a', 'sim_error:domain'] done
+  k=2 set=10 ['link_bw:fabric-rngd0-a40b', 'link_bw:fabric-rngd1-a40a'] done
+  k=2 set=11 ['link_bw:fabric-rngd0-a40b', 'link_bw:fabric-rngd1-a40b'] done
+  k=2 set=12 ['link_bw:fabric-rngd0-a40b', 'link_bw:fabric-rngd0-rngd1'] done
+  k=2 set=13 ['link_bw:fabric-rngd0-a40b', 'link_bw:fabric-a40a-a40b'] done
+  k=2 set=14 ['link_bw:fabric-rngd0-a40b', 'profile:cuda-a40-node_a40a'] done
+  k=2 set=15 ['link_bw:fabric-rngd0-a40b', 'profile:cuda-a40-node_a40b'] done
+  k=2 set=16 ['link_bw:fabric-rngd0-a40b', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=2 set=17 ['link_bw:fabric-rngd0-a40b', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=2 set=18 ['link_bw:fabric-rngd0-a40b', 'sim_error:domain'] done
+  k=2 set=19 ['link_bw:fabric-rngd1-a40a', 'link_bw:fabric-rngd1-a40b'] done
+  k=2 set=20 ['link_bw:fabric-rngd1-a40a', 'link_bw:fabric-rngd0-rngd1'] done
+  k=2 set=21 ['link_bw:fabric-rngd1-a40a', 'link_bw:fabric-a40a-a40b'] done
+  k=2 set=22 ['link_bw:fabric-rngd1-a40a', 'profile:cuda-a40-node_a40a'] done
+  k=2 set=23 ['link_bw:fabric-rngd1-a40a', 'profile:cuda-a40-node_a40b'] done
+  k=2 set=24 ['link_bw:fabric-rngd1-a40a', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=2 set=25 ['link_bw:fabric-rngd1-a40a', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=2 set=26 ['link_bw:fabric-rngd1-a40a', 'sim_error:domain'] done
+  k=2 set=27 ['link_bw:fabric-rngd1-a40b', 'link_bw:fabric-rngd0-rngd1'] done
+  k=2 set=28 ['link_bw:fabric-rngd1-a40b', 'link_bw:fabric-a40a-a40b'] done
+  k=2 set=29 ['link_bw:fabric-rngd1-a40b', 'profile:cuda-a40-node_a40a'] done
+  k=2 set=30 ['link_bw:fabric-rngd1-a40b', 'profile:cuda-a40-node_a40b'] done
+  k=2 set=31 ['link_bw:fabric-rngd1-a40b', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=2 set=32 ['link_bw:fabric-rngd1-a40b', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=2 set=33 ['link_bw:fabric-rngd1-a40b', 'sim_error:domain'] done
+  k=2 set=34 ['link_bw:fabric-rngd0-rngd1', 'link_bw:fabric-a40a-a40b'] done
+  k=2 set=35 ['link_bw:fabric-rngd0-rngd1', 'profile:cuda-a40-node_a40a'] done
+  k=2 set=36 ['link_bw:fabric-rngd0-rngd1', 'profile:cuda-a40-node_a40b'] done
+  k=2 set=37 ['link_bw:fabric-rngd0-rngd1', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=2 set=38 ['link_bw:fabric-rngd0-rngd1', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=2 set=39 ['link_bw:fabric-rngd0-rngd1', 'sim_error:domain'] done
+  k=2 set=40 ['link_bw:fabric-a40a-a40b', 'profile:cuda-a40-node_a40a'] done
+  k=2 set=41 ['link_bw:fabric-a40a-a40b', 'profile:cuda-a40-node_a40b'] done
+  k=2 set=42 ['link_bw:fabric-a40a-a40b', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=2 set=43 ['link_bw:fabric-a40a-a40b', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=2 set=44 ['link_bw:fabric-a40a-a40b', 'sim_error:domain'] done
+  k=2 set=45 ['profile:cuda-a40-node_a40a', 'profile:cuda-a40-node_a40b'] done
+  k=2 set=46 ['profile:cuda-a40-node_a40a', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=2 set=47 ['profile:cuda-a40-node_a40a', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=2 set=48 ['profile:cuda-a40-node_a40a', 'sim_error:domain'] done
+  k=2 set=49 ['profile:cuda-a40-node_a40b', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=2 set=50 ['profile:cuda-a40-node_a40b', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=2 set=51 ['profile:cuda-a40-node_a40b', 'sim_error:domain'] done
+  k=2 set=52 ['profile:furiosa-rngd-card-node_rngd0', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=2 set=53 ['profile:furiosa-rngd-card-node_rngd0', 'sim_error:domain'] done
+  k=2 set=54 ['profile:furiosa-rngd-card-node_rngd1', 'sim_error:domain'] done
+  k=3 set=0 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd0-a40b', 'link_bw:fabric-rngd1-a40a'] done
+  k=3 set=1 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd0-a40b', 'link_bw:fabric-rngd1-a40b'] done
+  k=3 set=2 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd0-a40b', 'link_bw:fabric-rngd0-rngd1'] done
+  k=3 set=3 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd0-a40b', 'link_bw:fabric-a40a-a40b'] done
+  k=3 set=4 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd0-a40b', 'profile:cuda-a40-node_a40a'] done
+  k=3 set=5 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd0-a40b', 'profile:cuda-a40-node_a40b'] done
+  k=3 set=6 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd0-a40b', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=3 set=7 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd0-a40b', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=8 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd0-a40b', 'sim_error:domain'] done
+  k=3 set=9 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd1-a40a', 'link_bw:fabric-rngd1-a40b'] done
+  k=3 set=10 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd1-a40a', 'link_bw:fabric-rngd0-rngd1'] done
+  k=3 set=11 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd1-a40a', 'link_bw:fabric-a40a-a40b'] done
+  k=3 set=12 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd1-a40a', 'profile:cuda-a40-node_a40a'] done
+  k=3 set=13 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd1-a40a', 'profile:cuda-a40-node_a40b'] done
+  k=3 set=14 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd1-a40a', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=3 set=15 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd1-a40a', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=16 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd1-a40a', 'sim_error:domain'] done
+  k=3 set=17 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd1-a40b', 'link_bw:fabric-rngd0-rngd1'] done
+  k=3 set=18 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd1-a40b', 'link_bw:fabric-a40a-a40b'] done
+  k=3 set=19 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd1-a40b', 'profile:cuda-a40-node_a40a'] done
+  k=3 set=20 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd1-a40b', 'profile:cuda-a40-node_a40b'] done
+  k=3 set=21 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd1-a40b', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=3 set=22 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd1-a40b', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=23 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd1-a40b', 'sim_error:domain'] done
+  k=3 set=24 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd0-rngd1', 'link_bw:fabric-a40a-a40b'] done
+  k=3 set=25 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd0-rngd1', 'profile:cuda-a40-node_a40a'] done
+  k=3 set=26 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd0-rngd1', 'profile:cuda-a40-node_a40b'] done
+  k=3 set=27 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd0-rngd1', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=3 set=28 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd0-rngd1', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=29 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-rngd0-rngd1', 'sim_error:domain'] done
+  k=3 set=30 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-a40a-a40b', 'profile:cuda-a40-node_a40a'] done
+  k=3 set=31 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-a40a-a40b', 'profile:cuda-a40-node_a40b'] done
+  k=3 set=32 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-a40a-a40b', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=3 set=33 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-a40a-a40b', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=34 ['link_bw:fabric-rngd0-a40a', 'link_bw:fabric-a40a-a40b', 'sim_error:domain'] done
+  k=3 set=35 ['link_bw:fabric-rngd0-a40a', 'profile:cuda-a40-node_a40a', 'profile:cuda-a40-node_a40b'] done
+  k=3 set=36 ['link_bw:fabric-rngd0-a40a', 'profile:cuda-a40-node_a40a', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=3 set=37 ['link_bw:fabric-rngd0-a40a', 'profile:cuda-a40-node_a40a', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=38 ['link_bw:fabric-rngd0-a40a', 'profile:cuda-a40-node_a40a', 'sim_error:domain'] done
+  k=3 set=39 ['link_bw:fabric-rngd0-a40a', 'profile:cuda-a40-node_a40b', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=3 set=40 ['link_bw:fabric-rngd0-a40a', 'profile:cuda-a40-node_a40b', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=41 ['link_bw:fabric-rngd0-a40a', 'profile:cuda-a40-node_a40b', 'sim_error:domain'] done
+  k=3 set=42 ['link_bw:fabric-rngd0-a40a', 'profile:furiosa-rngd-card-node_rngd0', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=43 ['link_bw:fabric-rngd0-a40a', 'profile:furiosa-rngd-card-node_rngd0', 'sim_error:domain'] done
+  k=3 set=44 ['link_bw:fabric-rngd0-a40a', 'profile:furiosa-rngd-card-node_rngd1', 'sim_error:domain'] done
+  k=3 set=45 ['link_bw:fabric-rngd0-a40b', 'link_bw:fabric-rngd1-a40a', 'link_bw:fabric-rngd1-a40b'] done
+  k=3 set=46 ['link_bw:fabric-rngd0-a40b', 'link_bw:fabric-rngd1-a40a', 'link_bw:fabric-rngd0-rngd1'] done
+  k=3 set=47 ['link_bw:fabric-rngd0-a40b', 'link_bw:fabric-rngd1-a40a', 'link_bw:fabric-a40a-a40b'] done
+  k=3 set=48 ['link_bw:fabric-rngd0-a40b', 'link_bw:fabric-rngd1-a40a', 'profile:cuda-a40-node_a40a'] done
+  k=3 set=49 ['link_bw:fabric-rngd0-a40b', 'link_bw:fabric-rngd1-a40a', 'profile:cuda-a40-node_a40b'] done
+  k=3 set=50 ['link_bw:fabric-rngd0-a40b', 'link_bw:fabric-rngd1-a40a', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=3 set=51 ['link_bw:fabric-rngd0-a40b', 'link_bw:fabric-rngd1-a40a', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=52 ['link_bw:fabric-rngd0-a40b', 'link_bw:fabric-rngd1-a40a', 'sim_error:domain'] done
+  k=3 set=53 ['link_bw:fabric-rngd0-a40b', 'link_bw:fabric-rngd1-a40b', 'link_bw:fabric-rngd0-rngd1'] done
+  k=3 set=54 ['link_bw:fabric-rngd0-a40b', 'link_bw:fabric-rngd1-a40b', 'link_bw:fabric-a40a-a40b'] done
+  k=3 set=55 ['link_bw:fabric-rngd0-a40b', 'link_bw:fabric-rngd1-a40b', 'profile:cuda-a40-node_a40a'] done
+  k=3 set=56 ['link_bw:fabric-rngd0-a40b', 'link_bw:fabric-rngd1-a40b', 'profile:cuda-a40-node_a40b'] done
+  k=3 set=57 ['link_bw:fabric-rngd0-a40b', 'link_bw:fabric-rngd1-a40b', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=3 set=58 ['link_bw:fabric-rngd0-a40b', 'link_bw:fabric-rngd1-a40b', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=59 ['link_bw:fabric-rngd0-a40b', 'link_bw:fabric-rngd1-a40b', 'sim_error:domain'] done
+  k=3 set=60 ['link_bw:fabric-rngd0-a40b', 'link_bw:fabric-rngd0-rngd1', 'link_bw:fabric-a40a-a40b'] done
+  k=3 set=61 ['link_bw:fabric-rngd0-a40b', 'link_bw:fabric-rngd0-rngd1', 'profile:cuda-a40-node_a40a'] done
+  k=3 set=62 ['link_bw:fabric-rngd0-a40b', 'link_bw:fabric-rngd0-rngd1', 'profile:cuda-a40-node_a40b'] done
+  k=3 set=63 ['link_bw:fabric-rngd0-a40b', 'link_bw:fabric-rngd0-rngd1', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=3 set=64 ['link_bw:fabric-rngd0-a40b', 'link_bw:fabric-rngd0-rngd1', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=65 ['link_bw:fabric-rngd0-a40b', 'link_bw:fabric-rngd0-rngd1', 'sim_error:domain'] done
+  k=3 set=66 ['link_bw:fabric-rngd0-a40b', 'link_bw:fabric-a40a-a40b', 'profile:cuda-a40-node_a40a'] done
+  k=3 set=67 ['link_bw:fabric-rngd0-a40b', 'link_bw:fabric-a40a-a40b', 'profile:cuda-a40-node_a40b'] done
+  k=3 set=68 ['link_bw:fabric-rngd0-a40b', 'link_bw:fabric-a40a-a40b', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=3 set=69 ['link_bw:fabric-rngd0-a40b', 'link_bw:fabric-a40a-a40b', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=70 ['link_bw:fabric-rngd0-a40b', 'link_bw:fabric-a40a-a40b', 'sim_error:domain'] done
+  k=3 set=71 ['link_bw:fabric-rngd0-a40b', 'profile:cuda-a40-node_a40a', 'profile:cuda-a40-node_a40b'] done
+  k=3 set=72 ['link_bw:fabric-rngd0-a40b', 'profile:cuda-a40-node_a40a', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=3 set=73 ['link_bw:fabric-rngd0-a40b', 'profile:cuda-a40-node_a40a', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=74 ['link_bw:fabric-rngd0-a40b', 'profile:cuda-a40-node_a40a', 'sim_error:domain'] done
+  k=3 set=75 ['link_bw:fabric-rngd0-a40b', 'profile:cuda-a40-node_a40b', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=3 set=76 ['link_bw:fabric-rngd0-a40b', 'profile:cuda-a40-node_a40b', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=77 ['link_bw:fabric-rngd0-a40b', 'profile:cuda-a40-node_a40b', 'sim_error:domain'] done
+  k=3 set=78 ['link_bw:fabric-rngd0-a40b', 'profile:furiosa-rngd-card-node_rngd0', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=79 ['link_bw:fabric-rngd0-a40b', 'profile:furiosa-rngd-card-node_rngd0', 'sim_error:domain'] done
+  k=3 set=80 ['link_bw:fabric-rngd0-a40b', 'profile:furiosa-rngd-card-node_rngd1', 'sim_error:domain'] done
+  k=3 set=81 ['link_bw:fabric-rngd1-a40a', 'link_bw:fabric-rngd1-a40b', 'link_bw:fabric-rngd0-rngd1'] done
+  k=3 set=82 ['link_bw:fabric-rngd1-a40a', 'link_bw:fabric-rngd1-a40b', 'link_bw:fabric-a40a-a40b'] done
+  k=3 set=83 ['link_bw:fabric-rngd1-a40a', 'link_bw:fabric-rngd1-a40b', 'profile:cuda-a40-node_a40a'] done
+  k=3 set=84 ['link_bw:fabric-rngd1-a40a', 'link_bw:fabric-rngd1-a40b', 'profile:cuda-a40-node_a40b'] done
+  k=3 set=85 ['link_bw:fabric-rngd1-a40a', 'link_bw:fabric-rngd1-a40b', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=3 set=86 ['link_bw:fabric-rngd1-a40a', 'link_bw:fabric-rngd1-a40b', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=87 ['link_bw:fabric-rngd1-a40a', 'link_bw:fabric-rngd1-a40b', 'sim_error:domain'] done
+  k=3 set=88 ['link_bw:fabric-rngd1-a40a', 'link_bw:fabric-rngd0-rngd1', 'link_bw:fabric-a40a-a40b'] done
+  k=3 set=89 ['link_bw:fabric-rngd1-a40a', 'link_bw:fabric-rngd0-rngd1', 'profile:cuda-a40-node_a40a'] done
+  k=3 set=90 ['link_bw:fabric-rngd1-a40a', 'link_bw:fabric-rngd0-rngd1', 'profile:cuda-a40-node_a40b'] done
+  k=3 set=91 ['link_bw:fabric-rngd1-a40a', 'link_bw:fabric-rngd0-rngd1', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=3 set=92 ['link_bw:fabric-rngd1-a40a', 'link_bw:fabric-rngd0-rngd1', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=93 ['link_bw:fabric-rngd1-a40a', 'link_bw:fabric-rngd0-rngd1', 'sim_error:domain'] done
+  k=3 set=94 ['link_bw:fabric-rngd1-a40a', 'link_bw:fabric-a40a-a40b', 'profile:cuda-a40-node_a40a'] done
+  k=3 set=95 ['link_bw:fabric-rngd1-a40a', 'link_bw:fabric-a40a-a40b', 'profile:cuda-a40-node_a40b'] done
+  k=3 set=96 ['link_bw:fabric-rngd1-a40a', 'link_bw:fabric-a40a-a40b', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=3 set=97 ['link_bw:fabric-rngd1-a40a', 'link_bw:fabric-a40a-a40b', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=98 ['link_bw:fabric-rngd1-a40a', 'link_bw:fabric-a40a-a40b', 'sim_error:domain'] done
+  k=3 set=99 ['link_bw:fabric-rngd1-a40a', 'profile:cuda-a40-node_a40a', 'profile:cuda-a40-node_a40b'] done
+  k=3 set=100 ['link_bw:fabric-rngd1-a40a', 'profile:cuda-a40-node_a40a', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=3 set=101 ['link_bw:fabric-rngd1-a40a', 'profile:cuda-a40-node_a40a', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=102 ['link_bw:fabric-rngd1-a40a', 'profile:cuda-a40-node_a40a', 'sim_error:domain'] done
+  k=3 set=103 ['link_bw:fabric-rngd1-a40a', 'profile:cuda-a40-node_a40b', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=3 set=104 ['link_bw:fabric-rngd1-a40a', 'profile:cuda-a40-node_a40b', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=105 ['link_bw:fabric-rngd1-a40a', 'profile:cuda-a40-node_a40b', 'sim_error:domain'] done
+  k=3 set=106 ['link_bw:fabric-rngd1-a40a', 'profile:furiosa-rngd-card-node_rngd0', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=107 ['link_bw:fabric-rngd1-a40a', 'profile:furiosa-rngd-card-node_rngd0', 'sim_error:domain'] done
+  k=3 set=108 ['link_bw:fabric-rngd1-a40a', 'profile:furiosa-rngd-card-node_rngd1', 'sim_error:domain'] done
+  k=3 set=109 ['link_bw:fabric-rngd1-a40b', 'link_bw:fabric-rngd0-rngd1', 'link_bw:fabric-a40a-a40b'] done
+  k=3 set=110 ['link_bw:fabric-rngd1-a40b', 'link_bw:fabric-rngd0-rngd1', 'profile:cuda-a40-node_a40a'] done
+  k=3 set=111 ['link_bw:fabric-rngd1-a40b', 'link_bw:fabric-rngd0-rngd1', 'profile:cuda-a40-node_a40b'] done
+  k=3 set=112 ['link_bw:fabric-rngd1-a40b', 'link_bw:fabric-rngd0-rngd1', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=3 set=113 ['link_bw:fabric-rngd1-a40b', 'link_bw:fabric-rngd0-rngd1', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=114 ['link_bw:fabric-rngd1-a40b', 'link_bw:fabric-rngd0-rngd1', 'sim_error:domain'] done
+  k=3 set=115 ['link_bw:fabric-rngd1-a40b', 'link_bw:fabric-a40a-a40b', 'profile:cuda-a40-node_a40a'] done
+  k=3 set=116 ['link_bw:fabric-rngd1-a40b', 'link_bw:fabric-a40a-a40b', 'profile:cuda-a40-node_a40b'] done
+  k=3 set=117 ['link_bw:fabric-rngd1-a40b', 'link_bw:fabric-a40a-a40b', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=3 set=118 ['link_bw:fabric-rngd1-a40b', 'link_bw:fabric-a40a-a40b', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=119 ['link_bw:fabric-rngd1-a40b', 'link_bw:fabric-a40a-a40b', 'sim_error:domain'] done
+  k=3 set=120 ['link_bw:fabric-rngd1-a40b', 'profile:cuda-a40-node_a40a', 'profile:cuda-a40-node_a40b'] done
+  k=3 set=121 ['link_bw:fabric-rngd1-a40b', 'profile:cuda-a40-node_a40a', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=3 set=122 ['link_bw:fabric-rngd1-a40b', 'profile:cuda-a40-node_a40a', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=123 ['link_bw:fabric-rngd1-a40b', 'profile:cuda-a40-node_a40a', 'sim_error:domain'] done
+  k=3 set=124 ['link_bw:fabric-rngd1-a40b', 'profile:cuda-a40-node_a40b', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=3 set=125 ['link_bw:fabric-rngd1-a40b', 'profile:cuda-a40-node_a40b', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=126 ['link_bw:fabric-rngd1-a40b', 'profile:cuda-a40-node_a40b', 'sim_error:domain'] done
+  k=3 set=127 ['link_bw:fabric-rngd1-a40b', 'profile:furiosa-rngd-card-node_rngd0', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=128 ['link_bw:fabric-rngd1-a40b', 'profile:furiosa-rngd-card-node_rngd0', 'sim_error:domain'] done
+  k=3 set=129 ['link_bw:fabric-rngd1-a40b', 'profile:furiosa-rngd-card-node_rngd1', 'sim_error:domain'] done
+  k=3 set=130 ['link_bw:fabric-rngd0-rngd1', 'link_bw:fabric-a40a-a40b', 'profile:cuda-a40-node_a40a'] done
+  k=3 set=131 ['link_bw:fabric-rngd0-rngd1', 'link_bw:fabric-a40a-a40b', 'profile:cuda-a40-node_a40b'] done
+  k=3 set=132 ['link_bw:fabric-rngd0-rngd1', 'link_bw:fabric-a40a-a40b', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=3 set=133 ['link_bw:fabric-rngd0-rngd1', 'link_bw:fabric-a40a-a40b', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=134 ['link_bw:fabric-rngd0-rngd1', 'link_bw:fabric-a40a-a40b', 'sim_error:domain'] done
+  k=3 set=135 ['link_bw:fabric-rngd0-rngd1', 'profile:cuda-a40-node_a40a', 'profile:cuda-a40-node_a40b'] done
+  k=3 set=136 ['link_bw:fabric-rngd0-rngd1', 'profile:cuda-a40-node_a40a', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=3 set=137 ['link_bw:fabric-rngd0-rngd1', 'profile:cuda-a40-node_a40a', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=138 ['link_bw:fabric-rngd0-rngd1', 'profile:cuda-a40-node_a40a', 'sim_error:domain'] done
+  k=3 set=139 ['link_bw:fabric-rngd0-rngd1', 'profile:cuda-a40-node_a40b', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=3 set=140 ['link_bw:fabric-rngd0-rngd1', 'profile:cuda-a40-node_a40b', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=141 ['link_bw:fabric-rngd0-rngd1', 'profile:cuda-a40-node_a40b', 'sim_error:domain'] done
+  k=3 set=142 ['link_bw:fabric-rngd0-rngd1', 'profile:furiosa-rngd-card-node_rngd0', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=143 ['link_bw:fabric-rngd0-rngd1', 'profile:furiosa-rngd-card-node_rngd0', 'sim_error:domain'] done
+  k=3 set=144 ['link_bw:fabric-rngd0-rngd1', 'profile:furiosa-rngd-card-node_rngd1', 'sim_error:domain'] done
+  k=3 set=145 ['link_bw:fabric-a40a-a40b', 'profile:cuda-a40-node_a40a', 'profile:cuda-a40-node_a40b'] done
+  k=3 set=146 ['link_bw:fabric-a40a-a40b', 'profile:cuda-a40-node_a40a', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=3 set=147 ['link_bw:fabric-a40a-a40b', 'profile:cuda-a40-node_a40a', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=148 ['link_bw:fabric-a40a-a40b', 'profile:cuda-a40-node_a40a', 'sim_error:domain'] done
+  k=3 set=149 ['link_bw:fabric-a40a-a40b', 'profile:cuda-a40-node_a40b', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=3 set=150 ['link_bw:fabric-a40a-a40b', 'profile:cuda-a40-node_a40b', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=151 ['link_bw:fabric-a40a-a40b', 'profile:cuda-a40-node_a40b', 'sim_error:domain'] done
+  k=3 set=152 ['link_bw:fabric-a40a-a40b', 'profile:furiosa-rngd-card-node_rngd0', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=153 ['link_bw:fabric-a40a-a40b', 'profile:furiosa-rngd-card-node_rngd0', 'sim_error:domain'] done
+  k=3 set=154 ['link_bw:fabric-a40a-a40b', 'profile:furiosa-rngd-card-node_rngd1', 'sim_error:domain'] done
+  k=3 set=155 ['profile:cuda-a40-node_a40a', 'profile:cuda-a40-node_a40b', 'profile:furiosa-rngd-card-node_rngd0'] done
+  k=3 set=156 ['profile:cuda-a40-node_a40a', 'profile:cuda-a40-node_a40b', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=157 ['profile:cuda-a40-node_a40a', 'profile:cuda-a40-node_a40b', 'sim_error:domain'] done
+  k=3 set=158 ['profile:cuda-a40-node_a40a', 'profile:furiosa-rngd-card-node_rngd0', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=159 ['profile:cuda-a40-node_a40a', 'profile:furiosa-rngd-card-node_rngd0', 'sim_error:domain'] done
+  k=3 set=160 ['profile:cuda-a40-node_a40a', 'profile:furiosa-rngd-card-node_rngd1', 'sim_error:domain'] done
+  k=3 set=161 ['profile:cuda-a40-node_a40b', 'profile:furiosa-rngd-card-node_rngd0', 'profile:furiosa-rngd-card-node_rngd1'] done
+  k=3 set=162 ['profile:cuda-a40-node_a40b', 'profile:furiosa-rngd-card-node_rngd0', 'sim_error:domain'] done
+  k=3 set=163 ['profile:cuda-a40-node_a40b', 'profile:furiosa-rngd-card-node_rngd1', 'sim_error:domain'] done
+  k=3 set=164 ['profile:furiosa-rngd-card-node_rngd0', 'profile:furiosa-rngd-card-node_rngd1', 'sim_error:domain'] done
+wrote outputs/uncertainty/s2/eb/eb1_regret_vs_budget_s2.json
+eb1 exit=0

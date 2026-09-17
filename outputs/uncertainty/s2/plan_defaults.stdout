@@ -1,0 +1,48 @@
+warning: provenance fields could not be determined: backend_version, model_revision, surrogate, top_k, vllm_version
+--- HeteroPilot plan ---------------------------------------------------------
+service : meta-llama/Llama-3.1-8B
+cluster : pd-rngd-gpu-card
+searched: 324 generated, 324 simulated (prune ratio 0%)
+
+--- Rejected candidates ------------------------------------------------------
+  outside_calibration_domain 324
+  NOTE: outside_calibration_domain means a value the candidate needs was never measured - its operating point lies outside an accuracy domain under `refuse`, its hardware has no calibration, or the slab3d table does not cover it. Those candidates were NOT judged infeasible - they were not judged at all.
+
+--- INFEASIBLE ---------------------------------------------------------------
+  every simulated candidate was undecidable: all 324 of them run at an operating point outside the measured accuracy domain
+
+  suggestions:
+    - no candidates were generated at all; check the cluster spec and profiles
+    - 324 candidate(s) could not be judged: their operating point lies outside every measured accuracy domain (or their hardware has none), so no margin applies. They are undecidable, not infeasible (outside_calibration_domain).
+    - the strongest of them by minimize_energy is furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t8192 (5.005e+04) at an unknown operating point - measure the envelope there to decide it, or set outside_domain: widen_error_bars to accept an extrapolation. Reason: the predictor reported no operating point for this run, so no accuracy domain can be consulted - the candidate is undecidable, not infeasible
+
+--- Uncertain inputs ---------------------------------------------------------
+  coverage: sim_error 2/2 uncertain (measured 2); profile 0/4 uncertain; power 0/4 uncertain; link_bw 2/12 uncertain (vendor_spec 2); link_lat 2/12 uncertain (vendor_spec 2)
+  4 input(s) are ranked on their GRADE'S DEFAULT range: nothing measured their own width, so grades.yaml's default stands in (D111)
+
+    id                                           kind       grade             nominal  range                      affects
+  ~ link_bw:pcie-a40a-02                         link_bw    vendor_spec            64  [8, 64] gbps               cuda-a40-node_a40a
+  ~ link_bw:pcie-a40b-02                         link_bw    vendor_spec            64  [8, 64] gbps               cuda-a40-node_a40b
+  ~ link_lat:pcie-a40a-02                        link_lat   vendor_spec         2,000  [2,000, 1.6e+04] ns        cuda-a40-node_a40a
+  ~ link_lat:pcie-a40b-02                        link_lat   vendor_spec         2,000  [2,000, 1.6e+04] ns        cuda-a40-node_a40b
+    sim_error:A40/in_lt1024-out_ge512-rps_lt20   sim_error  measured          0.01129  [0.008369, 0.01421] fraction cuda-a40-node_a40a, cuda-a40-node_a40b
+    sim_error:RNGD-CARD/sharegpt-llama31-8b-20   sim_error  measured           0.1029  [0.01261, 0.1931] fraction furiosa-rngd-card-node_rngd0, furiosa-rngd-card-node_rngd1
+  ~  = the grade's default range from grades.yaml, not a measured width
+
+--- Measurement plan ---------------------------------------------------------
+  budget: unlimited
+  this budget removes 0 of decision regret across 0 measurement(s)
+
+  6 input(s) CANNOT BE DECIDED BEFORE MEASURING - no width of their own AND no default for their grade, so no regret can be computed for them at all:
+      link_bw:pcie-a40a-02
+      link_lat:pcie-a40a-02
+      link_bw:pcie-a40b-02
+      link_lat:pcie-a40b-02
+      sim_error:A40/in_lt1024-out_ge512-rps_lt20
+      sim_error:RNGD-CARD/sharegpt-llama31-8b-20
+
+--- Caveats ------------------------------------------------------------------
+  - Prefix caching is disabled for every candidate. With it enabled the simulator's prefix-cache memory grows monotonically and the run dies on any device small enough to saturate (docs/deviations.md D12). Consequence: ServiceSpec.traffic.prefix_share_ratio has no effect on these predictions, and TTFT is pessimistic for workloads with genuinely shared prefixes.
+  - 324 candidate(s) produced no readable operating point, so no accuracy-domain margin could be applied and they were left undecided (outside_calibration_domain)
+
+wrote outputs/uncertainty/s2/plan_defaults.yaml

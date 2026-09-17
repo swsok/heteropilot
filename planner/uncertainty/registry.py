@@ -25,13 +25,13 @@ from __future__ import annotations
 
 import enum
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from planner.inventory import Source
 from planner.topology import TopologyError, TopologyGraph
-from planner.uncertainty.grades import CostsTable, GradesTable, RangeRule
+from planner.uncertainty.grades import CostsTable, DefaultRule, GradesTable, RangeRule
 from planner.util import tier as tierutil
 
 if TYPE_CHECKING:
@@ -120,6 +120,13 @@ class Range(_Strict):
     unit: str = "fraction"
     #: Row id in grades.yaml, or the calibration file the width came from.
     source: str = ""
+    #: ``sourced`` - the width came from this input's own (kind, grade) rule or
+    #: from the calibration store. ``default`` - nothing measured this input's
+    #: width, so the grade's default from ``grades.yaml`` was applied (S2, D111).
+    #: Carried all the way to the rendered measurement plan: a default is a
+    #: policy the operator may disagree with, and it says so rather than looking
+    #: like a measurement.
+    range_source: Literal["sourced", "default"] = "sourced"
 
     @property
     def is_unbounded(self) -> bool:
@@ -189,8 +196,12 @@ class UncertainInputRegistry(_Strict):
     costs_digest: str = ""
 
     def unbounded(self) -> list[UncertainInput]:
-        """Items with no sourced range - "cannot be decided before measuring"."""
+        """Items with no range at all - "cannot be decided before measuring"."""
         return [i for i in self.items if i.range.is_unbounded]
+
+    def defaulted(self) -> list[UncertainInput]:
+        """Items ranked on the grade's default range rather than their own (D111)."""
+        return [i for i in self.items if i.range.range_source == "default"]
 
     def by_kind(self, kind: UncertainKind) -> list[UncertainInput]:
         return [i for i in self.items if i.kind is kind]
@@ -204,14 +215,57 @@ class UncertainInputRegistry(_Strict):
 # Range construction
 # ---------------------------------------------------------------------------
 
+def _default_range(
+    grades: GradesTable, kind: UncertainKind, grade: Grade, nominal: float, unit: str,
+    *, unbounded_source: str = "",
+) -> Range:
+    """The grade's default range, or unbounded when the grade has no default.
+
+    The S2 layer (D111). Before it, an input whose own (kind, grade) sourced no
+    width left the measurement plan's ranking entirely - which is what happened
+    to `link_bw:pcie-a40a-02`, the `vendor_spec` link that turned out to explain
+    a -43.4 % TPOT error and cost 0.114 h to measure.
+
+    A default never overrides a sourced width; it is only ever reached when
+    there is none, and the range it returns says `range_source="default"` so
+    nothing downstream can mistake the two.
+    """
+    default = grades.default_for(kind.value, grade.value)
+    if default is None:
+        # The honest end of the road, and still a real category: a grade nobody
+        # can put a defensible width on (`user_defined`, a deliberate what-if)
+        # stays "cannot be decided before measuring". `unbounded_source` keeps
+        # the breadcrumb of WHICH row said so.
+        return Range(unit=unit, source=unbounded_source)
+
+    if default.rule is DefaultRule.ABSOLUTE and default.half_width is not None:
+        lo, hi = nominal - default.half_width, nominal + default.half_width
+    elif default.lo is not None and default.hi is not None:
+        # Ordered after multiplying: a negative nominal would otherwise invert
+        # the interval and trip the non-degenerate check.
+        ends = sorted((nominal * default.lo, nominal * default.hi))
+        lo, hi = ends[0], ends[1]
+    else:  # pragma: no cover - the model validator forbids this shape
+        return Range(unit=unit, source=unbounded_source)
+
+    if hi <= lo:
+        # A relative default on a nominal of zero. No width exists, and
+        # inventing one here would be the guess the whole table refuses.
+        return Range(unit=unit, source=unbounded_source)
+    return Range(
+        lo=lo, hi=hi, unit=unit, source=f"defaults:{default.id}", range_source="default"
+    )
+
+
 def _range_from_rule(
     grades: GradesTable, kind: UncertainKind, grade: Grade, nominal: float, unit: str
 ) -> Range:
     """Apply grades.yaml's formula for a (kind, grade) to a nominal value.
 
     A rule that cannot produce a non-degenerate interval - no sourced number, a
-    nominal of zero under a multiplicative rule - yields an unbounded range
-    rather than a fabricated one.
+    nominal of zero under a multiplicative rule - falls through to the grade's
+    default range (S2, D111), and to unbounded when the grade has none. Neither
+    step fabricates a width: a default is a sourced policy, labelled as one.
     """
     rule = grades.rule_for(kind.value, grade.value)
 
@@ -222,12 +276,15 @@ def _range_from_rule(
     else:
         # UNBOUNDED, or CALIBRATION_DERIVED (whose width comes from the
         # calibration store, applied by the caller, not from this table).
-        return Range(unit=unit, source=rule.id if rule.source else "")
+        return _default_range(
+            grades, kind, grade, nominal, unit,
+            unbounded_source=rule.id if rule.source else "",
+        )
 
     if hi <= lo:
-        return Range(
-            unit=unit,
-            source="",
+        return _default_range(
+            grades, kind, grade, nominal, unit,
+            unbounded_source=rule.id if rule.source else "",
         )
     return Range(lo=lo, hi=hi, unit=unit, source=rule.id)
 
@@ -402,7 +459,9 @@ def _profile_items(
                     kind=UncertainKind.PROFILE,
                     grade=Grade.PLACEHOLDER,
                     nominal=1.0,
-                    range=Range(unit="fraction"),
+                    range=_default_range(
+                        grades, UncertainKind.PROFILE, Grade.PLACEHOLDER, 1.0, "fraction"
+                    ),
                     cost=_cost_for(costs, UncertainKind.PROFILE),
                     affects=[island.id],
                     note=f"no profile loaded for accelerator model {island.accelerator_model}",
@@ -518,9 +577,24 @@ def _sim_error_items(
                     lo=nominal - half, hi=nominal + half, unit="fraction", source=rule.id
                 )
             else:
-                rng = Range(unit="fraction", source=rule.id if rule.source else "")
+                # A bucket whose p95 equals its |mean| records a spread of
+                # exactly zero, which is a sample-count artifact rather than a
+                # perfect simulator. Since S2 that falls through to the
+                # sim_error/measured default instead of leaving the one input
+                # that carries most of this fixture's regret unrankable (D111).
+                rng = _default_range(
+                    grades, UncertainKind.SIM_ERROR, Grade.MEASURED, nominal, "fraction",
+                    unbounded_source=rule.id if rule.source else "",
+                )
                 if half <= 0:
-                    note += "; p95 equals |mean| so no width is sourced -> unbounded"
+                    note += (
+                        "; p95 equals |mean| so no width is sourced"
+                        + (
+                            " -> grade default applied"
+                            if not rng.is_unbounded
+                            else " -> unbounded"
+                        )
+                    )
             out.append(
                 UncertainInput(
                     id=f"sim_error:{hardware}/{bucket}",
@@ -541,7 +615,9 @@ def _sim_error_items(
                 kind=UncertainKind.SIM_ERROR,
                 grade=Grade.PLACEHOLDER,
                 nominal=0.0,
-                range=Range(unit="fraction"),
+                range=_default_range(
+                    grades, UncertainKind.SIM_ERROR, Grade.PLACEHOLDER, 0.0, "fraction"
+                ),
                 cost=cost,
                 affects=sorted(affects_by_hw[hardware]),
                 note=(

@@ -1,0 +1,23 @@
+pool 11  penalty 198,990.0
+  m=3 done (616 cases so far)
+  m=5 done (1232 cases so far)
+  m=9 done (1848 cases so far)
+wrote outputs/uncertainty/s2/eb/eb2_flip_detection_s2.json
+  m=3: {'n': 616, 'tp': 102, 'fp': 19, 'fn': 1, 'tn': 494, 'precision': 0.8429752066115702, 'recall': 0.9902912621359223, 'false_positive_rate': 0.037037037037037035}
+        categories {'delta': 19}
+        realisable {'n': 560, 'tp': 66, 'fp': 0, 'fn': 0, 'tn': 494, 'precision': 1.0, 'recall': 1.0, 'false_positive_rate': 0.0}
+          link_bw: {'n': 336, 'tp': 0, 'fp': 0, 'fn': 0, 'tn': 336, 'precision': None, 'recall': None, 'false_positive_rate': 0.0}
+          profile: {'n': 224, 'tp': 66, 'fp': 0, 'fn': 0, 'tn': 158, 'precision': 1.0, 'recall': 1.0, 'false_positive_rate': 0.0}
+          sim_error: {'n': 0, 'tp': 0, 'fp': 0, 'fn': 0, 'tn': 0, 'precision': None, 'recall': None, 'false_positive_rate': None}  (scoped out, D72)
+  m=5: {'n': 616, 'tp': 102, 'fp': 19, 'fn': 1, 'tn': 494, 'precision': 0.8429752066115702, 'recall': 0.9902912621359223, 'false_positive_rate': 0.037037037037037035}
+        categories {'delta': 19}
+        realisable {'n': 560, 'tp': 66, 'fp': 0, 'fn': 0, 'tn': 494, 'precision': 1.0, 'recall': 1.0, 'false_positive_rate': 0.0}
+          link_bw: {'n': 336, 'tp': 0, 'fp': 0, 'fn': 0, 'tn': 336, 'precision': None, 'recall': None, 'false_positive_rate': 0.0}
+          profile: {'n': 224, 'tp': 66, 'fp': 0, 'fn': 0, 'tn': 158, 'precision': 1.0, 'recall': 1.0, 'false_positive_rate': 0.0}
+          sim_error: {'n': 0, 'tp': 0, 'fp': 0, 'fn': 0, 'tn': 0, 'precision': None, 'recall': None, 'false_positive_rate': None}  (scoped out, D72)
+  m=9: {'n': 616, 'tp': 102, 'fp': 19, 'fn': 1, 'tn': 494, 'precision': 0.8429752066115702, 'recall': 0.9902912621359223, 'false_positive_rate': 0.037037037037037035}
+        categories {'delta': 19}
+        realisable {'n': 560, 'tp': 66, 'fp': 0, 'fn': 0, 'tn': 494, 'precision': 1.0, 'recall': 1.0, 'false_positive_rate': 0.0}
+          link_bw: {'n': 336, 'tp': 0, 'fp': 0, 'fn': 0, 'tn': 336, 'precision': None, 'recall': None, 'false_positive_rate': 0.0}
+          profile: {'n': 224, 'tp': 66, 'fp': 0, 'fn': 0, 'tn': 158, 'precision': 1.0, 'recall': 1.0, 'false_positive_rate': 0.0}
+          sim_error: {'n': 0, 'tp': 0, 'fp': 0, 'fn': 0, 'tn': 0, 'precision': None, 'recall': None, 'false_positive_rate': None}  (scoped out, D72)
