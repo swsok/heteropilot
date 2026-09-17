@@ -81,16 +81,25 @@ subtree under it is entirely fork-added (`4aac7a5`), and the new file is data be
 bundle, not a change to upstream code. Work order A7 requires this location: the grid is a property
 of the served artifact, not of the card, so it cannot live in `profiles/accelerators/*.yaml`.
 
-### One stale guard, fixed
+### One stale guard, and two sessions fixing it at once
 
 `tests/test_deviations_numbering.py` rejected D90 with *"claim a block in CLAUDE.md
 in the same commit"* — the one instruction that had already been followed on
 2026-09-15. Its allowed range was the literal `BLOCK_RANGE = (37, 89)`, written
-when D80–D89 was the last row, so claiming a block in CLAUDE.md could never be
-enough on its own. The range is now parsed from CLAUDE.md's table (six blocks,
-D40–D99, plus the block-free D37–D39), which is where the rule lives; a stray
-`D100` still fails. The parametrised presence check gained a `D90` case so that
-deleting a row is a failure rather than a silently smaller range.
+when D80–D89 was the last row, so claiming a block could never be enough on its
+own.
+
+**`WORK_ORDER_p2_regular_spec_evidence.md` hit the same wall and fixed it first**,
+in the work that became `main`'s `f0a3a84`, and its fix is the better one: it also
+widens `_REFERENCE` from `D\d{1,2}` to `D\d{1,3}`, without which no reference to
+D90–D99 was being checked for existence at all. This spike's own version of the
+fix was dropped in favour of theirs on rebase; all that is left here is the `D90`
+and `D100` cases in the parametrised presence check.
+
+That is the D34 collision the numbering rule exists to prevent, arriving through a
+*test* rather than through `deviations.md` — two streams, the same stale constant,
+no textual overlap in the entries themselves. Worth noting that the block table
+did its job: D90–D99 and D100–D109 never collided, only the guard did.
 
 ### Two corrections to the work order's §1.1
 
