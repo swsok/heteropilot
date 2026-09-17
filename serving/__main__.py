@@ -151,7 +151,11 @@ def _resolve_instance_dtype(instance, cli_dtype, dtype_to_bits):
     return dtype
 
 
-def _build_instance_runtime_configs(instances, args, dtype_to_bits):
+def _build_instance_runtime_configs(instances, args, dtype_to_bits, cluster_defaults=None):
+    # Top-level cluster keys an instance may inherit. Only the spike's
+    # execution_model / prefill_priority read from here; everything else keeps
+    # its existing instance-or-CLI precedence.
+    cluster_defaults = cluster_defaults or {}
     runtime_configs = []
     for instance_id, instance in enumerate(instances):
         dtype = _resolve_instance_dtype(instance, args.dtype, dtype_to_bits)
@@ -181,6 +185,14 @@ def _build_instance_runtime_configs(instances, args, dtype_to_bits):
             "enable_prefix_caching": instance.get(
                 "enable_prefix_caching", args.enable_prefix_caching),
             "prioritize_prefill": instance.get("prioritize_prefill", args.prioritize_prefill),
+            # Spike, WORK_ORDER_npu_exec_model_spike.md B.1. Absent anywhere ==
+            # 'vllm', which is the untouched path; the R1/R2 anchors prove it is
+            # byte-identical. Readable per instance or once at the cluster top
+            # level, because a heterogeneous cluster has one runtime per island.
+            "execution_model": instance.get(
+                "execution_model", cluster_defaults.get("execution_model", "vllm")),
+            "prefill_priority": instance.get(
+                "prefill_priority", cluster_defaults.get("prefill_priority", "strict")),
             "enable_local_offloading": instance.get(
                 "enable_local_offloading", args.enable_local_offloading),
             "enable_attn_offloading": enable_attn_offloading,
@@ -350,7 +362,8 @@ def main():
     power_modeling = cluster["power_modeling"]
     power_configs = cluster["power_configs"]
     pim_models = cluster["pim_models"]
-    instance_runtime_configs = _build_instance_runtime_configs(instances, args, _dtype_to_bits)
+    instance_runtime_configs = _build_instance_runtime_configs(
+        instances, args, _dtype_to_bits, cluster_defaults=raw_cluster_config)
     any_prefix_caching = any(cfg["enable_prefix_caching"] for cfg in instance_runtime_configs)
     # ----------------------------------------- Set config -----------------------------------------
     # Automatic network, memory configuration
@@ -467,6 +480,8 @@ def main():
             cxl_mem,
             ep_size=instance.get("ep_total", 1),
             kv_cache_dtype=inst_cfg["kv_cache_dtype"],
+            execution_model=inst_cfg["execution_model"],
+            prefill_priority=inst_cfg["prefill_priority"],
         ))
 
     # Controller for astra-sim process communication

@@ -15,12 +15,20 @@ from .pim_model import *
 import numpy as np
 
 # class that shedules request of astra-sim
+#: The widest prefill/extend chunk the RNGD artifact compiles: its 8 prefill
+#: buckets stop at attention_size 1024 and its 74 extend buckets are all
+#: `input_ids_size <= 1024` (D90). A step carrying more than this has no plan.
+AOT_MAX_PREFILL_CHUNK = 1024
+
+
 class Scheduler:
     def __init__(self, model, node_id, instance_id, max_num_seqs, max_num_batched_tokens,
                  num_npus, tp_size, pp_size, npu_mem, cpu_mem,
                  start_npu, pd_type, fp, block_size, req_num,
                  prioritize_prefill, enable_prefix_caching, enable_prefix_sharing, prefix_pool, prefix_storage, enable_chunked_prefill=False,
-                 long_prefill_token_threshold=0, cxl_mem=0, ep_size=1, kv_cache_dtype='auto'):
+                 long_prefill_token_threshold=0, cxl_mem=0, ep_size=1, kv_cache_dtype='auto',
+                 execution_model='vllm', prefill_priority='strict',
+                 aot_max_prefill_chunk=AOT_MAX_PREFILL_CHUNK):
         self.model = model
         self.config = get_config(model)
         self.node_id = node_id
@@ -39,6 +47,22 @@ class Scheduler:
         self.enable_chunked_prefill = enable_chunked_prefill
         self.prefix_storage = prefix_storage
         self.prioritize_prefill = prioritize_prefill
+        # Execution model. 'vllm' is the untouched path and must stay
+        # byte-identical; 'bucketed_aot' is the spike prototype
+        # (WORK_ORDER_npu_exec_model_spike.md B.1 P1).
+        self.execution_model = execution_model
+        self.prefill_priority = prefill_priority
+        self.aot_max_prefill_chunk = aot_max_prefill_chunk
+        #: Whose turn it is under `prefill_priority: alternate`. Unused under
+        #: 'strict', which drains the prefill queue first.
+        self._aot_prefill_turn = True
+        if execution_model == 'bucketed_aot' and enable_prefix_caching:
+            raise ValueError(
+                "execution_model 'bucketed_aot' is implemented in schedule_base "
+                "only; run it with --no-enable-prefix-caching. Silently falling "
+                "back to schedule_with_prefix would report the vLLM step policy "
+                "as if it were the bucketed one."
+            )
         # lists are sorted in arrival time manner
         self.request = []
         self.inflight = []
@@ -64,6 +88,48 @@ class Scheduler:
             if req.evict:
                 load_size += self.memory.get_evict_kv(req)
         return load_size
+
+    def _bucketed_aot_batch(self, batch_req):
+        """Pick one step the compiled bucket grid can execute.
+
+        Returns `(requests, scheduled_tokens)`, or `([], None)` when there is
+        nothing runnable. Two rules, both read off the artifact (D90):
+
+        * a prefill/extend step carries exactly ONE request, at most
+          `aot_max_prefill_chunk` tokens of it;
+        * a decode step carries only decoding requests, one token each.
+
+        Which one a step is, when both are available, is `prefill_priority`:
+        `strict` drains the prefill queue first, `alternate` takes turns. The
+        vendor runtime's actual order is not known; STEP C.2 of
+        `WORK_ORDER_npu_exec_model_spike.md` is meant to measure it.
+
+        **Running both values does not substitute for that measurement.** The work
+        order's contingency was to run each and take whichever lands closer to the
+        hardware. Measured across nine operating points the two differ by at most
+        0.03 pp of TPOT error (D92), so the comparison cannot discriminate and the
+        knob stays open until C.2 observes the order directly.
+        """
+        prefills = [req for req in batch_req if req.is_prefill()]
+        decodes = [req for req in batch_req if not req.is_prefill()]
+
+        take_prefill = bool(prefills)
+        if take_prefill and decodes and self.prefill_priority == 'alternate':
+            take_prefill = self._aot_prefill_turn
+            self._aot_prefill_turn = not self._aot_prefill_turn
+
+        if take_prefill:
+            req = prefills[0]
+            chunk = min(req.original_input - req.num_computed_tokens,
+                        self.aot_max_prefill_chunk)
+            if chunk <= 0:
+                return [], None
+            req.chunk_len = chunk
+            return [req], {req.id: chunk}
+
+        if not decodes:
+            return [], None
+        return decodes, {req.id: 1 for req in decodes}
 
     # batch the request scheduling method
     def schedule_base(self, current, sys, batch_id=-1):
@@ -97,27 +163,43 @@ class Scheduler:
 
             # Get decode requests for preemption decisions
             gen_req = [req for req in batch_req if not req.is_prefill()]
-            
-            if self.prioritize_prefill and not self.enable_chunked_prefill:
-                prefill_req = [req for req in batch_req if req.is_prefill()]
 
-                if len(prefill_req) != 0:
-                    batch_req = prefill_req
-                    batch_len = min(len(batch_req), available_slots)
-                    batch_req = batch_req[:batch_len]
-            
-            # Chunked prefill: process decode requests first, then prefill requests
-            if self.enable_chunked_prefill:
-                prefills = [req for req in batch_req if req.is_prefill()]
-                decodes = [req for req in batch_req if not req.is_prefill()]
-                batch_req = decodes + prefills
+            # execution_model: bucketed_aot -- one step the compiled grid has a
+            # plan for. Every prefill and extend bucket is batch_size 1 and every
+            # decode bucket is input_ids_size 1 (D90), so a step is either ONE
+            # request's prefill chunk or a decode batch, never both.
+            aot_tokens = None
+            if self.execution_model == 'bucketed_aot':
+                batch_req, aot_tokens = self._bucketed_aot_batch(batch_req)
+                if not batch_req:
+                    return None
                 batch_len = len(batch_req)
+                gen_req = [req for req in batch_req if not req.is_prefill()]
+            else:
+                if self.prioritize_prefill and not self.enable_chunked_prefill:
+                    prefill_req = [req for req in batch_req if req.is_prefill()]
+
+                    if len(prefill_req) != 0:
+                        batch_req = prefill_req
+                        batch_len = min(len(batch_req), available_slots)
+                        batch_req = batch_req[:batch_len]
+
+                # Chunked prefill: process decode requests first, then prefill requests
+                if self.enable_chunked_prefill:
+                    prefills = [req for req in batch_req if req.is_prefill()]
+                    decodes = [req for req in batch_req if not req.is_prefill()]
+                    batch_req = decodes + prefills
+                    batch_len = len(batch_req)
             
             # ============ STEP 1: Token budget allocation (FIRST) ============
             # Build scheduled_tokens dict: req.id -> tokens to process this step
             scheduled_tokens = {}
-            
-            if self.enable_chunked_prefill:
+
+            if aot_tokens is not None:
+                # Already decided by _bucketed_aot_batch, which is the whole point
+                # of the rule: the budget is the bucket, not max_num_batched_tokens.
+                scheduled_tokens = aot_tokens
+            elif self.enable_chunked_prefill:
                 # vLLM-style chunked prefill: schedule running (decode + ongoing prefill)
                 # first, then waiting (new prefill) requests. Token budget is the main
                 # constraint; long_prefill_token_threshold caps per-request tokens per step.
