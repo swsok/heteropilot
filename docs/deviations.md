@@ -3375,3 +3375,68 @@ as undecided rather than substituted.
 `experiments/scripts/npu_exec_ttft_compare.py`,
 `experiments/results/npu_exec_ttft.md`, `docs/npu_exec_spike.md` §B,
 `outputs/npu_spike/b_*`, `outputs/d23fix/anchor/after_npu_exec_b/`.
+
+---
+
+## D93 — the decode grouping grid is the powers of two from 1024, and an attention execution is mostly fixed cost · Recorded 2026-09-17
+
+`WORK_ORDER_npu_exec_model_spike.md` STEP C.1 and C.3, on **`npu2` (PCI
+`45:00.0`)** — `npu0`, the card every committed RNGD measurement was taken on, was
+held throughout by another tenant's pod. Results that are properties of the
+artifact carry; results that are properties of the card are labelled `npu2`'s.
+
+**1. The `composed` path is single-KV-bucket, not batch-1.** Holding concurrency
+fixed and removing only the KV diversity — 64 requests, every prompt exactly 512
+tokens and every completion 128 — takes the wire hit rate from 12.0 % on sharegpt
+to **97.5 %** at c4. H-a is excluded: a batch-size-matching rule cannot be moved by
+the prompt-length distribution. And the batch is rounded up rather than matched,
+because c3 holds 96-98 % although 3 is not a compiled decode batch size. D90's
+description of `composed` as effectively c1-only is right about the traffic and
+wrong about the rule.
+
+**2. A decode attention execution costs ~40 us fixed plus a per-sequence term.**
+From 29,728 raw EDF executions across two probe workloads and three
+concurrencies: `45.1 us + 3.15 us x n` at `attention_size` 1024, `37.1 + 8.54 x n`
+at 2048. Dividing the committed `npu0` bundle's per-layer totals by D17's measured
+executions per layer gives `43.1 + 7.15` independently -- a different card, a
+different workload, a different derivation, agreeing to 14 % on the fixed term and
+19 % on the slope. The structure transfers; the constants are `npu2`'s.
+
+At group size 1 the longer bucket is **cheaper** (38.8 us at 2048 against 48.3 at
+1024), tightly so at both. Unexplained, recorded as observed.
+
+**3. Decode groups on the decode buckets, and D91's open item is closed.** Every
+decode attention execution in the `[900, 1000]` KV runs used `attention_size
+= 1024` and every one in the `[1900, 2000]` runs used `2048`. Not one used 896,
+768, 640 or any other rung of the kernelwise menu -- those are for prefill and
+extend. Of D91's three candidate grids the decode-edge one is the runtime's, the
+kernelwise menu is excluded, and the uniform-1024 grid was a coincidence of
+sharegpt's range.
+
+**4. Nothing caps the executions near three.** The decode ladder is geometric, so
+`[2048, 4096)` spans a 2:1 range of KV and a workload with a bounded KV
+distribution occupies two or three buckets however large the batch grows. The
+STEP A census measured exactly that on this grid, 1.05 to 2.64 groups as the mean
+batch went 1.07 to 14.97. D17's saturation needs no cap mechanism. **Testable and
+unmeasured:** a wide-KV workload should show more groups and more executions.
+
+**5. So R-attn is a number, and it is small.** Re-priced with the measured cost
+model -- re-grouping changes only the fixed term, so scaling the whole lookup by a
+ratio of group counts, which is what STEP A did, overstates it by about a third --
+and on the settled grid, R-attn is **-2.0 to -4.1 pp and flat in load**, against
+the `-3.7 to +26.5 pp` D91 had to leave it at. The simulator over-charges decode
+attention slightly: it pays for the group structure of the sharegpt batches its
+table was measured on while its own batches are marginally less ragged.
+
+**Consequence for the spike's conclusion.** With all three mechanisms settled the
+decomposition closes at conclusion **(ii)**: at served 2.19 the measured error is
++11.00 pp and the mechanisms account for -2.00, so the residual is the error; at
+served 15.21 they account for +1.78 of +2.47. The execution model explains a
+small, quantified part and the accuracy domain keeps the rest.
+
+**Where.** `experiments/scripts/npu_exec_attention_groups.py`,
+`experiments/results/npu_exec_attention_groups.md`,
+`experiments/results/rngd_pipeline_hit_rate.md`,
+`workloads/{fixedlen-512in-128out-64,bucket1024-900in-100out-96,bucket2048-1900in-100out-96}.jsonl`,
+`outputs/npu_spike/{c1_fixedlen,c3_bucket1024,c3_bucket2048}`,
+`docs/npu_exec_spike.md` §C and §D.

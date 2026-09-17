@@ -577,3 +577,172 @@ It does sharpen C.3. The runtime demonstrably *can* run four sequences as one
 fused execution when their KV agrees, so whatever caps D17's attention executions
 near three is not a per-sequence cost. C.3 should look for a cap on the number of
 distinct **groups**.
+
+### C.3 — what one attention execution costs, and what the grid is (E-N8)
+
+Two probe workloads, `npu2`, artifact `d6ae6a43`, c4 / c8 / c16 each: 900-in /
+100-out so every sequence's KV stays in `[900, 1000]`, and 1900-in / 100-out so it
+stays in `[1900, 2000]`. An EDF stage is named by its compiled bucket, so
+`batch_size` **is** the group size that execution covered. Full table:
+`experiments/results/npu_exec_attention_groups.md`.
+
+| group size | µs at `attention_size` 1024 | µs at 2048 |
+| ---: | ---: | ---: |
+| 1 | 48.3 | 38.8 |
+| 2 | 54.5 | 54.9 |
+| 4 | 55.0 | 76.7 |
+| 8 | 68.8 | 108.8 |
+| 16 | 96.5 | 171.1 |
+| **least squares** | **45.1 + 3.15·n** | **37.1 + 8.54·n** |
+
+**A decode attention execution is mostly fixed cost.** ~40 µs to issue one at all,
+plus a per-sequence term that grows with context length. So splitting a batch into
+`g` groups costs about `40·g` µs whatever the split; the per-sequence work is paid
+either way.
+
+**The cards agree on the structure.** Dividing the committed `npu0` bundle's
+per-layer totals by D17's measured executions per layer gives an independent
+estimate — **43.1 µs fixed + 7.15 µs per sequence** — from a different card, a
+different workload and a different derivation. Against `npu2`'s directly measured
+37.1 + 8.54 that is 14 % on the fixed term and 19 % on the slope. The *structure*
+transfers; the exact constants are `npu2`'s and are not merged into the `npu0`
+bundle.
+
+One thing not explained: at group size 1 the longer bucket is **cheaper**
+(38.8 µs at 2048 against 48.3 at 1024), tightly so at both (p05–p95 spans of 1.4
+and 1.5 µs). Recorded as observed.
+
+#### The grouping grid is the decode buckets — A.1's open item, closed
+
+Every decode attention execution in the `[900, 1000]` runs used
+`attention_size = 1024`, and every one in the `[1900, 2000]` runs used `2048`.
+Not one used 896, 768, 640 or any of the kernelwise menu's 128-spaced rungs. Those
+finer rungs exist for prefill and extend; **decode groups on the powers of two
+from 1024.**
+
+So of A.1's three candidates, the **decode-edge** grid is the runtime's, the
+kernelwise menu is excluded, and the uniform-1024 grid was only ever a coincidence
+of sharegpt's range.
+
+#### What caps the executions near three: nothing does
+
+D17's saturation needs no cap. The decode ladder is geometric, so the bucket
+`[2048, 4096)` covers a 2:1 span of KV; a workload whose KV distribution is
+bounded — sharegpt, mean ≈ 2200 — occupies two or three buckets however large the
+batch grows. A.1's own census measured exactly that on this grid: 1.05 → 2.64
+groups as the mean batch went 1.07 → 14.97. The runtime is not declining to split;
+there is nothing left to split into.
+
+This is testable and currently unmeasured: a workload with a **wide** KV spread
+should show more groups and more attention executions per layer. That is the
+experiment a follow-up work order should run, and it is the same axis B.3's
+hold-out was meant to probe.
+
+#### R-attn, finally a number
+
+With the measured cost model in place of a ratio of group counts — re-grouping
+changes only the fixed term, not the per-sequence work — and with the grid
+settled, A.3's R-attn stops being a range:
+
+| point | R-attn before C.3 | **R-attn after C.3** |
+| --- | --- | ---: |
+| c1.0 | −4.47 … −4.46 | **−4.10** |
+| c1.99 | −2.65 … −1.18 | **−2.27** |
+| c3.98 | −2.53 … +3.91 | **−1.96** |
+| c7.88 | −3.63 … +13.35 | **−2.43** |
+| c15.3 | −3.75 … +25.83 | **−2.05** |
+| c15.59 | −3.70 … +26.47 | **−2.00** |
+
+**−2.0 to −4.1 pp, and flat in load.** The simulator over-charges decode attention
+slightly, because it pays for the group structure of the sharegpt batches the
+table was measured on while its own batches are marginally less ragged. Two of the
+three things that made this look big were errors of method — the double count
+(D91) and scaling the per-sequence term along with the fixed one — and the third,
+the grid, is now measured.
+
+---
+
+## §D — the decomposition, and the conclusion (STEP D)
+
+### The table
+
+TPOT, sharegpt, 300 requests, `--match offered`. Contributions are percentage
+points on the decode-cost sum; the step-policy column is measured by re-simulation
+(A.2) and the rest by offline re-pricing (A.3) under C.3's measured cost model.
+
+| served | current err | step policy | R-pad | R-attn | explained | **residual** | prototype err |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1.02 | +2.25 | +0.16 | +0.00 | −4.10 | −3.94 | **+6.19** | +2.41 |
+| 2.19 | +11.00 | +0.28 | −0.01 | −2.27 | −2.00 | **+13.00** | +11.36 |
+| 4.31 | +10.79 | +0.71 | −0.36 | −1.96 | −1.61 | **+12.40** | +11.58 |
+| 8.21 | +7.33 | +1.48 | +0.47 | −2.43 | −0.48 | **+7.81** | +9.03 |
+| 14.83 | +3.26 | +2.74 | +0.70 | −2.05 | +1.39 | **+1.87** | +6.43 |
+| 15.21 | +2.47 | +2.93 | +0.85 | −2.00 | +1.78 | **+0.69** | +5.79 |
+| 25.18 | −3.28 | +4.56 | — | — | +4.56 | **−7.84** | +1.94 |
+| 37.67 | −25.17 | +5.37 | — | — | +5.37 | **−30.54** | −19.28 |
+| 44.47 | −48.59 | +4.36 | — | — | +4.36 | **−52.95** | −43.73 |
+
+(The three high-load rows have no A.1 census, so R-pad and R-attn are not priced
+there; the work order's completion condition allows a cell to read "undecided"
+and these do.)
+
+TTFT is a separate table (§B.2, simulator against simulator) and the mechanism
+there is **falsified**, not quantified: removing every mixed step moves TTFT p50
+by −5.7 % to +3.0 % against a measured gap of −32.6 %. R-128, the prefill
+128-padding, is a flat +6.6 to +6.7 pp and is the only TTFT mechanism with a
+settled magnitude.
+
+### Conclusion: **(ii) — some of it, and a smaller some than the question assumed**
+
+Not (i). The prototype narrows the nine-point error span from 59.59 pp to
+55.31 pp, a **7 %** narrowing against the one-third the work order set as the bar.
+The sign flip does not go away; it moves. Below c16 the prototype makes the error
+worse.
+
+Not (iii) either. Three mechanisms have settled, non-zero magnitudes and two of
+them are worth formalising:
+
+| mechanism | magnitude | formalise? |
+| --- | --- | --- |
+| step policy, exclusivity | +0.2 to +5.4 pp, grows with load | **yes** — real and load-dependent, but it is not a TPOT fix; it is what makes the simulator's queue behave, and it took served concurrency at c15.3 from 14.83 to 15.28 against a measured 15.3 |
+| R-128, prefill 128-padding | +6.6 pp, flat | **yes** — the largest single settled number in the spike, and the one that lands on TTFT where the gap is −32.6 % |
+| R-attn, KV-group diversity | −2.0 to −4.1 pp, flat | **only as the measured cost model** — `g × 43 µs + N × 7 µs`, never as a ratio of group counts, and only once a wide-KV workload has tested it |
+| R-pad, batch padding | < 1 pp | **no** — already inside the bundle; modelling it double-counts |
+| P3 as the work order wrote it | +31.6 pp | **no** — that number is a double count, not a mechanism |
+| mixed steps as a TTFT cause | −5.7 to +3.0 % on TTFT | **no** — falsified by B.2 |
+
+Everything that remains is the residual, and at the low-load end the residual
+**is** the error: at served 2.19 the measured error is +11.00 pp and the three
+mechanisms together account for −2.00. Nothing in the execution model explains why
+the simulator is 11 % pessimistic at concurrency 2.
+
+### The relationship to the accuracy domain
+
+The domain's job is unchanged by this spike, and that is the finding. It carries
+the error curve as measurement precisely because the curve is not yet derivable
+from mechanism: at the low-load end 100 % of it is residual, and at the high-load
+end the prototype recovers 5.4 of 25 pp. Re-measuring the domain under the
+prototype would move the low-load points by +0.2 to +3.3 pp in the **wrong**
+direction and shift the zero crossing upward from ~16 to ~30 served, so a
+prototype-based domain would charge *more* margin below c16 and less above it.
+That is not an improvement to buy with a `serving/` change.
+
+`rps_aware`'s E5 winner was not re-evaluated here: the prototype's effect on a
+plan is bounded by its effect on the error, and at the operating point that plan
+sits at the effect is a few percentage points in the direction that widens
+margins. Recorded as **not re-run** rather than estimated.
+
+### What a follow-up work order should and should not do
+
+**Should**: formalise the step policy and the 128-padding as opt-in rules, with
+the measured constants; run the wide-KV workload that C.3's saturation explanation
+predicts; and take the hold-out measurement B.3 is still waiting on.
+
+**Should not**: build P2 or P3 as the work order describes them, treat the 7 %
+narrowing as a case for merging the prototype, or quote the +31.6 pp,
+the +14.0 % TTFT or the +26.5 pp R-attn — each is recorded here with the method
+error that produced it.
+
+**Open, and cheap**: C.2 (does the runtime alternate prefill and decode steps, or
+drain the prefill queue) is still unobserved, and B.2 showed the two knob values
+differ by 0.03 pp, so it cannot be settled indirectly. C.5's staircase was not run.

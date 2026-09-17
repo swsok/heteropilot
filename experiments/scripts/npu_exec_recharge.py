@@ -245,8 +245,17 @@ def price_rule(p: Pricer, layers: int, step: Step, rule: str, ladder, edges,
             if pc:
                 attn += p.attention(pc, kvp, 0, 0, 0, 0)
             return p.step_cost(layers, tokens, sequences, attn)
-        ratio = len(buckets) / _d17_groups(nd)
-        attn = p.attention(pc, kvp, nd, kvm, kvx, kvn) * ratio
+        # Since C.3 the correction is a measured cost model rather than a ratio
+        # of group counts. One decode attention execution costs a large FIXED
+        # amount plus a modest amount per sequence it covers, so re-grouping a
+        # batch changes only the fixed term -- the per-sequence work is done
+        # either way. Scaling the whole lookup by g_actual/g_table, which is what
+        # this rule did before C.3, wrongly re-scales the per-sequence term too
+        # and overstates the correction by about a third.
+        g_table = _d17_groups(nd)
+        base = ATTN_FIXED_US * g_table + ATTN_SLOPE_US * nd
+        actual = ATTN_FIXED_US * len(buckets) + ATTN_SLOPE_US * nd
+        attn = p.attention(pc, kvp, nd, kvm, kvx, kvn) * (actual / base)
         return p.step_cost(layers, tokens, sequences, attn)
     elif rule == "R-128" and pc:
         pc = _ceil128(pc)
@@ -256,6 +265,16 @@ def price_rule(p: Pricer, layers: int, step: Step, rule: str, ladder, edges,
 
     return p.step_cost(layers, tokens, sequences, p.attention(pc, kvp, nd, kvm, kvx, kvn))
 
+
+#: The per-execution decode attention cost, C.3 (E-N8). Two independent routes:
+#: the committed npu0 bundle's per-layer totals divided by D17's executions per
+#: layer give 43.1 us fixed + 7.15 us per sequence, and 19,392 raw EDF executions
+#: on npu2 at attention_size 2048 give 37.1 + 8.54. The npu0 pair is used here,
+#: because the bundle being re-priced is npu0's; the npu2 measurement is the
+#: independent confirmation that the STRUCTURE -- a large fixed cost and a modest
+#: per-sequence slope -- is real rather than an artefact of dividing by D17.
+ATTN_FIXED_US = 43.1
+ATTN_SLOPE_US = 7.15
 
 #: What D17 measured on the card: attention executions per layer against the mean
 #: number of sequences in the batch. This is the diversity the bundle's decode rows

@@ -166,6 +166,41 @@ not a gap to paper over.
 
 ## 2. Next work, in priority order
 
+### 2.0 `WORK_ORDER_npu_exec_model_spike.md` — **STEP 0/A/B/C done 2026-09-17, conclusion (ii)**
+
+The spike asked how much of the RNGD accuracy domain's sign-changing error is the
+vLLM-vs-bucketed-AOT structural difference. Answer: **7 %** of the error span, and
+at low load none of it. Full record in `docs/npu_exec_spike.md`; D90–D93.
+
+**Do not redo these.** Three mechanisms the work order names are settled and two
+of them must *not* be built: batch padding (P2) and group attention (P3) are
+already inside the measured bundle, and modelling them double-counts. The
+prototype on `spike/npu-exec-b-prototype` is **do-not-merge** and its default path
+is proven byte-identical (R1/R2 anchors plus six identical CSVs).
+
+**Still open, in the order they are worth doing:**
+
+- **A wide-KV workload.** C.3 explains D17's saturation near three attention
+  executions as the geometry of a power-of-two bucket ladder against a workload
+  with a bounded KV spread — no runtime cap involved. That predicts more groups on
+  a wide-KV workload and is currently unmeasured. Any node for the census half;
+  the NPU node for the measurement.
+- **B.3's hold-out.** Needs C.4, which needs a card. Never run.
+- **C.2.** Whether the runtime alternates prefill and decode steps or drains the
+  prefill queue is still unobserved, and B.2 showed the two knob values differ by
+  0.03 pp, so it **cannot** be settled by running both and comparing. Ask Furiosa
+  for a step-timestamp logging option, or find one.
+- **C.5's staircase**, not run.
+
+**Trap, and it cost a device slot.** `npu0` — the card every committed RNGD
+measurement was taken on — was held throughout by another tenant's pod, and all
+three vendor-level checks said it was free. `alloc_status` read all zeros,
+`furiosa-smi ps` was empty, and power sat at idle. `docs/nodes/npu.md` now says to
+read the process list for `--chip` flags instead. Everything in §C was measured on
+`npu2` (PCI `45:00.0`) and is labelled as such; the card labels have shifted again
+and today's `npu2` is the card the four-card inventory called `npu3`.
+
+
 ### 2.1 `WORK_ORDER_rps_aware.md` — **complete, STEP 0–6, PRs #60–#70**
 
 Delivered, in the order it binds:
