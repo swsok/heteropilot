@@ -168,7 +168,7 @@ def test_the_numbering_is_dense_so_a_gap_means_a_reservation() -> None:
     )
 
 
-@pytest.mark.parametrize("block", ["D40", "D50", "D60", "D70", "D80"])
+@pytest.mark.parametrize("block", ["D40", "D50", "D60", "D70", "D80", "D90", "D100"])
 def test_claude_md_still_documents_the_blocks(block: str) -> None:
     """The table is the whole mechanism -- a test that enforces a rule nobody can
     find is worse than no test."""

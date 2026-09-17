@@ -885,6 +885,14 @@ in the repo. The calibrated row is the honest local fix.
   Whether the runtime genuinely never mixes them is **not decidable from these
   traces**: the EDF CSV carries durations, not timestamps, so co-occurrence
   within one forward is unobservable.
+
+  **Resolved by the artifact buckets, 2026-09-15/16 — see D90.** The sentence
+  above stays as written, because it is still true *of these traces*. The
+  compiled grid answers it from the other side: every prefill and extend bucket
+  is `batch_size = 1` and every decode bucket is `input_ids_size = 1`, so no
+  compiled plan can hold a prefill chunk and a decode token at once. The runtime
+  structurally never mixes them, and the nearest-slice fallback is approximating
+  an interior the hardware never visits.
 - **The vendor runtime compiles two plans for the same model.** Batch 1 runs a
   fully-fused `Composed` graph with no `Tokenwise` and no `Attention` stages at
   all; batch ≥ 2 runs the per-layer path. So there is no `input_size: 1` bucket
@@ -3154,3 +3162,79 @@ must not be interpolated on one axis.
 
 **Where.** `profiles/calibration/openloop/a40.accuracy.openloop.yaml`,
 `experiments/p2_evidence/results/v2_openloop_concurrency.md` §5-6.
+---
+
+## D90 — above c1 the RNGD runtime never runs a fused pipeline, and the compiled grid rules out mixed steps · Recorded 2026-09-16
+
+**What the planner assumed, implicitly.** The RNGD perf bundle and its accuracy
+domain were built from EDF traces without recording *which* compiled plan
+produced them, and the simulator's cost model reproduces a vLLM-style scheduler:
+a step may mix prefill and decode tokens, batches take any size, and attention is
+looked up at the batch's real token count and real KV. Two facts about the vendor
+artifact contradict that, and both are properties of the compiled artifact rather
+than of the card.
+
+**1. `composed` is a c1-only path.** `d6ae6a43` compiles 47 pipelines — one
+`kernelwise` (a composable IR assembled per layer) and 46 `composed`, each a fused
+graph for exactly one decode bucket. `furiosa-llm`'s own `Wire pipeline hit rate`
+gauge, tabulated from the committed serve logs of both envelope campaigns, is
+99.8 % at concurrency 1 and then 47.5 / 12.0 / 1.8 / 0.5 / 0.0 / 0.0 / 0.0 at
+c2 / c4 / c8 / c16 / c32 / c64 / c128, with repeats inside 0.2 pp. So at every
+load the planner cares about, the runtime is on the kernelwise path. This is
+also why D17's per-layer EDF traces at c16–c32 have per-layer stages at all: a
+`composed` step has none to trace.
+
+*Why the hit rate collapses is open.* Either the running batch size rarely
+matches a compiled `bs` (H-a), or a `composed` pipeline, being compiled for one
+`(bs, attention_size)`, can serve a step only when every sequence shares that KV
+bucket (H-b). 47.5 % at c2 and 12.0 % at c4 read like the probability that two,
+then four, sequences share a bucket, which favours H-b; STEP C.1 of
+`WORK_ORDER_npu_exec_model_spike.md` decides it with a fixed-prompt-length run.
+
+**2. Mixed prefill+decode steps are not compiled, so the runtime cannot do them.**
+Every prefill bucket (8) and every extend bucket (74) has `batch_size = 1`, and
+every decode bucket (46) has `input_ids_size = 1`. No compiled plan holds both a
+prefill chunk and a decode token, so one forward pass is either one request's
+prefill/extend chunk or a decode batch. Meanwhile
+`serving/core/scheduler.py:101-120` batches several prefills together when
+`prioritize_prefill ∧ ¬chunked`, and mixes decode with prefill chunks under one
+`max_num_batched_tokens` budget when chunked prefill is on. No knob makes the
+simulator reproduce "prefill is bs=1 and exclusive of decode" exactly; it can only
+be approximated.
+
+**3. The decode grid is a KV budget, and it caps the batch below what E6 asked
+for.** `bs × attention_size` is 131072 on the `bs=1` row and 262144–524288 on the
+rest, so the widest context shrinks as the batch grows: 65536 at bs=4, 16384 at
+bs=16, 4096 at bs=64 and 128, and 2048 at bs=256. On sharegpt, whose mean KV is
+≈ 2200 (D17), the bs=256 row cannot be used at all and the largest executable
+decode batch is **128**. `rps_aware`'s E6 gave RNGD candidates
+`max_num_seqs 256`, a setting this artifact has no plan for. The measured
+envelope is unaffected — it was taken from the server, which simply never used
+that batch size — but a plan quoting 256 as the operating point is quoting one
+the hardware cannot reach.
+
+**Consequence for D17.** D17 recorded "whether the runtime genuinely never mixes
+[prefill and decode] is **not decidable from these traces**: the EDF CSV carries
+durations, not timestamps, so co-occurrence within one forward is unobservable."
+That remains true of the traces. The compiled grid settles the question from the
+other side, structurally, and the answer is that it never mixes them. D17's
+sentence is annotated in place rather than rewritten.
+
+**Not fixed here, on purpose.** This is a spike's STEP 0. Nothing in `serving/`
+or `planner/` changes; the spike measures how much of the RNGD accuracy domain's
+error these differences explain before anything is built. Two rules the spike's
+own later steps are written in terms of were also found to be wrong and are
+carried as open items, not adopted: the kernelwise attention menu is the union of
+the 128 compiled buckets and **not** a uniform 1024-token grid (its decode edges
+are powers of two from 1024), and the batch-padding ladder
+`1, 2, …, 256, 384, 512, 1024` is **not** powers of two above 256.
+
+**Where.** `experiments/scripts/furiosa_artifact_buckets.py`,
+`experiments/scripts/serve_log_hit_rates.py`,
+`experiments/results/rngd_artifact_buckets.md`,
+`experiments/results/rngd_pipeline_hit_rate.md`,
+`profiler/perf/RNGD-CARD/meta-llama/Llama-3.1-8B/bf16/artifact_buckets.yaml`,
+`docs/npu_exec_spike.md` §0. Artifact `d6ae6a43` (furiosa-llm `b62dbc1`,
+compiler `d19a92a2f2`, tp=8); classification per
+`furiosa_llm/metadata/config_types.py`. The D-number comes from the `D90–D99`
+block `WORK_ORDER_npu_exec_model_spike.md` claims in `CLAUDE.md` (2026-09-15).
