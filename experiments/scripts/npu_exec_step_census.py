@@ -88,6 +88,19 @@ FALLBACK_DECODE_EDGES = [1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072]
 POW2_LADDER = [1 << i for i in range(0, 21)]
 
 
+def _tag_order(path: Path) -> tuple:
+    """Sort runs by the concurrency in their tag, not by its spelling.
+
+    `sorted(glob(...))` puts c15p3 before c1p0, which makes a table that reads as
+    if the trend ran backwards.
+    """
+    tag = path.stem.split("_", 1)[-1]
+    try:
+        return (0, float(tag.lstrip("c").replace("p", ".")))
+    except ValueError:
+        return (1, 0.0)
+
+
 @dataclass
 class Step:
     batch_id: int
@@ -116,17 +129,32 @@ def _next_up(ladder: list[int], value: int) -> int:
     return ladder[-1]
 
 
-def load_grid(path: Path | None) -> tuple[list[int], list[int], str]:
-    """(batch ladder, decode attention edges, provenance) from an artifact grid."""
+def load_grid(path: Path | None) -> tuple[list[int], list[int], list[int], str]:
+    """(batch ladder, kernelwise menu edges, decode-only edges, provenance).
+
+    Three grids, because it is not known which one the runtime groups on and the
+    census exists to tell them apart. The menu is what the kernelwise pipeline can
+    address; the decode-only edges are the subset the 46 composed decode plans use.
+    """
     if path is None:
-        return FALLBACK_BATCH_LADDER, FALLBACK_DECODE_EDGES, "fallback (no --grid given)"
+        return (FALLBACK_BATCH_LADDER, FALLBACK_DECODE_EDGES, FALLBACK_DECODE_EDGES,
+                "fallback (no --grid given)")
     import yaml
 
     doc = yaml.safe_load(path.read_text())
     ladder = doc.get("kernelwise", {}).get("tokenwise_buckets")
     if not ladder:
         ladder = sorted({row["batch_size"] for row in doc["buckets"]["decode"]})
-    edges = sorted({row["attention_size"] for row in doc["buckets"]["decode"]})
+    # The UNION of every bucket's attention_size, not the decode buckets' alone.
+    # Above c1 the runtime is on the kernelwise pipeline (D90), and that pipeline's
+    # attention menu is the union -- 15 distinct sizes, 128-spaced up to 1024 and
+    # powers of two above it. The decode buckets contribute only the powers of two,
+    # so using them alone makes every sequence shorter than 1024 look like one
+    # group when the menu can tell eight of them apart.
+    edges = sorted(
+        {row["attention_size"] for rows in doc["buckets"].values() for row in rows}
+    )
+    decode_edges = sorted({row["attention_size"] for row in doc["buckets"]["decode"]})
     src = doc.get("source", {})
     # A relative --grid is not `relative_to` anything, and an absolute one outside
     # the tree RAISES rather than falling back -- the same trap lowload_sim_error.py
@@ -136,7 +164,7 @@ def load_grid(path: Path | None) -> tuple[list[int], list[int], str]:
     except ValueError:
         shown = path.resolve()
     prov = f"{shown} (artifact {src.get('artifact_id', '?')})"
-    return sorted(ladder), edges, prov
+    return sorted(ladder), edges, decode_edges, prov
 
 
 def parse_run(log: Path, trace: Path, strict: bool = False) -> tuple[list[Step], dict]:
@@ -210,7 +238,8 @@ def parse_run(log: Path, trace: Path, strict: bool = False) -> tuple[list[Step],
     return steps, {"requests": len(inputs), "unbalanced_steps": unbalanced}
 
 
-def census(steps: list[Step], ladder: list[int], edges: list[int]) -> dict:
+def census(steps: list[Step], ladder: list[int], edges: list[int],
+           decode_edges: list[int] | None = None) -> dict:
     total = len(steps)
     total_cycles = sum(s.cycles for s in steps)
     mixed = [s for s in steps if s.mixed]
@@ -226,13 +255,14 @@ def census(steps: list[Step], ladder: list[int], edges: list[int]) -> dict:
 
     def _groups(rows: list[Step], mode: str) -> dict:
         counts: Counter[int] = Counter()
+        grid = decode_edges if mode == "decode_edges" else edges
         for s in rows:
             if not s.decode_kv:
                 continue
             if mode == "uniform1024":
                 keys = {kv // 1024 for kv in s.decode_kv}
             else:
-                keys = {_next_up(edges, max(kv, 1)) for kv in s.decode_kv}
+                keys = {_next_up(grid, max(kv, 1)) for kv in s.decode_kv}
             counts[len(keys)] += 1
         n = sum(counts.values())
         mean = sum(k * v for k, v in counts.items()) / n if n else None
@@ -263,7 +293,11 @@ def census(steps: list[Step], ladder: list[int], edges: list[int]) -> dict:
         ),
         "decode_pad_frac_artifact_ladder": _pad_ratio(pure_decode, ladder),
         "decode_pad_frac_pow2": _pad_ratio(pure_decode, POW2_LADDER),
-        "kv_groups_artifact_edges": _groups(pure_decode, "artifact"),
+        "mean_decode_batch": (
+            sum(s.n_decode for s in pure_decode) / len(pure_decode) if pure_decode else None
+        ),
+        "kv_groups_kernelwise_menu": _groups(pure_decode, "artifact"),
+        "kv_groups_decode_edges": _groups(pure_decode, "decode_edges"),
         "kv_groups_uniform1024": _groups(pure_decode, "uniform1024"),
         "prefill_tokens": prefill_tokens,
         "prefill_pad128_frac": (
@@ -273,10 +307,32 @@ def census(steps: list[Step], ladder: list[int], edges: list[int]) -> dict:
     }
 
 
-#: What D17 measured on the card: attention executions per layer, against the
-#: mean number of sequences in the batch. Carried here so the census prints the
+#: What D17 measured on the card: attention executions per layer, against the mean
+#: number of sequences in the batch. Carried here so the census prints the
 #: comparison rather than leaving it to a reader with two documents open.
-D17_ATTENTION_EXECUTIONS = {1.95: 1.95, 3.91: 2.40, 8.91: 2.87, 15.16: 3.03, 29.09: 3.08}
+D17_ATTENTION_EXECUTIONS = [(1.95, 1.95), (3.91, 2.40), (8.91, 2.87),
+                            (15.16, 3.03), (29.09, 3.08)]
+
+
+def d17_groups(batch: float) -> float:
+    """D17's executions per layer at this batch size, linear between its points.
+
+    Clamped rather than extrapolated at both ends: five points are not a curve
+    outside the range they cover. Note the shape -- it SATURATES near 3 as the
+    batch grows from 2 to 29, which is what any candidate grouping grid has to
+    reproduce.
+    """
+    xs = [x for x, _ in D17_ATTENTION_EXECUTIONS]
+    ys = [y for _, y in D17_ATTENTION_EXECUTIONS]
+    if batch <= xs[0]:
+        return ys[0]
+    if batch >= xs[-1]:
+        return ys[-1]
+    for i in range(len(xs) - 1):
+        if xs[i] <= batch <= xs[i + 1]:
+            t = (batch - xs[i]) / (xs[i + 1] - xs[i])
+            return ys[i] + t * (ys[i + 1] - ys[i])
+    return ys[-1]
 
 
 def _fmt_pct(x: float | None) -> str:
@@ -295,30 +351,37 @@ def to_markdown(rows: list[dict], grid_prov: str) -> str:
         "**simulated** run; nothing was measured on hardware. The grid the padding and grouping",
         f"ladders come from is `{grid_prov}`.",
         "",
-        "| point | steps | mixed steps | mixed cycle share | prefill steps bs=1 "
-        "| decode pad (artifact ladder) | decode pad (pow2) "
-        "| KV groups (artifact edges) | KV groups (uniform 1024) | prefill 128-pad |",
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        "| point | steps | mean decode bs | mixed steps | mixed cycle share "
+        "| prefill steps bs=1 | decode pad (artifact ladder) | decode pad (pow2) "
+        "| KV groups: menu / decode edges / uniform 1024 | D17 measured @ this batch "
+        "| prefill 128-pad |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for r in rows:
         c = r["census"]
+        mb = c["mean_decode_batch"]
         out.append(
-            f"| {r['tag']} | {c['steps']} | "
+            f"| {r['tag']} | {c['steps']} | {_fmt_num(mb)} | "
             f"{c['mixed_steps']} ({_fmt_pct(c['mixed_step_frac'])}) | "
             f"{_fmt_pct(c['mixed_step_cycle_frac'])} | "
             f"{_fmt_pct(c['prefill_bs1_frac'])} | "
             f"{_fmt_pct(c['decode_pad_frac_artifact_ladder'])} | "
             f"{_fmt_pct(c['decode_pad_frac_pow2'])} | "
-            f"{_fmt_num(c['kv_groups_artifact_edges']['mean'])} | "
+            f"{_fmt_num(c['kv_groups_kernelwise_menu']['mean'])} / "
+            f"{_fmt_num(c['kv_groups_decode_edges']['mean'])} / "
             f"{_fmt_num(c['kv_groups_uniform1024']['mean'])} | "
+            f"{_fmt_num(d17_groups(mb) if mb else None)} | "
             f"{_fmt_pct(c['prefill_pad128_frac'])} |"
         )
     out += [
         "",
         "D17 measured, on the card, attention executions per layer of",
-        "1.95 / 2.40 / 2.87 / 3.03 / 3.08 at mean batch 1.95 / 3.91 / 8.91 / 15.16 / 29.09.",
-        "The two KV-group columns are the two candidate grids; the one that tracks those",
-        "numbers is the grid the runtime actually groups on.",
+        "1.95 / 2.40 / 2.87 / 3.03 / 3.08 at mean batch 1.95 / 3.91 / 8.91 / 15.16 / 29.09 --",
+        "a curve that SATURATES near 3. The three KV-group columns are the candidate grids.",
+        "None of them is the answer: the kernelwise menu keeps growing where the measurement",
+        "flattens, and the two coarse grids track the shape but sit low. So grouping is not",
+        "'one attention execution per distinct compiled bucket in the batch', and STEP C.3",
+        "has to measure the rule rather than pick one of these.",
     ]
     return "\n".join(out) + "\n"
 
@@ -340,10 +403,10 @@ def main() -> int:
                          "balance, instead of counting it")
     args = ap.parse_args()
 
-    ladder, edges, prov = load_grid(args.grid)
+    ladder, edges, decode_edges, prov = load_grid(args.grid)
 
     rows = []
-    for log in sorted(args.run_dir.glob("sim_*.log")):
+    for log in sorted(args.run_dir.glob("sim_*.log"), key=_tag_order):
         tag = log.stem[len("sim_"):]
         trace = args.run_dir / f"trace_{tag}.jsonl"
         if not trace.exists():
@@ -354,13 +417,15 @@ def main() -> int:
             print(f"  {tag}: no batch lines -- was the run given --log-level INFO?",
                   file=sys.stderr)
             continue
-        c = census(steps, ladder, edges)
+        c = census(steps, ladder, edges, decode_edges)
         rows.append({"tag": tag, "log": str(log), "meta": meta, "census": c})
         print(f"  {tag}: {c['steps']} steps, "
               f"{c['mixed_steps']} mixed ({_fmt_pct(c['mixed_step_frac'])}), "
               f"prefill bs=1 {_fmt_pct(c['prefill_bs1_frac'])}, "
-              f"KV groups {_fmt_num(c['kv_groups_artifact_edges']['mean'])}"
-              f"/{_fmt_num(c['kv_groups_uniform1024']['mean'])}, "
+              f"KV groups {_fmt_num(c['kv_groups_kernelwise_menu']['mean'])}"
+              f"/{_fmt_num(c['kv_groups_decode_edges']['mean'])}"
+              f"/{_fmt_num(c['kv_groups_uniform1024']['mean'])} "
+              f"vs D17 {_fmt_num(d17_groups(c['mean_decode_batch']))}, "
               f"unbalanced {meta['unbalanced_steps']}",
               file=sys.stderr)
 

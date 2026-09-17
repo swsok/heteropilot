@@ -194,3 +194,192 @@ still fits in one step; the second keeps chunked prefill on, which is what makes
 `lowload_sim_error.py` hardcoded the scheduler knobs and the log level, so it grew
 a `--sim-arg` passthrough (appended to the simulator's command line, last
 occurrence wins). Omitting it leaves every committed invocation byte-identical.
+
+### A.1 — what the simulator's steps look like (E-N1)
+
+Six envelope points, 300 requests each, current knobs, `--log-level INFO`. The runs
+reproduce the committed accuracy domain to the second decimal (+2.25 / +11.00 /
++10.79 / +7.33 / +3.26 / +2.47 against `outputs/card_lowload_300/`), so INFO logging
+changed nothing. **369,270 steps replayed, 0 unbalanced.** Full table:
+`experiments/results/npu_exec_step_census.md`.
+
+| point | steps | mean decode bs | mixed steps | mixed cycle share | prefill bs=1 | decode pad | prefill 128-pad |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| c1.0 | 182269 | 1.07 | 0.08 % | 0.4 % | 100 % | 0.0 % | 7.2 % |
+| c1.99 | 90705 | 2.16 | 0.33 % | 1.4 % | 100 % | 11.3 % | 7.2 % |
+| c3.98 | 45796 | 4.27 | 0.65 % | 2.6 % | 100 % | 29.9 % | 7.2 % |
+| c7.88 | 24063 | 8.13 | 1.24 % | 4.6 % | 100 % | 38.3 % | 7.2 % |
+| c15.3 | 13383 | 14.61 | 2.23 % | 7.4 % | 100 % | 25.7 % | 7.2 % |
+| c15.59 | 13054 | 14.97 | 2.29 % | 7.6 % | 100 % | 30.3 % | 7.2 % |
+
+Three readings, and the first is not the one the step-share column suggests.
+
+**Mixed steps are a small share of steps and almost all of the prefills.** The raw
+share looks negligible — 0.08 % to 2.3 % of steps, 0.4 % to 7.6 % of time — but that
+is because decode steps outnumber prefill steps by three to four orders of magnitude.
+Counted the other way: there are exactly 300 prefill steps at every point, and above
+c1 **299 of them are mixed**. The simulator performs a pure prefill step exactly once
+per run, for the first request, and shares every subsequent prefill with running
+decodes. (At c1 it manages 163 pure ones, because the previous request has usually
+finished.) So on the TTFT path the thing the compiled grid has no bucket for is not
+rare at all: it happens to all but one request. Its small share of *time* is why it is
+nearly invisible in TPOT, and its universality on prefill is a candidate for the
+TTFT gap D17 measured at −32.6 %, which this spike has not otherwise touched.
+
+**Prefill steps are already `bs = 1`, without being asked.** Every one of the 300 has
+a single prefilling request, so the grid's `bs = 1` prefill constraint is never
+violated at these loads — and none of them is chunked either, since 300 prefill steps
+for 300 requests means each prompt fit in one step under the 8192-token budget. The
+work order expected `bs = 1` to be a mechanism; at c1–c16 on sharegpt it has zero
+magnitude. It would bind only where two prefills arrive close enough to coincide.
+
+**The batch-padding ladder never leaves its lower rungs.** Mean decode batch tops out
+at 15, so the artifact ladder and the powers of two are the same ladder here and the
+384 rung STEP 0 found never fires. The padding *amount* is large — up to 38 % of
+decode lanes are padding — which makes its cost (below) the surprise.
+
+### The KV-group grid: none of the three candidates is the rule (E-N1, open)
+
+The work order asked for the group count "both ways", the artifact's real decode edges
+against a uniform 1024-token grid. Building it turned up a third candidate that has a
+better claim than either: above c1 the runtime is on the **kernelwise** pipeline (D90),
+whose attention menu is the union of all 128 compiled buckets — 15 distinct sizes,
+128-spaced to 1024 and powers of two above. That is what a kernelwise step can
+actually address.
+
+| point | mean decode bs | kernelwise menu | decode edges | uniform 1024 | **D17 measured** |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| c1.0 | 1.07 | 1.05 | 1.05 | 1.05 | 1.95 |
+| c1.99 | 2.16 | 1.82 | 1.63 | 1.63 | 2.00 |
+| c3.98 | 4.27 | 2.87 | 2.12 | 2.14 | 2.43 |
+| c7.88 | 8.13 | 4.15 | 2.40 | 2.45 | 2.80 |
+| c15.3 | 14.61 | 5.32 | 2.63 | 2.72 | 3.02 |
+| c15.59 | 14.97 | 5.37 | 2.64 | 2.73 | 3.03 |
+
+**The answer is that none of them is the rule.** D17's measured executions per layer
+*saturate*: 1.95 at batch 2, 3.08 at batch 29, i.e. it stops splitting at about three
+however ragged the batch gets. The kernelwise menu does the opposite — it keeps
+splitting, reaching 5.37 at batch 15 and diverging further above. The two coarse grids
+do track the saturation, and they are indistinguishable from each other on sharegpt
+(2.64 vs 2.73 at c15), but both sit about 0.4 below the measurement.
+
+So the runtime is not issuing one attention execution per distinct compiled bucket in
+the batch. Something caps it near three. **This is STEP C.3's question and it is now a
+sharper one than the work order posed**: not "which of these two grids", but "what caps
+the execution count at three". The prediction in STEP 0 — that the uniform grid would
+"predict many more" groups than the real edges — is **wrong**: on sharegpt the two are
+within 0.1 of each other. It is the menu, which STEP 0 did not consider, that explodes.
+
+### A.2 — the step policy's contribution (E-N2)
+
+Both variants, nine envelope points, 300 requests, `--match offered`, against the
+committed 300-request baseline (`outputs/card_lowload_300/`, `card_highload_300/`).
+
+| env conc | current err % | exclusive | chunk 1024 | Δ exclusive (pp) | Δ chunk (pp) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 1.0 | +2.25 | +2.41 | +2.25 | +0.16 | +0.00 |
+| 1.99 | +11.00 | +11.28 | +10.99 | +0.28 | −0.01 |
+| 3.98 | +10.79 | +11.50 | +10.71 | +0.71 | −0.08 |
+| 7.88 | +7.33 | +8.81 | +7.08 | +1.48 | −0.25 |
+| 15.3 | +3.26 | +6.00 | +2.79 | +2.74 | −0.47 |
+| 15.59 | +2.47 | +5.40 | +1.97 | +2.93 | −0.50 |
+| 29.3 | −3.28 | **+1.28** | −4.01 | +4.56 | −0.73 |
+| 59.2 | −25.17 | −19.81 | −25.94 | +5.37 | −0.77 |
+| 107.2 | −48.59 | −44.23 | −49.21 | +4.36 | −0.62 |
+
+**The 1024-token chunk ceiling contributes nothing**: |Δ| ≤ 0.8 pp at every point,
+and the sign is consistently negative, so it slightly deepens the high-load optimism
+rather than relieving it.
+
+**Exclusivity contributes a real but one-sided amount.** It grows monotonically with
+load, +0.16 pp at c1 to +5.37 pp at c59, which is the right *direction* for the
+high-load optimism — it takes c29.3 from −3.28 % to +1.28 %, across zero. But it is
+the wrong direction everywhere the simulator is already pessimistic: at c3.98 the
+error goes from +10.79 % to +11.50 %. So the step policy cannot be the explanation for
+the low-load half of the curve, and at best it is a third of the high-load half.
+
+**The simulator's throughput ceiling is not a step-policy artifact.** At the c107.2
+arrival rate the sim settles at served concurrency 44.47 under current knobs and 47.77
+under exclusivity — still less than half the measured 107.2. Whatever the sim is
+missing at high load survives both step policies.
+
+### A.3 — what each rule costs (E-N3)
+
+The rebuilt step-cost model reproduces the simulator's own per-step cycles to a median
+ratio of **0.999–1.000** (p05–p95 within 0.0003 at every point), so the re-pricing is
+being done with the simulator's own arithmetic. Percentage points on the sum of decode
+step cost, which is the TPOT proxy; full table in
+`experiments/results/npu_exec_recharge.md`.
+
+| point | current err % | R-pad | R-attn (menu) | R-attn (decode edges) | R-128 (prefill) | R-c1 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| c1.0 | +2.25 | +0.00 | −4.46 | −4.47 | +6.71 | +0.00 |
+| c1.99 | +11.00 | −0.01 | −1.18 | −2.65 | +6.70 | +0.00 |
+| c3.98 | +10.79 | −0.36 | +3.91 | −2.53 | +6.67 | +0.00 |
+| c7.88 | +7.33 | +0.47 | +13.35 | −3.63 | +6.63 | +0.00 |
+| c15.3 | +3.26 | +0.70 | +25.83 | −3.75 | +6.56 | +0.00 |
+| c15.59 | +2.47 | +0.85 | +26.47 | −3.70 | +6.56 | +0.00 |
+
+**R-pad costs essentially nothing, and that is a result rather than a bug.** Up to
+38 % of decode lanes are padding, and re-pricing the step at the padded batch moves it
+by less than 1 pp. Two reasons, and both matter for STEP B. The bundle's dense table is
+nearly flat from 1 to 256 tokens — the card is latency-bound there, `qkv_proj` costs
+45 µs at one token and 51 µs at eight — so rounding the batch up buys almost nothing.
+And the table's points *are* the bucket points: it was measured on the card, which was
+already padding, so the padding is inside the measurement. Charging it again is
+double-counting a cost that is already paid. **P2 of STEP B.1 should not be built** on
+this bundle; the measured ladder already absorbs it.
+
+**R-128 is a flat +6.6 to +6.7 pp on prefill, at every load.** It does not vary because
+it is a property of the token-length distribution, not of the batching, and it sits
+against D17's +10.9 %. It is the only mechanism here with a stable, load-independent
+magnitude, and it applies to TTFT rather than TPOT.
+
+**R-attn cannot be quantified yet, and the range is the finding.** Depending on which
+grouping grid is assumed, the same rule on the same steps reads **−3.7 pp or +26.5 pp**
+at c15. Since A.1 showed that neither grid is the rule, neither number is the
+contribution. Two things are nevertheless established:
+
+1. *The grouping is already in the bundle, once.* `meta.yaml` states each decode row's
+   time is "total decode-attention device time over (forwards × 32)" on sharegpt at
+   that concurrency, so D17's 1.95–3.08 executions are inside the number the simulator
+   looks up. The obvious reading of the work order's R-attn — replace the lookup with a
+   sum over groups — multiplies it in a second time. That miscomputation is reported in
+   the table as "R-attn naive" (+31.6 pp at c15) rather than deleted, because its size
+   is what makes it easy to make and easy to believe.
+2. *What the simulator can be wrong about is the residual diversity*: how ragged this
+   run's batches are versus the sharegpt batches the row was measured on. That is what
+   the two R-attn columns price, and it is the only part of the mechanism that survives
+   a change of workload — which is exactly what STEP B.3's hold-out tests.
+
+### A.4 — the decomposition so far, and the prediction it falsifies
+
+STEP 0 predicted "low-load pessimism (c2–c8) is dominated by R-pad, high-load optimism
+(c25–c76) by R-attn and the step policy". The first half is **falsified**: R-pad is
+worth under 1 pp everywhere and the low-load +11 % is untouched by it. The second half
+is **not yet testable** — A.2 shows the step policy is worth at most +5.4 pp at c59 and
+the sign of R-attn is not known.
+
+What can be said with the six measured points:
+
+| mechanism | magnitude | shape | verdict |
+| --- | --- | --- | --- |
+| step policy, exclusivity | +0.2 to +5.4 pp | grows with load | real but small; **wrong sign at low load** — it makes the +11 % worse |
+| step policy, 1024 chunk ceiling | ≤ 0.8 pp | flat | negligible |
+| R-pad, batch padding | < 1 pp | flat | **already in the bundle**; do not model |
+| R-128, prefill padding | +6.6 pp | flat | real, TTFT only |
+| R-attn, KV diversity | −3.7 to +26.5 pp | grows with load | **undecided until C.3** |
+| mixed steps | 0.4–7.6 % of time, but 299/300 prefills | grows with load | not yet priced; needs B's P1. The TTFT candidate |
+
+The +11 % pessimism at c2–c4 is explained by **none of them**. Every mechanism with a
+settled magnitude is either flat (R-128, which is TTFT) or under 1 pp (R-pad), and the
+one that grows with load has the wrong sign there. That is the residual the work order
+said not to drive to zero, and at c2–c4 it is currently the whole error.
+
+Two things follow for STEP B, both narrowing it. **P2 (decode quantisation) should not
+be built**: its cost is already in the bundle and re-charging it double-counts. **P1
+(step policy) is worth building, but for TTFT rather than TPOT** — A.2 priced its TPOT
+contribution at under 5.4 pp with the wrong sign below c16, while A.1 shows it changes
+the shape of 299 of 300 prefills. That reframes what the prototype is for, and the
+work order's risk row for "no mechanism exceeds 5 pp" — build P1 minimally and close —
+is the row that currently applies.

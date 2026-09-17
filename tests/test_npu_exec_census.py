@@ -170,9 +170,9 @@ def test_next_up_rungs_and_overflow(mod):
     assert mod._next_up(ladder, 99999) == 1024
 
 
-def test_the_two_kv_grids_are_counted_separately(mod, tmp_path):
-    """A batch whose KVs span one artifact bucket but several 1024-token slices
-    is exactly the case that tells the two candidate grids apart."""
+def test_the_three_kv_grids_are_counted_separately(mod, tmp_path):
+    """The census exists to tell the candidate grouping grids apart, so a batch
+    that they disagree about must come out with three different counts."""
     log, trace = _write_run(
         tmp_path,
         [1100, 1500, 1900],
@@ -192,16 +192,25 @@ def test_the_two_kv_grids_are_counted_separately(mod, tmp_path):
     assert decode[0].decode_kv == [1100, 1500, 1900]
 
     ladder = [1, 2, 4, 8, 16, 32, 64, 128, 256, 384, 512, 1024]
-    edges = [1024, 2048, 4096, 8192]
-    c = mod.census(decode, ladder, edges)
-    # All three sit under the 2048 edge: one group on the artifact grid.
-    assert c["kv_groups_artifact_edges"]["mean"] == 1.0
-    # Floor-divided by 1024 they are 1, 1 and 1 -- also one, so raise one of them
-    # past the slice boundary to show the grids genuinely disagree.
-    decode[0].decode_kv = [1100, 1500, 2100]
-    c2 = mod.census(decode, ladder, edges)
+    menu = [128, 256, 384, 512, 640, 768, 896, 1024, 2048, 4096, 8192]
+    decode_edges = [1024, 2048, 4096, 8192]
+    c = mod.census(decode, ladder, menu, decode_edges)
+    # 1100, 1500 and 1900 all round up to 2048 on either coarse grid, and 1100 //
+    # 1024 == 1500 // 1024 == 1 while 1900 // 1024 == 1 too -- so one group each.
+    # The menu has no rung between 1024 and 2048 either, so here all three agree.
+    assert c["kv_groups_kernelwise_menu"]["mean"] == 1.0
+    assert c["kv_groups_decode_edges"]["mean"] == 1.0
+    assert c["kv_groups_uniform1024"]["mean"] == 1.0
+
+    # Now a batch the grids genuinely disagree about: 600 and 900 are one group on
+    # both coarse grids (both round to 1024, both floor to slice 0) but two on the
+    # menu, which has 640 and 896 rungs. This is the disagreement that makes the
+    # census worth running.
+    decode[0].decode_kv = [600, 900, 1900]
+    c2 = mod.census(decode, ladder, menu, decode_edges)
+    assert c2["kv_groups_kernelwise_menu"]["mean"] == 3.0
+    assert c2["kv_groups_decode_edges"]["mean"] == 2.0
     assert c2["kv_groups_uniform1024"]["mean"] == 2.0
-    assert c2["kv_groups_artifact_edges"]["mean"] == 2.0
 
 
 def test_prefill_128_padding_is_measured_against_the_real_chunks(mod, tmp_path):
@@ -216,15 +225,36 @@ def test_prefill_128_padding_is_measured_against_the_real_chunks(mod, tmp_path):
     assert c["prefill_bs1_frac"] == 1.0
 
 
-def test_the_committed_grid_supplies_both_ladders(mod):
+def test_the_committed_grid_supplies_every_ladder(mod):
     """`--grid` must read the artifact's own ladders, not the fallbacks -- the
     fallbacks exist so the script runs, not so a result can quote them."""
     grid = ROOT / "profiler/perf/RNGD-CARD/meta-llama/Llama-3.1-8B/bf16/artifact_buckets.yaml"
-    ladder, edges, prov = mod.load_grid(grid)
+    ladder, edges, decode_edges, prov = mod.load_grid(grid)
+    assert decode_edges == [1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072]
     assert 384 in ladder, "the 384 rung is the whole reason the ladder is read"
-    assert edges[0] == 1024 and edges[-1] == 131072
+    # The grouping grid is the kernelwise menu, i.e. the UNION of every bucket's
+    # attention_size: 128-spaced to 1024, then powers of two. Taking the decode
+    # buckets alone would start at 1024 and make every sequence below that look
+    # like one group.
+    assert edges == [128, 256, 384, 512, 640, 768, 896, 1024,
+                     2048, 4096, 8192, 16384, 32768, 65536, 131072]
     assert "d6ae6a43" in prov
 
-    fb_ladder, fb_edges, fb_prov = mod.load_grid(None)
+    fb_ladder, fb_edges, _fb_dec, fb_prov = mod.load_grid(None)
     assert "fallback" in fb_prov
     assert fb_ladder == mod.FALLBACK_BATCH_LADDER and fb_edges == mod.FALLBACK_DECODE_EDGES
+
+
+def test_d17_curve_saturates_and_is_clamped(mod):
+    """The measured grouping curve flattens near 3 between batch 15 and 29.
+
+    That shape is the test any candidate grid has to pass, and it is why the
+    kernelwise menu -- which keeps splitting as the batch grows -- cannot be the
+    rule. Outside the measured range the curve is clamped, not extrapolated.
+    """
+    assert mod.d17_groups(1.0) == 1.95
+    assert mod.d17_groups(1.95) == 1.95
+    assert mod.d17_groups(29.09) == 3.08
+    assert mod.d17_groups(500.0) == 3.08
+    assert mod.d17_groups(3.03) == pytest.approx(2.198, abs=1e-3)
+    assert mod.d17_groups(29.09) - mod.d17_groups(15.16) < 0.1

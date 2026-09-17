@@ -3238,3 +3238,78 @@ are powers of two from 1024), and the batch-padding ladder
 compiler `d19a92a2f2`, tp=8); classification per
 `furiosa_llm/metadata/config_types.py`. The D-number comes from the `D90–D99`
 block `WORK_ORDER_npu_exec_model_spike.md` claims in `CLAUDE.md` (2026-09-15).
+
+---
+
+## D91 — the work order's A.2 knob set livelocks, and three of the four mechanisms it names are already absorbed or unmeasurable · Recorded 2026-09-17
+
+`WORK_ORDER_npu_exec_model_spike.md` STEP A decomposes the RNGD accuracy domain's
+error into mechanisms an AOT bucket executor obeys and a vLLM-style scheduler does
+not. Four of its instructions did not survive contact with the code and the
+bundle. None of this changes `serving/` or `planner/`; STEP A is counting.
+
+**1. `--no-enable-chunked-prefill --max-num-batched-tokens 1024` cannot run
+sharegpt.** With chunked prefill off, `max_num_batched_tokens` is not a step budget
+— `serving/core/scheduler.py:164-180` drops requests from the batch until the total
+fits and returns `None` when the batch empties, printing `[WARNNING] Cannot load the
+request to batch due to max_num_batched_tokens limitation`. A prompt longer than the
+budget is then never schedulable. Ten of the first twenty sharegpt requests are
+longer than 1024 tokens, up to 3452, so the run livelocks: the probe emitted 80,821
+of those warnings and died at the timeout (`outputs/npu_spike/a2_asspec_probe/`,
+exit 124). The runtime chunks too — its 74 `extend` buckets are `chunk <= 1024`
+against non-zero KV — so "no chunked prefill" was never a description of it. A.2 was
+run instead as two one-sided approximations, `a2_exclusive` (prefill exclusive of
+decode, chunking left on at 8192) and `a2_chunk1024` (a genuine 1024-token step
+budget, exclusivity given up), each labelled with what it does not capture.
+
+**2. Batch padding is already inside the measured bundle, so R-pad/P2 must not be
+modelled.** Up to 38 % of the simulator's decode lanes at c7.88 are padding once the
+batch is rounded to a compiled size, yet re-pricing every step at the padded batch
+moves the decode-cost sum by less than 1 pp at every point. Two independent reasons.
+The bundle's dense table is nearly flat from 1 to 256 tokens — `qkv_proj` is 45.2 µs
+at one token and 51.2 µs at eight — because the card is latency-bound there. And the
+table's rows *are* the bucket points: it was measured on the card, which was already
+padding, so the padding is in the measurement. Charging it again double-counts.
+
+**3. Decode-attention grouping is also already inside the bundle, once.**
+`profiler/perf/RNGD-CARD/.../bf16/meta.yaml` states each decode row's time is "total
+decode-attention device time over (forwards x 32)" measured on sharegpt at that
+concurrency, so D17's 1.95-to-3.08 attention executions per layer are inside the
+number the simulator looks up. The work order's R-attn — replace the lookup with a
+sum over KV groups — multiplies the grouping in a second time; done that way it
+reads +31.6 pp at c15, which is not a contribution but a double count. What the
+simulator can be wrong about is the *residual* diversity, this run's batches against
+the sharegpt batches the row was measured on.
+
+**4. Neither candidate grouping grid is the rule, and a third one is worse.** The
+work order asked STEP A.1 to count KV groups "both ways", the artifact's decode edges
+against a uniform 1024-token grid, and to pick whichever tracks D17's measurement.
+Neither does, and the two are indistinguishable on sharegpt (2.64 vs 2.73 groups at
+mean batch 15, against D17's 3.03). A third grid has the better structural claim —
+above c1 the runtime is on the kernelwise pipeline (D90), whose attention menu is the
+union of all 128 compiled buckets, 15 sizes 128-spaced to 1024 and powers of two
+above — and it is the worst fit of the three: it keeps splitting as the batch grows,
+reaching 5.37 at batch 15 where D17's measurement has flattened at 3.03. D17's curve
+*saturates*; no "one execution per distinct compiled bucket" rule does. So the
+grouping rule is **unknown**, and the R-attn contribution is unquantified: the same
+rule on the same steps reads -3.7 pp or +26.5 pp at c15 depending on the grid
+assumed. STEP C.3 has to measure what caps the execution count near three; STEP 0's
+prediction that the uniform grid would predict "many more" groups than the real edges
+is retracted.
+
+**What STEP A does establish.** The step-cost model rebuilt from the perf DB
+reproduces the simulator's own per-step cycles to a median ratio of 0.999-1.000, and
+the replay of 369,270 steps balanced exactly, so the counting is sound. Prefill steps
+are already `bs = 1` in 300 of 300 cases at every point, so that constraint has zero
+magnitude at c1-c16. Mixed steps are 0.08-2.3 % of steps and 0.4-7.6 % of time, and
+their count is exactly 299 above c1 — one per request after the first. Prefill
+128-padding is a flat +6.6 to +6.7 pp and lands on TTFT, not TPOT. The step policy is
+worth +0.2 to +5.4 pp and has the wrong sign below c16. The +11 % pessimism at
+c2-c4 is explained by none of them.
+
+**Where.** `experiments/scripts/npu_exec_step_census.py`,
+`experiments/scripts/npu_exec_recharge.py`,
+`experiments/results/npu_exec_step_census.md`,
+`experiments/results/npu_exec_recharge.md`, `docs/npu_exec_spike.md` §A,
+`outputs/npu_spike/`. The D-number comes from the `D90-D99` block
+`WORK_ORDER_npu_exec_model_spike.md` claims in `CLAUDE.md`.
