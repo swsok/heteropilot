@@ -1,0 +1,236 @@
+# COPY of pd-rngd-gpu-card.yaml with the cross-pair PCIe links set to the
+# MEASURED TP=4 effective all-reduce bandwidth instead of the vendor_spec 64.0.
+# A3: the committed fixture is NOT edited -- E-A1 and every result replayed from
+# it keep their cluster unchanged.
+#
+# `pcie-a40a-02` and `pcie-a40b-02`: 64.0 vendor_spec -> **8.8 measured**.
+#
+# Measured 2026-09-17 with torch + NCCL 2.27.5 over the four GPUs of one island,
+# 64 MiB all-reduce: 8.81 GB/s busbw on CUDA 0-3 and 8.78 on CUDA 4-7, agreeing
+# to 0.5 % across two independent NUMA groups. That is the bandwidth the TP group
+# actually gets, which is what this link stands for in the simulator.
+#
+# Two other defensible values are recorded beside it in
+# experiments/p2_evidence/results/v3_verdict_accuracy.md appendix A, and they
+# BRACKET this one rather than compete with it:
+#   25.0 GB/s  a direct device-to-device copy across the same path -- the link
+#              with no collective algorithm on top of it
+#   7.5-8.4    what V4's perturbation had to assume to reproduce the measurement
+#
+# The NVLink links are left at 112.5 although the same probe measured 52.2 GB/s
+# p2p and 39.1 busbw on that path. Changing them was not asked for and is not
+# needed for this candidate: TP=4's ring is limited by the slowest hop, which is
+# this one.
+cluster_id: pd-rngd-gpu-card-measured-pcie
+nodes:
+- id: node_rngd0
+  accelerators:
+  - id: card0
+    type: NPU
+    vendor: FuriosaAI
+    model: RNGD-CARD
+    backend: furiosa
+    memory_gb: 47.5
+    state: FREE
+    profile: profiles/accelerators/furiosa_rngd_card.yaml
+  nics:
+  - id: nic0
+    type: ethernet
+    speed_gbps: 100
+  power:
+    base_node_power: 60.0
+    source: placeholder
+- id: node_rngd1
+  accelerators:
+  - id: card0
+    type: NPU
+    vendor: FuriosaAI
+    model: RNGD-CARD
+    backend: furiosa
+    memory_gb: 47.5
+    state: FREE
+    profile: profiles/accelerators/furiosa_rngd_card.yaml
+  nics:
+  - id: nic0
+    type: ethernet
+    speed_gbps: 100
+  power:
+    base_node_power: 60.0
+    source: placeholder
+- id: node_a40a
+  accelerators:
+  - id: gpu0
+    type: GPU
+    vendor: NVIDIA
+    model: A40
+    backend: cuda
+    memory_gb: 45.0
+    state: FREE
+    profile: profiles/accelerators/a40.yaml
+  - id: gpu1
+    type: GPU
+    vendor: NVIDIA
+    model: A40
+    backend: cuda
+    memory_gb: 45.0
+    state: FREE
+    profile: profiles/accelerators/a40.yaml
+  - id: gpu2
+    type: GPU
+    vendor: NVIDIA
+    model: A40
+    backend: cuda
+    memory_gb: 45.0
+    state: FREE
+    profile: profiles/accelerators/a40.yaml
+  - id: gpu3
+    type: GPU
+    vendor: NVIDIA
+    model: A40
+    backend: cuda
+    memory_gb: 45.0
+    state: FREE
+    profile: profiles/accelerators/a40.yaml
+  nics:
+  - id: nic0
+    type: ethernet
+    speed_gbps: 100
+  power:
+    source: placeholder
+- id: node_a40b
+  accelerators:
+  - id: gpu0
+    type: GPU
+    vendor: NVIDIA
+    model: A40
+    backend: cuda
+    memory_gb: 45.0
+    state: FREE
+    profile: profiles/accelerators/a40.yaml
+  - id: gpu1
+    type: GPU
+    vendor: NVIDIA
+    model: A40
+    backend: cuda
+    memory_gb: 45.0
+    state: FREE
+    profile: profiles/accelerators/a40.yaml
+  - id: gpu2
+    type: GPU
+    vendor: NVIDIA
+    model: A40
+    backend: cuda
+    memory_gb: 45.0
+    state: FREE
+    profile: profiles/accelerators/a40.yaml
+  - id: gpu3
+    type: GPU
+    vendor: NVIDIA
+    model: A40
+    backend: cuda
+    memory_gb: 45.0
+    state: FREE
+    profile: profiles/accelerators/a40.yaml
+  nics:
+  - id: nic0
+    type: ethernet
+    speed_gbps: 100
+  power:
+    source: placeholder
+links:
+- id: nvlink-a40a-01
+  src: node_a40a/gpu0
+  dst: node_a40a/gpu1
+  type: NVLINK
+  bandwidth_gbps: 112.5
+  latency_ns: 1000
+  contention_group: a40a-pair0
+  source: measured
+- id: nvlink-a40a-23
+  src: node_a40a/gpu2
+  dst: node_a40a/gpu3
+  type: NVLINK
+  bandwidth_gbps: 112.5
+  latency_ns: 1000
+  contention_group: a40a-pair1
+  source: measured
+- id: pcie-a40a-02
+  src: node_a40a/gpu0
+  dst: node_a40a/gpu2
+  type: PCIE
+  bandwidth_gbps: 8.8
+  latency_ns: 2000
+  contention_group: a40a-pcie
+  source: measured
+- id: nvlink-a40b-01
+  src: node_a40b/gpu0
+  dst: node_a40b/gpu1
+  type: NVLINK
+  bandwidth_gbps: 112.5
+  latency_ns: 1000
+  contention_group: a40b-pair0
+  source: measured
+- id: nvlink-a40b-23
+  src: node_a40b/gpu2
+  dst: node_a40b/gpu3
+  type: NVLINK
+  bandwidth_gbps: 112.5
+  latency_ns: 1000
+  contention_group: a40b-pair1
+  source: measured
+- id: pcie-a40b-02
+  src: node_a40b/gpu0
+  dst: node_a40b/gpu2
+  type: PCIE
+  bandwidth_gbps: 8.8
+  latency_ns: 2000
+  contention_group: a40b-pcie
+  source: measured
+- id: fabric-rngd0-a40a
+  src: node_rngd0/card0
+  dst: node_a40a/gpu0
+  type: ETHERNET
+  bandwidth_gbps: 13.0
+  latency_ns: 20000
+  contention_group: host-pcie
+  source: measured
+- id: fabric-rngd0-a40b
+  src: node_rngd0/card0
+  dst: node_a40b/gpu0
+  type: ETHERNET
+  bandwidth_gbps: 13.0
+  latency_ns: 20000
+  contention_group: host-pcie
+  source: measured
+- id: fabric-rngd1-a40a
+  src: node_rngd1/card0
+  dst: node_a40a/gpu0
+  type: ETHERNET
+  bandwidth_gbps: 13.0
+  latency_ns: 20000
+  contention_group: host-pcie
+  source: measured
+- id: fabric-rngd1-a40b
+  src: node_rngd1/card0
+  dst: node_a40b/gpu0
+  type: ETHERNET
+  bandwidth_gbps: 13.0
+  latency_ns: 20000
+  contention_group: host-pcie
+  source: measured
+- id: fabric-rngd0-rngd1
+  src: node_rngd0/card0
+  dst: node_rngd1/card0
+  type: ETHERNET
+  bandwidth_gbps: 13.1
+  latency_ns: 20000
+  contention_group: host-pcie
+  source: measured
+- id: fabric-a40a-a40b
+  src: node_a40a/gpu0
+  dst: node_a40b/gpu0
+  type: ETHERNET
+  bandwidth_gbps: 12.9
+  latency_ns: 20000
+  contention_group: host-pcie
+  source: measured

@@ -238,7 +238,31 @@ evidence. Proposed, not started.
 **A third, smaller one**: measure `link_bw:pcie-a40a-02`. Seven minutes of
 exclusive GPU (§6.3.2), and §6.3.3 makes it the leading explanation for the whole
 of V3's error. It needs no code at all — it is the measurement the plan already
-wanted and could not rank.
+wanted and could not rank. **Done 2026-09-17 — Appendix A.**
+
+**A fourth, for Stage B+**: give each uncertainty **grade** a default sourced
+range, so an input like this one can be *ranked* instead of shelved.
+
+`link_bw:pcie-a40a-02` carried `grade: VENDOR_SPEC` and
+`range: lo=None, hi=None`. `--measurement-plan` sweeps an input across its
+**sourced** range to compute ΔR, so an input with no range is listed as
+*undecidable* and gets **no rank at all** — correctly, because inventing a range
+would be inventing a number (absolute rule 3). The consequence is that the one
+input which turned out to explain a 44 % prediction error sat below every ranked
+item, at a measurement cost of 0.114 h.
+
+**Appendix A supplies the evidence such a default would need.** Measured, the
+vendor figure was optimistic by **7.3×** for the quantity the simulator reads
+(64.0 against a TP=4 effective 8.8) and by **2.6×** for the nearest physical
+analogue (64.0 against a 25.0 GB/s device-to-device copy). A `vendor_spec` grade
+whose default range were, say, `[nominal/8, nominal]` would have ranked this
+input rather than shelving it — and the range would have had a source: this
+measurement, on this class of path.
+
+**One measurement is not a distribution**, so the figure above is a data point
+for that work and not the default itself. Recorded here because Stage B+ owns the
+grades table and because the case that motivates it is now measured. Out of scope
+for this work order.
 
 ## 6. What V3 does deliver: P1, and the SLO sweep that makes one deployment count
 
@@ -534,3 +558,179 @@ What V3 therefore establishes, on A40:
 3. **Neither result transfers to a domain that does cover the candidate.** V2's
    TP=1 points, where the domain does cover it, agree with the hardware to
    ~1 %.
+
+---
+
+# Appendix A — the link, measured
+
+*Added 2026-09-17. §6.3.3 named an unmeasured link as the leading explanation for
+V3's 44.6 % error and said seven minutes of GPU would settle it. This is that
+measurement, plus the discriminator that rules out the competing hypothesis, plus
+one thing nobody was looking for. All eight GPUs were confirmed idle before each
+run and released after.*
+
+> **Three independent routes reach the same number.** V4's perturbation had to
+> assume **7.46–8.39** to reproduce the measurement; the link measures
+> **8.78–8.81 GB/s** effective for a TP=4 all-reduce; and re-simulating with 8.8
+> collapses the TP=4 error from **−43.4 % to −7.0 %** on TPOT and from **−21.2 %
+> to −0.7 %** on served concurrency.
+>
+> The same substitution makes the **TP=2** candidate *worse* — −5.2 % to
+> **+18.2 %** — and that is the appendix's second finding, not its failure. A
+> single static link value cannot be right for both, because the quantity the
+> simulator reads there is not a property of the path but of **which devices the
+> candidate occupies**.
+
+## A.1 What was measured
+
+`nccl-tests` could not be used: the only build on this host needs GLIBC 2.34 and
+Ubuntu 20.04 has 2.31. The probe is `experiments/p2_evidence/link_probe.py`,
+torch 2.10 + NCCL 2.27.5 under `torchrun`, sweeping 8 KiB to 64 MiB — the range a
+TP group actually sends, since Llama-3.1-8B at hidden 4096 in bf16 carries 8 KiB
+per token per all-reduce, so a 128-way decode step is 1 MiB and a 2048-token
+prefill chunk is 16 MiB.
+
+Run on **both** GPU groups, which are topologically symmetric (0↔1 and 2↔3 are
+`NV4`, the pairs bridged by `NODE`, 0–3 to 4–7 is `SYS`) but sit on different
+NUMA nodes:
+
+| case | 1 MiB busbw | **64 MiB busbw** | GPUs 0–3 | GPUs 4–7 |
+| --- | ---: | ---: | ---: | ---: |
+| `tp4` — all four | 7.07 / 7.60 | **8.81 / 8.78** | 8.81 | 8.78 |
+| `tp4` with `NCCL_P2P_DISABLE=1` | 5.70 / 5.76 | 6.49 / 6.47 | 6.49 | 6.47 |
+| `pair` inside an NVLink pair | 13.11 / 13.45 | **39.11 / 39.10** | 39.11 | 39.10 |
+| `pair` across the bridge | 9.51 / 9.73 | **19.29 / 19.33** | 19.29 | 19.33 |
+| the same, `NCCL_P2P_DISABLE=1` | 4.68 / 4.70 | 6.81 / 6.78 | 6.81 | 6.78 |
+| direct p2p copy, NVLink pair | — | — | 52.21 | 52.20 |
+| direct p2p copy, across the bridge | — | — | 25.01 | 25.01 |
+
+**Every case agrees across the two groups to within 0.5 %.** That is a
+reproduction on independent hardware, not a repeat.
+
+**Against what the cluster spec says:**
+
+| link | spec | measured p2p | measured pair all-reduce | TP=4 effective |
+| --- | ---: | ---: | ---: | ---: |
+| `nvlink-a40a-01` | 112.5 | 52.2 | 39.1 | — |
+| `pcie-a40a-02` | **64.0 `vendor_spec`** | 25.0 | 19.3 | **8.8** |
+
+**Peer-to-peer is enabled on both paths** (`can_device_access_peer` is true for
+0↔2), and disabling it costs the bridge pair 2.85× (19.33 → 6.78), so it is not
+merely available but load-bearing. **ACS could not be read** — `lspci`'s ACS
+control register needs root here — so the functional check stands in for it: a
+host where ACS blocked peer-to-peer would not show those numbers.
+
+## A.2 The discriminator: is it the link, or the TP compute model?
+
+§6.3.3 was explicit that a TP compute model wrong in a way that mimics a slow
+link would fit the same data. The test is to run the same candidate at **TP=2
+inside one NVLink pair**, which never touches the bridge, and compare the
+simulator's error.
+
+Both bound to NUMA 1 (see A.3), simulator on the same sharegpt trace, cache
+disabled, three repeats each:
+
+| | sim p99 TPOT | measured p99 | error | sim `L` | measured `L` | error |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| **TP=4**, crosses the bridge | 36.547 | 64.616 | **−43.44 %** | 127.87 | 162.26 | −21.19 % |
+| **TP=2**, inside the NV4 pair | 63.831 | 67.337 | **−5.21 %** | 153.77 | 156.06 | −1.47 % |
+
+**An 8.3× difference in error, from removing the bridge from the path.** The TP
+compute model is exonerated: shrink the group so it never crosses the slow hop
+and the simulator is accurate to ~5 %.
+
+## A.3 What nobody was looking for: NUMA placement is worth 1.93×
+
+The first attempt to reproduce the P1 measurement on GPUs 4–7 came back at half
+the throughput. Engine initialisation was **identical** — same 35.79 GiB KV
+cache, same 1 172 624 tokens, same 8.95× maximum concurrency, same model load —
+and so were clocks, power limits and temperatures across all eight GPUs.
+
+GPUs 4–7 sit on NUMA node 1 and nothing binds the server to it:
+
+| | p99 TPOT | p99 TTFT | output tok/s |
+| --- | ---: | ---: | ---: |
+| 0–3, TP=4, unbound | 66.012 | 53 176 | 1 930.6 |
+| 4–7, TP=4, unbound | 66.520 | **139 180** | **1 018.5** |
+| 4–7, TP=2, unbound | 68.494 | 142 391 | 990.2 |
+| **4–7, TP=4, `numactl --cpunodebind=1 --membind=1`** | **64.616** | **51 357** | **1 970.7** |
+
+**Binding recovers 1.93× of throughput and 0.37× of TTFT**, and lands within
+2–3 % of the 0–3 baseline. TPOT barely moves in any of them: what NUMA costs is
+prefill and queueing, not decode.
+
+Three things follow.
+
+1. **The TP hypothesis was already dead here.** Unbound, TP=4 and TP=2 on 4–7 are
+   indistinguishable (1 018 against 990); bound, TP=4 jumps to 1 971. The
+   variable was never TP.
+2. **V3's headline survives.** Recomputed against the NUMA-bound measurement the
+   simulator's TPOT error is **−43.44 %** where §6.3 reported −44.63 %. It was
+   not a NUMA artefact.
+3. **There is a methodology debt.** Every A40 measurement before this one — V2's
+   eight ladder stages, V3's P1 — ran **unbound**, and GPUs 0–3 happened to land
+   well. The deploy backend has no affinity control at all. V2's stages were TP=1
+   on a single card, where the exposure is smallest, but **that is an argument,
+   not a check.** Future measurements bind explicitly and say so.
+
+## A.4 Re-simulating with the measured value — and why one value cannot serve
+
+The cross-pair links are set to **8.8, `source: measured`**, in a **copy** of the
+fixture (`experiments/configs/clusters/pd-rngd-gpu-card-measured-pcie.yaml`,
+rule A3). The committed cluster is untouched.
+
+| candidate | metric | measured | sim @ 64.0 | error | **sim @ 8.8** | **error** |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| **TP=4** | p99 TPOT | 64.62 | 36.55 | −43.44 % | **60.09** | **−7.01 %** |
+| | served `L` | 162.26 | 127.87 | −21.19 % | **161.07** | **−0.73 %** |
+| | p99 TTFT | 51 357 | 16 716 | −67.45 % | 44 866 | −12.64 % |
+| **TP=2** | p99 TPOT | 67.34 | 63.83 | −5.21 % | 79.60 | **+18.21 %** |
+| | served `L` | 156.06 | 153.77 | −1.47 % | 166.49 | +6.69 % |
+| | p99 TTFT | 52 613 | 48 447 | −7.92 % | 67 342 | +28.00 % |
+
+**For TP=4 the substitution all but removes the error** — served concurrency to
+within 0.7 %, which is the metric claim 2 is about.
+
+**For TP=2 it introduces one, and changes its sign.** The reason is visible in
+the fact that it changed at all: the hardware's TP=2 runs inside the NVLink pair
+and **never crosses the bridge**, so a link it does not use could not have moved
+its prediction by 25 %. **The simulator routes TP=2 over the cross-pair link
+anyway** — it has no representation of which two of an island's four devices a
+TP=2 group occupies.
+
+**So 8.8 is the effective bandwidth of a TP=4 candidate, not a property of the
+path.** Three values describe that path and they bracket rather than compete:
+
+| value | what it is | where it applies |
+| ---: | --- | --- |
+| **25.0 GB/s** | a direct device-to-device copy | the link with no collective on it |
+| **8.8 GB/s** | TP=4 all-reduce busbw | **the value this re-simulation uses** |
+| 7.5–8.4 | what V4's perturbation had to assume | inferred, not measured |
+
+A static per-link field cannot hold a quantity that depends on how many devices a
+candidate spans and which ones. **That is the same axis as A.3's NUMA finding and
+as §6.4's missing parallelism scope**, seen a third time:
+
+| # | what the model cannot express | measured cost |
+| --- | --- | ---: |
+| 1 | which NUMA node hosts the island's server | **1.93×** throughput |
+| 2 | which devices inside an island a TP group occupies | 5.2 % → 18.2 % error |
+| 3 | the parallelism degree a domain was fitted at | 1.13 % margin where ~80 % was needed |
+
+## A.5 What this changes, and what it does not
+
+**Unchanged.** V3's finding stands in full: the per-point margin under-corrected
+by ~70× on P1, and §6.4's reading — that this is a missing scoping axis rather
+than a failure of margining — is now supported by measurement rather than by
+inference.
+
+**Strengthened.** §6.3.3 offered the link as a hypothesis with three metrics
+fitting one parameter. It is now measured directly, reproduced on two GPU groups,
+and confirmed by a discriminator that removes the competing explanation.
+
+**New.** Device placement is not one condition but at least three, and the
+largest of them — NUMA — was invisible to every measurement this work order has
+taken so far.
+
+**Still not established.** Whether the same holds on RNGD, where the margin is
+~21 % rather than ~1 %, is untested and unreachable from this node.

@@ -1,0 +1,113 @@
+=== 2026-09-17T11:17:14+09:00 deploying p2ev-tp4-b47 ===
+  backend       : vllm-cuda
+  plan          : p2ev-tp4-b47
+  endpoint      : http://127.0.0.1:8400
+  pid           : 1186817
+  started       : 2026-09-17T02:17:15.026200+00:00
+  CUDA devices  : 4,5,6,7
+healthy after ~70s
+=== 2026-09-17T11:18:15+09:00 p2ev-tp4-b47 repeat 0 ===
+open loop: 300 requests -> http://127.0.0.1:8400/v1 (trace 10.280 rps, offering 10.280 rps, span 29.2s, no concurrency bound)
+warm-up: 244.6 ms (paid before the schedule starts)
+an error occurred during closing of asynchronous generator <async_generator object safe_async_iterate at 0x7fae4cb82a40>
+asyncgen: <async_generator object safe_async_iterate at 0x7fae4cb82a40>
+    yield chunk
+    await iterator.aclose()
+    raise exc
+    async with safe_async_iterate(self._connection._receive_response_body(**kwargs)) as iterator:
+an error occurred during closing of asynchronous generator <async_generator object PoolByteStream.__aiter__ at 0x7fae4cb875b0>
+asyncgen: <async_generator object PoolByteStream.__aiter__ at 0x7fae4cb875b0>
+    yield chunk
+    async with safe_async_iterate(self._stream) as iterator:
+done: 300/300 ok, 0 failed in 191.2s
+launch error (ms): mean=2.75 p99=21.20 max=35.32
+served concurrency (Little's law) = 169.129
+ttft_ms: mean=71538.57 p50=71100.19 p95=135879.78 p99=138015.49
+tpot_ms: mean=55.61 p50=58.85 p95=65.07 p99=66.81
+output tokens=195753, 1024.1 tok/s
+wrote outputs/p2_evidence/v3/p2ev-tp4-b47_r0.json
+=== 2026-09-17T11:21:57+09:00 p2ev-tp4-b47 repeat 1 ===
+open loop: 300 requests -> http://127.0.0.1:8400/v1 (trace 10.280 rps, offering 10.280 rps, span 29.2s, no concurrency bound)
+warm-up: 248.6 ms (paid before the schedule starts)
+done: 300/300 ok, 0 failed in 192.4s
+launch error (ms): mean=3.01 p99=23.55 max=50.85
+served concurrency (Little's law) = 164.651
+ttft_ms: mean=69045.93 p50=67998.83 p95=136465.51 p99=139473.12
+tpot_ms: mean=56.10 p50=58.89 p95=65.02 p99=66.42
+output tokens=195753, 1017.6 tok/s
+wrote outputs/p2_evidence/v3/p2ev-tp4-b47_r1.json
+=== 2026-09-17T11:25:40+09:00 p2ev-tp4-b47 repeat 2 ===
+open loop: 300 requests -> http://127.0.0.1:8400/v1 (trace 10.280 rps, offering 10.280 rps, span 29.2s, no concurrency bound)
+warm-up: 244.7 ms (paid before the schedule starts)
+done: 300/300 ok, 0 failed in 193.1s
+launch error (ms): mean=3.11 p99=22.66 max=57.01
+served concurrency (Little's law) = 163.786
+ttft_ms: mean=68699.37 p50=68038.19 p95=137306.75 p99=140051.73
+tpot_ms: mean=56.39 p50=59.00 p95=65.30 p99=66.33
+output tokens=195753, 1013.9 tok/s
+wrote outputs/p2_evidence/v3/p2ev-tp4-b47_r2.json
+=== 2026-09-17T11:29:24+09:00 stopping p2ev-tp4-b47 ===
+error: no pidfile for deployment 'p2ev-tp4-b47'
+=== 2026-09-17T11:29:25+09:00 done ===
+=== 2026-09-17T11:29:45+09:00 deploying p2ev-tp2-b47 ===
+resolved serve command(s):
+  [cuda-a40-node_a40b] devices -> 4,5,6,7
+    CUDA_VISIBLE_DEVICES=4,5,6,7 vllm serve NousResearch/Meta-Llama-3.1-8B --tensor-parallel-size 2 --dtype bfloat16 --kv-cache-dtype auto --block-size 16 --max-num-seqs 128 --max-num-batched-tokens 2048 --host 0.0.0.0 --port 8401 --no-enable-prefix-caching --enable-chunked-prefill
+
+validation: OK
+
+healthy after ~60s
+=== 2026-09-17T11:30:35+09:00 p2ev-tp2-b47 repeat 0 ===
+open loop: 300 requests -> http://127.0.0.1:8401/v1 (trace 10.280 rps, offering 10.280 rps, span 29.2s, no concurrency bound)
+warm-up: 252.7 ms (paid before the schedule starts)
+done: 300/300 ok, 0 failed in 197.4s
+launch error (ms): mean=3.34 p99=22.37 max=69.47
+served concurrency (Little's law) = 159.869
+ttft_ms: mean=67376.19 p50=67115.92 p95=139755.20 p99=141985.76
+tpot_ms: mean=58.11 p50=60.77 p95=67.27 p99=67.89
+output tokens=195753, 991.6 tok/s
+wrote outputs/p2_evidence/v3/p2ev-tp2-b47_r0.json
+=== 2026-09-17T11:34:24+09:00 p2ev-tp2-b47 repeat 1 ===
+open loop: 300 requests -> http://127.0.0.1:8401/v1 (trace 10.280 rps, offering 10.280 rps, span 29.2s, no concurrency bound)
+warm-up: 250.8 ms (paid before the schedule starts)
+an error occurred during closing of asynchronous generator <async_generator object safe_async_iterate at 0x7f02c6563300>
+asyncgen: <async_generator object safe_async_iterate at 0x7f02c6563300>
+    yield chunk
+    await iterator.aclose()
+    raise exc
+    async with safe_async_iterate(self._connection._receive_response_body(**kwargs)) as iterator:
+an error occurred during closing of asynchronous generator <async_generator object PoolByteStream.__aiter__ at 0x7f02c63735b0>
+asyncgen: <async_generator object PoolByteStream.__aiter__ at 0x7f02c63735b0>
+    yield chunk
+    async with safe_async_iterate(self._stream) as iterator:
+done: 300/300 ok, 0 failed in 198.4s
+launch error (ms): mean=2.95 p99=19.95 max=37.75
+served concurrency (Little's law) = 161.626
+ttft_ms: mean=68908.05 p50=67906.11 p95=140232.39 p99=143407.11
+tpot_ms: mean=58.29 p50=60.86 p95=67.87 p99=68.97
+output tokens=195753, 986.9 tok/s
+wrote outputs/p2_evidence/v3/p2ev-tp2-b47_r1.json
+=== 2026-09-17T11:38:13+09:00 p2ev-tp2-b47 repeat 2 ===
+open loop: 300 requests -> http://127.0.0.1:8401/v1 (trace 10.280 rps, offering 10.280 rps, span 29.2s, no concurrency bound)
+warm-up: 251.5 ms (paid before the schedule starts)
+an error occurred during closing of asynchronous generator <async_generator object safe_async_iterate at 0x7f518e147140>
+asyncgen: <async_generator object safe_async_iterate at 0x7f518e147140>
+    yield chunk
+    await iterator.aclose()
+    raise exc
+    async with safe_async_iterate(self._connection._receive_response_body(**kwargs)) as iterator:
+an error occurred during closing of asynchronous generator <async_generator object PoolByteStream.__aiter__ at 0x7f518e14b5b0>
+asyncgen: <async_generator object PoolByteStream.__aiter__ at 0x7f518e14b5b0>
+    yield chunk
+    async with safe_async_iterate(self._stream) as iterator:
+done: 300/300 ok, 0 failed in 197.3s
+launch error (ms): mean=3.30 p99=20.16 max=67.68
+served concurrency (Little's law) = 162.511
+ttft_ms: mean=69182.50 p50=68006.43 p95=139463.97 p99=141778.50
+tpot_ms: mean=57.85 p50=60.57 p95=67.79 p99=68.62
+output tokens=195753, 992.3 tok/s
+wrote outputs/p2_evidence/v3/p2ev-tp2-b47_r2.json
+=== 2026-09-17T11:42:02+09:00 stopping p2ev-tp2-b47 ===
+error: no pidfile for deployment 'p2ev-tp2-b47'
+=== 2026-09-17T11:42:02+09:00 done ===
+=== BOTH RUNS COMPLETE ===

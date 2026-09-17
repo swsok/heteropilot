@@ -1,0 +1,118 @@
+=== 2026-09-17T11:13:03+09:00 tp4 (ranks 0,1,2,3, physical 4,5,6,7)  ===
+W0917 11:13:04.888000 1182849 torch/distributed/run.py:852] 
+W0917 11:13:04.888000 1182849 torch/distributed/run.py:852] *****************************************
+W0917 11:13:04.888000 1182849 torch/distributed/run.py:852] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0917 11:13:04.888000 1182849 torch/distributed/run.py:852] *****************************************
+/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/torch/distributed/c10d_logger.py:83: UserWarning: barrier(): using the device under current context. You can specify `device_id` in `init_process_group` to mute this warning.
+  return func(*args, **kwargs)
+           8 KiB      111.1 us  algbw    0.07 GB/s  busbw    0.11 GB/s
+          16 KiB       76.3 us  algbw    0.21 GB/s  busbw    0.32 GB/s
+          32 KiB       47.1 us  algbw    0.70 GB/s  busbw    1.04 GB/s
+          64 KiB       52.5 us  algbw    1.25 GB/s  busbw    1.87 GB/s
+         128 KiB       72.0 us  algbw    1.82 GB/s  busbw    2.73 GB/s
+         256 KiB      116.3 us  algbw    2.25 GB/s  busbw    3.38 GB/s
+         512 KiB      202.0 us  algbw    2.60 GB/s  busbw    3.89 GB/s
+        1024 KiB      206.9 us  algbw    5.07 GB/s  busbw    7.60 GB/s
+        2048 KiB      362.8 us  algbw    5.78 GB/s  busbw    8.67 GB/s
+        4096 KiB      684.9 us  algbw    6.12 GB/s  busbw    9.19 GB/s
+        8192 KiB     1356.6 us  algbw    6.18 GB/s  busbw    9.28 GB/s
+       16384 KiB     2816.1 us  algbw    5.96 GB/s  busbw    8.94 GB/s
+       32768 KiB     5750.0 us  algbw    5.84 GB/s  busbw    8.75 GB/s
+       65536 KiB    11465.2 us  algbw    5.85 GB/s  busbw    8.78 GB/s
+  p2p 0-1:   52.20 GB/s  lat    27.7 us  peer_access=True
+  p2p 0-2:   25.01 GB/s  lat    28.3 us  peer_access=True
+wrote outputs/p2_evidence/link47/tp4.json
+=== 2026-09-17T11:13:11+09:00 tp4_nop2p (ranks 0,1,2,3, physical 4,5,6,7) NCCL_P2P_DISABLE=1 ===
+W0917 11:13:12.820000 1183025 torch/distributed/run.py:852] 
+W0917 11:13:12.820000 1183025 torch/distributed/run.py:852] *****************************************
+W0917 11:13:12.820000 1183025 torch/distributed/run.py:852] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0917 11:13:12.820000 1183025 torch/distributed/run.py:852] *****************************************
+/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/torch/distributed/c10d_logger.py:83: UserWarning: barrier(): using the device under current context. You can specify `device_id` in `init_process_group` to mute this warning.
+  return func(*args, **kwargs)
+           8 KiB      116.9 us  algbw    0.07 GB/s  busbw    0.11 GB/s
+          16 KiB       52.6 us  algbw    0.31 GB/s  busbw    0.47 GB/s
+          32 KiB       51.1 us  algbw    0.64 GB/s  busbw    0.96 GB/s
+          64 KiB       63.5 us  algbw    1.03 GB/s  busbw    1.55 GB/s
+         128 KiB       91.4 us  algbw    1.43 GB/s  busbw    2.15 GB/s
+         256 KiB      138.1 us  algbw    1.90 GB/s  busbw    2.85 GB/s
+         512 KiB      181.2 us  algbw    2.89 GB/s  busbw    4.34 GB/s
+        1024 KiB      273.2 us  algbw    3.84 GB/s  busbw    5.76 GB/s
+        2048 KiB      534.9 us  algbw    3.92 GB/s  busbw    5.88 GB/s
+        4096 KiB     1024.0 us  algbw    4.10 GB/s  busbw    6.14 GB/s
+        8192 KiB     2042.6 us  algbw    4.11 GB/s  busbw    6.16 GB/s
+       16384 KiB     3935.4 us  algbw    4.26 GB/s  busbw    6.39 GB/s
+       32768 KiB     7864.6 us  algbw    4.27 GB/s  busbw    6.40 GB/s
+       65536 KiB    15564.6 us  algbw    4.31 GB/s  busbw    6.47 GB/s
+  p2p 0-1:   52.23 GB/s  lat    25.3 us  peer_access=True
+  p2p 0-2:   25.02 GB/s  lat    25.2 us  peer_access=True
+wrote outputs/p2_evidence/link47/tp4_nop2p.json
+=== 2026-09-17T11:13:18+09:00 pair_nvlink (ranks 0,1, physical 4,5)  ===
+W0917 11:13:19.607000 1183200 torch/distributed/run.py:852] 
+W0917 11:13:19.607000 1183200 torch/distributed/run.py:852] *****************************************
+W0917 11:13:19.607000 1183200 torch/distributed/run.py:852] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0917 11:13:19.607000 1183200 torch/distributed/run.py:852] *****************************************
+/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/torch/distributed/c10d_logger.py:83: UserWarning: barrier(): using the device under current context. You can specify `device_id` in `init_process_group` to mute this warning.
+  return func(*args, **kwargs)
+           8 KiB       80.8 us  algbw    0.10 GB/s  busbw    0.10 GB/s
+          16 KiB       75.9 us  algbw    0.22 GB/s  busbw    0.22 GB/s
+          32 KiB       78.4 us  algbw    0.42 GB/s  busbw    0.42 GB/s
+          64 KiB       45.7 us  algbw    1.44 GB/s  busbw    1.44 GB/s
+         128 KiB       47.2 us  algbw    2.78 GB/s  busbw    2.78 GB/s
+         256 KiB       46.1 us  algbw    5.68 GB/s  busbw    5.68 GB/s
+         512 KiB       65.7 us  algbw    7.97 GB/s  busbw    7.97 GB/s
+        1024 KiB       78.0 us  algbw   13.45 GB/s  busbw   13.45 GB/s
+        2048 KiB      103.2 us  algbw   20.32 GB/s  busbw   20.32 GB/s
+        4096 KiB      156.1 us  algbw   26.87 GB/s  busbw   26.87 GB/s
+        8192 KiB      261.7 us  algbw   32.06 GB/s  busbw   32.06 GB/s
+       16384 KiB      469.3 us  algbw   35.75 GB/s  busbw   35.75 GB/s
+       32768 KiB      930.4 us  algbw   36.06 GB/s  busbw   36.06 GB/s
+       65536 KiB     1716.4 us  algbw   39.10 GB/s  busbw   39.10 GB/s
+  p2p 0-1:   52.31 GB/s  lat    21.9 us  peer_access=True
+wrote outputs/p2_evidence/link47/pair_nvlink.json
+=== 2026-09-17T11:13:23+09:00 pair_pcie_46 (ranks 0,1, physical 4,6)  ===
+W0917 11:13:24.222000 1183324 torch/distributed/run.py:852] 
+W0917 11:13:24.222000 1183324 torch/distributed/run.py:852] *****************************************
+W0917 11:13:24.222000 1183324 torch/distributed/run.py:852] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0917 11:13:24.222000 1183324 torch/distributed/run.py:852] *****************************************
+/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/torch/distributed/c10d_logger.py:83: UserWarning: barrier(): using the device under current context. You can specify `device_id` in `init_process_group` to mute this warning.
+  return func(*args, **kwargs)
+           8 KiB       80.3 us  algbw    0.10 GB/s  busbw    0.10 GB/s
+          16 KiB       51.3 us  algbw    0.32 GB/s  busbw    0.32 GB/s
+          32 KiB       49.6 us  algbw    0.66 GB/s  busbw    0.66 GB/s
+          64 KiB       46.8 us  algbw    1.40 GB/s  busbw    1.40 GB/s
+         128 KiB       47.2 us  algbw    2.78 GB/s  busbw    2.78 GB/s
+         256 KiB       60.1 us  algbw    4.36 GB/s  busbw    4.36 GB/s
+         512 KiB       84.2 us  algbw    6.22 GB/s  busbw    6.22 GB/s
+        1024 KiB      107.8 us  algbw    9.73 GB/s  busbw    9.73 GB/s
+        2048 KiB      155.6 us  algbw   13.48 GB/s  busbw   13.48 GB/s
+        4096 KiB      258.2 us  algbw   16.24 GB/s  busbw   16.24 GB/s
+        8192 KiB      475.6 us  algbw   17.64 GB/s  busbw   17.64 GB/s
+       16384 KiB      903.3 us  algbw   18.57 GB/s  busbw   18.57 GB/s
+       32768 KiB     1764.5 us  algbw   19.02 GB/s  busbw   19.02 GB/s
+       65536 KiB     3472.2 us  algbw   19.33 GB/s  busbw   19.33 GB/s
+  p2p 0-1:   25.03 GB/s  lat    22.9 us  peer_access=True
+wrote outputs/p2_evidence/link47/pair_pcie_46.json
+=== 2026-09-17T11:13:27+09:00 pair_pcie_46_nop2p (ranks 0,1, physical 4,6) NCCL_P2P_DISABLE=1 ===
+W0917 11:13:28.889000 1183445 torch/distributed/run.py:852] 
+W0917 11:13:28.889000 1183445 torch/distributed/run.py:852] *****************************************
+W0917 11:13:28.889000 1183445 torch/distributed/run.py:852] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0917 11:13:28.889000 1183445 torch/distributed/run.py:852] *****************************************
+/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/torch/distributed/c10d_logger.py:83: UserWarning: barrier(): using the device under current context. You can specify `device_id` in `init_process_group` to mute this warning.
+  return func(*args, **kwargs)
+           8 KiB       82.0 us  algbw    0.10 GB/s  busbw    0.10 GB/s
+          16 KiB       56.0 us  algbw    0.29 GB/s  busbw    0.29 GB/s
+          32 KiB      116.9 us  algbw    0.28 GB/s  busbw    0.28 GB/s
+          64 KiB      129.3 us  algbw    0.51 GB/s  busbw    0.51 GB/s
+         128 KiB      129.8 us  algbw    1.01 GB/s  busbw    1.01 GB/s
+         256 KiB      105.5 us  algbw    2.48 GB/s  busbw    2.48 GB/s
+         512 KiB      135.2 us  algbw    3.88 GB/s  busbw    3.88 GB/s
+        1024 KiB      223.2 us  algbw    4.70 GB/s  busbw    4.70 GB/s
+        2048 KiB      402.2 us  algbw    5.21 GB/s  busbw    5.21 GB/s
+        4096 KiB      698.2 us  algbw    6.01 GB/s  busbw    6.01 GB/s
+        8192 KiB     1304.6 us  algbw    6.43 GB/s  busbw    6.43 GB/s
+       16384 KiB     2481.3 us  algbw    6.76 GB/s  busbw    6.76 GB/s
+       32768 KiB     4991.9 us  algbw    6.72 GB/s  busbw    6.72 GB/s
+       65536 KiB     9903.1 us  algbw    6.78 GB/s  busbw    6.78 GB/s
+  p2p 0-1:   25.03 GB/s  lat    23.2 us  peer_access=True
+wrote outputs/p2_evidence/link47/pair_pcie_46_nop2p.json
+=== 2026-09-17T11:13:33+09:00 link probe (4-7) complete ===

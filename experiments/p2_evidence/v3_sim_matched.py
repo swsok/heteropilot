@@ -39,7 +39,8 @@ CLUSTER = REPO / "experiments/configs/clusters/pd-rngd-gpu-card.yaml"
 SERVICE = REPO / "examples/service_specs/llama31-8b.yaml"
 WORK = REPO / "outputs/p2_evidence/v3_sim"
 OUT = REPO / "experiments/p2_evidence/results/v3_sim_matched.json"
-CANDIDATES = ("cuda-a40-node_a40a-tp4-dp1-s128-t2048",)
+CANDIDATES = ("cuda-a40-node_a40a-tp4-dp1-s128-t2048",
+              "cuda-a40-node_a40a-tp2-dp1-s128-t2048")
 
 
 def main() -> int:
@@ -70,7 +71,7 @@ def main() -> int:
             print(f"!! {cid} not generated")
             continue
         predictor = LLMServingSimPredictor(
-            trace, work_dir=WORK / "matched", timeout_s=3600.0)
+            trace, work_dir=WORK / f"matched_{cid.split('-')[4]}", timeout_s=3600.0)
         print(f"--- simulating {cid} on the measured trace", flush=True)
         result = predictor.predict(candidate, spec, cluster, by_id, profiles)
         metrics = getattr(result, "metrics", None)

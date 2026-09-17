@@ -1,0 +1,55 @@
+=== 2026-09-17T11:53:11+09:00 deploying p2ev-tp2-b47numa ===
+  backend       : vllm-cuda
+  plan          : p2ev-tp2-b47numa
+  endpoint      : http://127.0.0.1:8403
+  pid           : 1199802
+  started       : 2026-09-17T02:53:12.361086+00:00
+  CUDA devices  : 4,5,6,7
+healthy after ~60s
+=== 2026-09-17T11:54:02+09:00 p2ev-tp2-b47numa repeat 0 ===
+open loop: 300 requests -> http://127.0.0.1:8403/v1 (trace 10.280 rps, offering 10.280 rps, span 29.2s, no concurrency bound)
+warm-up: 258.9 ms (paid before the schedule starts)
+done: 300/300 ok, 0 failed in 104.0s
+launch error (ms): mean=4.17 p99=27.39 max=88.92
+served concurrency (Little's law) = 155.812
+ttft_ms: mean=18544.71 p50=21041.42 p95=48082.10 p99=52199.04
+tpot_ms: mean=54.32 p50=56.73 p95=66.07 p99=67.00
+output tokens=195753, 1883.0 tok/s
+wrote outputs/p2_evidence/v3/p2ev-tp2-b47numa_r0.json
+=== 2026-09-17T11:56:17+09:00 p2ev-tp2-b47numa repeat 1 ===
+open loop: 300 requests -> http://127.0.0.1:8403/v1 (trace 10.280 rps, offering 10.280 rps, span 29.2s, no concurrency bound)
+warm-up: 253.9 ms (paid before the schedule starts)
+an error occurred during closing of asynchronous generator <async_generator object PoolByteStream.__aiter__ at 0x7f1556ddf5b0>
+asyncgen: <async_generator object PoolByteStream.__aiter__ at 0x7f1556ddf5b0>
+    yield chunk
+    async with safe_async_iterate(self._stream) as iterator:
+done: 300/300 ok, 0 failed in 104.5s
+launch error (ms): mean=4.03 p99=24.81 max=78.15
+served concurrency (Little's law) = 156.138
+ttft_ms: mean=18727.21 p50=21116.79 p95=48594.00 p99=52815.65
+tpot_ms: mean=54.64 p50=57.02 p95=66.64 p99=67.47
+output tokens=195753, 1873.3 tok/s
+wrote outputs/p2_evidence/v3/p2ev-tp2-b47numa_r1.json
+=== 2026-09-17T11:58:33+09:00 p2ev-tp2-b47numa repeat 2 ===
+open loop: 300 requests -> http://127.0.0.1:8403/v1 (trace 10.280 rps, offering 10.280 rps, span 29.2s, no concurrency bound)
+warm-up: 255.6 ms (paid before the schedule starts)
+an error occurred during closing of asynchronous generator <async_generator object safe_async_iterate at 0x7f235c4834c0>
+asyncgen: <async_generator object safe_async_iterate at 0x7f235c4834c0>
+    yield chunk
+    await iterator.aclose()
+    raise exc
+    async with safe_async_iterate(self._connection._receive_response_body(**kwargs)) as iterator:
+an error occurred during closing of asynchronous generator <async_generator object PoolByteStream.__aiter__ at 0x7f235c48f5b0>
+asyncgen: <async_generator object PoolByteStream.__aiter__ at 0x7f235c48f5b0>
+    yield chunk
+    async with safe_async_iterate(self._stream) as iterator:
+done: 300/300 ok, 0 failed in 104.5s
+launch error (ms): mean=3.83 p99=24.19 max=52.23
+served concurrency (Little's law) = 156.228
+ttft_ms: mean=18752.96 p50=21138.07 p95=48651.48 p99=52823.24
+tpot_ms: mean=54.63 p50=57.00 p95=66.62 p99=67.54
+output tokens=195753, 1873.6 tok/s
+wrote outputs/p2_evidence/v3/p2ev-tp2-b47numa_r2.json
+=== 2026-09-17T12:00:48+09:00 stopping p2ev-tp2-b47numa ===
+stopped deployment 'p2ev-tp2-b47numa'.
+=== 2026-09-17T12:00:49+09:00 done ===

@@ -40,6 +40,26 @@ is a case where the invention did not help. **n = 1, and it is counterfactual**:
 what it shows is what happens when the domain does not cover the candidate, not
 what the margin achieves when it does.
 
+**(v) V3's P1 measurement is a TRANSIENT time-average, so it is a qualitative
+case only** (decision 2026-09-17). Neither side reaches steady state: both are
+triangles, the hardware peaking at 300 concurrent — every request in the trace
+resident at once — and draining (`v3_verdict_accuracy.md` §6.3.1). `L` = 163
+is the mean of that triangle, not a concurrency the server settled at.
+
+**The specification's worked embodiment must therefore be measured on a
+steady-state interval**, not on this run: an arrival window long enough for the
+queue to stabilise, with the interval's flatness reported. V3's numbers support
+§2 and §5.2 as *cases*; they are not the measurement an embodiment quotes.
+
+**(vi) Figure 2's registered region carries its own non-registration table.** The
+figure marks `[14.832, 25.181]` as the one interval V1's §5.4 procedure
+registers; every other interval is unregistered **for a stated reason**, and the
+figure must be read against `v1_validation_region.md` §2.1, which names the
+condition that rejected each one (ratio > 2, sample count < 100, a change of
+operating mode, or a vacuous stage 2). A reader seeing one shaded band must be
+able to ask why the rest is unshaded and get an answer per interval, not in
+aggregate.
+
 **(ii) V3-R is left as a selection step.** When an RNGD node is available, select
 one RNGD candidate each of the P2 and P3 shapes and run the same comparison.
 Until then the specification must not imply that the RNGD regime's verdicts have
@@ -60,7 +80,10 @@ there, not the *verdict*.
 | §5.2/§5.3, claim 2 — lookup coordinate | `L_pred` vs `L_meas` divergence under open-loop load | `v2_openloop_concurrency.md` | **PENDING** (driver ready, PR #95) |
 | **§2** problem definition — a prediction that is confidently wrong | P1: predicted p99 TPOT 36.5 ms, measured **66.0 ms** (−44.6 %); predicted L 127.9, measured 163.4 | `v3_verdict_accuracy.md` §6.3 | **established**, n=1 |
 | **§5.2** application conditions — parallelism and placement | domain fitted at TP=1 answers a TP=4 query; `AccuracyDomain` has no parallelism axis; error −1.05 % at TP=1 against −44.6 % at TP=4 | `v3_verdict_accuracy.md` §6.4 | **established**, n=1, **counterfactual** |
-| §5.2 supporting — an unmeasured input is sufficient to explain it | one registry item (`link_bw:pcie-a40a-02`, `vendor_spec`, no sourced range, 0.114 h to measure) reproduces all three metrics at ~8 gbps | `v3_verdict_accuracy.md` §6.3.2–6.3.3 | **established** as a hypothesis, not proven |
+| §5.2 supporting — an unmeasured input explains it | `link_bw:pcie-a40a-02` measures **8.8 GB/s** effective against a `vendor_spec` 64.0; substituting it drops the TP=4 error from −43.4 % to −7.0 % on TPOT and −21.2 % to −0.7 % on concurrency | `v3_verdict_accuracy.md` Appendix A.1, A.4 | **established by measurement**, reproduced on two GPU groups |
+| §5.2 — the parallelism condition, discriminated | same candidate at TP=2 inside an NVLink pair errs **−5.2 %** where TP=4 across the bridge errs **−43.4 %**, an 8.3× difference from removing one hop | `v3_verdict_accuracy.md` A.2 | **established**, n=1 per arm |
+| §5.2 — device placement, third instance | one static link value cannot serve both candidates: 8.8 fixes TP=4 and breaks TP=2 (−5.2 % → +18.2 %), because the simulator cannot express which devices a TP group occupies | `v3_verdict_accuracy.md` A.4 | **established** |
+| §5.2 — device placement, NUMA | binding the server to the island's NUMA node is worth **1.93×** throughput and 0.37× TTFT, with identical engine init, clocks and power | `v3_verdict_accuracy.md` A.3 | **established**, and it invalidates nothing already measured (A.3 ③) |
 | §6 verdict accuracy, A40 cases | — | **not measurable**: the deploy backend blocks P2 and P3 | `v3_verdict_accuracy.md` §4① | **not established** |
 | §6 cost of holding | all 30 held candidates are also rejected unmargined → holding costs nothing on this fixture | `v3_verdict_accuracy.md` §1 | **established** |
 | §6 verdict accuracy, RNGD regime | — | **V3-R, not scheduled** | **not established** |
