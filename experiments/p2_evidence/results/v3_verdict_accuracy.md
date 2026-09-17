@@ -222,6 +222,24 @@ it. It is noted so the next planning round has the cost in front of it: without 
 router, Phase 4 can deploy only single-island `dp=1` plans, which is a minority of
 what the planner recommends.
 
+**A parallelism / placement axis on `AccuracyDomain`**, and a `refuse` when a
+candidate's configuration does not match the one the domain was fitted on, is the
+second. §6.4 is the measured case for it: a domain fitted at TP=1 answered a TP=4
+query with a 1.13 % margin where ~80 % was needed, and nothing in the schema
+could say that was extrapolation.
+
+**It is also out of scope here, because it is a code change**, and a consequential
+one: adding a scoping field makes every committed domain under-specified until it
+is filled in, and turning on `refuse` for a mismatch would change the verdict of
+every candidate whose parallelism differs from its domain's — which on this
+fixture is most of them. It belongs in its own PR with its own regression
+evidence. Proposed, not started.
+
+**A third, smaller one**: measure `link_bw:pcie-a40a-02`. Seven minutes of
+exclusive GPU (§6.3.2), and §6.3.3 makes it the leading explanation for the whole
+of V3's error. It needs no code at all — it is the measurement the plan already
+wanted and could not rank.
+
 ## 6. What V3 does deliver: P1, and the SLO sweep that makes one deployment count
 
 **MEASURED 2026-09-17** on the A40 node, all eight GPUs idle and confirmed so
@@ -303,9 +321,18 @@ threshold in the grid:
 | 50 | FALSE PASS | FALSE PASS | FALSE PASS | FALSE PASS | no |
 
 **Tally: (a) 6 false passes, (b) 3 correct rejections and 3 false passes, (c) and
-(d) 6 false passes each.** On this candidate the global rule strictly dominated
-the per-point one. **As cases, not statistics** — one candidate read at six
-thresholds is one measurement, and the specification must present it that way.
+(d) 6 false passes each.**
+
+**How to state this, and how not to.** The global rule came out ahead **on this
+one candidate, at SLO 38–42 only, and by an accident of margin size** — 18 % is
+arbitrarily larger than 1.13 %, and at SLO 44 and above it fails exactly as the
+others do. It was not better informed; it was bigger. Nothing here supports
+"a global margin beats a per-point one", and §6.4 shows the comparison is not
+even between two margin policies but between a domain that covers the candidate
+and one that does not.
+
+**As cases, not statistics** — one candidate read at six thresholds is one
+measurement, and the specification must present it that way.
 
 ### 6.3 The measurement
 
@@ -332,10 +359,133 @@ L 127.872 / TPOT 36.547 / TTFT 16 716.4 against E-A1's 127.280 / 36.795 /
 the measurement are not at the same load, and that is itself the finding: the
 simulator did not know how much work this configuration would be carrying.
 
+#### 6.3.1 There is no steady state — both sides are transients, and the run is in overload
+
+Instantaneous concurrency, counted as requests that have arrived and not yet
+completed:
+
+| | peak concurrency | at | arrival span | window | middle-half slope |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| simulator | 217 | 29.2 s | 29.1 s | 58.8 s | −1.34 req/s |
+| **measured** | **300** | 29.3 s | 29.2 s | 101.4 s | **−3.23 req/s** |
+
+Neither side is flat. Both are triangles: the queue accumulates through the
+arrival window, peaks as the last request lands, and drains. **On the hardware
+the peak is 300 — every request in the trace is resident at once**, and with
+`max_num_seqs = 128` that means 172 of them are queued rather than running. The
+makespan ratio is **1.724×**.
+
+**So the conclusion is stated as overload, not as an operating point.** `L`
+= 163.383 is the time-average of a triangle, not a concurrency the server
+settled at; the simulator's 127.872 is the time-average of a *different* triangle
+with the same base. Part of the −21.73 % gap is therefore a difference in drain
+shape rather than in load, and neither figure should be read as "the operating
+point this candidate runs at". A steady-state measurement would need an arrival
+window long enough for the queue to stabilise, which 300 requests at ~10 rps
+against a ~3 rps server cannot provide.
+
+#### 6.3.2 The topology the simulator was given, against the one that exists
+
+`nvidia-smi topo -m` on this node, for the four GPUs `cuda-a40-node_a40a` maps to:
+
+```
+        GPU0  GPU1  GPU2  GPU3
+GPU0     X    NV4   NODE  NODE
+GPU1    NV4    X    NODE  NODE
+GPU2    NODE  NODE   X    NV4
+GPU3    NODE  NODE  NV4    X
+```
+
+Two NVLink pairs (0–1, 2–3) bridged by PCIe. The cluster spec has the same
+*shape* — `nvlink-a40a-01` and `nvlink-a40a-23` at 112.5, `pcie-a40a-02` at 64.0
+— so the structure is right. **But `pcie-a40a-02` carries `source: vendor_spec`,
+and TP=4 spans both pairs, so every all-reduce crosses exactly that link.**
+
+The uncertain-input registry already says so. Of its six entries for this
+fixture, the first is:
+
+```
+id      link_bw:pcie-a40a-02        grade   VENDOR_SPEC
+nominal 64.0 gbps                   range   lo=None, hi=None
+affects ['cuda-a40-node_a40a']      cost    0.114 h, exclusive
+```
+
+**It affects exactly P1's island, it is the only non-measured input that does,
+and it has no sourced range** — so `--measurement-plan` lists it as *undecidable*
+rather than scoring it, and it receives **no ΔR rank at all**. Measuring it costs
+**seven minutes**.
+
+#### 6.3.3 Is that link the cause? One parameter, three metrics
+
+Re-simulated with only `pcie-a40a-02` changed (`v4_pcie_perturbation.json`):
+
+| PCIe bw | `L_pred` | p99 TPOT | p99 TTFT |
+| ---: | ---: | ---: | ---: |
+| 64.0 (vendor spec) | 127.872 | 36.547 | 16 716 |
+| 32.0 | 134.625 | 40.301 | 20 936 |
+| 16.0 | 146.187 | 47.525 | 29 822 |
+| 6.4 | 170.584 | 70.909 | 57 868 |
+| **measured** | **163.383** | **66.012** | **53 176** |
+
+Interpolating each metric separately for the bandwidth that reproduces it:
+
+| metric | bandwidth that matches | vs vendor spec |
+| --- | ---: | ---: |
+| served concurrency | 8.39 gbps | 7.6× lower |
+| p99 TPOT | 7.75 gbps | 8.3× lower |
+| p99 TTFT | 7.46 gbps | 8.6× lower |
+
+**Three metrics, one parameter, agreement within ±6 %.** A single unmeasured
+input, set to about an eighth of its vendor figure, reproduces the whole of a
+44.6 % TPOT error and a 21.7 % concurrency error at the same time.
+
+**This is evidence, not proof.** A TP compute model that is wrong in a way that
+mimics a slow link would fit too; what makes the link the better hypothesis is
+that three metrics of different kinds move together under one knob, and that the
+knob is the one input the registry independently flagged for this island.
+**Settling it costs seven minutes of GPU** — the measurement the plan could not
+rank because the input has no sourced range.
+
 **Launch accuracy**: worst 76.08 ms against the driver's 20 ms contract, as in
 V2's 10 rps stages and for the same reason — 300 streamed responses in flight at
 ~10 rps saturate the event loop. At a p99 TTFT of 53 s that is 0.14 % of a
 request's residency.
+
+#### 6.3.4 Sanity: patent 1's lower bound is not violated
+
+Patent 1's pruning stages S1–S5′ are the candidate generator's; the numeric one
+is **S5, the memory-roofline TPOT floor**. For P1 at tp=4 with 128 active
+sequences:
+
+```
+weights 4 015 529 984 B + 128 x 32 768 B  =  4 019 724 288 B
+/ 696 GB/s                                =  5.7755 ms
+```
+
+| | ms | ratio to floor |
+| --- | ---: | ---: |
+| S5 roofline floor | **5.7755** | 1.00× |
+| simulator p99 TPOT | 36.547 | 6.33× |
+| **measured p99 TPOT** | **66.012** | **11.43×** |
+
+**The bound holds** — a lower bound that exceeded a measurement would be wrong by
+construction, and this one does not. It is also very loose, which is expected: it
+charges one pass of weights and live KV through HBM and nothing for compute,
+collectives or queueing. The 11.4× gap is where those live, and §6.3.3 argues a
+large part of it is the unmeasured link.
+
+#### 6.3.5 The lookup coordinate does not matter here
+
+Both coordinates are **inside** the A40 domain's measured range [4.043, 170.56]:
+`L_pred` = 127.872 and `L_meas` = 163.383. The margins they select are 1.1347 %
+and 1.3896 %, giving robust values of 37.21 ms and 37.31 ms against a measured
+66.01 ms. **Neither covers, and the verdict is identical either way.**
+
+So this case adds nothing for or against claim 2's coordinate choice — consistent
+with V2, which measured the two coordinates differing by under 3 % and selecting
+margins within 0.008 pp. What decides this case is not *where* the domain is
+consulted but that **the domain does not cover the candidate's parallelism at
+all** (§6.4).
 
 ### 6.4 Why this is a finding about the domain's schema, not about margining
 

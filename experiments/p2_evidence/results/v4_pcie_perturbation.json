@@ -1,0 +1,110 @@
+{
+  "candidate": "cuda-a40-node_a40a-tp4-dp1-s128-t2048",
+  "link": "pcie-a40a-02",
+  "runs": [
+    {
+      "factor": 1.0,
+      "bandwidth_gbps": 64.0,
+      "metrics": {
+        "p50_ttft_ms": 7140.611465,
+        "p95_ttft_ms": 15322.012587200004,
+        "p99_ttft_ms": 16716.437878409997,
+        "p50_tpot_ms": 30.4825645,
+        "p95_tpot_ms": 35.67384815,
+        "p99_tpot_ms": 36.54736826,
+        "throughput_tps": 7703.735477319392,
+        "slo_goodput_rps": 5.101901674192519,
+        "slo_attainment": 1.0,
+        "completed_requests": 300,
+        "completed_tokens": 195753,
+        "total_energy_j": 76360.0,
+        "average_power_w": 1296.672931034483,
+        "peak_power_w": 1363.96,
+        "tokens_per_joule": 2.56355421686747,
+        "sim_wall_seconds": 52.84,
+        "served_concurrency": 127.87194609280543,
+        "served_concurrency_per_island": {
+          "cuda-a40-node_a40a": 127.87194609280543
+        }
+      }
+    },
+    {
+      "factor": 0.5,
+      "bandwidth_gbps": 32.0,
+      "metrics": {
+        "p50_ttft_ms": 9094.9082065,
+        "p95_ttft_ms": 19616.258937650004,
+        "p99_ttft_ms": 20935.744358319997,
+        "p50_tpot_ms": 33.446788,
+        "p95_tpot_ms": 39.3725894,
+        "p99_tpot_ms": 40.30121594,
+        "throughput_tps": 7130.987338134225,
+        "slo_goodput_rps": 4.722591572125484,
+        "slo_attainment": 1.0,
+        "completed_requests": 300,
+        "completed_tokens": 195753,
+        "total_energy_j": 77240.0,
+        "average_power_w": 1214.032063492064,
+        "peak_power_w": 1358.01,
+        "tokens_per_joule": 2.5343474883480064,
+        "sim_wall_seconds": 52.91,
+        "served_concurrency": 134.62525495089469,
+        "served_concurrency_per_island": {
+          "cuda-a40-node_a40a": 134.62525495089469
+        }
+      }
+    },
+    {
+      "factor": 0.25,
+      "bandwidth_gbps": 16.0,
+      "metrics": {
+        "p50_ttft_ms": 12599.129723999999,
+        "p95_ttft_ms": 27566.155796400002,
+        "p99_ttft_ms": 29821.466549309996,
+        "p50_tpot_ms": 39.991363500000006,
+        "p95_tpot_ms": 46.75511185,
+        "p99_tpot_ms": 47.525473559999995,
+        "throughput_tps": 6216.439175821242,
+        "slo_goodput_rps": 3.5542741296484306,
+        "slo_attainment": 0.8633333333333333,
+        "completed_requests": 300,
+        "completed_tokens": 195753,
+        "total_energy_j": 78860.0,
+        "average_power_w": 1078.136527777778,
+        "peak_power_w": 1354.16,
+        "tokens_per_joule": 2.4822850621354298,
+        "sim_wall_seconds": 50.23,
+        "served_concurrency": 146.18657598331598,
+        "served_concurrency_per_island": {
+          "cuda-a40-node_a40a": 146.18657598331598
+        }
+      }
+    },
+    {
+      "factor": 0.1,
+      "bandwidth_gbps": 6.4,
+      "metrics": {
+        "p50_ttft_ms": 24917.955728,
+        "p95_ttft_ms": 53729.13530045,
+        "p99_ttft_ms": 57867.76598452999,
+        "p50_tpot_ms": 57.793769499999996,
+        "p95_tpot_ms": 69.5371126,
+        "p99_tpot_ms": 70.909165,
+        "throughput_tps": 4399.843127918989,
+        "slo_goodput_rps": 0.2913854854778223,
+        "slo_attainment": 0.1,
+        "completed_requests": 300,
+        "completed_tokens": 195753,
+        "total_energy_j": 86570.0,
+        "average_power_w": 840.9941747572814,
+        "peak_power_w": 1347.25,
+        "tokens_per_joule": 2.26121058103269,
+        "sim_wall_seconds": 49.1,
+        "served_concurrency": 170.58370458859295,
+        "served_concurrency_per_island": {
+          "cuda-a40-node_a40a": 170.58370458859295
+        }
+      }
+    }
+  ]
+}
