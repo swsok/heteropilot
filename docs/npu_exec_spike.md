@@ -392,3 +392,385 @@ contribution at under 5.4 pp with the wrong sign below c16, while A.1 shows it c
 the shape of 299 of 300 prefills. That reframes what the prototype is for, and the
 work order's risk row for "no mechanism exceeds 5 pp" — build P1 minimally and close —
 is the row that currently applies.
+
+---
+
+## §B — the prototype (STEP B)
+
+Spike branch `spike/npu-exec-b-prototype`, **do not merge**. Opt-in through the
+cluster JSON:
+
+```json
+{"execution_model": "bucketed_aot", "prefill_priority": "strict"}
+```
+
+### B.1 — scope, cut down by what STEP A measured
+
+| rule | built? | why |
+| --- | --- | --- |
+| **P1** step policy | **yes** | prefill/extend steps carry one request, `chunk ≤ 1024`, exclusive of decode |
+| P2 decode quantisation | **no** | A.3: the padding is already inside the measured bundle, and re-charging it double-counts (D91) |
+| P3 group attention | **no** | A.3: the grouping is also already in the bundle, and the grid it groups on is unknown until C.3 |
+| P4 c1 path | unchanged | the control, as specified |
+| P5 KV reservation | **no** | untouched by STEP A; still open |
+
+So the prototype is P1 alone, which is what the work order's own risk row
+prescribes when no mechanism clears 5 pp. One guard was added rather than a
+fallback: `execution_model: bucketed_aot` together with prefix caching **raises**,
+because the rule is implemented in `schedule_base` only and falling through to
+`schedule_with_prefix` would report the vLLM step policy as if it were the
+bucketed one.
+
+`prefill_priority` is `strict` (drain the prefill queue) or `alternate` (take
+turns). C.2 is supposed to decide it; both are run here.
+
+### B.2 — equivalence, and what the prototype changes (E-N4)
+
+**Equivalence holds twice over.** The R1/R2 anchors
+(`experiments/scripts/d23fix_anchors.sh after_npu_exec_b`) reproduce all four
+committed SHA-256 sums from `after_d28`. And the six low-load points re-run
+*without* `execution_model` are **byte-identical CSVs** to the pre-edit runs of
+§A.1. Absent the key, nothing moved.
+
+**The prototype does change the step structure it was built to change.** Censused
+at 300 requests, c15.59, against the same point under the current policy:
+
+| | vLLM | `bucketed_aot` |
+| --- | ---: | ---: |
+| steps | 13054 | 13063 |
+| mixed steps | 299 | **0** |
+| prefill steps | 300 | 401 |
+| prefill steps at `bs = 1` | 100 % | 100 % |
+| prefill tokens | 257,239 | 257,239 |
+| mean decode batch | 14.97 | 15.44 |
+
+No step mixes prefill with decode any more, the 300 prompts now take 401 steps
+because they chunk at 1024, and the token total is unchanged — the work is the
+same work, differently shaped.
+
+TPOT error, nine points, 300 requests, `--match offered`:
+
+| env conc | current | `strict` | `alternate` | served: current → `strict` | measured |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 1.0 | +2.25 | +2.41 | +2.38 | 1.02 → 1.02 | 1.0 |
+| 1.99 | +11.00 | +11.36 | +11.34 | 2.19 → 2.20 | 1.99 |
+| 3.98 | +10.79 | +11.58 | +11.57 | 4.31 → 4.35 | 3.98 |
+| 7.88 | +7.33 | +9.03 | +9.03 | 8.21 → 8.34 | 7.88 |
+| 15.3 | +3.26 | +6.43 | +6.43 | 14.83 → 15.28 | 15.3 |
+| 15.59 | +2.47 | +5.79 | +5.80 | 15.21 → 15.68 | 15.59 |
+| 29.3 | −3.28 | +1.94 | +1.94 | 25.18 → 26.49 | 29.3 |
+| 59.2 | −25.17 | −19.28 | −19.29 | 37.67 → 40.47 | 59.2 |
+| 107.2 | −48.59 | −43.73 | −43.73 | 44.47 → 48.23 | 107.2 |
+
+The two comparison criteria the work order fixed in advance:
+
+**(a) Residual span.** Current `[−48.59, +11.00]`, width 59.59 pp. Prototype
+`[−43.73, +11.58]`, width 55.31 pp. That is a **7 % narrowing**, against the
+"one third of current" the work order names for conclusion (i). It is not close.
+
+**(b) Does the sign flip go away?** **No — it moves.** Under the current policy the
+error crosses zero between served 15.21 and 25.18; under the prototype it crosses
+between 26.49 and 40.47. The vLLM fingerprint is displaced, not removed.
+
+Two further readings.
+
+**`strict` and `alternate` are indistinguishable.** The largest difference across
+all nine points is **0.03 pp**. So the indirect estimate the work order's risk row
+proposed for C.2 — run both, report whichever is closer to the measurement —
+**cannot discriminate**, and C.2 must be decided by direct observation or left
+open. This is a result about the experiment, not about the runtime.
+
+**Queue reproduction improves where it was already close and not where it matters.**
+At c15.3 the simulated served concurrency goes 14.83 → 15.28 against a measured
+15.3, which is near exact. At the c107.2 arrival rate it goes 44.47 → 48.23
+against a measured 107.2. The simulator's throughput ceiling is not the step
+policy.
+
+### B.2 — TTFT (E-N4), and the STEP A hypothesis it falsifies
+
+Simulator against simulator, because the measured side is closed-loop (D19). Full
+table: `experiments/results/npu_exec_ttft.md`.
+
+| env conc | vLLM p50 | AOT p50 | Δ | vLLM p95 | AOT p95 | Δ |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1.0 | 77.0 | 75.8 | −1.6 % | 171.0 | 179.3 | +4.9 % |
+| 1.99 | 80.3 | 82.8 | +3.0 % | 179.4 | 191.7 | +6.8 % |
+| 3.98 | 84.5 | 81.7 | −3.3 % | 188.1 | 194.2 | +3.2 % |
+| 7.88 | 86.6 | 84.1 | −2.9 % | 183.5 | 188.5 | +2.7 % |
+| 15.3 | 87.2 | 86.7 | −0.5 % | 187.2 | 192.3 | +2.7 % |
+| 15.59 | 87.1 | 84.3 | −3.2 % | 187.7 | 192.7 | +2.7 % |
+| 29.3 | 87.9 | 85.9 | −2.3 % | 188.8 | 198.4 | +5.1 % |
+| 59.2 | 93.5 | 90.9 | −2.8 % | 187.9 | 191.7 | +2.0 % |
+| 107.2 | 95.7 | 90.3 | −5.7 % | 185.3 | 198.4 | +7.1 % |
+
+**§A's TTFT hypothesis is falsified.** A.1 found the simulator mixes prefill with
+decode on 299 of 300 prefill steps and proposed that as a candidate for D17's
+−32.6 % TTFT gap. Removing the mixing entirely moves simulated TTFT p50 by between
+−5.7 % and +3.0 %, and p95 by +2.0 % to +7.1 %. Nothing of that size closes a
+32.6 % gap, and p50 mostly moves **down** where it would need to move up.
+
+An intermediate number that looked much better is worth recording so it is not
+believed later: the same comparison on a **20-request** run read +14.0 % on p50
+and +10.3 % on p95. That is a small-sample artifact — the same drain-tail effect
+D32 recorded — and it is the number this spike would have quoted had it stopped at
+the smoke test.
+
+### B.3 — hold-out (E-N5): not run
+
+The hold-out workload needs a measured counterpart from STEP C.4, and STEP C has
+not run: `npu0`, the card every committed RNGD measurement was taken on, is held
+by another tenant's pod (`docs/nodes/npu.md`). Per the work order's own completion
+condition this is recorded as **undecided, awaiting measurement** rather than
+substituted. Nothing in §B should be read as evidence that the prototype
+generalises off sharegpt — that is exactly the question B.3 exists to answer, and
+it is open.
+
+---
+
+## §C — hardware (STEP C), on `npu2`
+
+**Which card, and why it matters.** Every committed RNGD measurement — the perf
+bundle, the envelope, the accuracy domain, D17's traces — was taken on `npu0`
+(PCI `03:00.0`). Throughout this step `npu0` was held by another tenant's
+`rngd_pd.serving.cluster --role prefill --backend rngd-full --chip 0` pod, and
+`npu1` by its decode counterpart. Only `npu2` (PCI `45:00.0`) was free, and that
+is a **different physical card** — the four-card inventory in `docs/nodes/npu.md`
+called it `npu3`. So every number below is `npu2`'s, and a result that is a
+property of the *card* cannot be merged into the `npu0` bundle without a
+cross-card check. A result that is a property of the *artifact* carries.
+
+(The three vendor-level ways of checking whether a card is free all said it was.
+That is recorded in `docs/nodes/npu.md`; the process list is what answers it.)
+
+### C.1 — the composed path is single-KV-bucket, and the batch is padded (E-N6)
+
+Artifact `d6ae6a43`, one card at `tp=8`, `workloads/fixedlen-512in-128out-64.jsonl`
+— every prompt exactly 512 tokens and every completion 128, so every sequence's KV
+stays inside `(0, 1024]`, one decode attention bucket, for the whole run.
+
+| workload | concurrency | wire (composed) hit rate |
+| --- | ---: | ---: |
+| sharegpt, variable length | 4 | **12.0 %** |
+| fixed 512 / 128 | 4 | **97.5 %** |
+| fixed 512 / 128 | 3 | **96.0 – 98.1 %** |
+
+**H-b, and H-a is excluded.** Holding the concurrency fixed and removing only the
+KV diversity takes the hit rate from 12.0 % to 97.5 %. Under H-a — the batch size
+rarely matching a compiled `bs` — changing the prompt-length distribution could
+not have done that. A `composed` pipeline is compiled for one
+`(batch_size, attention_size)` pair and serves a step only when every sequence in
+the batch shares that attention bucket.
+
+**And the batch size is rounded up rather than matched.** Three is not a compiled
+decode batch size, yet c3 holds 96–98 %; an exact-match rule would read ~0 %.
+
+This is a property of the artifact's pipeline-selection rule, so it carries from
+`npu2` to `npu0`; the percentages themselves are `npu2`'s.
+
+**What it changes.** It corrects the description of the `composed` path recorded
+in STEP 0: it is not "batch-1 only", it is "single-KV-bucket only", and sharegpt
+simply never presents such a batch above c1. It does **not** move the
+decomposition — the prototype leaves the c1 path alone (P4) and real traffic is
+still on the kernelwise path at every load the planner cares about.
+
+It does sharpen C.3. The runtime demonstrably *can* run four sequences as one
+fused execution when their KV agrees, so whatever caps D17's attention executions
+near three is not a per-sequence cost. C.3 should look for a cap on the number of
+distinct **groups**.
+
+### C.3 — what one attention execution costs, and what the grid is (E-N8)
+
+Two probe workloads, `npu2`, artifact `d6ae6a43`, c4 / c8 / c16 each: 900-in /
+100-out so every sequence's KV stays in `[900, 1000]`, and 1900-in / 100-out so it
+stays in `[1900, 2000]`. An EDF stage is named by its compiled bucket, so
+`batch_size` **is** the group size that execution covered. Full table:
+`experiments/results/npu_exec_attention_groups.md`.
+
+| group size | µs at `attention_size` 1024 | µs at 2048 |
+| ---: | ---: | ---: |
+| 1 | 48.3 | 38.8 |
+| 2 | 54.5 | 54.9 |
+| 4 | 55.0 | 76.7 |
+| 8 | 68.8 | 108.8 |
+| 16 | 96.5 | 171.1 |
+| **least squares** | **45.1 + 3.15·n** | **37.1 + 8.54·n** |
+
+**A decode attention execution is mostly fixed cost.** ~40 µs to issue one at all,
+plus a per-sequence term that grows with context length. So splitting a batch into
+`g` groups costs about `40·g` µs whatever the split; the per-sequence work is paid
+either way.
+
+**The cards agree on the structure.** Dividing the committed `npu0` bundle's
+per-layer totals by D17's measured executions per layer gives an independent
+estimate — **43.1 µs fixed + 7.15 µs per sequence** — from a different card, a
+different workload and a different derivation. Against `npu2`'s directly measured
+37.1 + 8.54 that is 14 % on the fixed term and 19 % on the slope. The *structure*
+transfers; the exact constants are `npu2`'s and are not merged into the `npu0`
+bundle.
+
+One thing not explained: at group size 1 the longer bucket is **cheaper**
+(38.8 µs at 2048 against 48.3 at 1024), tightly so at both (p05–p95 spans of 1.4
+and 1.5 µs). Recorded as observed.
+
+#### The grouping grid is the decode buckets — A.1's open item, closed
+
+Every decode attention execution in the `[900, 1000]` runs used
+`attention_size = 1024`, and every one in the `[1900, 2000]` runs used `2048`.
+Not one used 896, 768, 640 or any of the kernelwise menu's 128-spaced rungs. Those
+finer rungs exist for prefill and extend; **decode groups on the powers of two
+from 1024.**
+
+So of A.1's three candidates, the **decode-edge** grid is the runtime's, the
+kernelwise menu is excluded, and the uniform-1024 grid was only ever a coincidence
+of sharegpt's range.
+
+#### What caps the executions near three: nothing does
+
+D17's saturation needs no cap. The decode ladder is geometric, so the bucket
+`[2048, 4096)` covers a 2:1 span of KV; a workload whose KV distribution is
+bounded — sharegpt, mean ≈ 2200 — occupies two or three buckets however large the
+batch grows. A.1's own census measured exactly that on this grid: 1.05 → 2.64
+groups as the mean batch went 1.07 → 14.97. The runtime is not declining to split;
+there is nothing left to split into.
+
+This is testable and currently unmeasured: a workload with a **wide** KV spread
+should show more groups and more attention executions per layer. That is the
+experiment a follow-up work order should run, and it is the same axis B.3's
+hold-out was meant to probe.
+
+#### The whole of §C ran without NUMA binding, and that is now checked
+
+Every measurement above was taken with placement left to the kernel scheduler —
+no `numactl`, no affinity, and nothing in the artifacts saying so. The repo had
+already measured that leaving it to chance is worth **1.93× of throughput** on
+this host (`p2_regular_spec_evidence` Appendix A.3); that work landed on `main`
+during this session and this spike did not carry it over. **D94** records the debt
+and the fix: `--numa-bind` on both harnesses, defaulting to `auto`, plus the
+affinity mask in `provenance`.
+
+The check, on the same card and workload, server mask `0-23,48-71` against `0-95`:
+
+| group size | unbound | bound | Δ |
+| ---: | ---: | ---: | ---: |
+| 1 | 48.3 | 48.3 | +0.02 % |
+| 2 | 54.7 | 54.8 | +0.12 % |
+| 4 | 50.3 | 50.2 | −0.24 % |
+| 8 | 67.6 | 67.6 | −0.05 % |
+| 16 | 96.5 | 96.6 | +0.05 % |
+| **fit** | **43.7 + 3.20·n** | **43.7 + 3.20·n** | 0.05 % / 0.07 % |
+
+**The cost model stands.** It survives because these are EDF *device* cycles and
+NUMA governs host memory and DMA staging, and because `tp=8` here is two fused
+quads inside one card — from the host, one engine. That was the argument before
+the re-measurement; it is now a result. What is **not** cleared: the wall-clock
+half of `measure_envelope.py`, and the committed envelope and accuracy domain,
+which earlier sessions took unbound.
+
+#### R-attn, finally a number
+
+With the measured cost model in place of a ratio of group counts — re-grouping
+changes only the fixed term, not the per-sequence work — and with the grid
+settled, A.3's R-attn stops being a range:
+
+| point | R-attn before C.3 | **R-attn after C.3** |
+| --- | --- | ---: |
+| c1.0 | −4.47 … −4.46 | **−4.10** |
+| c1.99 | −2.65 … −1.18 | **−2.27** |
+| c3.98 | −2.53 … +3.91 | **−1.96** |
+| c7.88 | −3.63 … +13.35 | **−2.43** |
+| c15.3 | −3.75 … +25.83 | **−2.05** |
+| c15.59 | −3.70 … +26.47 | **−2.00** |
+
+**−2.0 to −4.1 pp, and flat in load.** The simulator over-charges decode attention
+slightly, because it pays for the group structure of the sharegpt batches the
+table was measured on while its own batches are marginally less ragged. Two of the
+three things that made this look big were errors of method — the double count
+(D91) and scaling the per-sequence term along with the fixed one — and the third,
+the grid, is now measured.
+
+---
+
+## §D — the decomposition, and the conclusion (STEP D)
+
+### The table
+
+TPOT, sharegpt, 300 requests, `--match offered`. Contributions are percentage
+points on the decode-cost sum; the step-policy column is measured by re-simulation
+(A.2) and the rest by offline re-pricing (A.3) under C.3's measured cost model.
+
+| served | current err | step policy | R-pad | R-attn | explained | **residual** | prototype err |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1.02 | +2.25 | +0.16 | +0.00 | −4.10 | −3.94 | **+6.19** | +2.41 |
+| 2.19 | +11.00 | +0.28 | −0.01 | −2.27 | −2.00 | **+13.00** | +11.36 |
+| 4.31 | +10.79 | +0.71 | −0.36 | −1.96 | −1.61 | **+12.40** | +11.58 |
+| 8.21 | +7.33 | +1.48 | +0.47 | −2.43 | −0.48 | **+7.81** | +9.03 |
+| 14.83 | +3.26 | +2.74 | +0.70 | −2.05 | +1.39 | **+1.87** | +6.43 |
+| 15.21 | +2.47 | +2.93 | +0.85 | −2.00 | +1.78 | **+0.69** | +5.79 |
+| 25.18 | −3.28 | +4.56 | — | — | +4.56 | **−7.84** | +1.94 |
+| 37.67 | −25.17 | +5.37 | — | — | +5.37 | **−30.54** | −19.28 |
+| 44.47 | −48.59 | +4.36 | — | — | +4.36 | **−52.95** | −43.73 |
+
+(The three high-load rows have no A.1 census, so R-pad and R-attn are not priced
+there; the work order's completion condition allows a cell to read "undecided"
+and these do.)
+
+TTFT is a separate table (§B.2, simulator against simulator) and the mechanism
+there is **falsified**, not quantified: removing every mixed step moves TTFT p50
+by −5.7 % to +3.0 % against a measured gap of −32.6 %. R-128, the prefill
+128-padding, is a flat +6.6 to +6.7 pp and is the only TTFT mechanism with a
+settled magnitude.
+
+### Conclusion: **(ii) — some of it, and a smaller some than the question assumed**
+
+Not (i). The prototype narrows the nine-point error span from 59.59 pp to
+55.31 pp, a **7 %** narrowing against the one-third the work order set as the bar.
+The sign flip does not go away; it moves. Below c16 the prototype makes the error
+worse.
+
+Not (iii) either. Three mechanisms have settled, non-zero magnitudes and two of
+them are worth formalising:
+
+| mechanism | magnitude | formalise? |
+| --- | --- | --- |
+| step policy, exclusivity | +0.2 to +5.4 pp, grows with load | **yes** — real and load-dependent, but it is not a TPOT fix; it is what makes the simulator's queue behave, and it took served concurrency at c15.3 from 14.83 to 15.28 against a measured 15.3 |
+| R-128, prefill 128-padding | +6.6 pp, flat | **yes** — the largest single settled number in the spike, and the one that lands on TTFT where the gap is −32.6 % |
+| R-attn, KV-group diversity | −2.0 to −4.1 pp, flat | **only as the measured cost model** — `g × 43 µs + N × 7 µs`, never as a ratio of group counts, and only once a wide-KV workload has tested it |
+| R-pad, batch padding | < 1 pp | **no** — already inside the bundle; modelling it double-counts |
+| P3 as the work order wrote it | +31.6 pp | **no** — that number is a double count, not a mechanism |
+| mixed steps as a TTFT cause | −5.7 to +3.0 % on TTFT | **no** — falsified by B.2 |
+
+Everything that remains is the residual, and at the low-load end the residual
+**is** the error: at served 2.19 the measured error is +11.00 pp and the three
+mechanisms together account for −2.00. Nothing in the execution model explains why
+the simulator is 11 % pessimistic at concurrency 2.
+
+### The relationship to the accuracy domain
+
+The domain's job is unchanged by this spike, and that is the finding. It carries
+the error curve as measurement precisely because the curve is not yet derivable
+from mechanism: at the low-load end 100 % of it is residual, and at the high-load
+end the prototype recovers 5.4 of 25 pp. Re-measuring the domain under the
+prototype would move the low-load points by +0.2 to +3.3 pp in the **wrong**
+direction and shift the zero crossing upward from ~16 to ~30 served, so a
+prototype-based domain would charge *more* margin below c16 and less above it.
+That is not an improvement to buy with a `serving/` change.
+
+`rps_aware`'s E5 winner was not re-evaluated here: the prototype's effect on a
+plan is bounded by its effect on the error, and at the operating point that plan
+sits at the effect is a few percentage points in the direction that widens
+margins. Recorded as **not re-run** rather than estimated.
+
+### What a follow-up work order should and should not do
+
+**Should**: formalise the step policy and the 128-padding as opt-in rules, with
+the measured constants; run the wide-KV workload that C.3's saturation explanation
+predicts; and take the hold-out measurement B.3 is still waiting on.
+
+**Should not**: build P2 or P3 as the work order describes them, treat the 7 %
+narrowing as a case for merging the prototype, or quote the +31.6 pp,
+the +14.0 % TTFT or the +26.5 pp R-attn — each is recorded here with the method
+error that produced it.
+
+**Open, and cheap**: C.2 (does the runtime alternate prefill and decode steps, or
+drain the prefill queue) is still unobserved, and B.2 showed the two knob values
+differ by 0.03 pp, so it cannot be settled indirectly. C.5's staircase was not run.

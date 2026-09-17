@@ -3313,3 +3313,200 @@ c2-c4 is explained by none of them.
 `experiments/results/npu_exec_recharge.md`, `docs/npu_exec_spike.md` §A,
 `outputs/npu_spike/`. The D-number comes from the `D90-D99` block
 `WORK_ORDER_npu_exec_model_spike.md` claims in `CLAUDE.md`.
+
+---
+
+## D92 — the bucketed execution model narrows the RNGD error by 7 %, not by two thirds · Recorded 2026-09-17
+
+`WORK_ORDER_npu_exec_model_spike.md` STEP B built the opt-in prototype STEP A's
+decomposition had cut down to one rule, and measured what it is worth. The
+prototype lives on the spike branch and is **not merged**; `serving/` on `main`
+is unchanged.
+
+**What was built.** `execution_model: bucketed_aot` in the cluster JSON makes a
+prefill/extend step carry exactly one request and at most 1024 tokens of it, and
+makes it exclusive of decode -- the shape D90 says the compiled grid has plans
+for. P2 (decode quantisation) and P3 (group attention) were **not** built,
+because D91 found both are already inside the measured bundle. One guard rather
+than a fallback: the rule is implemented in `schedule_base` only, so combining it
+with prefix caching raises instead of silently running the vLLM policy under a
+bucketed label.
+
+**Equivalence.** The R1/R2 anchors reproduce all four committed SHA-256 sums from
+`after_d28`, and the six low-load points re-run without the key are byte-identical
+CSVs to the pre-edit runs. Absent `execution_model`, nothing moved.
+
+**The prototype does what it claims to the step structure.** Mixed steps go 19 to
+**0** at c3.98, prefill steps 20 to 35 as prompts chunk at 1024, prefill batch
+size stays 1, prefill token total unchanged.
+
+**And it is worth 7 %.** The nine-point TPOT error span goes from
+`[-48.59, +11.00]` (width 59.59 pp) to `[-43.73, +11.58]` (width 55.31 pp). The
+work order's threshold for "the execution model explains most of the error" was a
+residual of one third of the current span. It is not close. The sign flip does not
+disappear either: it moves from between served 15.21/25.18 to between 26.49/40.47.
+Below c16 the prototype makes the error WORSE -- +10.79 to +11.58 at c3.98 --
+which is the same wrong-signedness the knob approximation showed.
+
+**`strict` and `alternate` cannot be told apart.** The largest difference across
+nine points is 0.03 pp. The work order's contingency for STEP C.2 -- if the
+runtime's step order cannot be observed, run both knob values and take whichever
+lands closer to the measurement -- **does not work**, and C.2 has to be answered
+directly or left open. This is a fact about the experiment, not the runtime.
+
+**The TTFT hypothesis STEP A raised is falsified.** A.1 found the simulator mixes
+prefill with decode on 299 of its 300 prefill steps and offered that as a
+candidate for D17's -32.6 % TTFT gap. Removing the mixing entirely moves simulated
+TTFT p50 by -5.7 % to +3.0 % and p95 by +2.0 % to +7.1 % (simulator against
+simulator; the measured side is closed-loop, D19). Nothing of that size closes a
+32.6 % gap, and p50 mostly moves down where it would have to move up. **A
+20-request version of the same comparison read +14.0 % on p50** -- a small-sample
+artifact of the same kind D32 recorded, and the number this spike would have
+quoted had it stopped at its smoke test.
+
+**Not established: anything off sharegpt.** B.3's hold-out needs a measured
+counterpart from STEP C.4, and STEP C has not run -- `npu0`, the card every
+committed RNGD measurement was taken on, is held by another tenant's pod. Recorded
+as undecided rather than substituted.
+
+**Where.** `serving/core/scheduler.py` and `serving/__main__.py` on
+`spike/npu-exec-b-prototype` (do not merge),
+`experiments/configs/clusters/rngd-card-llama31-8b-tp1-aot-{strict,alternate}.json`,
+`experiments/scripts/npu_exec_ttft_compare.py`,
+`experiments/results/npu_exec_ttft.md`, `docs/npu_exec_spike.md` §B,
+`outputs/npu_spike/b_*`, `outputs/d23fix/anchor/after_npu_exec_b/`.
+
+---
+
+## D93 — the decode grouping grid is the powers of two from 1024, and an attention execution is mostly fixed cost · Recorded 2026-09-17
+
+`WORK_ORDER_npu_exec_model_spike.md` STEP C.1 and C.3, on **`npu2` (PCI
+`45:00.0`)** — `npu0`, the card every committed RNGD measurement was taken on, was
+held throughout by another tenant's pod. Results that are properties of the
+artifact carry; results that are properties of the card are labelled `npu2`'s.
+
+**1. The `composed` path is single-KV-bucket, not batch-1.** Holding concurrency
+fixed and removing only the KV diversity — 64 requests, every prompt exactly 512
+tokens and every completion 128 — takes the wire hit rate from 12.0 % on sharegpt
+to **97.5 %** at c4. H-a is excluded: a batch-size-matching rule cannot be moved by
+the prompt-length distribution. And the batch is rounded up rather than matched,
+because c3 holds 96-98 % although 3 is not a compiled decode batch size. D90's
+description of `composed` as effectively c1-only is right about the traffic and
+wrong about the rule.
+
+**2. A decode attention execution costs ~40 us fixed plus a per-sequence term.**
+From 29,728 raw EDF executions across two probe workloads and three
+concurrencies: `45.1 us + 3.15 us x n` at `attention_size` 1024, `37.1 + 8.54 x n`
+at 2048. Dividing the committed `npu0` bundle's per-layer totals by D17's measured
+executions per layer gives `43.1 + 7.15` independently -- a different card, a
+different workload, a different derivation, agreeing to 14 % on the fixed term and
+19 % on the slope. The structure transfers; the constants are `npu2`'s.
+
+At group size 1 the longer bucket is **cheaper** (38.8 us at 2048 against 48.3 at
+1024), tightly so at both. Unexplained, recorded as observed.
+
+**3. Decode groups on the decode buckets, and D91's open item is closed.** Every
+decode attention execution in the `[900, 1000]` KV runs used `attention_size
+= 1024` and every one in the `[1900, 2000]` runs used `2048`. Not one used 896,
+768, 640 or any other rung of the kernelwise menu -- those are for prefill and
+extend. Of D91's three candidate grids the decode-edge one is the runtime's, the
+kernelwise menu is excluded, and the uniform-1024 grid was a coincidence of
+sharegpt's range.
+
+**4. Nothing caps the executions near three.** The decode ladder is geometric, so
+`[2048, 4096)` spans a 2:1 range of KV and a workload with a bounded KV
+distribution occupies two or three buckets however large the batch grows. The
+STEP A census measured exactly that on this grid, 1.05 to 2.64 groups as the mean
+batch went 1.07 to 14.97. D17's saturation needs no cap mechanism. **Testable and
+unmeasured:** a wide-KV workload should show more groups and more executions.
+
+**5. So R-attn is a number, and it is small.** Re-priced with the measured cost
+model -- re-grouping changes only the fixed term, so scaling the whole lookup by a
+ratio of group counts, which is what STEP A did, overstates it by about a third --
+and on the settled grid, R-attn is **-2.0 to -4.1 pp and flat in load**, against
+the `-3.7 to +26.5 pp` D91 had to leave it at. The simulator over-charges decode
+attention slightly: it pays for the group structure of the sharegpt batches its
+table was measured on while its own batches are marginally less ragged.
+
+**Consequence for the spike's conclusion.** With all three mechanisms settled the
+decomposition closes at conclusion **(ii)**: at served 2.19 the measured error is
++11.00 pp and the mechanisms account for -2.00, so the residual is the error; at
+served 15.21 they account for +1.78 of +2.47. The execution model explains a
+small, quantified part and the accuracy domain keeps the rest.
+
+**Where.** `experiments/scripts/npu_exec_attention_groups.py`,
+`experiments/results/npu_exec_attention_groups.md`,
+`experiments/results/rngd_pipeline_hit_rate.md`,
+`workloads/{fixedlen-512in-128out-64,bucket1024-900in-100out-96,bucket2048-1900in-100out-96}.jsonl`,
+`outputs/npu_spike/{c1_fixedlen,c3_bucket1024,c3_bucket2048}`,
+`docs/npu_exec_spike.md` §C and §D.
+
+---
+
+## D94 — STEP C ran without NUMA binding; the harnesses now bind by default and the cost model survives the check · Recorded 2026-09-17
+
+**The debt.** Every measurement in `WORK_ORDER_npu_exec_model_spike.md` STEP C was
+taken with placement left to the kernel scheduler. `measure_envelope.py`,
+`rebuild_rngd_bundle_from_edf.py` and `bench_furiosa_endpoint.py` had no
+`numactl`, no `taskset` and no affinity handling of any kind, and
+`planner/util/provenance.py` recorded `cpu_count` but not where the process was
+allowed to run -- so no artifact said whether it was bound.
+
+This was **already known to matter in this repo** and the spike did not carry it
+over: `WORK_ORDER_p2_regular_spec_evidence.md` Appendix A.3 measured that leaving
+the server's binding to chance is worth **1.93x of throughput on this host**, and
+that every A40 measurement before it ran unbound. That work landed on `main`
+during this spike's session and was not read.
+
+**The host.** Two NUMA nodes, 48 CPUs each, distances 10 local / 32 remote. All
+three RNGD cards report `numa_node = 0` (PCI `03:00.0`, `04:00.0`, `45:00.0`), so
+the spike's `npu0`-against-`npu2` cross-check was not confounded by different
+nodes -- which was luck, not method.
+
+**The fix.** `--numa-bind` on both harnesses: `auto` resolves the card's node from
+its PCI address and pins the server **and** the bench client to it, a node number
+pins explicitly, `off` reproduces the old behaviour. The choice is recorded in
+each point's JSON, and `provenance.cpu_placement()` now records the affinity mask
+and which NUMA nodes it lands on.
+
+**The default is `auto`, against this repo's usual convention** that a new flag
+defaults to the old behaviour so committed invocations stay byte-identical. That
+argument does not transfer to a measurement whose old behaviour is
+*unreproducible*: an unbound run's number depends on where the scheduler put it.
+
+*Trap worth recording.* `/sys/class/rngd_mgmt/*` are **virtual** devices with no
+PCI parent, so `device/numa_node` cannot be followed and the obvious sysfs walk
+silently finds nothing. The resolver asks `furiosa-smi info` for the BDF and reads
+`/sys/bus/pci/devices/<bdf>/numa_node`. The first implementation used the sysfs
+guess, returned "unresolved" and bound nothing -- it failed safe by design, but a
+reader would have believed binding was on.
+
+**The check.** `bucket1024` re-collected on the same card with `--numa-bind auto`
+(server mask `0-23,48-71`, against `0-95` unbound), same workload, same
+concurrencies:
+
+| group size | unbound us | bound us | delta |
+| ---: | ---: | ---: | ---: |
+| 1 | 48.3 | 48.3 | +0.02 % |
+| 2 | 54.7 | 54.8 | +0.12 % |
+| 4 | 50.3 | 50.2 | -0.24 % |
+| 8 | 67.6 | 67.6 | -0.05 % |
+| 16 | 96.5 | 96.6 | +0.05 % |
+
+Least squares `43.7 + 3.20 x n` on both sides -- fixed term 0.05 %, slope 0.07 %.
+**D93's cost model stands and needs no correction.** The reason it survives is
+structural: these are EDF *device* cycles, and NUMA governs host memory and DMA
+staging rather than on-device kernel time. The RNGD artifact's `tp=8` is two fused
+quads inside one card, so from the host it is one engine -- the shape that showed
+0.42 % in the A40 check, not the four-worker shape that showed 93 %.
+
+**Not cleared by this.** The wall-clock half of `measure_envelope.py` -- served
+concurrency, throughput, TPOT, TTFT -- was not re-measured. C.1's hit rates are
+runtime counters and are unaffected. The committed RNGD envelope and accuracy
+domain were taken unbound by earlier sessions and re-taking them is outside this
+spike.
+
+**Where.** `experiments/scripts/measure_envelope.py`,
+`experiments/scripts/rebuild_rngd_bundle_from_edf.py`,
+`planner/util/provenance.py`, `experiments/results/npu_exec_attention_groups.md`,
+`outputs/npu_spike/c3_bucket1024_numa/`, `docs/nodes/npu.md`.

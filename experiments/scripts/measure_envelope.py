@@ -53,6 +53,8 @@ import argparse
 import csv
 import json
 import os
+import re
+import shutil
 import signal
 import subprocess
 import sys
@@ -291,6 +293,94 @@ def _server_bin(backend: str) -> str:
     return str(REPO_ROOT / binary) if binary.startswith(".") else binary
 
 
+def _pci_bdf(backend: str, card: int) -> str | None:
+    """The card's PCI address, asked of the vendor tool rather than guessed.
+
+    Sysfs cannot be walked for this on either backend. `/sys/class/rngd_mgmt/*`
+    are VIRTUAL devices with no PCI parent, so there is no `device/numa_node` to
+    follow, and a CUDA ordinal is not a DRM card number. Both tools print the
+    address next to the index they use, so that is what is read.
+    """
+    if backend == "furiosa":
+        cmd = ["furiosa-smi", "info"]
+        pattern = re.compile(rf"\bnpu{card}\b.*?(0000:[0-9a-fA-F]{{2}}:[0-9a-fA-F]{{2}}\.\d)")
+    elif backend == "cuda":
+        cmd = ["nvidia-smi", f"--id={card}", "--query-gpu=pci.bus_id",
+               "--format=csv,noheader"]
+        pattern = re.compile(r"([0-9a-fA-F]{8}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}\.\d)")
+    else:
+        return None
+    try:
+        out = subprocess.run(cmd, capture_output=True, text=True, timeout=30).stdout
+    except (OSError, subprocess.SubprocessError):
+        return None
+    for line in out.splitlines():
+        m = pattern.search(line)
+        if m:
+            return m.group(1).lower()
+    return None
+
+
+def numa_node_of_card(backend: str, card: int) -> int | None:
+    """The NUMA node the accelerator sits on, via its PCI address.
+
+    Returns None when it cannot be determined, which is a reason to bind
+    explicitly or not at all -- never a reason to guess a node. `-1` from the
+    firmware means "not stated" and is reported as None for the same reason.
+    """
+    bdf = _pci_bdf(backend, card)
+    if bdf is None:
+        return None
+    path = Path(f"/sys/bus/pci/devices/{bdf}/numa_node")
+    if not path.exists():
+        return None
+    try:
+        node = int(path.read_text().strip())
+    except ValueError:
+        return None
+    return node if node >= 0 else None
+
+
+def numa_prefix(spec: str, backend: str, card: int) -> tuple[list[str], str]:
+    """`numactl` prefix for a launch line, plus what to record about it.
+
+    `WORK_ORDER_npu_exec_model_spike.md` grew this after the fact. The repo had
+    already measured what leaving it to chance is worth -- **1.93x of throughput
+    on this host** for a TP=4 vLLM deployment, and every A40 measurement before
+    that ran unbound -- and the NPU spike's STEP C then ran unbound too.
+
+    **The default is `auto`, not `off`, and that is deliberate.** Elsewhere in
+    this repo a new flag defaults to the old behaviour so committed invocations
+    stay byte-identical. That argument does not transfer to a measurement whose
+    old behaviour is *unreproducible*: an unbound run's number depends on where
+    the scheduler happened to put it. Binding is what makes two runs comparable,
+    so it is what a harness should do unless told otherwise.
+
+    `off` reproduces the old behaviour when a comparison against an unbound
+    artifact needs it. Either way the choice is recorded, so no artifact is
+    silently one or the other.
+    """
+    if spec == "off":
+        return [], "off"
+    if spec == "auto":
+        node = numa_node_of_card(backend, card)
+        if node is None:
+            return [], "auto-unresolved"
+    else:
+        try:
+            node = int(spec)
+        except ValueError:
+            raise SystemExit(
+                f"--numa-bind: expected off, auto or a node number, got {spec!r}"
+            ) from None
+    if shutil.which("numactl") is None:
+        raise SystemExit(
+            "--numa-bind asked for binding but `numactl` is not installed; "
+            "pass --numa-bind off to measure unbound on purpose"
+        )
+    return ["numactl", f"--cpunodebind={node}", f"--membind={node}"], f"node{node}"
+
+
 def server_command(backend: str, artifact: str, port: int,
                    card: int, tp: int,
                    engine: dict[str, str] | None = None,
@@ -384,6 +474,12 @@ def run_point(args, concurrency: int, out_dir: Path, repeat: int = 0) -> dict | 
     cmd, env_overlay = server_command(
         args.backend, str(args.artifact), args.port, args.card, args.tp,
         engine=args.engine)
+    # The server AND the load generator are bound to the accelerator's node.
+    # Binding only the server would leave the client free to sit across the
+    # bridge, and in a closed-loop bench the client is in the latency path of
+    # every request it measures.
+    numa, numa_label = numa_prefix(args.numa_bind, args.backend, args.card)
+    cmd = numa + cmd
     env = {**os.environ, **env_overlay}
     with log_path.open("w") as log:
         server = subprocess.Popen(
@@ -415,7 +511,8 @@ def run_point(args, concurrency: int, out_dir: Path, repeat: int = 0) -> dict | 
             # interpreter is per backend: the FuriosaAI stack lives in the system
             # python (see rebuild_rngd_bundle_from_edf), the CUDA one in
             # .venv-vllm. Neither is `.venv`, which has no `openai` at all.
-            [args.bench_python, "-u",
+            [*numa,
+             args.bench_python, "-u",
              str(REPO_ROOT / "experiments/scripts/bench_furiosa_endpoint.py"),
              "--base-url", f"http://127.0.0.1:{args.port}/v1",
              "--model", model, "--dataset", str(args.dataset),
@@ -444,8 +541,14 @@ def run_point(args, concurrency: int, out_dir: Path, repeat: int = 0) -> dict | 
         return None
     bench = json.loads(bench_json.read_text())
     rows = read_sampler_csv(sampler_csv)
-    return summarise_point(bench, rows, bench_window, idle_window,
-                           device_sn=args.device_sn, pool_size=pool)
+    point = summarise_point(bench, rows, bench_window, idle_window,
+                            device_sn=args.device_sn, pool_size=pool)
+    # Recorded on every point, bound or not, so an artifact says for itself which
+    # it is. An unbound number is not wrong, but it is not comparable with a
+    # bound one, and until now nothing in the file distinguished them.
+    if point is not None:
+        point["numa_bind"] = numa_label
+    return point
 
 
 def main() -> int:
@@ -493,6 +596,15 @@ def main() -> int:
     ap.add_argument("--dtype", default="bfloat16")
     ap.add_argument("--kv-cache-dtype", default="auto")
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--numa-bind", default="auto",
+                    help="bind the server AND the bench client to a NUMA node: "
+                         "`auto` (the accelerator's own node, read from sysfs), a "
+                         "node number, or `off`. Default `auto` -- unlike other "
+                         "flags here it does NOT default to the old behaviour, "
+                         "because the old behaviour is unreproducible: leaving "
+                         "placement to the scheduler was measured at 1.93x of "
+                         "throughput on this host. Use `off` only to compare "
+                         "against an artifact that was itself taken unbound.")
     ap.add_argument("--startup-timeout", type=float, default=1800.0)
     ap.add_argument("--bench-timeout", type=float, default=7200.0)
     args = ap.parse_args()

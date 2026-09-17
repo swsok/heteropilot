@@ -93,6 +93,63 @@ def hash_object(obj: Any) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
+def cpu_placement() -> dict[str, Any]:
+    """Where on the host this process was allowed to run, and what the host offers.
+
+    Recorded because leaving it unrecorded made two artifacts look comparable
+    when they were not. This host has two NUMA nodes at a distance of 32 against
+    10 local, and an unbound server was measured at **1.93x of throughput** away
+    from a bound one on a TP=4 deployment. Every measurement taken before
+    `--numa-bind` existed ran unbound, and nothing in those files says so --
+    which is the part that costs a reader, not the binding itself.
+
+    ``affinity`` is this process's own CPU mask. Narrower than ``cpu_count``
+    means something pinned it; equal means nothing did, which is a fact about the
+    run and not a default worth hiding.
+    """
+    out: dict[str, Any] = {"affinity_cpus": None, "numa_nodes": None,
+                           "numa_node_of_affinity": None}
+    try:
+        mask = sorted(os.sched_getaffinity(0))
+        out["affinity_cpus"] = len(mask)
+    except (AttributeError, OSError):
+        mask = []
+
+    nodes: dict[int, set[int]] = {}
+    node_root = Path("/sys/devices/system/node")
+    if node_root.is_dir():
+        for entry in sorted(node_root.glob("node[0-9]*")):
+            try:
+                idx = int(entry.name[4:])
+                cpus = entry / "cpulist"
+                nodes[idx] = _parse_cpulist(cpus.read_text()) if cpus.exists() else set()
+            except (ValueError, OSError):
+                continue
+    if nodes:
+        out["numa_nodes"] = len(nodes)
+        if mask:
+            # Which nodes the mask actually lands on. One node means bound (or a
+            # single-node machine); several means the process may cross the
+            # bridge, whoever decided that.
+            on = sorted(n for n, cpus in nodes.items() if cpus & set(mask))
+            out["numa_node_of_affinity"] = on if len(on) != 1 else on[0]
+    return out
+
+
+def _parse_cpulist(text: str) -> set[int]:
+    """`0-23,48-71` -> the set it denotes."""
+    cpus: set[int] = set()
+    for part in text.strip().split(","):
+        if not part:
+            continue
+        if "-" in part:
+            lo, hi = part.split("-", 1)
+            cpus.update(range(int(lo), int(hi) + 1))
+        else:
+            cpus.add(int(part))
+    return cpus
+
+
 def accelerators() -> dict[str, Any]:
     """What accelerators this machine actually has, probed not assumed.
 
@@ -162,6 +219,9 @@ def collect(
         # Which node produced this. hostname is `s8` on every machine this
         # project runs on, so it does not identify one; the accelerators do.
         "accelerators": accelerators(),
+        # Where on the host this ran. An unbound run and a bound one are not
+        # comparable, and until this field existed neither said which it was.
+        "cpu_placement": cpu_placement(),
     }
     if extra:
         block.update(extra)

@@ -94,6 +94,25 @@ executions.
 | --- | --- | --- | --- | --- | --- |
 | `swe-bench-qwen3-30b-a3b-50-sps0.2.jsonl` | 50 | 765 | 15.3 | 0.2 | Qwen3-30B-A3B |
 
+### Fixed-length probes (NPU execution-model spike)
+
+Built by truncating and concatenating ShareGPT token ids so that **every request
+has the same input length**, which is what makes them probes rather than
+workloads: a batch of them keeps every sequence inside one of the vendor
+artifact's attention buckets for the whole run. Nothing is sampled, so they are
+not traffic and must not be used to characterise performance -- they exist to
+isolate one variable. `WORK_ORDER_npu_exec_model_spike.md` STEP C.1 and C.3.
+
+Prefixes are deliberately distinct between requests (90+ distinct 16-token
+prefixes in each), so the prefix cache stays out of the measurement; the runs
+confirm it at 0.0--0.1 % hit rate.
+
+| File | Input | Output | Requests | KV range | Purpose |
+| --- | ---: | ---: | ---: | --- | --- |
+| `fixedlen-512in-128out-64.jsonl` | 512 | 128 | 64 | [512, 640] | C.1: one decode bucket, tells the `composed` selection rule apart from batch-size matching |
+| `bucket1024-900in-100out-96.jsonl` | 900 | 100 | 96 | [900, 1000] | C.3: every sequence on the 1024 attention rung |
+| `bucket2048-1900in-100out-96.jsonl` | 1900 | 100 | 96 | [1900, 2000] | C.3: the same at 2048, for the length dependence |
+
 ### Other
 | File | Description |
 | --- | --- |

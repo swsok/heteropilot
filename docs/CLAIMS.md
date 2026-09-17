@@ -173,6 +173,30 @@ clear the bar for a paper.
 
 ## 2. Not established — and why
 
+**The vLLM-vs-bucketed execution model explains 7 % of the RNGD simulator error,
+not most of it — spike, prototype, not merged (2026-09-17).** Label:
+`sim-on-measured, prototype`. The RNGD accuracy domain's TPOT error changes sign
+with load (+11 % at served 2.2, −18 % at 76). An opt-in `execution_model:
+bucketed_aot` that makes prefill steps `bs = 1`, chunked at 1024 and exclusive of
+decode — the shape the vendor artifact actually compiles — narrows the nine-point
+error span from 59.59 pp to **55.31 pp**, and moves the zero crossing rather than
+removing it. Three mechanisms have settled magnitudes: the step policy is +0.2 to
++5.4 pp and grows with load, prefill 128-padding is a flat +6.6 pp on TTFT, and
+KV-group diversity is −2.0 to −4.1 pp. At served 2.19 they account for −2.00 pp of
+a +11.00 pp error, so the low-load half of the curve is **entirely residual** and
+stays with the accuracy domain. Evidence: `docs/npu_exec_spike.md`, D90–D93,
+`experiments/results/npu_exec_{step_census,recharge,attention_groups,ttft}.md`.
+The prototype lives on `spike/npu-exec-b-prototype` and `serving/` on `main` is
+unchanged; the R1/R2 anchors and six byte-identical CSVs prove the default path
+did not move.
+
+Three numbers this spike produced and then **retracted as method errors**, listed
+because each looked like a result: +31.6 pp for "group attention" (double-counts a
+grouping the bundle already contains), +14.0 % for the prototype's TTFT effect (a
+20-request small-sample artifact; at 300 requests it is −5.7 % to +3.0 %), and
++26.5 pp for R-attn (scaled a per-sequence cost that re-grouping does not change).
+
+
 **E6's crossover is real in simulation and now measured over most of its
 range — upgraded 2026-09-11, and the upgrade did not change it.** On
 `pd-rngd-gpu-card` the recommended backend goes RNGD → cross-vendor P/D → A40 as

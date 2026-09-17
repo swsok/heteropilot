@@ -73,3 +73,52 @@ appended; until then the rule is **undecided**.
 
 Priority is low for the spike's own conclusion: the c1 path is left unchanged in the prototype
 (STEP B.1 P4), so neither hypothesis moves the decomposition.
+
+---
+
+## Resolved 2026-09-17 — H-b, and the batch is padded (E-N6, STEP C.1)
+
+**Measured on `npu2` (PCI `45:00.0`), not on `npu0`.** `npu0` — the card every
+committed RNGD measurement was taken on — was held throughout by another tenant's
+`rngd_pd.serving.cluster --chip 0` pod (`docs/nodes/npu.md`). The conclusion below
+is about the *artifact's* pipeline-selection rule rather than about the card, so
+it carries; the hit-rate numbers themselves are `npu2`'s.
+
+Same artifact `d6ae6a43`, same `furiosa-llm`, one card at the vendor default
+`tp=8`. The only thing changed from the sharegpt campaign is the workload:
+`workloads/fixedlen-512in-128out-64.jsonl`, every prompt exactly 512 tokens and
+every completion 128, so every sequence's KV stays inside `(0, 1024]` — one decode
+attention bucket — for the whole run.
+
+| workload | concurrency | wire (composed) hit rate |
+| --- | ---: | ---: |
+| sharegpt, variable length | 4 | **12.0 %** |
+| fixed 512 / 128 | 4 | **97.5 %** |
+| fixed 512 / 128 | 3 | **96.0 – 98.1 %** |
+
+**H-b, not H-a.** Holding batch size constant and removing only the KV diversity
+takes the hit rate from 12.0 % to 97.5 % at the same concurrency on the same card.
+Under H-a — the running batch size rarely matching a compiled `bs` — changing the
+prompt-length distribution would have changed nothing. A `composed` pipeline is
+compiled for one `(batch_size, attention_size)` pair and can serve a step only
+when every sequence in the batch shares that attention bucket; a mixed-KV batch
+falls back to `kernelwise`, where attention can be issued per group.
+
+**The batch size is padded up, not matched exactly.** Three is not a compiled
+decode batch size — the 46 composed decode plans use `bs ∈ {1, 2, 4, 8, 16, 32,
+64, 128, 256}` — yet c3 holds 96–98 %. An exact-match rule would have read ~0 %.
+So the selection rule is: round the batch up to the next compiled `bs`, then
+require every sequence to share that `bs`'s attention bucket.
+
+**What this does and does not change.** It settles the c1-only behaviour of the
+`composed` path recorded above: `composed` is not "batch-1 only", it is
+"single-KV-bucket only", and sharegpt simply never presents such a batch above
+c1. It does **not** move the spike's decomposition — the prototype leaves the c1
+path alone (STEP B.1 P4) and every load the planner cares about is still on the
+kernelwise path, because real traffic has mixed KV.
+
+It does sharpen one thing for STEP C.3. The runtime demonstrably *can* run a
+4-sequence batch as one fused execution when the KV agrees. So whatever caps D17's
+measured attention executions per layer near three is not a per-sequence cost —
+the hardware is willing to do a whole batch in one go. C.3 should look for a cap
+on the number of distinct *groups*, not on the batch.

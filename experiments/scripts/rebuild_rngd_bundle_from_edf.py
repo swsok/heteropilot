@@ -91,6 +91,21 @@ ATTENTION_RE = re.compile(
 # collect
 # ---------------------------------------------------------------------------
 
+def _numa_prefix(spec: str, card: int) -> tuple[list[str], str]:
+    """`numactl` prefix for this card, borrowed from `measure_envelope.py`.
+
+    Imported rather than reimplemented: two copies of "which node is this card
+    on" would be two chances to answer it differently, and the answer decides
+    whether a measurement is comparable with another.
+    """
+    import importlib.util
+    path = REPO_ROOT / "experiments/scripts/measure_envelope.py"
+    spec_ = importlib.util.spec_from_file_location("measure_envelope", path)
+    module = importlib.util.module_from_spec(spec_)
+    sys.modules[spec_.name] = module
+    spec_.loader.exec_module(module)
+    return module.numa_prefix(spec, "furiosa", card)
+
 def wait_for_server(port: int, timeout: float) -> str | None:
     """Poll /v1/models until the server answers; return the served model id."""
     deadline = time.time() + timeout
@@ -115,13 +130,15 @@ def collect(args) -> int:
             print(f"concurrency {concurrency}: {edf.name} exists, skipping")
             continue
         env = dict(os.environ)
+        numa, _numa_label = _numa_prefix(args.numa_bind, args.card)
         env["EDF_PROFILER_OUTPUT_PATH"] = str(edf)
         env["TUC_PROFILE_LEVEL"] = "info"
         env["RUST_LOG"] = "span::tuc=info"
         log_path = out_root / f"serve_c{concurrency}.log"
         with log_path.open("w") as log:
             server = subprocess.Popen(
-                ["furiosa-llm", "serve", str(args.artifact),
+                [*numa,
+                 "furiosa-llm", "serve", str(args.artifact),
                  "--host", "127.0.0.1", "--port", str(args.port),
                  "--devices", f"npu:{args.card}:*"],
                 env=env, stdout=log, stderr=log, start_new_session=True,
@@ -137,7 +154,8 @@ def collect(args) -> int:
             # sys.executable may be a venv without `openai`; the bench client
             # needs the system interpreter where the vendor stack lives.
             subprocess.run(
-                [args.bench_python, "-u",
+                [*numa,
+                 args.bench_python, "-u",
                  str(REPO_ROOT / "experiments/scripts/bench_furiosa_endpoint.py"),
                  "--base-url", f"http://127.0.0.1:{args.port}/v1",
                  "--model", model, "--dataset", str(args.dataset),
@@ -543,6 +561,11 @@ def main() -> int:
     c.add_argument("--dataset", type=Path,
                    default=Path("workloads/sharegpt-llama-3.1-8b-300-sps10.jsonl"))
     c.add_argument("--out", type=Path, default=Path("outputs/rngd_edf_bundle"))
+    c.add_argument("--numa-bind", default="auto",
+                   help="bind the server and the bench client to a NUMA node: "
+                        "`auto` (the card's own node), a node number, or `off`. "
+                        "Default `auto`; see measure_envelope.py's flag for why "
+                        "it does not default to the old unbound behaviour.")
     c.add_argument("--startup-timeout", type=float, default=300.0)
     c.add_argument("--bench-timeout", type=float, default=1200.0)
     c.add_argument("--refresh", action="store_true")
