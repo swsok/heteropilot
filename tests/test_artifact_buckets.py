@@ -103,6 +103,23 @@ def test_sharegpt_cannot_reach_batch_256(grid: dict) -> None:
     assert widest[256] == 2048
 
 
+def test_the_kernelwise_menu_carries_the_padding_ladder(grid: dict) -> None:
+    """The ladder a decode batch is padded onto, which D90 says is not powers of two.
+
+    It was missing from the first emitted grid, and the consumer that needed it
+    fell back to the decode batch sizes -- which have no 384 rung, so the fallback
+    produced a padding table that looked right and was wrong above 256. The menu
+    is emitted now and pinned here.
+    """
+    menu = grid["kernelwise"]
+    assert menu["attention_buckets"] == 128
+    assert menu["tokenwise_buckets"] == [1, 2, 4, 8, 16, 32, 64, 128, 256, 384, 512, 1024]
+    # 128 is the union of the compiled buckets, not 131072/1024. Asserting the
+    # identity keeps the work order's arithmetic coincidence from coming back.
+    b = grid["buckets"]
+    assert menu["attention_buckets"] == len(b["prefill"]) + len(b["extend"]) + len(b["decode"])
+
+
 def test_emitter_round_trips(tmp_path: Path) -> None:
     """The emitter is hand-rolled to keep its header; YAML must still read it."""
     module = _load_script()
@@ -118,6 +135,7 @@ def test_emitter_round_trips(tmp_path: Path) -> None:
             "pipeline_metadata_list": [
                 {
                     "composition_type": "kernelwise",
+                    "tokenwise_buckets": [{"input_size": 1}, {"input_size": 384}],
                     "attention_buckets": [
                         {"batch_size": 1, "attention_size": 128, "kv_cache_size": 0},
                         {"batch_size": 2, "attention_size": 1024, "kv_cache_size": 1023},
@@ -140,3 +158,36 @@ def test_emitter_round_trips(tmp_path: Path) -> None:
         {"batch_size": 2, "attention_size": 1024, "kv_cache_size": 1023, "input_ids_size": 1}
     ]
     assert parsed["derived"]["decode_kv_budget_by_batch_size"] == {2: 2048}
+    assert parsed["kernelwise"] == {"attention_buckets": 3, "tokenwise_buckets": [1, 384]}
+
+
+def test_a_kernelwise_pipeline_with_no_ladder_emits_no_section() -> None:
+    """An emitted `tokenwise_buckets: []` would read as "nothing to pad to".
+
+    That is not what an artifact missing the field says, and a consumer would take
+    it as authoritative instead of falling back visibly. So the section is omitted.
+    """
+    module = _load_script()
+    doc = {
+        "metadata": {
+            "name": "vendor/Model",
+            "artifact_id": "0000beef-0000-0000-0000-000000000000",
+            "furiosa_llm_version": "deadbee",
+            "furiosa_compiler_version": "cafe1234",
+        },
+        "model": {
+            "parallel_config": {"tensor_parallel_size": 1, "pipeline_parallel_size": 1},
+            "pipeline_metadata_list": [
+                {
+                    "composition_type": "kernelwise",
+                    "attention_buckets": [
+                        {"batch_size": 2, "attention_size": 1024, "kv_cache_size": 1023}
+                    ],
+                }
+            ],
+        },
+    }
+    out = io.StringIO()
+    module.emit_yaml(Path("/nowhere/artifact.json"), doc,
+                     module.dedup(module.buckets_from_artifact(doc)), out)
+    assert "kernelwise" not in yaml.safe_load(out.getvalue())

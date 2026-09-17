@@ -127,3 +127,70 @@ next entry of this ladder.
 | does the `INFO` batch log carry per-request ids and token counts | STEP A.1 (fallback: `--no-cleanup-inputs` trace `input_size`) |
 | does `lowload_sim_error.py` accept scheduler knobs | STEP A.2 (fallback: a cluster-json copy) |
 | is there attention-stage shape in the raw EDF CSV | STEP A.3 R-attn (fallback: D17 median, marked provisional, replaced by C.3) |
+
+---
+
+## §A — decomposition without code changes (STEP A)
+
+Nothing in `serving/` or `planner/` changes in this step. Two things the work order
+left as "needs investigation" were settled first, and one of them changes what A.2
+can be.
+
+### The step structure is already in the log — no debug print needed
+
+The work order expected to have to add a read-only debug print and record it as an
+A3 exception, because `scheduler.py:296-335` logs a batch id and nothing else. It
+does not need one. `trace_generator.py:1308` already logs, at INFO, one line per
+scheduled step carrying the requests in it:
+
+```
+Batch #7: model=meta-llama/Llama-3.1-8B num_reqs=4 total_len=4 req_ids=[0, 1, 2, 3]
+```
+
+and `Controller` logs a **cumulative** cycle count per iteration, whose first
+difference is that step's duration. (Reading the count itself as a duration makes
+every step look monotonically longer — a mistake that still produces a plausible
+table.) Together with the trace the run was given, which holds each request's input
+length, that is enough to replay every step: a request with fewer computed tokens
+than its input is prefilling and consumes some of the step's token budget, any
+other is decoding and consumes exactly one token over `computed` tokens of KV.
+
+The replay is self-checking, because the prefill chunks must sum to
+`total_len - n_decode` exactly. `experiments/scripts/npu_exec_step_census.py`
+counts a step that does not balance and `--strict` makes it an error; on the
+pilot run **3610 of 3610 steps balanced**, so the reconstruction is the
+scheduler's own allocation and not an approximation of it.
+
+### The work order's A.2 knob set cannot run this workload
+
+A.2 asks for `--no-enable-chunked-prefill --prioritize-prefill
+--max-num-batched-tokens 1024 --max-num-seqs 128`. Those flags do not compose on
+sharegpt. With chunked prefill off, `max_num_batched_tokens` stops being a step
+budget and becomes a cap on input length: `scheduler.py:164-180` drops requests
+from the batch until the total fits, and when the batch empties it prints
+`[WARNNING] Cannot load the request to batch due to max_num_batched_tokens
+limitation` and returns `None`. A request longer than 1024 tokens can then never
+be scheduled. Half the workload is longer than that — 10 of the first 20 sharegpt
+requests, up to 3452 tokens — so the run livelocks. Measured, not inferred: the
+probe emitted **80,821** of those warnings and was killed at the timeout
+(`outputs/npu_spike/a2_asspec_probe/`, exit 124).
+
+This is not a detail of the flags. The runtime chunks too — its 74 `extend`
+buckets are exactly `chunk <= 1024` against non-zero KV — so "no chunked prefill"
+was never the right description of it. What the runtime does is chunk at
+`bs = 1` and keep prefill steps exclusive of decode, and §1.4 of the work order
+already says no knob combination reproduces that. So A.2 runs **two** one-sided
+approximations instead of one, and each is labelled with what it does not capture:
+
+| variant | knobs | captures | misses |
+| --- | --- | --- | --- |
+| `a2_exclusive` | `--no-enable-chunked-prefill --prioritize-prefill --max-num-seqs 128` | prefill steps exclusive of decode | the 1024-token chunk ceiling; prefill batches are not forced to `bs=1` |
+| `a2_chunk1024` | `--max-num-batched-tokens 1024 --long-prefill-token-threshold 1024 --max-num-seqs 128` | the 1024-token chunk ceiling, one prefill chunk per step | exclusivity — decode is still scheduled first and prefill fills the remainder |
+
+`--max-num-batched-tokens 8192` is kept in the first so that a 3452-token prompt
+still fits in one step; the second keeps chunked prefill on, which is what makes
+1024 a budget again rather than a ceiling on input length.
+
+`lowload_sim_error.py` hardcoded the scheduler knobs and the log level, so it grew
+a `--sim-arg` passthrough (appended to the simulator's command line, last
+occurrence wins). Omitting it leaves every committed invocation byte-identical.

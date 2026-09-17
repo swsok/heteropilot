@@ -13,7 +13,7 @@ source:
   furiosa_compiler_version: d19a92a2f2
   classification_rule: furiosa_llm/metadata/config_types.py
   extracted_by: experiments/scripts/furiosa_artifact_buckets.py
-  extracted_on: 2026-09-16
+  extracted_on: 2026-09-17
 parallel_config:
   tensor_parallel_size: 8
   pipeline_parallel_size: 1
@@ -41,6 +41,12 @@ derived:
     64: 262144
     128: 524288
     256: 524288
+kernelwise:
+  # The composable pipeline, which is the one the runtime uses above
+  # concurrency 1 (D90). `tokenwise_buckets` is the ladder a decode batch
+  # is padded up to, and it is NOT the powers of two -- note the 384.
+  attention_buckets: 128
+  tokenwise_buckets: [1, 2, 4, 8, 16, 32, 64, 128, 256, 384, 512, 1024]
 buckets:
   prefill:
     - {batch_size: 1, attention_size: 128, kv_cache_size: 0, input_ids_size: 128}

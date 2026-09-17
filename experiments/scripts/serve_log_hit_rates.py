@@ -26,7 +26,6 @@ from __future__ import annotations
 
 import argparse
 import re
-import statistics
 from pathlib import Path
 
 FURIOSA_RE = re.compile(
