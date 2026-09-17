@@ -44,11 +44,42 @@ under `kubepods-burstable-*`) have held RNGD npu0/1/2 via `--chip 0/1/2` and all
 four ATOMs. Do not drain devices or kill those pods.
 
 `furiosa-smi ps` and `rbln-stat` **under-report**, because the holders are pods.
-The reliable check:
+
+> **`alloc_status` under-reports too, and on 2026-09-17 it said every PE was
+> free while two cards were held.** Every one of
+> `/sys/class/rngd_mgmt/rngd!npu*pe*/alloc_status` read `dram_capacity: 0x0`,
+> `dram_usage: 0x0`, ... all zero, and `furiosa-smi ps` printed an empty table --
+> while `rngd_pd.serving.cluster --role prefill --backend rngd-full --chip 0` had
+> been running for 16 h 53 m and `--role decode --backend rngd --chip 1` for
+> 16 h 41 m. Both cards were idle at ~38 W, so a power reading does not
+> discriminate either: a pod that holds a chip and is serving no traffic looks
+> exactly like a free card on all three vendor-level checks.
+>
+> **Check the process list instead, and read the `--chip` flags:**
+>
+> ```bash
+> ps -eo pid,etime,cmd | grep "[r]ngd_pd.serving.cluster"
+> ```
+>
+> A chip named by a live pod's `--chip N` is claimed no matter what sysfs says.
+> ATOM holders appear in the same list as `--backend atom` and take no `--chip`.
+> Treat `alloc_status` as confirmation when it is non-zero and as **no evidence**
+> when it is zero.
+
+The check this file used to name, kept because a non-zero reading is still
+meaningful:
 
 ```bash
 cat /sys/class/rngd_mgmt/rngd\!npu<N>pe<M>/alloc_status   # non-empty == claimed
 ```
+
+**Card count and labels, 2026-09-17: three cards, and the labels have shifted.**
+`furiosa-smi` lists npu0 at PCI `03:00.0`, npu1 at `04:00.0` and npu2 at
+`45:00.0`. The four-card inventory above had `03/04/44/45`, so `44:00.0` is gone
+again and **today's `npu2` is the card that inventory called `npu3`**. The PCI BDF
+is the durable identity; the `npuN` label is not, and neither is the count.
+`npu0` (`03:00.0`) is the same physical card every committed RNGD measurement was
+taken on -- and it is currently the one the other tenant holds.
 
 Availability has changed three times: 2026-08-25 only npu3 was allocatable;
 2026-08-27 every PE on all three surviving cards was free and `furiosa-smi ps` was
