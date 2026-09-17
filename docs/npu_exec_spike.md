@@ -524,3 +524,56 @@ condition this is recorded as **undecided, awaiting measurement** rather than
 substituted. Nothing in §B should be read as evidence that the prototype
 generalises off sharegpt — that is exactly the question B.3 exists to answer, and
 it is open.
+
+---
+
+## §C — hardware (STEP C), on `npu2`
+
+**Which card, and why it matters.** Every committed RNGD measurement — the perf
+bundle, the envelope, the accuracy domain, D17's traces — was taken on `npu0`
+(PCI `03:00.0`). Throughout this step `npu0` was held by another tenant's
+`rngd_pd.serving.cluster --role prefill --backend rngd-full --chip 0` pod, and
+`npu1` by its decode counterpart. Only `npu2` (PCI `45:00.0`) was free, and that
+is a **different physical card** — the four-card inventory in `docs/nodes/npu.md`
+called it `npu3`. So every number below is `npu2`'s, and a result that is a
+property of the *card* cannot be merged into the `npu0` bundle without a
+cross-card check. A result that is a property of the *artifact* carries.
+
+(The three vendor-level ways of checking whether a card is free all said it was.
+That is recorded in `docs/nodes/npu.md`; the process list is what answers it.)
+
+### C.1 — the composed path is single-KV-bucket, and the batch is padded (E-N6)
+
+Artifact `d6ae6a43`, one card at `tp=8`, `workloads/fixedlen-512in-128out-64.jsonl`
+— every prompt exactly 512 tokens and every completion 128, so every sequence's KV
+stays inside `(0, 1024]`, one decode attention bucket, for the whole run.
+
+| workload | concurrency | wire (composed) hit rate |
+| --- | ---: | ---: |
+| sharegpt, variable length | 4 | **12.0 %** |
+| fixed 512 / 128 | 4 | **97.5 %** |
+| fixed 512 / 128 | 3 | **96.0 – 98.1 %** |
+
+**H-b, and H-a is excluded.** Holding the concurrency fixed and removing only the
+KV diversity takes the hit rate from 12.0 % to 97.5 %. Under H-a — the batch size
+rarely matching a compiled `bs` — changing the prompt-length distribution could
+not have done that. A `composed` pipeline is compiled for one
+`(batch_size, attention_size)` pair and serves a step only when every sequence in
+the batch shares that attention bucket.
+
+**And the batch size is rounded up rather than matched.** Three is not a compiled
+decode batch size, yet c3 holds 96–98 %; an exact-match rule would read ~0 %.
+
+This is a property of the artifact's pipeline-selection rule, so it carries from
+`npu2` to `npu0`; the percentages themselves are `npu2`'s.
+
+**What it changes.** It corrects the description of the `composed` path recorded
+in STEP 0: it is not "batch-1 only", it is "single-KV-bucket only", and sharegpt
+simply never presents such a batch above c1. It does **not** move the
+decomposition — the prototype leaves the c1 path alone (P4) and real traffic is
+still on the kernelwise path at every load the planner cares about.
+
+It does sharpen C.3. The runtime demonstrably *can* run four sequences as one
+fused execution when their KV agrees, so whatever caps D17's attention executions
+near three is not a per-sequence cost. C.3 should look for a cap on the number of
+distinct **groups**.
