@@ -3313,3 +3313,65 @@ c2-c4 is explained by none of them.
 `experiments/results/npu_exec_recharge.md`, `docs/npu_exec_spike.md` §A,
 `outputs/npu_spike/`. The D-number comes from the `D90-D99` block
 `WORK_ORDER_npu_exec_model_spike.md` claims in `CLAUDE.md`.
+
+---
+
+## D92 — the bucketed execution model narrows the RNGD error by 7 %, not by two thirds · Recorded 2026-09-17
+
+`WORK_ORDER_npu_exec_model_spike.md` STEP B built the opt-in prototype STEP A's
+decomposition had cut down to one rule, and measured what it is worth. The
+prototype lives on the spike branch and is **not merged**; `serving/` on `main`
+is unchanged.
+
+**What was built.** `execution_model: bucketed_aot` in the cluster JSON makes a
+prefill/extend step carry exactly one request and at most 1024 tokens of it, and
+makes it exclusive of decode -- the shape D90 says the compiled grid has plans
+for. P2 (decode quantisation) and P3 (group attention) were **not** built,
+because D91 found both are already inside the measured bundle. One guard rather
+than a fallback: the rule is implemented in `schedule_base` only, so combining it
+with prefix caching raises instead of silently running the vLLM policy under a
+bucketed label.
+
+**Equivalence.** The R1/R2 anchors reproduce all four committed SHA-256 sums from
+`after_d28`, and the six low-load points re-run without the key are byte-identical
+CSVs to the pre-edit runs. Absent `execution_model`, nothing moved.
+
+**The prototype does what it claims to the step structure.** Mixed steps go 19 to
+**0** at c3.98, prefill steps 20 to 35 as prompts chunk at 1024, prefill batch
+size stays 1, prefill token total unchanged.
+
+**And it is worth 7 %.** The nine-point TPOT error span goes from
+`[-48.59, +11.00]` (width 59.59 pp) to `[-43.73, +11.58]` (width 55.31 pp). The
+work order's threshold for "the execution model explains most of the error" was a
+residual of one third of the current span. It is not close. The sign flip does not
+disappear either: it moves from between served 15.21/25.18 to between 26.49/40.47.
+Below c16 the prototype makes the error WORSE -- +10.79 to +11.58 at c3.98 --
+which is the same wrong-signedness the knob approximation showed.
+
+**`strict` and `alternate` cannot be told apart.** The largest difference across
+nine points is 0.03 pp. The work order's contingency for STEP C.2 -- if the
+runtime's step order cannot be observed, run both knob values and take whichever
+lands closer to the measurement -- **does not work**, and C.2 has to be answered
+directly or left open. This is a fact about the experiment, not the runtime.
+
+**The TTFT hypothesis STEP A raised is falsified.** A.1 found the simulator mixes
+prefill with decode on 299 of its 300 prefill steps and offered that as a
+candidate for D17's -32.6 % TTFT gap. Removing the mixing entirely moves simulated
+TTFT p50 by -5.7 % to +3.0 % and p95 by +2.0 % to +7.1 % (simulator against
+simulator; the measured side is closed-loop, D19). Nothing of that size closes a
+32.6 % gap, and p50 mostly moves down where it would have to move up. **A
+20-request version of the same comparison read +14.0 % on p50** -- a small-sample
+artifact of the same kind D32 recorded, and the number this spike would have
+quoted had it stopped at its smoke test.
+
+**Not established: anything off sharegpt.** B.3's hold-out needs a measured
+counterpart from STEP C.4, and STEP C has not run -- `npu0`, the card every
+committed RNGD measurement was taken on, is held by another tenant's pod. Recorded
+as undecided rather than substituted.
+
+**Where.** `serving/core/scheduler.py` and `serving/__main__.py` on
+`spike/npu-exec-b-prototype` (do not merge),
+`experiments/configs/clusters/rngd-card-llama31-8b-tp1-aot-{strict,alternate}.json`,
+`experiments/scripts/npu_exec_ttft_compare.py`,
+`experiments/results/npu_exec_ttft.md`, `docs/npu_exec_spike.md` §B,
+`outputs/npu_spike/b_*`, `outputs/d23fix/anchor/after_npu_exec_b/`.

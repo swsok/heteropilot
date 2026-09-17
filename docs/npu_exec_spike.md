@@ -392,3 +392,135 @@ contribution at under 5.4 pp with the wrong sign below c16, while A.1 shows it c
 the shape of 299 of 300 prefills. That reframes what the prototype is for, and the
 work order's risk row for "no mechanism exceeds 5 pp" — build P1 minimally and close —
 is the row that currently applies.
+
+---
+
+## §B — the prototype (STEP B)
+
+Spike branch `spike/npu-exec-b-prototype`, **do not merge**. Opt-in through the
+cluster JSON:
+
+```json
+{"execution_model": "bucketed_aot", "prefill_priority": "strict"}
+```
+
+### B.1 — scope, cut down by what STEP A measured
+
+| rule | built? | why |
+| --- | --- | --- |
+| **P1** step policy | **yes** | prefill/extend steps carry one request, `chunk ≤ 1024`, exclusive of decode |
+| P2 decode quantisation | **no** | A.3: the padding is already inside the measured bundle, and re-charging it double-counts (D91) |
+| P3 group attention | **no** | A.3: the grouping is also already in the bundle, and the grid it groups on is unknown until C.3 |
+| P4 c1 path | unchanged | the control, as specified |
+| P5 KV reservation | **no** | untouched by STEP A; still open |
+
+So the prototype is P1 alone, which is what the work order's own risk row
+prescribes when no mechanism clears 5 pp. One guard was added rather than a
+fallback: `execution_model: bucketed_aot` together with prefix caching **raises**,
+because the rule is implemented in `schedule_base` only and falling through to
+`schedule_with_prefix` would report the vLLM step policy as if it were the
+bucketed one.
+
+`prefill_priority` is `strict` (drain the prefill queue) or `alternate` (take
+turns). C.2 is supposed to decide it; both are run here.
+
+### B.2 — equivalence, and what the prototype changes (E-N4)
+
+**Equivalence holds twice over.** The R1/R2 anchors
+(`experiments/scripts/d23fix_anchors.sh after_npu_exec_b`) reproduce all four
+committed SHA-256 sums from `after_d28`. And the six low-load points re-run
+*without* `execution_model` are **byte-identical CSVs** to the pre-edit runs of
+§A.1. Absent the key, nothing moved.
+
+**The prototype does change the step structure it was built to change.** Censused
+at 300 requests, c15.59, against the same point under the current policy:
+
+| | vLLM | `bucketed_aot` |
+| --- | ---: | ---: |
+| steps | 13054 | 13063 |
+| mixed steps | 299 | **0** |
+| prefill steps | 300 | 401 |
+| prefill steps at `bs = 1` | 100 % | 100 % |
+| prefill tokens | 257,239 | 257,239 |
+| mean decode batch | 14.97 | 15.44 |
+
+No step mixes prefill with decode any more, the 300 prompts now take 401 steps
+because they chunk at 1024, and the token total is unchanged — the work is the
+same work, differently shaped.
+
+TPOT error, nine points, 300 requests, `--match offered`:
+
+| env conc | current | `strict` | `alternate` | served: current → `strict` | measured |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 1.0 | +2.25 | +2.41 | +2.38 | 1.02 → 1.02 | 1.0 |
+| 1.99 | +11.00 | +11.36 | +11.34 | 2.19 → 2.20 | 1.99 |
+| 3.98 | +10.79 | +11.58 | +11.57 | 4.31 → 4.35 | 3.98 |
+| 7.88 | +7.33 | +9.03 | +9.03 | 8.21 → 8.34 | 7.88 |
+| 15.3 | +3.26 | +6.43 | +6.43 | 14.83 → 15.28 | 15.3 |
+| 15.59 | +2.47 | +5.79 | +5.80 | 15.21 → 15.68 | 15.59 |
+| 29.3 | −3.28 | +1.94 | +1.94 | 25.18 → 26.49 | 29.3 |
+| 59.2 | −25.17 | −19.28 | −19.29 | 37.67 → 40.47 | 59.2 |
+| 107.2 | −48.59 | −43.73 | −43.73 | 44.47 → 48.23 | 107.2 |
+
+The two comparison criteria the work order fixed in advance:
+
+**(a) Residual span.** Current `[−48.59, +11.00]`, width 59.59 pp. Prototype
+`[−43.73, +11.58]`, width 55.31 pp. That is a **7 % narrowing**, against the
+"one third of current" the work order names for conclusion (i). It is not close.
+
+**(b) Does the sign flip go away?** **No — it moves.** Under the current policy the
+error crosses zero between served 15.21 and 25.18; under the prototype it crosses
+between 26.49 and 40.47. The vLLM fingerprint is displaced, not removed.
+
+Two further readings.
+
+**`strict` and `alternate` are indistinguishable.** The largest difference across
+all nine points is **0.03 pp**. So the indirect estimate the work order's risk row
+proposed for C.2 — run both, report whichever is closer to the measurement —
+**cannot discriminate**, and C.2 must be decided by direct observation or left
+open. This is a result about the experiment, not about the runtime.
+
+**Queue reproduction improves where it was already close and not where it matters.**
+At c15.3 the simulated served concurrency goes 14.83 → 15.28 against a measured
+15.3, which is near exact. At the c107.2 arrival rate it goes 44.47 → 48.23
+against a measured 107.2. The simulator's throughput ceiling is not the step
+policy.
+
+### B.2 — TTFT (E-N4), and the STEP A hypothesis it falsifies
+
+Simulator against simulator, because the measured side is closed-loop (D19). Full
+table: `experiments/results/npu_exec_ttft.md`.
+
+| env conc | vLLM p50 | AOT p50 | Δ | vLLM p95 | AOT p95 | Δ |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1.0 | 77.0 | 75.8 | −1.6 % | 171.0 | 179.3 | +4.9 % |
+| 1.99 | 80.3 | 82.8 | +3.0 % | 179.4 | 191.7 | +6.8 % |
+| 3.98 | 84.5 | 81.7 | −3.3 % | 188.1 | 194.2 | +3.2 % |
+| 7.88 | 86.6 | 84.1 | −2.9 % | 183.5 | 188.5 | +2.7 % |
+| 15.3 | 87.2 | 86.7 | −0.5 % | 187.2 | 192.3 | +2.7 % |
+| 15.59 | 87.1 | 84.3 | −3.2 % | 187.7 | 192.7 | +2.7 % |
+| 29.3 | 87.9 | 85.9 | −2.3 % | 188.8 | 198.4 | +5.1 % |
+| 59.2 | 93.5 | 90.9 | −2.8 % | 187.9 | 191.7 | +2.0 % |
+| 107.2 | 95.7 | 90.3 | −5.7 % | 185.3 | 198.4 | +7.1 % |
+
+**§A's TTFT hypothesis is falsified.** A.1 found the simulator mixes prefill with
+decode on 299 of 300 prefill steps and proposed that as a candidate for D17's
+−32.6 % TTFT gap. Removing the mixing entirely moves simulated TTFT p50 by between
+−5.7 % and +3.0 %, and p95 by +2.0 % to +7.1 %. Nothing of that size closes a
+32.6 % gap, and p50 mostly moves **down** where it would need to move up.
+
+An intermediate number that looked much better is worth recording so it is not
+believed later: the same comparison on a **20-request** run read +14.0 % on p50
+and +10.3 % on p95. That is a small-sample artifact — the same drain-tail effect
+D32 recorded — and it is the number this spike would have quoted had it stopped at
+the smoke test.
+
+### B.3 — hold-out (E-N5): not run
+
+The hold-out workload needs a measured counterpart from STEP C.4, and STEP C has
+not run: `npu0`, the card every committed RNGD measurement was taken on, is held
+by another tenant's pod (`docs/nodes/npu.md`). Per the work order's own completion
+condition this is recorded as **undecided, awaiting measurement** rather than
+substituted. Nothing in §B should be read as evidence that the prototype
+generalises off sharegpt — that is exactly the question B.3 exists to answer, and
+it is open.
