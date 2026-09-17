@@ -44,137 +44,161 @@
     46.0,
     50.0
   ],
-  "measured_p99_tpot_ms": null,
+  "measured_p99_tpot_ms": 66.012,
   "sweep": [
     {
       "tpot_slo_ms": 38.0,
-      "measured_satisfies": null,
+      "measured_satisfies": false,
       "rules": {
         "a_margin0": {
           "verdict": "feasible",
-          "bound_by": null
+          "bound_by": null,
+          "outcome": "FALSE PASS"
         },
         "b_global18": {
           "verdict": "rejected",
-          "bound_by": "tpot"
+          "bound_by": "tpot",
+          "outcome": "correct rejection"
         },
         "c_accuracy_domain": {
           "verdict": "feasible",
-          "bound_by": null
+          "bound_by": null,
+          "outcome": "FALSE PASS"
         },
         "d_refuse": {
           "verdict": "feasible",
-          "bound_by": null
+          "bound_by": null,
+          "outcome": "FALSE PASS"
         }
       }
     },
     {
       "tpot_slo_ms": 40.0,
-      "measured_satisfies": null,
+      "measured_satisfies": false,
       "rules": {
         "a_margin0": {
           "verdict": "feasible",
-          "bound_by": null
+          "bound_by": null,
+          "outcome": "FALSE PASS"
         },
         "b_global18": {
           "verdict": "rejected",
-          "bound_by": "tpot"
+          "bound_by": "tpot",
+          "outcome": "correct rejection"
         },
         "c_accuracy_domain": {
           "verdict": "feasible",
-          "bound_by": null
+          "bound_by": null,
+          "outcome": "FALSE PASS"
         },
         "d_refuse": {
           "verdict": "feasible",
-          "bound_by": null
+          "bound_by": null,
+          "outcome": "FALSE PASS"
         }
       }
     },
     {
       "tpot_slo_ms": 42.0,
-      "measured_satisfies": null,
+      "measured_satisfies": false,
       "rules": {
         "a_margin0": {
           "verdict": "feasible",
-          "bound_by": null
+          "bound_by": null,
+          "outcome": "FALSE PASS"
         },
         "b_global18": {
           "verdict": "rejected",
-          "bound_by": "tpot"
+          "bound_by": "tpot",
+          "outcome": "correct rejection"
         },
         "c_accuracy_domain": {
           "verdict": "feasible",
-          "bound_by": null
+          "bound_by": null,
+          "outcome": "FALSE PASS"
         },
         "d_refuse": {
           "verdict": "feasible",
-          "bound_by": null
+          "bound_by": null,
+          "outcome": "FALSE PASS"
         }
       }
     },
     {
       "tpot_slo_ms": 44.0,
-      "measured_satisfies": null,
+      "measured_satisfies": false,
       "rules": {
         "a_margin0": {
           "verdict": "feasible",
-          "bound_by": null
+          "bound_by": null,
+          "outcome": "FALSE PASS"
         },
         "b_global18": {
           "verdict": "feasible",
-          "bound_by": null
+          "bound_by": null,
+          "outcome": "FALSE PASS"
         },
         "c_accuracy_domain": {
           "verdict": "feasible",
-          "bound_by": null
+          "bound_by": null,
+          "outcome": "FALSE PASS"
         },
         "d_refuse": {
           "verdict": "feasible",
-          "bound_by": null
+          "bound_by": null,
+          "outcome": "FALSE PASS"
         }
       }
     },
     {
       "tpot_slo_ms": 46.0,
-      "measured_satisfies": null,
+      "measured_satisfies": false,
       "rules": {
         "a_margin0": {
           "verdict": "feasible",
-          "bound_by": null
+          "bound_by": null,
+          "outcome": "FALSE PASS"
         },
         "b_global18": {
           "verdict": "feasible",
-          "bound_by": null
+          "bound_by": null,
+          "outcome": "FALSE PASS"
         },
         "c_accuracy_domain": {
           "verdict": "feasible",
-          "bound_by": null
+          "bound_by": null,
+          "outcome": "FALSE PASS"
         },
         "d_refuse": {
           "verdict": "feasible",
-          "bound_by": null
+          "bound_by": null,
+          "outcome": "FALSE PASS"
         }
       }
     },
     {
       "tpot_slo_ms": 50.0,
-      "measured_satisfies": null,
+      "measured_satisfies": false,
       "rules": {
         "a_margin0": {
           "verdict": "feasible",
-          "bound_by": null
+          "bound_by": null,
+          "outcome": "FALSE PASS"
         },
         "b_global18": {
           "verdict": "feasible",
-          "bound_by": null
+          "bound_by": null,
+          "outcome": "FALSE PASS"
         },
         "c_accuracy_domain": {
           "verdict": "feasible",
-          "bound_by": null
+          "bound_by": null,
+          "outcome": "FALSE PASS"
         },
         "d_refuse": {
           "verdict": "feasible",
-          "bound_by": null
+          "bound_by": null,
+          "outcome": "FALSE PASS"
         }
       }
     }

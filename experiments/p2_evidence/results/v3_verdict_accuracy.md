@@ -16,7 +16,8 @@ deployment run.*
 | §3 measured verdicts vs rules | **PENDING** — needs A40 GPUs |
 | §4 limits | **complete** — two of them found by trying to deploy |
 | §5 out of scope | **complete** |
-| §6 P1 deployment + SLO sweep | rule side **complete**; measured column **PENDING** |
+| §6 P1 deployment + SLO sweep | **complete** — measured 2026-09-17, 3 repeats |
+| §6.4 the TP=1 / TP=4 contrast | **complete** — the finding V3 actually produced |
 
 **Scope closed 2026-09-16.** The deploy backend cannot launch P2 or P3 as
 selected (§4①), so V3 measures **P1 only**, extended by an SLO sweep (§6.2) that
@@ -108,8 +109,8 @@ regenerable and untracked).
 
 ## 3. Measured verdicts against the four rules
 
-**PENDING — needs A40 GPUs**, and reduced in scope: **P1 only** (§4①). The table
-is §6.2's, filled from the measurement; §6.1 says what runs.
+**Measured 2026-09-17**, reduced in scope to **P1 only** (§4①). The table is
+§6.2's; §6.3 has the measurement and §6.4 what it means.
 
 Per the work order, **these are cases, not statistics** — one candidate read at
 six thresholds is one measurement, not a rate, and the specification must present
@@ -175,9 +176,18 @@ It is worth being precise about what this is evidence of. It is **not** a failur
 of the per-point margin — it is the margin behaving correctly on a predictor that
 is already accurate at these operating points. A margin policy that charged more
 than the measured error here would be over-correcting, and the disclosure's
-one-sidedness exists to prevent exactly that. **The A40 is the case where the
-invention should do almost nothing, and it does almost nothing.** What that case
-cannot do is demonstrate the invention's value, which is why ③ matters.
+one-sidedness exists to prevent exactly that. **Where the domain covers the
+candidate, the A40 is the case where the invention should do almost nothing, and
+it does almost nothing.** What that case cannot do is demonstrate the invention's
+value, which is why ③ matters.
+
+**AMENDED 2026-09-17 by the measurement.** The "1–3 %" above is V2's figure and
+it holds **at TP=1, where every point in the domain was measured**. V3 deployed a
+TP=4 candidate and found the error is **−44.6 %** at nearly the same served
+concurrency. So this limit is narrower than it was written: the margin is smaller
+than the simulator's error *within the domain's coverage*, and outside it the
+margin is not small but simply **uninformed**. §6.4 has the evidence and what it
+implies for the schema.
 
 ### ③ The verdict-changing cases are on RNGD, and are built from V0 and V1
 
@@ -214,8 +224,23 @@ what the planner recommends.
 
 ## 6. What V3 does deliver: P1, and the SLO sweep that makes one deployment count
 
-**PENDING the measurement** — the GPUs are held by another job. Scripts, plans and
-the rule side are ready; §6.2's measured column is the only thing outstanding.
+**MEASURED 2026-09-17** on the A40 node, all eight GPUs idle and confirmed so
+before starting. Three repeats, 300/300 requests each, server stopped and GPUs
+released afterwards. Raw `outputs/p2_evidence/v3/p2ev-v3-p1_r{0,1,2}.json`.
+
+> **The result runs against the invention on this candidate, and §6.4 says why
+> that is a finding rather than a refutation.** The simulator predicted a p99
+> TPOT of 36.5 ms and the hardware delivered **66.0 ms** — a −44.6 % error,
+> against a per-point margin of 1.13 %. Across the SLO sweep the per-point rule
+> produced **six false passes and zero correct rejections**, while the global
+> 18 % produced **three correct rejections**. The margin that would have covered
+> the measurement is **~80 %**.
+>
+> The mechanism is not a failure of per-point margining. At almost the same
+> served concurrency the same simulator on the same hardware is accurate to
+> **−1.05 %** at TP=1 (V2) and wrong by **−44.6 %** at TP=4 (here). **The A40
+> accuracy domain is fitted entirely on TP=1 and `AccuracyDomain` has no
+> parallelism axis at all.**
 
 ### 6.1 The deployment
 
@@ -265,22 +290,97 @@ the code, not assumed.
 
 | TPOT SLO | (a) | (b) | (c) | (d) | measured ≤ SLO? |
 | ---: | --- | --- | --- | --- | --- |
-| 38 | feasible | **rejected** | feasible | feasible | PENDING |
-| 40 | feasible | **rejected** | feasible | feasible | PENDING |
-| 42 | feasible | **rejected** | feasible | feasible | PENDING |
-| 44 | feasible | feasible | feasible | feasible | PENDING |
-| 46 | feasible | feasible | feasible | feasible | PENDING |
-| 50 | feasible | feasible | feasible | feasible | PENDING |
+Measured p99 TPOT is **66.012 ms**, so the candidate really violates at every
+threshold in the grid:
 
-**The three cells at SLO 38/40/42 are what this recovers.** There the global
-18 % rejects and the per-point margin passes — the same disagreement P3 was
-selected to show, on a candidate that can actually be deployed. If the hardware
-comes in at or under 42 ms, rule (b) produced a **false rejection** in three
-cells and rule (c) did not; if it comes in above 43.42, rules (a), (c) and (d)
-produced **false passes** and (b) was right.
+| TPOT SLO | (a) no margin | (b) global 18 % | (c) per-point | (d) per-point + refuse | measured ≤ SLO? |
+| ---: | --- | --- | --- | --- | --- |
+| 38 | FALSE PASS | **correct rejection** | FALSE PASS | FALSE PASS | no |
+| 40 | FALSE PASS | **correct rejection** | FALSE PASS | FALSE PASS | no |
+| 42 | FALSE PASS | **correct rejection** | FALSE PASS | FALSE PASS | no |
+| 44 | FALSE PASS | FALSE PASS | FALSE PASS | FALSE PASS | no |
+| 46 | FALSE PASS | FALSE PASS | FALSE PASS | FALSE PASS | no |
+| 50 | FALSE PASS | FALSE PASS | FALSE PASS | FALSE PASS | no |
 
-Either way V3 gets §6 material — an exclusion rate for a candidate that really
-satisfies, or a pass rate for one that really violates — from one deployment
-rather than the six the original design needed. **As cases, not as statistics**:
-one candidate across six thresholds is one measurement read six ways, and the
-specification must present it as such.
+**Tally: (a) 6 false passes, (b) 3 correct rejections and 3 false passes, (c) and
+(d) 6 false passes each.** On this candidate the global rule strictly dominated
+the per-point one. **As cases, not statistics** — one candidate read at six
+thresholds is one measurement, and the specification must present it that way.
+
+### 6.3 The measurement
+
+| | predicted (matched trace) | measured (3 repeats) | error `e` |
+| --- | ---: | ---: | ---: |
+| served concurrency | 127.872 | **163.383** | **−21.73 %** |
+| p99 TPOT | 36.547 ms | **66.012 ms** | **−44.63 %** |
+| p99 TTFT | 16 716.4 ms | **53 176.1 ms** | −68.56 % |
+| p50 TPOT | 30.483 ms | 56.552 ms | −46.10 % |
+
+Repeatability is excellent and is not the issue: p99 TPOT spread **0.047 ms
+(0.072 %)** over three runs, `L_meas` spread 0.067 (0.041 %). Every run delivered
+195 753 output tokens, the trace's exact total.
+
+**The workload confound was removed, not argued away.** P1's committed prediction
+comes from E-A1, which ran a trace synthesised from the spec's length
+distributions; the hardware ran the sharegpt file. The two differ by 2–4 % on
+mean lengths and offered rate, so the simulator was re-run on **the exact file
+the server was driven with** (`v3_sim_matched.py`, cache disabled). It returned
+L 127.872 / TPOT 36.547 / TTFT 16 716.4 against E-A1's 127.280 / 36.795 /
+16 159.5 — under 1 % apart. The table above uses the matched values.
+
+**D32's ±20 % operating-point guard fails here** at −21.73 %. The prediction and
+the measurement are not at the same load, and that is itself the finding: the
+simulator did not know how much work this configuration would be carrying.
+
+**Launch accuracy**: worst 76.08 ms against the driver's 20 ms contract, as in
+V2's 10 rps stages and for the same reason — 300 streamed responses in flight at
+~10 rps saturate the event loop. At a p99 TTFT of 53 s that is 0.14 % of a
+request's residency.
+
+### 6.4 Why this is a finding about the domain's schema, not about margining
+
+The natural reading — "the per-point margin failed and the cruder global rule did
+better" — is wrong, and the evidence that it is wrong is V2's.
+
+| | TP | served concurrency | p99 TPOT error |
+| --- | ---: | ---: | ---: |
+| V2, 10 rps stage | **1** | 170.46 | **−1.05 %** |
+| V3, P1 | **4** | 163.38 | **−44.63 %** |
+
+Same hardware, same model, same workload, same arrival process, nearly the same
+served concurrency. The simulator is accurate to 1 % at TP=1 and wrong by 45 % at
+TP=4. Measured tensor-parallel scaling is **1.78× of TP=1 throughput for four
+times the GPUs**; the simulator credits far more.
+
+**Every point in `a40.accuracy.yaml` and in V2's open-loop file was measured at
+TP=1**, and `AccuracyDomain`'s scoping fields are
+
+```
+fitted_at_concurrency, points, outside_domain, source, note,
+workload_shape, model, variant, arrival_process
+```
+
+— **there is no parallelism axis.** So a domain fitted on single-card runs is
+consulted for a four-way tensor-parallel candidate with nothing in the schema to
+say that is extrapolation. The margin it returns (1.13 %) is a correct answer to
+a question about TP=1, applied to a configuration it never saw.
+
+**This is constructive for the disclosure rather than damaging.** Its own
+`refuse` contract — decline to judge an operating point no measurement covers —
+is exactly the right response here, and it did not fire because the domain has no
+way to represent the axis along which this candidate is out of range. **The
+scoping conditions in §2.4.1 (model, precision, token mix, arrival process) are
+incomplete: parallelism belongs among them.** The specification can state that as
+a condition on the verification information rather than discovering it later.
+
+What V3 therefore establishes, on A40:
+
+1. With a domain that does not cover the candidate's parallelism, **the per-point
+   margin under-corrects by a factor of ~70** (1.13 % charged, ~80 % needed) and
+   produces false passes at every threshold tested.
+2. A **fixed global margin is not a fix** — 18 % also under-corrects, and its
+   three correct rejections come from being arbitrarily larger, not from being
+   better informed. At SLO 44 and above it fails too.
+3. **Neither result transfers to a domain that does cover the candidate.** V2's
+   TP=1 points, where the domain does cover it, agree with the hardware to
+   ~1 %.

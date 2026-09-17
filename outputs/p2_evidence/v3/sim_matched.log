@@ -1,0 +1,3 @@
+--- simulating cuda-a40-node_a40a-tp4-dp1-s128-t2048 on the measured trace
+    outcome=OK L=127.87194609280543 p99_tpot=36.54736826 p99_ttft=16716.437878409997
+wrote experiments/p2_evidence/results/v3_sim_matched.json
