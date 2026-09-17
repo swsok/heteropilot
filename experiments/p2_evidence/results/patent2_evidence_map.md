@@ -22,6 +22,44 @@ the disclosure's own §5.6 candidate B (predicted 48.41 ms, robust 59.04 ms).
 measurement-and-arithmetic results needing no hardware, and **not** from V3. V3
 supplies A40 cases: one agreed baseline, one TTFT-decided catch, one rescue.
 
+**(iii) The parallelism axis goes in a DEPENDENT claim, not the independent one**
+(decision 2026-09-17). V3 measured a case where a domain fitted at TP=1 answered
+a TP=4 query with a 1.13 % margin where ~80 % was needed
+(`v3_verdict_accuracy.md` §6.4). The response the specification takes is to name
+**the parallelism configuration and the device placement among the conditions
+under which verification information may be applied** — as a dependent claim and
+as a detailed-description embodiment. It does **not** enter the independent
+claim: the invention's core is per-operating-point margining, and a scoping
+condition is a refinement of it, not a precondition for it.
+
+**(iv) V3's P1 result maps to §2 and §5.2, not to §6.** It is evidence for the
+*problem* the invention addresses (a prediction that is confidently wrong, §2)
+and for the *conditions* under which verification information transfers (§5.2).
+It is **not** an effect of the invention and must not be cited in §6, because it
+is a case where the invention did not help. **n = 1, and it is counterfactual**:
+what it shows is what happens when the domain does not cover the candidate, not
+what the margin achieves when it does.
+
+**(v) V3's P1 measurement is a TRANSIENT time-average, so it is a qualitative
+case only** (decision 2026-09-17). Neither side reaches steady state: both are
+triangles, the hardware peaking at 300 concurrent — every request in the trace
+resident at once — and draining (`v3_verdict_accuracy.md` §6.3.1). `L` = 163
+is the mean of that triangle, not a concurrency the server settled at.
+
+**The specification's worked embodiment must therefore be measured on a
+steady-state interval**, not on this run: an arrival window long enough for the
+queue to stabilise, with the interval's flatness reported. V3's numbers support
+§2 and §5.2 as *cases*; they are not the measurement an embodiment quotes.
+
+**(vi) Figure 2's registered region carries its own non-registration table.** The
+figure marks `[14.832, 25.181]` as the one interval V1's §5.4 procedure
+registers; every other interval is unregistered **for a stated reason**, and the
+figure must be read against `v1_validation_region.md` §2.1, which names the
+condition that rejected each one (ratio > 2, sample count < 100, a change of
+operating mode, or a vacuous stage 2). A reader seeing one shaded band must be
+able to ask why the rest is unshaded and get an answer per interval, not in
+aggregate.
+
 **(ii) V3-R is left as a selection step.** When an RNGD node is available, select
 one RNGD candidate each of the P2 and P3 shapes and run the same comparison.
 Until then the specification must not imply that the RNGD regime's verdicts have
@@ -40,10 +78,16 @@ there, not the *verdict*.
 | §5.4 / §5.7 consistency | the endpoint placement cannot satisfy the ratio condition on a domain wider than a doubling | `v1_validation_region.md` §2.1 | **established** |
 | §5.6 worked example | re-judged: B becomes `unmeasured`, A flips to SLO_VIOLATED | `v1_validation_region.md` §3 | **established** |
 | §5.2/§5.3, claim 2 — lookup coordinate | `L_pred` vs `L_meas` divergence under open-loop load | `v2_openloop_concurrency.md` | **PENDING** (driver ready, PR #95) |
-| §6 verdict accuracy, A40 cases | measured verdicts for P1/P2/P3 against the four rules | `v3_verdict_accuracy.md` §3 | **PENDING** (selection confirmed) |
+| **§2** problem definition — a prediction that is confidently wrong | P1: predicted p99 TPOT 36.5 ms, measured **66.0 ms** (−44.6 %); predicted L 127.9, measured 163.4 | `v3_verdict_accuracy.md` §6.3 | **established**, n=1 |
+| **§5.2** application conditions — parallelism and placement | domain fitted at TP=1 answers a TP=4 query; `AccuracyDomain` has no parallelism axis; error −1.05 % at TP=1 against −44.6 % at TP=4 | `v3_verdict_accuracy.md` §6.4 | **established**, n=1, **counterfactual** |
+| §5.2 supporting — an unmeasured input explains it | `link_bw:pcie-a40a-02` measures **8.8 GB/s** effective against a `vendor_spec` 64.0; substituting it drops the TP=4 error from −43.4 % to −7.0 % on TPOT and −21.2 % to −0.7 % on concurrency | `v3_verdict_accuracy.md` Appendix A.1, A.4 | **established by measurement**, reproduced on two GPU groups |
+| §5.2 — the parallelism condition, discriminated | same candidate at TP=2 inside an NVLink pair errs **−5.2 %** where TP=4 across the bridge errs **−43.4 %**, an 8.3× difference from removing one hop | `v3_verdict_accuracy.md` A.2 | **established**, n=1 per arm |
+| §5.2 — device placement, third instance | one static link value cannot serve both candidates: 8.8 fixes TP=4 and breaks TP=2 (−5.2 % → +18.2 %), because the simulator cannot express which devices a TP group occupies | `v3_verdict_accuracy.md` A.4 | **established** |
+| §5.2 — device placement, NUMA | binding the server to the island's NUMA node is worth **1.93×** throughput and 0.37× TTFT, with identical engine init, clocks and power | `v3_verdict_accuracy.md` A.3 | **established**, and it invalidates nothing already measured (A.3 ③) |
+| §6 verdict accuracy, A40 cases | — | **not measurable**: the deploy backend blocks P2 and P3 | `v3_verdict_accuracy.md` §4① | **not established** |
 | §6 cost of holding | all 30 held candidates are also rejected unmargined → holding costs nothing on this fixture | `v3_verdict_accuracy.md` §1 | **established** |
 | §6 verdict accuracy, RNGD regime | — | **V3-R, not scheduled** | **not established** |
-| fig. 2 | measured 9-point residual curve, sign change, zero-margin span, registered region | V4, from V0+V1 | **PENDING** |
+| fig. 2 | measured residual curve, sign change, zero-margin span, registered region | `experiments/figures/patent2_fig2_measured.png`, from `v4_figure2.py` | **established** — 8 points on the **p99 basis the verdict reads** (D101); c16.6 is absent because it has no per-request pair |
 
 ## 2. Numbers cleared for use, with their caveats
 

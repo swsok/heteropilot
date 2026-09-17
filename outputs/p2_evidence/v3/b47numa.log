@@ -1,0 +1,55 @@
+=== 2026-09-17T11:44:52+09:00 deploying p2ev-tp4-b47numa ===
+  backend       : vllm-cuda
+  plan          : p2ev-tp4-b47numa
+  endpoint      : http://127.0.0.1:8402
+  pid           : 1196589
+  started       : 2026-09-17T02:44:52.590176+00:00
+  CUDA devices  : 4,5,6,7
+healthy after ~70s
+=== 2026-09-17T11:45:52+09:00 p2ev-tp4-b47numa repeat 0 ===
+open loop: 300 requests -> http://127.0.0.1:8402/v1 (trace 10.280 rps, offering 10.280 rps, span 29.2s, no concurrency bound)
+warm-up: 250.8 ms (paid before the schedule starts)
+an error occurred during closing of asynchronous generator <async_generator object PoolByteStream.__aiter__ at 0x7ff8b04675b0>
+asyncgen: <async_generator object PoolByteStream.__aiter__ at 0x7ff8b04675b0>
+    yield chunk
+    async with safe_async_iterate(self._stream) as iterator:
+done: 300/300 ok, 0 failed in 99.3s
+launch error (ms): mean=3.67 p99=28.21 max=44.98
+served concurrency (Little's law) = 162.237
+ttft_ms: mean=19673.81 p50=21990.41 p95=47648.85 p99=51336.32
+tpot_ms: mean=52.07 p50=55.13 p95=63.99 p99=64.58
+output tokens=195753, 1971.2 tok/s
+wrote outputs/p2_evidence/v3/p2ev-tp4-b47numa_r0.json
+=== 2026-09-17T11:48:03+09:00 p2ev-tp4-b47numa repeat 1 ===
+open loop: 300 requests -> http://127.0.0.1:8402/v1 (trace 10.280 rps, offering 10.280 rps, span 29.2s, no concurrency bound)
+warm-up: 253.7 ms (paid before the schedule starts)
+an error occurred during closing of asynchronous generator <async_generator object safe_async_iterate at 0x7f8e0706f4c0>
+asyncgen: <async_generator object safe_async_iterate at 0x7f8e0706f4c0>
+    yield chunk
+    await iterator.aclose()
+    raise exc
+    async with safe_async_iterate(self._connection._receive_response_body(**kwargs)) as iterator:
+an error occurred during closing of asynchronous generator <async_generator object PoolByteStream.__aiter__ at 0x7f8e0707f5b0>
+asyncgen: <async_generator object PoolByteStream.__aiter__ at 0x7f8e0707f5b0>
+    yield chunk
+    async with safe_async_iterate(self._stream) as iterator:
+done: 300/300 ok, 0 failed in 99.3s
+launch error (ms): mean=3.55 p99=23.01 max=35.85
+served concurrency (Little's law) = 162.247
+ttft_ms: mean=19676.24 p50=22004.81 p95=47651.23 p99=51323.13
+tpot_ms: mean=52.07 p50=55.15 p95=64.00 p99=64.61
+output tokens=195753, 1971.2 tok/s
+wrote outputs/p2_evidence/v3/p2ev-tp4-b47numa_r1.json
+=== 2026-09-17T11:50:13+09:00 p2ev-tp4-b47numa repeat 2 ===
+open loop: 300 requests -> http://127.0.0.1:8402/v1 (trace 10.280 rps, offering 10.280 rps, span 29.2s, no concurrency bound)
+warm-up: 253.8 ms (paid before the schedule starts)
+done: 300/300 ok, 0 failed in 99.4s
+launch error (ms): mean=4.10 p99=25.16 max=41.47
+served concurrency (Little's law) = 162.284
+ttft_ms: mean=19695.95 p50=22020.35 p95=47719.87 p99=51410.67
+tpot_ms: mean=52.12 p50=55.21 p95=64.08 p99=64.65
+output tokens=195753, 1969.7 tok/s
+wrote outputs/p2_evidence/v3/p2ev-tp4-b47numa_r2.json
+=== 2026-09-17T11:52:23+09:00 stopping p2ev-tp4-b47numa ===
+stopped deployment 'p2ev-tp4-b47numa'.
+=== 2026-09-17T11:52:24+09:00 done ===

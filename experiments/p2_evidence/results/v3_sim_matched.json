@@ -21,10 +21,36 @@
         "average_power_w": 1296.672931034483,
         "peak_power_w": 1363.96,
         "tokens_per_joule": 2.56355421686747,
-        "sim_wall_seconds": 51.75,
+        "sim_wall_seconds": 51.38,
         "served_concurrency": 127.87194609280543,
         "served_concurrency_per_island": {
           "cuda-a40-node_a40a": 127.87194609280543
+        }
+      }
+    },
+    {
+      "candidate_id": "cuda-a40-node_a40a-tp2-dp1-s128-t2048",
+      "outcome": "OK",
+      "metrics": {
+        "p50_ttft_ms": 19664.315322000002,
+        "p95_ttft_ms": 44730.57957765001,
+        "p99_ttft_ms": 48446.95075413,
+        "p50_tpot_ms": 54.234562,
+        "p95_tpot_ms": 63.162819799999994,
+        "p99_tpot_ms": 63.83122367,
+        "throughput_tps": 4549.033224683911,
+        "slo_goodput_rps": 0.41172992505836825,
+        "slo_attainment": 0.13666666666666666,
+        "completed_requests": 300,
+        "completed_tokens": 195753,
+        "total_energy_j": 83090.0,
+        "average_power_w": 833.9334343434342,
+        "peak_power_w": 864.43,
+        "tokens_per_joule": 2.3559152725959804,
+        "sim_wall_seconds": 24.28,
+        "served_concurrency": 153.76661167165656,
+        "served_concurrency_per_island": {
+          "cuda-a40-node_a40a": 153.76661167165656
         }
       }
     }

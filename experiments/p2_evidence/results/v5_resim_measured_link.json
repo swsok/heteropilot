@@ -1,0 +1,58 @@
+{
+  "link_bandwidth_gbps": 8.8,
+  "source": "measured TP=4 effective all-reduce",
+  "runs": [
+    {
+      "cluster": "experiments/configs/clusters/pd-rngd-gpu-card-measured-pcie.yaml",
+      "candidate_id": "cuda-a40-node_a40a-tp4-dp1-s128-t2048",
+      "metrics": {
+        "p50_ttft_ms": 18830.3003045,
+        "p95_ttft_ms": 41424.1009653,
+        "p99_ttft_ms": 44865.66258769,
+        "p50_tpot_ms": 49.730354,
+        "p95_tpot_ms": 59.20586235,
+        "p99_tpot_ms": 60.08935566,
+        "throughput_tps": 5098.259154630588,
+        "slo_goodput_rps": 0.6190048687497403,
+        "slo_attainment": 0.18333333333333332,
+        "completed_requests": 300,
+        "completed_tokens": 195753,
+        "total_energy_j": 82470.0,
+        "average_power_w": 924.0011363636364,
+        "peak_power_w": 1343.03,
+        "tokens_per_joule": 2.3736267733721355,
+        "sim_wall_seconds": 49.91,
+        "served_concurrency": 161.06664205431053,
+        "served_concurrency_per_island": {
+          "cuda-a40-node_a40a": 161.06664205431053
+        }
+      }
+    },
+    {
+      "cluster": "experiments/configs/clusters/pd-rngd-gpu-card-measured-pcie.yaml",
+      "candidate_id": "cuda-a40-node_a40a-tp2-dp1-s128-t2048",
+      "metrics": {
+        "p50_ttft_ms": 27508.39733,
+        "p95_ttft_ms": 62491.82705805,
+        "p99_ttft_ms": 67342.11755189,
+        "p50_tpot_ms": 66.4657505,
+        "p95_tpot_ms": 78.06921345,
+        "p99_tpot_ms": 79.59717002000001,
+        "throughput_tps": 3780.665576180033,
+        "slo_goodput_rps": 0.03338395005810286,
+        "slo_attainment": 0.013333333333333334,
+        "completed_requests": 300,
+        "completed_tokens": 195753,
+        "total_energy_j": 86830.0,
+        "average_power_w": 723.8351260504207,
+        "peak_power_w": 852.69,
+        "tokens_per_joule": 2.2544397097777265,
+        "sim_wall_seconds": 23.76,
+        "served_concurrency": 166.49389019083188,
+        "served_concurrency_per_island": {
+          "cuda-a40-node_a40a": 166.49389019083188
+        }
+      }
+    }
+  ]
+}
