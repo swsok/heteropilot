@@ -1,0 +1,5 @@
+  pcie x1.0   (  64.0 gbps): L= 127.872 p99_tpot=  36.547 p99_ttft=   16716.4
+  pcie x0.5   (  32.0 gbps): L= 134.625 p99_tpot=  40.301 p99_ttft=   20935.7
+  pcie x0.25  (  16.0 gbps): L= 146.187 p99_tpot=  47.525 p99_ttft=   29821.5
+  pcie x0.1   (   6.4 gbps): L= 170.584 p99_tpot=  70.909 p99_ttft=   57867.8
+wrote experiments/p2_evidence/results/v4_pcie_perturbation.json
