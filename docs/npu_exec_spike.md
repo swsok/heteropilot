@@ -1,0 +1,394 @@
+# Spike — how much of the simulator's RNGD error is the execution model?
+
+**Work order:** `WORK_ORDER_npu_exec_model_spike.md` (2026-09-15). **D-block:** D90–D99.
+**Experiment tag:** `E-N*`. This document is the spike's running record; STEP D turns it into the
+decomposition table and the conclusion.
+
+**The question.** The RNGD card's accuracy domain shows a TPOT error that changes sign with load —
++11 % at served concurrency 2, ~0 at 16, −18 % at 76 (`profiles/calibration/rngd_card_edf.yaml`),
+with TTFT at −32.6 % (D17, `rngd_sim_vs_real_summary.md`). How much of that is the structural
+difference between what LLMServingSim simulates (a vLLM-style continuous-batching scheduler) and
+what Furiosa-LLM is (a static, ahead-of-time-compiled bucket executor)? "Most" means a follow-up
+work order for an opt-in execution model; "some" means formalising only the mechanisms that carry
+weight and leaving the rest in the accuracy domain.
+
+This spike **decomposes**. Finishing an execution model is a later work order's job.
+
+---
+
+## §0 — Setup (STEP 0)
+
+### Baseline
+
+| item | value |
+| --- | --- |
+| branch point | `main` at `f6ee919` ("update WORK_ORDER_p2_regular_spec_evidence.md: V0 rewritten on D70") |
+| work branch | `spike/npu-exec-0-setup` |
+| date | 2026-09-16 |
+| node | **NPU** (`scripts/whichnode.sh`: 3 RNGD cards, 4 ATOM devices, no NVIDIA reachable, 96 cores / 1511 GiB) |
+
+`whichnode.sh` on this node reports: planner + analytical simulation YES; real vLLM bench NO (no
+NVIDIA driver); CUDA layerwise profiler NO; RNGD profiling YES via `furiosa.torch` under the system
+python3, not `.venv`; ATOM present but the vendor install is broken (`docs/nodes/npu.md`).
+
+STEP C of this work order is therefore runnable on this node. STEP 0 and STEP A need no device.
+
+### Gates
+
+At the branch point (`f6ee919`, before anything in this table existed):
+
+```
+pytest   904 passed, 1 skipped in 185.00s
+ruff     All checks passed!
+mypy     Success: no issues found in 47 source files
+```
+
+With STEP 0 applied:
+
+```
+pytest   912 passed, 1 skipped in 184.51s
+ruff     All checks passed!
+mypy     Success: no issues found in 47 source files
+```
+
+The eight new tests are the seven in `tests/test_artifact_buckets.py` and the `D90` case added to
+`test_claude_md_still_documents_the_blocks`. Nothing in `serving/` or `planner/` changed, so no
+golden output moved.
+
+### What STEP 0 committed
+
+| path | what |
+| --- | --- |
+| `experiments/scripts/furiosa_artifact_buckets.py` | reads `artifact.json`, classifies buckets, `--json` / `--yaml` |
+| `experiments/scripts/serve_log_hit_rates.py` | tabulates `Wire pipeline hit rate` from committed serve logs |
+| `experiments/results/rngd_artifact_buckets.md` | the grid of all three artifacts, and what follows from it |
+| `experiments/results/rngd_pipeline_hit_rate.md` | the composed-vs-kernelwise measurement, H-a/H-b left open |
+| `profiler/perf/RNGD-CARD/meta-llama/Llama-3.1-8B/bf16/artifact_buckets.yaml` | the machine-readable grid for `d6ae6a43` |
+| `docs/deviations.md` D90 | the kernelwise-path finding, and the D17 annotation it resolves |
+| `tests/test_artifact_buckets.py` | the grid's invariants, including D90's mixed-step claim |
+| `tests/test_deviations_numbering.py` | block range now read from CLAUDE.md instead of hardcoded |
+
+Both scripts were written during the 2026-09-15 investigation and were living in a session
+scratchpad, not in the repo; STEP 0 committed them and re-ran both from scratch on this checkout.
+Every number in §1.1 and §1.2 of the work order reproduced exactly (see the two results files).
+
+`CLAUDE.md` already carried the `D90–D99` block row and the `E-N*` tag row from 2026-09-15; both
+were confirmed present and **not** re-added.
+
+**A note on absolute rule 1.** `artifact_buckets.yaml` lands under `profiler/perf/`, which is an
+upstream *directory* (the pinned upstream ships an `RTXPRO6000` bundle there). The `RNGD-CARD`
+subtree under it is entirely fork-added (`4aac7a5`), and the new file is data beside the fork's own
+bundle, not a change to upstream code. Work order A7 requires this location: the grid is a property
+of the served artifact, not of the card, so it cannot live in `profiles/accelerators/*.yaml`.
+
+### One stale guard, and two sessions fixing it at once
+
+`tests/test_deviations_numbering.py` rejected D90 with *"claim a block in CLAUDE.md
+in the same commit"* — the one instruction that had already been followed on
+2026-09-15. Its allowed range was the literal `BLOCK_RANGE = (37, 89)`, written
+when D80–D89 was the last row, so claiming a block could never be enough on its
+own.
+
+**`WORK_ORDER_p2_regular_spec_evidence.md` hit the same wall and fixed it first**,
+in the work that became `main`'s `f0a3a84`, and its fix is the better one: it also
+widens `_REFERENCE` from `D\d{1,2}` to `D\d{1,3}`, without which no reference to
+D90–D99 was being checked for existence at all. This spike's own version of the
+fix was dropped in favour of theirs on rebase; all that is left here is the `D90`
+and `D100` cases in the parametrised presence check.
+
+That is the D34 collision the numbering rule exists to prevent, arriving through a
+*test* rather than through `deviations.md` — two streams, the same stale constant,
+no textual overlap in the entries themselves. Worth noting that the block table
+did its job: D90–D99 and D100–D109 never collided, only the guard did.
+
+### Two corrections to the work order's §1.1
+
+Both were found by re-running the extraction, and both change rules that STEP A and STEP B are
+written in terms of. Neither is settled by measurement yet, so both are carried forward as open
+items rather than adopted.
+
+**1. The kernelwise attention grid is not a uniform 1024 tokens.** §1.1 derives a 1024-token bucket
+width from `131072 / 128`. The 128 is not a division result: pipeline 0's menu holds exactly
+`8 prefill + 74 extend + 46 decode = 128` buckets and is the **union** of the compiled buckets
+(verified as a set; the 46 composed pipelines are a strict subset). Its spacing is 128 tokens up to
+1024 and then powers of two, and the decode edges are `{1024, 2048, …, 131072}`.
+
+*Consequence.* The "1024-unit KV bucket" of R-attn (STEP A.3) and P3 (STEP B.1) is not the grid the
+artifact actually has. Grouping on the real edges puts a ~29-sequence sharegpt batch into about 2–4
+groups, which is what D17 measured (1.95 → 3.08 attention executions per layer); a uniform 1024-token
+grid would predict many more. **STEP A.1 counts distinct groups both ways** and compares each with
+D17's 1.95 / 2.40 / 2.87 / 3.03 / 3.08. Nothing here measures the runtime's grouping — only what it
+was compiled for.
+
+**2. The batch-padding ladder is not powers of two throughout.** The kernelwise `tokenwise_buckets`
+ladder is 1, 2, 4, 8, 16, 32, 64, 128, 256, **384**, 512, 1024. "Round the batch up to the next
+power of two" (R-pad in A.3, P2 in B.1) is correct at or below 256 only; above it the target is the
+next entry of this ladder.
+
+### Open items carried out of STEP 0
+
+| item | where it is decided |
+| --- | --- |
+| H-a vs H-b — why the composed hit rate collapses | STEP C.1 |
+| KV-group unit: real decode edges vs uniform 1024 | STEP A.1 census, both ways, against D17 |
+| batch padding above 256 (the 384 rung) | STEP A.1 census / A.3 R-pad |
+| KV usage at 100 % even at c1 — bucket-granular reservation or gauge definition | STEP B.1 P5 (an open investigation item there) |
+| does the `INFO` batch log carry per-request ids and token counts | STEP A.1 (fallback: `--no-cleanup-inputs` trace `input_size`) |
+| does `lowload_sim_error.py` accept scheduler knobs | STEP A.2 (fallback: a cluster-json copy) |
+| is there attention-stage shape in the raw EDF CSV | STEP A.3 R-attn (fallback: D17 median, marked provisional, replaced by C.3) |
+
+---
+
+## §A — decomposition without code changes (STEP A)
+
+Nothing in `serving/` or `planner/` changes in this step. Two things the work order
+left as "needs investigation" were settled first, and one of them changes what A.2
+can be.
+
+### The step structure is already in the log — no debug print needed
+
+The work order expected to have to add a read-only debug print and record it as an
+A3 exception, because `scheduler.py:296-335` logs a batch id and nothing else. It
+does not need one. `trace_generator.py:1308` already logs, at INFO, one line per
+scheduled step carrying the requests in it:
+
+```
+Batch #7: model=meta-llama/Llama-3.1-8B num_reqs=4 total_len=4 req_ids=[0, 1, 2, 3]
+```
+
+and `Controller` logs a **cumulative** cycle count per iteration, whose first
+difference is that step's duration. (Reading the count itself as a duration makes
+every step look monotonically longer — a mistake that still produces a plausible
+table.) Together with the trace the run was given, which holds each request's input
+length, that is enough to replay every step: a request with fewer computed tokens
+than its input is prefilling and consumes some of the step's token budget, any
+other is decoding and consumes exactly one token over `computed` tokens of KV.
+
+The replay is self-checking, because the prefill chunks must sum to
+`total_len - n_decode` exactly. `experiments/scripts/npu_exec_step_census.py`
+counts a step that does not balance and `--strict` makes it an error; on the
+pilot run **3610 of 3610 steps balanced**, so the reconstruction is the
+scheduler's own allocation and not an approximation of it.
+
+### The work order's A.2 knob set cannot run this workload
+
+A.2 asks for `--no-enable-chunked-prefill --prioritize-prefill
+--max-num-batched-tokens 1024 --max-num-seqs 128`. Those flags do not compose on
+sharegpt. With chunked prefill off, `max_num_batched_tokens` stops being a step
+budget and becomes a cap on input length: `scheduler.py:164-180` drops requests
+from the batch until the total fits, and when the batch empties it prints
+`[WARNNING] Cannot load the request to batch due to max_num_batched_tokens
+limitation` and returns `None`. A request longer than 1024 tokens can then never
+be scheduled. Half the workload is longer than that — 10 of the first 20 sharegpt
+requests, up to 3452 tokens — so the run livelocks. Measured, not inferred: the
+probe emitted **80,821** of those warnings and was killed at the timeout
+(`outputs/npu_spike/a2_asspec_probe/`, exit 124).
+
+This is not a detail of the flags. The runtime chunks too — its 74 `extend`
+buckets are exactly `chunk <= 1024` against non-zero KV — so "no chunked prefill"
+was never the right description of it. What the runtime does is chunk at
+`bs = 1` and keep prefill steps exclusive of decode, and §1.4 of the work order
+already says no knob combination reproduces that. So A.2 runs **two** one-sided
+approximations instead of one, and each is labelled with what it does not capture:
+
+| variant | knobs | captures | misses |
+| --- | --- | --- | --- |
+| `a2_exclusive` | `--no-enable-chunked-prefill --prioritize-prefill --max-num-seqs 128` | prefill steps exclusive of decode | the 1024-token chunk ceiling; prefill batches are not forced to `bs=1` |
+| `a2_chunk1024` | `--max-num-batched-tokens 1024 --long-prefill-token-threshold 1024 --max-num-seqs 128` | the 1024-token chunk ceiling, one prefill chunk per step | exclusivity — decode is still scheduled first and prefill fills the remainder |
+
+`--max-num-batched-tokens 8192` is kept in the first so that a 3452-token prompt
+still fits in one step; the second keeps chunked prefill on, which is what makes
+1024 a budget again rather than a ceiling on input length.
+
+`lowload_sim_error.py` hardcoded the scheduler knobs and the log level, so it grew
+a `--sim-arg` passthrough (appended to the simulator's command line, last
+occurrence wins). Omitting it leaves every committed invocation byte-identical.
+
+### A.1 — what the simulator's steps look like (E-N1)
+
+Six envelope points, 300 requests each, current knobs, `--log-level INFO`. The runs
+reproduce the committed accuracy domain to the second decimal (+2.25 / +11.00 /
++10.79 / +7.33 / +3.26 / +2.47 against `outputs/card_lowload_300/`), so INFO logging
+changed nothing. **369,270 steps replayed, 0 unbalanced.** Full table:
+`experiments/results/npu_exec_step_census.md`.
+
+| point | steps | mean decode bs | mixed steps | mixed cycle share | prefill bs=1 | decode pad | prefill 128-pad |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| c1.0 | 182269 | 1.07 | 0.08 % | 0.4 % | 100 % | 0.0 % | 7.2 % |
+| c1.99 | 90705 | 2.16 | 0.33 % | 1.4 % | 100 % | 11.3 % | 7.2 % |
+| c3.98 | 45796 | 4.27 | 0.65 % | 2.6 % | 100 % | 29.9 % | 7.2 % |
+| c7.88 | 24063 | 8.13 | 1.24 % | 4.6 % | 100 % | 38.3 % | 7.2 % |
+| c15.3 | 13383 | 14.61 | 2.23 % | 7.4 % | 100 % | 25.7 % | 7.2 % |
+| c15.59 | 13054 | 14.97 | 2.29 % | 7.6 % | 100 % | 30.3 % | 7.2 % |
+
+Three readings, and the first is not the one the step-share column suggests.
+
+**Mixed steps are a small share of steps and almost all of the prefills.** The raw
+share looks negligible — 0.08 % to 2.3 % of steps, 0.4 % to 7.6 % of time — but that
+is because decode steps outnumber prefill steps by three to four orders of magnitude.
+Counted the other way: there are exactly 300 prefill steps at every point, and above
+c1 **299 of them are mixed**. The simulator performs a pure prefill step exactly once
+per run, for the first request, and shares every subsequent prefill with running
+decodes. (At c1 it manages 163 pure ones, because the previous request has usually
+finished.) So on the TTFT path the thing the compiled grid has no bucket for is not
+rare at all: it happens to all but one request. Its small share of *time* is why it is
+nearly invisible in TPOT, and its universality on prefill is a candidate for the
+TTFT gap D17 measured at −32.6 %, which this spike has not otherwise touched.
+
+**Prefill steps are already `bs = 1`, without being asked.** Every one of the 300 has
+a single prefilling request, so the grid's `bs = 1` prefill constraint is never
+violated at these loads — and none of them is chunked either, since 300 prefill steps
+for 300 requests means each prompt fit in one step under the 8192-token budget. The
+work order expected `bs = 1` to be a mechanism; at c1–c16 on sharegpt it has zero
+magnitude. It would bind only where two prefills arrive close enough to coincide.
+
+**The batch-padding ladder never leaves its lower rungs.** Mean decode batch tops out
+at 15, so the artifact ladder and the powers of two are the same ladder here and the
+384 rung STEP 0 found never fires. The padding *amount* is large — up to 38 % of
+decode lanes are padding — which makes its cost (below) the surprise.
+
+### The KV-group grid: none of the three candidates is the rule (E-N1, open)
+
+The work order asked for the group count "both ways", the artifact's real decode edges
+against a uniform 1024-token grid. Building it turned up a third candidate that has a
+better claim than either: above c1 the runtime is on the **kernelwise** pipeline (D90),
+whose attention menu is the union of all 128 compiled buckets — 15 distinct sizes,
+128-spaced to 1024 and powers of two above. That is what a kernelwise step can
+actually address.
+
+| point | mean decode bs | kernelwise menu | decode edges | uniform 1024 | **D17 measured** |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| c1.0 | 1.07 | 1.05 | 1.05 | 1.05 | 1.95 |
+| c1.99 | 2.16 | 1.82 | 1.63 | 1.63 | 2.00 |
+| c3.98 | 4.27 | 2.87 | 2.12 | 2.14 | 2.43 |
+| c7.88 | 8.13 | 4.15 | 2.40 | 2.45 | 2.80 |
+| c15.3 | 14.61 | 5.32 | 2.63 | 2.72 | 3.02 |
+| c15.59 | 14.97 | 5.37 | 2.64 | 2.73 | 3.03 |
+
+**The answer is that none of them is the rule.** D17's measured executions per layer
+*saturate*: 1.95 at batch 2, 3.08 at batch 29, i.e. it stops splitting at about three
+however ragged the batch gets. The kernelwise menu does the opposite — it keeps
+splitting, reaching 5.37 at batch 15 and diverging further above. The two coarse grids
+do track the saturation, and they are indistinguishable from each other on sharegpt
+(2.64 vs 2.73 at c15), but both sit about 0.4 below the measurement.
+
+So the runtime is not issuing one attention execution per distinct compiled bucket in
+the batch. Something caps it near three. **This is STEP C.3's question and it is now a
+sharper one than the work order posed**: not "which of these two grids", but "what caps
+the execution count at three". The prediction in STEP 0 — that the uniform grid would
+"predict many more" groups than the real edges — is **wrong**: on sharegpt the two are
+within 0.1 of each other. It is the menu, which STEP 0 did not consider, that explodes.
+
+### A.2 — the step policy's contribution (E-N2)
+
+Both variants, nine envelope points, 300 requests, `--match offered`, against the
+committed 300-request baseline (`outputs/card_lowload_300/`, `card_highload_300/`).
+
+| env conc | current err % | exclusive | chunk 1024 | Δ exclusive (pp) | Δ chunk (pp) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 1.0 | +2.25 | +2.41 | +2.25 | +0.16 | +0.00 |
+| 1.99 | +11.00 | +11.28 | +10.99 | +0.28 | −0.01 |
+| 3.98 | +10.79 | +11.50 | +10.71 | +0.71 | −0.08 |
+| 7.88 | +7.33 | +8.81 | +7.08 | +1.48 | −0.25 |
+| 15.3 | +3.26 | +6.00 | +2.79 | +2.74 | −0.47 |
+| 15.59 | +2.47 | +5.40 | +1.97 | +2.93 | −0.50 |
+| 29.3 | −3.28 | **+1.28** | −4.01 | +4.56 | −0.73 |
+| 59.2 | −25.17 | −19.81 | −25.94 | +5.37 | −0.77 |
+| 107.2 | −48.59 | −44.23 | −49.21 | +4.36 | −0.62 |
+
+**The 1024-token chunk ceiling contributes nothing**: |Δ| ≤ 0.8 pp at every point,
+and the sign is consistently negative, so it slightly deepens the high-load optimism
+rather than relieving it.
+
+**Exclusivity contributes a real but one-sided amount.** It grows monotonically with
+load, +0.16 pp at c1 to +5.37 pp at c59, which is the right *direction* for the
+high-load optimism — it takes c29.3 from −3.28 % to +1.28 %, across zero. But it is
+the wrong direction everywhere the simulator is already pessimistic: at c3.98 the
+error goes from +10.79 % to +11.50 %. So the step policy cannot be the explanation for
+the low-load half of the curve, and at best it is a third of the high-load half.
+
+**The simulator's throughput ceiling is not a step-policy artifact.** At the c107.2
+arrival rate the sim settles at served concurrency 44.47 under current knobs and 47.77
+under exclusivity — still less than half the measured 107.2. Whatever the sim is
+missing at high load survives both step policies.
+
+### A.3 — what each rule costs (E-N3)
+
+The rebuilt step-cost model reproduces the simulator's own per-step cycles to a median
+ratio of **0.999–1.000** (p05–p95 within 0.0003 at every point), so the re-pricing is
+being done with the simulator's own arithmetic. Percentage points on the sum of decode
+step cost, which is the TPOT proxy; full table in
+`experiments/results/npu_exec_recharge.md`.
+
+| point | current err % | R-pad | R-attn (menu) | R-attn (decode edges) | R-128 (prefill) | R-c1 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| c1.0 | +2.25 | +0.00 | −4.46 | −4.47 | +6.71 | +0.00 |
+| c1.99 | +11.00 | −0.01 | −1.18 | −2.65 | +6.70 | +0.00 |
+| c3.98 | +10.79 | −0.36 | +3.91 | −2.53 | +6.67 | +0.00 |
+| c7.88 | +7.33 | +0.47 | +13.35 | −3.63 | +6.63 | +0.00 |
+| c15.3 | +3.26 | +0.70 | +25.83 | −3.75 | +6.56 | +0.00 |
+| c15.59 | +2.47 | +0.85 | +26.47 | −3.70 | +6.56 | +0.00 |
+
+**R-pad costs essentially nothing, and that is a result rather than a bug.** Up to
+38 % of decode lanes are padding, and re-pricing the step at the padded batch moves it
+by less than 1 pp. Two reasons, and both matter for STEP B. The bundle's dense table is
+nearly flat from 1 to 256 tokens — the card is latency-bound there, `qkv_proj` costs
+45 µs at one token and 51 µs at eight — so rounding the batch up buys almost nothing.
+And the table's points *are* the bucket points: it was measured on the card, which was
+already padding, so the padding is inside the measurement. Charging it again is
+double-counting a cost that is already paid. **P2 of STEP B.1 should not be built** on
+this bundle; the measured ladder already absorbs it.
+
+**R-128 is a flat +6.6 to +6.7 pp on prefill, at every load.** It does not vary because
+it is a property of the token-length distribution, not of the batching, and it sits
+against D17's +10.9 %. It is the only mechanism here with a stable, load-independent
+magnitude, and it applies to TTFT rather than TPOT.
+
+**R-attn cannot be quantified yet, and the range is the finding.** Depending on which
+grouping grid is assumed, the same rule on the same steps reads **−3.7 pp or +26.5 pp**
+at c15. Since A.1 showed that neither grid is the rule, neither number is the
+contribution. Two things are nevertheless established:
+
+1. *The grouping is already in the bundle, once.* `meta.yaml` states each decode row's
+   time is "total decode-attention device time over (forwards × 32)" on sharegpt at
+   that concurrency, so D17's 1.95–3.08 executions are inside the number the simulator
+   looks up. The obvious reading of the work order's R-attn — replace the lookup with a
+   sum over groups — multiplies it in a second time. That miscomputation is reported in
+   the table as "R-attn naive" (+31.6 pp at c15) rather than deleted, because its size
+   is what makes it easy to make and easy to believe.
+2. *What the simulator can be wrong about is the residual diversity*: how ragged this
+   run's batches are versus the sharegpt batches the row was measured on. That is what
+   the two R-attn columns price, and it is the only part of the mechanism that survives
+   a change of workload — which is exactly what STEP B.3's hold-out tests.
+
+### A.4 — the decomposition so far, and the prediction it falsifies
+
+STEP 0 predicted "low-load pessimism (c2–c8) is dominated by R-pad, high-load optimism
+(c25–c76) by R-attn and the step policy". The first half is **falsified**: R-pad is
+worth under 1 pp everywhere and the low-load +11 % is untouched by it. The second half
+is **not yet testable** — A.2 shows the step policy is worth at most +5.4 pp at c59 and
+the sign of R-attn is not known.
+
+What can be said with the six measured points:
+
+| mechanism | magnitude | shape | verdict |
+| --- | --- | --- | --- |
+| step policy, exclusivity | +0.2 to +5.4 pp | grows with load | real but small; **wrong sign at low load** — it makes the +11 % worse |
+| step policy, 1024 chunk ceiling | ≤ 0.8 pp | flat | negligible |
+| R-pad, batch padding | < 1 pp | flat | **already in the bundle**; do not model |
+| R-128, prefill padding | +6.6 pp | flat | real, TTFT only |
+| R-attn, KV diversity | −3.7 to +26.5 pp | grows with load | **undecided until C.3** |
+| mixed steps | 0.4–7.6 % of time, but 299/300 prefills | grows with load | not yet priced; needs B's P1. The TTFT candidate |
+
+The +11 % pessimism at c2–c4 is explained by **none of them**. Every mechanism with a
+settled magnitude is either flat (R-128, which is TTFT) or under 1 pp (R-pad), and the
+one that grows with load has the wrong sign there. That is the residual the work order
+said not to drive to zero, and at c2–c4 it is currently the whole error.
+
+Two things follow for STEP B, both narrowing it. **P2 (decode quantisation) should not
+be built**: its cost is already in the bundle and re-charging it double-counts. **P1
+(step policy) is worth building, but for TTFT rather than TPOT** — A.2 priced its TPOT
+contribution at under 5.4 pp with the wrong sign below c16, while A.1 shows it changes
+the shape of 299 of 300 prefills. That reframes what the prototype is for, and the
+work order's risk row for "no mechanism exceeds 5 pp" — build P1 minimally and close —
+is the row that currently applies.

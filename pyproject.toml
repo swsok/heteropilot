@@ -26,7 +26,12 @@ extend-exclude = [
     "profiler/__main__.py",
     "bench",
     "workloads",
-    "scripts",
+    # Anchored. A bare "scripts" matches by BASENAME at any depth, so it was also
+    # excluding experiments/scripts/ -- 48 fork-owned analysis scripts that
+    # `ruff check .` therefore never saw. The five violations that hid there were
+    # found only by naming the directory explicitly, which bypasses exclusion.
+    # docs/scripts/ stays excluded via the "docs" entry below.
+    "/scripts",
     "docs",
 ]
 

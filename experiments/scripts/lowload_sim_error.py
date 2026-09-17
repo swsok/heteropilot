@@ -237,6 +237,20 @@ def main() -> int:
                          "see score(). The default is what the committed RNGD and "
                          "A40 invocations were built with, so they still run "
                          "verbatim.")
+    ap.add_argument("--sim-arg", action="append", default=[], metavar="ARG",
+                    help="an extra argument appended to the `python -m serving` "
+                         "command line, repeatable. Write it as `--sim-arg=VALUE`: "
+                         "argparse refuses a separate value that itself starts "
+                         "with a dash, which every flag being forwarded does. So "
+                         "`--sim-arg=--log-level --sim-arg=INFO` raises the "
+                         "verbosity and `--sim-arg=--no-enable-chunked-prefill` "
+                         "changes the step policy. A later occurrence of a flag "
+                         "wins over the block below. "
+                         "Added for the NPU execution-model spike, whose STEP A.1 "
+                         "needs the INFO batch log and whose A.2 re-runs the same "
+                         "points under runtime-shaped scheduler knobs; without it "
+                         "both meant a forked copy of this script. Omitting it "
+                         "leaves every committed invocation byte-identical.")
     ap.add_argument("--from-raw", type=Path, default=None,
                     help="re-score a previous run's lowload_sim_error.json instead "
                          "of simulating. The pairing is arithmetic on facts the "
@@ -303,6 +317,9 @@ def main() -> int:
             "--log-level", "WARNING", "--log-interval", "1.0",
             "--no-enable-prefix-caching", "--run-id", f"{args.run_prefix}-{tag}",
         ]
+        # Appended, not merged: argparse on the simulator's side lets the last
+        # occurrence win, so a caller overrides any flag above by naming it again.
+        cmd += args.sim_arg
         print(f"  conc {pt.conc}: offering {rps:.4f} rps", file=sys.stderr)
         with log.open("w") as fh:
             rc = subprocess.run(cmd, cwd=ROOT, stdout=fh, stderr=fh,
