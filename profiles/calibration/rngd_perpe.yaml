@@ -27,6 +27,15 @@ hardware:
     # from the 20-request validation run; duplicating it would put two answers in
     # the loader for one key. This file adds only what did not exist.
     accuracy_domain:
+      # Application-condition fields added 2026-09-17 (domain-scoping S1, D110).
+      # The work order's S1 list names three files and misses this one; it holds
+      # a domain too, so leaving it unstated would make the one abstraction whose
+      # tp is NOT 1 the only one the match test cannot check. `points` untouched
+      # (rule A3). TP=8 is this file's own first line -- "one accelerator is one
+      # PE, a card is a TP-8 island" -- not an inference. Binding unknown, as for
+      # the card-as-device sibling.
+      parallelism: {tp: 8, pp: 1, dp: 1}
+      placement: {islands: 1, device_binding: unknown}
       # The concurrency the per-PE model was first validated at: served 17.342 in
       # the simulator against 17.738 on the hardware, TPOT p50 35.809 vs 28.664 ms
       # (experiments/results/rngd_sim_vs_real_summary.md, recomputed from

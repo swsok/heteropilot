@@ -3510,3 +3510,109 @@ spike.
 `experiments/scripts/rebuild_rngd_bundle_from_edf.py`,
 `planner/util/provenance.py`, `experiments/results/npu_exec_attention_groups.md`,
 `outputs/npu_spike/c3_bucket1024_numa/`, `docs/nodes/npu.md`.
+
+---
+
+## D110 — an accuracy domain answers only for the configuration it was measured under, and a mismatch is its own refusal · Recorded 2026-09-17
+
+*`WORK_ORDER_domain_scoping.md` STEP S1. First entry from the `D110–D119`
+block. It splits one rejection stage into two and adds required application
+conditions to `AccuracyDomain`; D33 is the parent, which built the domain and
+its `refuse` default, and D102 is the sibling that placed the second A40 file.*
+
+**What the code assumed, implicitly.** An accuracy domain was keyed by hardware
+and narrowed, optionally, by `model` / `variant` / `workload_shape` /
+`arrival_process`. Everything else about the deployment it was measured under —
+the parallelism degrees, how many islands of that hardware ran, whether the
+serving process was bound to the accelerators' NUMA node — was not in the
+schema, so it could not be compared, so the domain answered for every candidate
+on that hardware. The assumption underneath is that the simulator's error is a
+property of the *device*. It is not: it is a property of the *deployment*.
+
+**What V3 measured.** `experiments/p2_evidence/results/v3_verdict_accuracy.md`
+took candidate P1 — one A40 island at **tp=4** — to hardware. Its margin came
+from `a40.accuracy.yaml`, which is fitted at **tp=1**, and the operating point
+was comfortably inside that domain's load axis, so every check the planner had
+passed:
+
+| | | |
+| --- | ---: | --- |
+| margin the domain charged at P1's operating point | **1.13 %** | correct arithmetic on the wrong measurement |
+| simulator error actually measured at P1 | **−44.63 %** | p99 TPOT 36.5 ms predicted, 66.0 ms delivered |
+| margin that would have been needed | **~80 %** | the per-point rule under-corrects by ~70× |
+| the same domain's error at tp=1 (V2) | **−1.05 %** | the domain is not wrong, it is being asked the wrong question |
+
+Two further conditions came out of the same measurement and are in the schema
+for the same reason: NUMA binding was worth **1.93×** of throughput on one
+otherwise unchanged deployment (A.3), and the effective all-reduce bandwidth of
+the link that carries TP=4 measured **8.8 GB/s** against a `vendor_spec` 64.0
+(D-entry for that is S3's, not this one).
+
+**How we adapt.**
+
+1. **`AccuracyDomain` gains required application conditions** — `hardware`,
+   `parallelism {tp, pp, dp}`, `placement {islands, device_binding}` — and
+   `check_conditions()`, which compares a candidate's `(hardware, model,
+   variant, workload_shape, arrival_process, tp, pp, dp, islands,
+   device_binding)` against them. **Exactly**, per assignment rather than
+   aggregated over the plan: two islands of one hardware at different
+   parallelism have no honest single `tp`.
+2. **Unstated on either side is UNCHECKED, not matching.** That is D33's
+   convention for `model`/`variant`/`workload_shape`, kept and extended: a
+   domain that does not record what it was measured under cannot refuse
+   anything on that ground, and refusing anyway would report "measured
+   elsewhere" as "measured differently". Skipped fields come back as
+   `condition_warnings` and land in the margin basis as applied on trust.
+3. **New rejection stage `CALIBRATION_CONDITION_MISMATCH`**, split out of
+   `OUTSIDE_CALIBRATION_DOMAIN`, which keeps the load-axis case. Both stay
+   epistemic — unmeasured, never infeasible, never `closest_plan` — but they
+   ask for different experiments, and that is the whole reason to separate
+   them: this one means *measure at this candidate's configuration*, the other
+   means *measure further along the load axis of the configuration we have*.
+   The refusal carries `mismatch_fields` and `required_measurement
+   {hardware, tp, pp, dp, islands, binding}`, which `search` prints as
+   `measure at: {...}`.
+4. **Policy key `--condition-mismatch {refuse,warn}`, default `refuse`**,
+   symmetric with a domain's own `outside_domain: refuse` (D33). `warn` applies
+   the domain anyway and records the mismatch; it exists to measure what the
+   refusal costs, not to plan with, and a test pins its margin to the pre-S1
+   number.
+5. **`Node.device_binding`** (`numa_pinned` / `unpinned` / `unknown`, default
+   `unknown`) is keyed through to the policy **by island**, not by hardware:
+   one cluster can hold a bound and an unbound node of the same accelerator.
+   Nothing in the compiler reads it — it is an application condition, not a
+   performance input.
+6. **`profiles/calibration/index.yaml`** lists every registered domain and its
+   conditions, so a refusal can say what *does* exist. It is a copy, and
+   `test_the_index_matches_the_domain_files` rebuilds it from the files so it
+   cannot become a second truth.
+
+**The four domain files, with no `points` value touched** (rule A3; each
+parallelism value read off the file's own provenance, not inferred):
+`a40.accuracy.yaml` tp=1 islands=1 `unpinned`; `openloop/a40.accuracy.openloop.yaml`
+tp=1 islands=1 `unpinned` (PR #104 re-ran this ladder bound and it agreed to
+0.42 % / 0.37 % / 0.46 % — recorded, not used to relabel the measurement);
+`rngd_card_edf.yaml` tp=1 islands=1 `unknown` (nothing records the host binding
+on the NPU node); `rngd_perpe.yaml` tp=8 islands=1 `unknown` — not in the work
+order's list of three, added because it is the one file whose `tp` is not 1 and
+leaving it unstated would make it the only domain the match test cannot check.
+
+**What this does not do, deliberately.** `arrival_process` is in the match rule
+and the CLI presents `open_loop` (`plan` always replays an arrival trace), but
+no committed A40/RNGD-CARD file states the field, so it is skipped-and-flagged
+today. Filling it in would make `rngd_card_edf.yaml` closed-loop (D19) and
+refuse every RNGD candidate; `model` / `variant` are left unstated for the same
+kind of reason (D33: scoping a domain is a measurement claim). Both move E-A1's
+counts, so they belong to STEP S4's re-run, not to a side effect here.
+
+**The risk is accepted, not mitigated.** With every domain at tp=1, the exact
+match rule refuses most multi-GPU candidates. That is the honest state of the
+measurements, and the refusal now carries `required_measurement`, so the output
+is not "unknown" but "measure here" — which is the point. Relaxing the rule
+(ignoring `tp`, say) is explicitly not done.
+
+**Where.** `planner/predictor/calibration.py`, `planner/optimizer/margin.py`,
+`planner/optimizer/exhaustive.py`, `planner/plan.py`, `planner/inventory.py`,
+`planner/render.py`, `planner/__main__.py`, `profiles/calibration/index.yaml`,
+the four domain files, `tests/test_calibration_condition.py`,
+`experiments/p2_evidence/results/v3_verdict_accuracy.md` §6.3 and A.3.

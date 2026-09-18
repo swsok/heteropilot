@@ -105,6 +105,21 @@ hardware:
       fitted_at_concurrency: 170.56
       outside_domain: widen_error_bars
       source: measured
+      # Application-condition fields added 2026-09-17, recording the configuration
+      # these points were measured under (domain-scoping S1, D110). No `points`
+      # value is touched -- rule A3. TP=1 is not inferred: `provenance.
+      # low_load_points_note` below says "card 0, Llama-3.1-8B bf16 TP=1" and the
+      # envelope in `fitted_from` is `.../bf16/tp1.yaml`.
+      parallelism: {tp: 1, pp: 1, dp: 1}
+      placement:
+        islands: 1
+        # UNPINNED, on the evidence of v3_verdict_accuracy.md A.3 point 3:
+        # "Every A40 measurement before this one -- V2's eight ladder stages,
+        # V3's P1 -- ran unbound". These points are older than that line, so they
+        # are covered by it. The <0.5 % bound-vs-unbound agreement PR #104
+        # established is a result about V2's LADDER (the openloop sibling file),
+        # not about these three points, and is not claimed for them here.
+        device_binding: unpinned
       points:
         - {conc: 4.043, tpot_err_pct: 0.59, ttft_err_pct: -18.66,
            note: "300-req sim at 0.1976 rps vs measured c4.076; conc gap -0.8%"}
