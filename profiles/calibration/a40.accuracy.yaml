@@ -111,6 +111,31 @@ hardware:
       # low_load_points_note` below says "card 0, Llama-3.1-8B bf16 TP=1" and the
       # envelope in `fitted_from` is `.../bf16/tp1.yaml`.
       parallelism: {tp: 1, pp: 1, dp: 1}
+      # OPEN_LOOP, added 2026-09-18 (domain-scoping S4), filled from this file's
+      # own provenance rather than from a default: the header above says
+      # "OPEN-LOOP, deliberately" and names the harness
+      # (`measure_envelope_openloop.py`, an arrival-trace replay, and
+      # `python -m bench run` for the 170.56 point), and `fitted_from` names
+      # `.../Llama-3.1-8B/bf16/tp1.yaml`. `python -m planner plan` always
+      # replays an arrival trace, so this domain MATCHES on this field and
+      # stating it changes nothing here - which is the result, not a
+      # formality. It is stated so that a future closed-loop deployment is
+      # refused rather than silently margined from an open-loop fit.
+      arrival_process: open_loop
+      # bf16 is sourced three ways: `low_load_points_note` ("Llama-3.1-8B bf16
+      # TP=1"), the `.../bf16/tp1.yaml` envelope in `fitted_from`, and the
+      # envelope file's own header.
+      variant: bf16
+      # `model` is deliberately NOT stated, and that is S4's decision rather than
+      # an omission. This repository holds TWO strings for one set of weights:
+      # `meta-llama/Llama-3.1-8B` in the envelope paths and
+      # `NousResearch/Meta-Llama-3.1-8B` in the open-loop A40 domain's own
+      # `provenance.deployment`. `check_conditions` compares strings, so stating
+      # either would refuse a run on the MIRROR NAME rather than on a model
+      # difference. Stating it needs an alias policy that does not exist, and a
+      # false refusal is not a safer error than a missing check - it is a
+      # different wrong answer. Measured: on E-A1 no candidate mismatches on
+      # `model` or `variant`, so nothing here is bought by guessing.
       placement:
         islands: 1
         # UNPINNED, on the evidence of v3_verdict_accuracy.md A.3 point 3:

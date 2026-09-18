@@ -3866,3 +3866,128 @@ another group's bandwidth is not a relaxation),
 `experiments/configs/clusters/pd-rngd-gpu-card-measured-pcie.yaml` (rewritten
 onto the schema; the simulator still receives 8.8 for the tp=4 island, verified),
 `tests/test_link_effective_bw.py`.
+
+## D113 — a domain states the arrival process it was fitted under, and the committed E-A1 numbers need `warn` to reproduce · Recorded 2026-09-18
+
+*`WORK_ORDER_domain_scoping.md` STEP S4, the fourth entry from the `D110–D119`
+block. It fills the two fields D110 deliberately left unstated and records what
+D110's own default does to a committed experiment. Read D110 first, and D19 for
+the arrival-process evidence.*
+
+**What the code did, and it is a reproduction failure rather than a bug.** S1
+ships `condition_mismatch="refuse"` as the planner's default. Every committed
+accuracy domain is fitted at `tp=1`, `dp=1`, one island. E-A1's fixture
+generates candidates at tp up to 4, dp up to 2 and across two islands. So on
+`main` after S1, `experiments/uncertainty/ea1_margin_modes.py` returns **0
+feasible for conditions (c) and (d)** with 276 candidates held, and the
+**50 / 244 / 30** that `ea1_margin_modes.md` publishes — and that D22's
+revalidation is anchored to — cannot be obtained from the committed script at
+all. Nothing is wrong with either; they are answers to different questions, and
+there was no way to ask the older one.
+
+**How we adapt.** Rules (a)–(d) are built with `condition_mismatch="warn"`,
+which applies a domain measured elsewhere under protest and records the
+mismatch. With it they reproduce exactly — 70 / 10 / 50 / 50, and (d)'s
+244 + 30. `warn` exists to measure what the refusal costs, never to plan with;
+the planner's own default is unchanged. A fifth rule **(e)** is the refusal:
+per-operating-point margin, refusing an operating point outside the measured
+range *and* a configuration no domain was measured under.
+
+**What (e) costs on E-A1: every candidate.** 0 feasible, no recommendation,
+**312 of 324 held** as `calibration_condition_mismatch`, 6 outside the domain,
+6 `slo_violated`.
+
+**And the work order's hypothesis was wrong about which field does it.** It
+predicted "A40 `tp>=2` or multi-island candidates are all held". They are, but:
+
+| fields that disagreed | held |
+| --- | ---: |
+| `dp` alone | 108 |
+| `dp` + `islands` | 90 |
+| `arrival_process` alone | 36 |
+| `tp` alone | 24 |
+| `dp` + `islands` + `tp` | 18 |
+| `dp` + `tp` | 12 |
+| `islands` + `tp` | 12 |
+| `islands` alone | 6 |
+| `arrival_process` + `islands` | 6 |
+
+Per field, which is the tally the planner prints: **`dp` 228, `islands` 132,
+`tp` 66, `arrival_process` 42.** So **`tp` accounts for 66 of 312**. The missing scoping axis
+the disclosure describes as "the parallelism degree a domain was fitted at" is
+wider than parallelism: **replication and placement are refused more often than
+parallelism is**, and a measurement programme aimed only at tp would close less
+than a quarter of these.
+
+**The two fields S1 left unstated are now stated, each from its own file's
+provenance and none inferred:**
+
+| domain | `arrival_process` | where it is written down already |
+| --- | --- | --- |
+| `a40.accuracy.yaml` | `open_loop` | its header: "OPEN-LOOP, deliberately"; `measure_envelope_openloop.py`, and `python -m bench run` for the 170.56 point |
+| `rngd_card_edf.yaml` | `closed_loop` | its `bucket_migration.why_unresolved`: "a burst against a closed-loop client… `bench_furiosa_endpoint.py` IGNORES `arrival_time_ns` and drives a fixed concurrency of 64 (D19)" |
+| `rngd_perpe.yaml` | `closed_loop` | its measured half is the RNGD-CARD envelope, whose own file states `closed_loop: true` |
+
+`variant: bf16` on the A40 and per-PE domains, from their `fitted_from` paths
+and headers. **Not on `rngd_card_edf.yaml`**: its one `fitted_from` artifact is
+a percentile table that records no model and no dtype, and the bucket label
+`sharegpt-llama31-8b-20` names a family, not a precision.
+
+**`model` is stated on NONE of them, and that is S4's decision.** This
+repository holds two strings for one set of weights —
+`meta-llama/Llama-3.1-8B` in the envelope paths and
+`NousResearch/Meta-Llama-3.1-8B` in the open-loop A40 domain's own
+`provenance.deployment`. `check_conditions` compares strings, so stating either
+would refuse a run on the MIRROR NAME rather than on a model difference; a
+false refusal is not a safer error than a missing check, it is a different
+wrong answer. Stating it needs an alias policy that does not exist. Measured:
+with `model` and `variant` stated on all three the counts are IDENTICAL
+(312 / 6 / 6) and no candidate mismatches on either field, so guessing buys
+nothing.
+
+**`arrival_process` moved 36 candidates and exactly the right ones.** Held rose
+276 → 312; all 42 candidates it touches are RNGD-touching (12 single-card, 30
+A40+RNGD mixes), 36 of them disagreeing on that field alone. **No A40-only candidate moved**, because
+the A40 domain is open-loop and so is `plan` — the control that says the field
+discriminates rather than refuses.
+
+**The 12 single-card RNGD candidates are the point.** They match every other
+condition and had been held as `outside_calibration_domain` at served
+concurrency 144.6 against a measured [1.02, 76]. They are now held as
+`calibration_condition_mismatch`. The verdict is unchanged and **the measurement
+it asks for is not**: an envelope point above c=76 no longer answers them, an
+open-loop refit does.
+
+**V3's P1 gets its ending.** One A40 island at tp=4 against a domain fitted at
+tp=1: held at every TPOT SLO from 38 to 50 ms, identically, because a condition
+mismatch is decided before any margin exists and no threshold can move it.
+Rules (a)–(d) made 6 / 3 / 6 / 6 false passes there; (e) makes none, and none
+of the correct rejections either. Beside it, S3 (D112) shows the prediction was
+recoverable where the margin was not: at the measured 8.8 GB/s link the same
+candidate predicts 60.09 ms p99 TPOT against 64.616 measured (−7.01 %) and
+served concurrency within 0.73 %.
+
+**A limit, recorded rather than fixed.** A condition mismatch is
+**whole-domain**: `arrival_process` disagreeing withdraws the TTFT and the TPOT
+error together. D19's evidence is narrower — a burst and a spread arrival
+process differ and "the difference lands entirely in TTFT" — so a closed-loop
+domain's TPOT error may survive into an open-loop deployment and refusing it is
+conservative rather than correct. Per-metric condition scoping would express
+that; it is not built and is not in this work order.
+
+**A trap closed on the way past.** `v3_slo_sweep.py` wrote
+`experiments/p2_evidence/results/v3_slo_sweep.json` — a **committed** artifact —
+with no way to redirect it, the same shape as the `eb1_regret_vs_budget.py`
+overwrite `docs/HANDOVER.md` §3 records. It now takes `--out-json`, and `--ea1`
+(a record other than the committed one) **requires** it.
+
+**Where.** `profiles/calibration/{a40.accuracy,rngd_card_edf,rngd_perpe}.yaml`
+(`arrival_process`, `model`, `variant`; no `points` value touched, rule A3),
+`experiments/uncertainty/ea1_margin_modes.py` (rule (e), `warn` for (a)–(d),
+the scope built as `planner/__main__.py` builds it),
+`experiments/p2_evidence/v3_slo_sweep.py` (the (e) column, `--ea1`,
+`--out-json`), `experiments/p2_evidence/v3_select_candidates.py`
+(`load(ea1_path)`, `row_for(..., rules)`),
+`experiments/uncertainty/results/ea1_s4_condition_refuse.md`,
+`experiments/p2_evidence/results/v3_addendum_s4.md`,
+`tests/test_domain_conditions_stated.py`.
