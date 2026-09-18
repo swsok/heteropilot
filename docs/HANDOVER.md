@@ -1,6 +1,9 @@
 # HeteroPilot — current state and what to do next
 
-> **This is the live handover.** Rewritten 2026-09-10 at the end of
+> **This is the live handover.** Last updated **2026-09-18** with
+> `WORK_ORDER_domain_scoping.md` S1 and S2 (PRs #106 and #107, both on `main` at
+> `3cbc8a0`) — see §2.10 for where that work order stands and what S3 is. The
+> body below was rewritten 2026-09-10 at the end of
 > `WORK_ORDER_rps_aware.md` rev 2 (STEP 0–6, PRs #60–#72). **The whole stack is on
 > `main` as of `3aadc2b`** and every `feat/rps-step*` branch, plus
 > `spike/d14-asym-tp`, has been deleted — `origin` holds `main` and nothing else.
@@ -28,6 +31,15 @@
 pytest -q     681 passed in 183.17s         # NPU node, 2026-09-11
 ruff check .  All checks passed!
 mypy          Success: no issues found in 38 source files
+```
+
+**Gates on `main` at `3cbc8a0`**, A40 node, after the domain-scoping S1+S2 merges
+(§2.10):
+
+```
+pytest -q     976 passed, 1 skipped in 107.80s   # A40 node, 2026-09-18
+ruff check .  All checks passed!
+mypy          Success: no issues found in 47 source files
 ```
 
 622 of those are the count this handover was written at, on the NPU node. One of
@@ -110,6 +122,14 @@ it deliberately). Tier 1 efficiency fits: `a40.efficiency.yaml`,
 `rtxpro6000.efficiency.yaml`. All bucket-scoped — **do not extrapolate outside the
 bucket named in the file.**
 
+Since 2026-09-17 every accuracy domain also **states the configuration it was
+measured under** — hardware, `parallelism {tp,pp,dp}`, `placement {islands,
+device_binding}` — and `profiles/calibration/index.yaml` lists them all. A
+candidate that differs on one of those is refused as
+`calibration_condition_mismatch`: unmeasured **at its own configuration**, which
+is a different gap from an operating point past the end of the load axis, and it
+asks for a different measurement. D110, §2.10.
+
 **Two new artifact kinds, and the rule attached to each:**
 
 | artifact | what it is | the refusal it carries |
@@ -165,6 +185,70 @@ not a gap to paper over.
 ---
 
 ## 2. Next work, in priority order
+
+### 2.10 `WORK_ORDER_domain_scoping.md` — **S1 and S2 done 2026-09-17/18 (PRs #106, #107), S3 next**
+
+The newest item and the front of the queue. It exists because STEP V3 of
+`WORK_ORDER_p2_regular_spec_evidence.md` (PR #98) found two defects that the
+disclosure's own claims rest on. **S1–S5 are CPU work, any node. S6 needs the A40
+node, S7 the RNGD node; both are optional.**
+
+**S1 — an accuracy domain answers only for the configuration it was measured
+under (D110, PR #106).** V3 deployed P1, one A40 island at **tp=4**, whose margin
+came from `a40.accuracy.yaml`, a domain fitted at **tp=1**. The operating point
+was inside that domain's load axis and the arithmetic was right, so every check
+passed: **1.13 %** charged where the measured error was **−44.63 %**, about a 70×
+under-correction, while the same domain is right to −1.05 % at the tp it was
+fitted at. `AccuracyDomain` now carries `hardware` / `parallelism` / `placement`,
+`check_conditions()` compares them per island assignment, and a mismatch is its
+own rejection stage carrying `mismatch_fields` and `required_measurement` — the
+disclosure's "additional measurement condition" output. Policy key
+`--condition-mismatch {refuse,warn}`, default `refuse`. **No `points` value was
+touched** (rule A3); the four domain files gained only the conditions their own
+provenance records.
+
+**S2 — a grade carries a default range (D111, PR #107).** An input whose own
+(kind, grade) sourced no width had no range, so no regret, so no place in the
+measurement plan at all. That is what happened to `link_bw:pcie-a40a-02` — the
+`vendor_spec` link that explained the whole of V3's −43.4 % TPOT error, for
+**0.114 h** of measurement. `grades.yaml` gains `defaults:`, every range built
+from one is labelled `range_source: default` end to end, `user_defined` still has
+none on purpose, and `MeasurementPlan.inert` is new because with ranges where
+there were none an input can be *decidable and worth zero*.
+
+**What S2 measured is not what it predicted, and it is the reason S3 matters.**
+The hypothesis was that the V3 link would rank first. It does not rank at all: it
+moves from `undecidable` to **`inert`**. A link bandwidth reaches a predicted
+metric through exactly one path — the prefill→decode KV transfer — and the E-A1
+corpus was built with `enable_pd=False`, so nothing crosses any link. **The
+registry prices a link as a KV transfer; the error V3 measured came from the same
+link carrying a TP all-reduce inside one island.**
+(`experiments/uncertainty/results/s2_default_ranges.md`.)
+
+**Next, in order:**
+
+- **S3 (CPU, ~1 day) — redefine the LINK_BW item** as the *effective collective
+  bandwidth of the deployment*, keyed by `(link_id, collective, msg_size_class,
+  device_binding)`, with a `measurements:` array on the cluster link schema and
+  the vendor value left untouched (A3). **The measurements already exist**: PR
+  #100 put 8.8 GB/s against a `vendor_spec` 64.0 in
+  `outputs/p2_evidence/link*/`. They come from `experiments/p2_evidence/link_probe.py`
+  (torch), **not** `nccl-tests`, so S6(ii) is still open if the work order's tool
+  is required.
+- **S4 (CPU, ~0.5 day) — re-run E-A1 under S1 and re-judge V3's P1.** The counts
+  will move and the moved counts are the disclosure's numbers; the existing
+  50/244/30 stays as the rule-(d) result and the new table is printed beside it.
+  S4 also owns the two fields S1 deliberately left unstated (`arrival_process`,
+  `model`/`variant`): filling them makes `rngd_card_edf.yaml` closed-loop (D19)
+  and refuses every RNGD candidate, which is a decision about the counts and not
+  a side effect.
+- **S5 (CPU, ~0.5 day)** — `docs/uncertainty_planner.md` is stale (it describes
+  B4 as unrun and resimulate as unimplemented); `patent2_evidence_map.md` needs
+  V3's ending and the patent-3 line.
+- **S6 (A40 node, half a day, optional)** — NUMA-pinned P1 re-measurement,
+  `nccl-tests all_reduce_perf` on 4 GPUs and a TP=2 run inside one NV4 pair.
+- **S7 (RNGD node, optional)** — V3-R, the only source for §6's verdict-flip
+  numbers, since the margin is ≈21 % only in the RNGD region.
 
 ### 2.0 `WORK_ORDER_npu_exec_model_spike.md` — **STEP 0/A/B/C done 2026-09-17, conclusion (ii)**
 
@@ -583,6 +667,32 @@ Recorded because they are not discoverable from the code.
   candidates hang costs `candidates × timeout ÷ workers` *per point*, and the
   envelope cache is written only when a point joins — kill a run mid-point and its
   completed simulations are lost, not resumed.
+
+**Re-running an experiment after a policy change**
+
+- **S1's `refuse` empties a measurement plan, and it looks like the plan is
+  broken.** Every committed accuracy domain is fitted at `tp=1` (only
+  `rngd_perpe.yaml` is `tp=8`), so on any fixture whose candidates are not tp=1 —
+  including the E-A1 corpus, whose winner is a tp=4 A40 island —
+  `--condition-mismatch refuse` holds every candidate, leaves no recommendation
+  to flip, and reports **every** uncertain input as undecidable. That is D110
+  working, not a regression, and it is what S4 has to quantify. An experiment
+  that asks a different question (S2 asked what the default ranges change) must
+  pass `--condition-mismatch warn` and say so in its output header; the
+  measurement-plan numbers are otherwise about S1 and nothing else.
+- **`--out-dir` does not redirect `--out-json`.** `eb1_regret_vs_budget.py`
+  defaults its JSON to the fixed `outputs/uncertainty/eb1/eb1_regret_vs_budget.json`
+  — a **committed** artifact — whatever `--out-dir` says. A re-run overwrote it on
+  2026-09-17 and it was restored from git. Pass `--out-json` explicitly, and
+  `git status outputs/` after any experiment re-run.
+- **Reproduce an E-B result with the invocation the result md records, not the
+  script's defaults.** E-B1's committed numbers are `--exhaustive --k 1 2 3`, 231
+  degraded sets; without `--exhaustive` it samples ten sets per k, which is a
+  different experiment whose numbers read like a regression.
+- **E-B3 is the one E-B experiment that re-simulates.** Its committed result
+  records 34.8 minutes for that side; a re-run on a shared A40 node was cut off at
+  90 minutes with ~306 simulations done. Give it an idle machine and
+  `experiments/scripts/livelock_watch.sh`.
 
 **Measurement**
 
