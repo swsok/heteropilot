@@ -1,0 +1,308 @@
+{
+  "fixture": {
+    "service": "examples/service_specs/llama31-8b.yaml",
+    "cluster": "experiments/configs/clusters/pd-rngd-gpu-card.yaml",
+    "num_requests": 300,
+    "seed": 42,
+    "islands": [
+      {
+        "id": "furiosa-rngd-card-node_rngd0",
+        "backend": "furiosa",
+        "size": 1
+      },
+      {
+        "id": "furiosa-rngd-card-node_rngd1",
+        "backend": "furiosa",
+        "size": 1
+      },
+      {
+        "id": "cuda-a40-node_a40a",
+        "backend": "cuda",
+        "size": 4
+      },
+      {
+        "id": "cuda-a40-node_a40b",
+        "backend": "cuda",
+        "size": 4
+      }
+    ],
+    "sweep": [
+      {
+        "ttft_slo_max_ms": 64000.0,
+        "feasible": true,
+        "generated": 468,
+        "evaluated": 468,
+        "recommended": {
+          "plan_id": "hp-00051",
+          "arch": "aggregated",
+          "backend_mix": "agg[cuda:tp4]",
+          "accelerators": 4,
+          "tokens_per_joule": 2.5954323001631323,
+          "slo_goodput_rps": 5.279963373257342,
+          "p99_ttft_ms": 15070.10466225,
+          "p99_tpot_ms": 35.58226791,
+          "average_power_w": 1292.5101785714285,
+          "slo_attainment": 1.0
+        },
+        "reason": ""
+      },
+      {
+        "ttft_slo_max_ms": 8000.0,
+        "feasible": false,
+        "generated": 468,
+        "evaluated": 468,
+        "recommended": null,
+        "reason": "no currently available configuration satisfies all constraints"
+      },
+      {
+        "ttft_slo_max_ms": 500.0,
+        "feasible": false,
+        "generated": 468,
+        "evaluated": 468,
+        "recommended": null,
+        "reason": "no currently available configuration satisfies all constraints"
+      }
+    ]
+  },
+  "bucket": "in_lt1024-out_ge512-rps_lt20",
+  "shape": "in_lt1024-out_ge512",
+  "grid": 5,
+  "budget_hours": null,
+  "condition_mismatch": "warn",
+  "recommended_candidate": "cuda-a40-node_a40a-tp4-dp1-s128-t8192",
+  "arms": {
+    "with_defaults": {
+      "grades_digest": "940e3b60fe4c2b24e899c50efd70c28237231e8fb6eb73ae3523310644634554",
+      "defaults": 9,
+      "defaults_dropped": false,
+      "ranked": [
+        "sim_error:A40/in_lt1024-out_ge512-rps_lt20",
+        "sim_error:RNGD-CARD/sharegpt-llama31-8b-20"
+      ],
+      "undecidable": [],
+      "inert": [
+        "link_bw:pcie-a40a-02",
+        "link_bw:pcie-a40b-02",
+        "link_lat:pcie-a40a-02",
+        "link_lat:pcie-a40b-02"
+      ],
+      "covered_regret": 15852.0,
+      "rows": [
+        {
+          "input_id": "sim_error:A40/in_lt1024-out_ge512-rps_lt20",
+          "kind": "sim_error",
+          "grade": "measured",
+          "nominal": 0.011288148489136266,
+          "range": "[0.008369, 0.01421] fraction",
+          "range_source": "sourced",
+          "where": "ranked",
+          "rank": 1,
+          "delta_regret": 13210.0,
+          "regret_per_hour": 322195.1219512195,
+          "cost_hours": 0.041
+        },
+        {
+          "input_id": "sim_error:RNGD-CARD/sharegpt-llama31-8b-20",
+          "kind": "sim_error",
+          "grade": "measured",
+          "nominal": 0.1028663855274929,
+          "range": "[0.01261, 0.1931] fraction",
+          "range_source": "sourced",
+          "where": "ranked",
+          "rank": 2,
+          "delta_regret": 2642.0,
+          "regret_per_hour": 64439.0243902439,
+          "cost_hours": 0.041
+        },
+        {
+          "input_id": "link_bw:pcie-a40a-02",
+          "kind": "link_bw",
+          "grade": "vendor_spec",
+          "nominal": 64.0,
+          "range": "[8, 64] gbps",
+          "range_source": "default",
+          "where": "inert",
+          "rank": null,
+          "delta_regret": null,
+          "regret_per_hour": null,
+          "cost_hours": 0.114
+        },
+        {
+          "input_id": "link_bw:pcie-a40b-02",
+          "kind": "link_bw",
+          "grade": "vendor_spec",
+          "nominal": 64.0,
+          "range": "[8, 64] gbps",
+          "range_source": "default",
+          "where": "inert",
+          "rank": null,
+          "delta_regret": null,
+          "regret_per_hour": null,
+          "cost_hours": 0.114
+        },
+        {
+          "input_id": "link_lat:pcie-a40a-02",
+          "kind": "link_lat",
+          "grade": "vendor_spec",
+          "nominal": 2000.0,
+          "range": "[2,000, 1.6e+04] ns",
+          "range_source": "default",
+          "where": "inert",
+          "rank": null,
+          "delta_regret": null,
+          "regret_per_hour": null,
+          "cost_hours": null
+        },
+        {
+          "input_id": "link_lat:pcie-a40b-02",
+          "kind": "link_lat",
+          "grade": "vendor_spec",
+          "nominal": 2000.0,
+          "range": "[2,000, 1.6e+04] ns",
+          "range_source": "default",
+          "where": "inert",
+          "rank": null,
+          "delta_regret": null,
+          "regret_per_hour": null,
+          "cost_hours": null
+        }
+      ],
+      "v3_input_rank": null,
+      "v3_input_where": "inert"
+    },
+    "without_defaults": {
+      "grades_digest": "940e3b60fe4c2b24e899c50efd70c28237231e8fb6eb73ae3523310644634554",
+      "defaults": 0,
+      "defaults_dropped": true,
+      "ranked": [
+        "sim_error:A40/in_lt1024-out_ge512-rps_lt20",
+        "sim_error:RNGD-CARD/sharegpt-llama31-8b-20"
+      ],
+      "undecidable": [
+        "link_bw:pcie-a40a-02",
+        "link_bw:pcie-a40b-02",
+        "link_lat:pcie-a40a-02",
+        "link_lat:pcie-a40b-02"
+      ],
+      "inert": [],
+      "covered_regret": 15852.0,
+      "rows": [
+        {
+          "input_id": "sim_error:A40/in_lt1024-out_ge512-rps_lt20",
+          "kind": "sim_error",
+          "grade": "measured",
+          "nominal": 0.011288148489136266,
+          "range": "[0.008369, 0.01421] fraction",
+          "range_source": "sourced",
+          "where": "ranked",
+          "rank": 1,
+          "delta_regret": 13210.0,
+          "regret_per_hour": 322195.1219512195,
+          "cost_hours": 0.041
+        },
+        {
+          "input_id": "sim_error:RNGD-CARD/sharegpt-llama31-8b-20",
+          "kind": "sim_error",
+          "grade": "measured",
+          "nominal": 0.1028663855274929,
+          "range": "[0.01261, 0.1931] fraction",
+          "range_source": "sourced",
+          "where": "ranked",
+          "rank": 2,
+          "delta_regret": 2642.0,
+          "regret_per_hour": 64439.0243902439,
+          "cost_hours": 0.041
+        },
+        {
+          "input_id": "link_bw:pcie-a40a-02",
+          "kind": "link_bw",
+          "grade": "vendor_spec",
+          "nominal": 64.0,
+          "range": "unbounded",
+          "range_source": "sourced",
+          "where": "undecidable",
+          "rank": null,
+          "delta_regret": null,
+          "regret_per_hour": null,
+          "cost_hours": 0.114
+        },
+        {
+          "input_id": "link_bw:pcie-a40b-02",
+          "kind": "link_bw",
+          "grade": "vendor_spec",
+          "nominal": 64.0,
+          "range": "unbounded",
+          "range_source": "sourced",
+          "where": "undecidable",
+          "rank": null,
+          "delta_regret": null,
+          "regret_per_hour": null,
+          "cost_hours": 0.114
+        },
+        {
+          "input_id": "link_lat:pcie-a40a-02",
+          "kind": "link_lat",
+          "grade": "vendor_spec",
+          "nominal": 2000.0,
+          "range": "unbounded",
+          "range_source": "sourced",
+          "where": "undecidable",
+          "rank": null,
+          "delta_regret": null,
+          "regret_per_hour": null,
+          "cost_hours": null
+        },
+        {
+          "input_id": "link_lat:pcie-a40b-02",
+          "kind": "link_lat",
+          "grade": "vendor_spec",
+          "nominal": 2000.0,
+          "range": "unbounded",
+          "range_source": "sourced",
+          "where": "undecidable",
+          "rank": null,
+          "delta_regret": null,
+          "regret_per_hour": null,
+          "cost_hours": null
+        }
+      ],
+      "v3_input_rank": null,
+      "v3_input_where": "undecidable"
+    }
+  },
+  "provenance": {
+    "git_commit": "0d388f4e0a49ba7f0d4219b1238f545658d5344c",
+    "git_dirty": true,
+    "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
+    "vllm_version": null,
+    "backend_version": null,
+    "model_revision": null,
+    "hardware_profile_hash": null,
+    "cluster_spec_hash": null,
+    "service_spec_hash": null,
+    "dataset_hash": null,
+    "random_seed": null,
+    "command": "s2_default_ranges.py --cache-dir outputs/uncertainty/ea1/cache --out experiments/uncertainty/results/s2_default_ranges_table.md --json-out outputs/uncertainty/s2/s2_default_ranges.json",
+    "timestamp": "2026-09-18T01:29:24.105973+00:00",
+    "python_version": "3.10.20",
+    "platform": "Linux-5.4.0-216-generic-x86_64-with-glibc2.31",
+    "hostname": "s8",
+    "cpu_count": 64,
+    "accelerators": {
+      "cuda": {
+        "count": 8,
+        "model": "NVIDIA A40"
+      },
+      "rngd_cards": null,
+      "atom_devices": 0
+    },
+    "cpu_placement": {
+      "affinity_cpus": 64,
+      "numa_nodes": 2,
+      "numa_node_of_affinity": [
+        0,
+        1
+      ]
+    }
+  }
+}

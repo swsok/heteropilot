@@ -379,10 +379,11 @@ def test_a_measurement_plan_ranks_the_placeholder_links_of_a_mixed_cluster(
         {i.input_id for i in plan.items}
         | {i.input_id for i in plan.uncovered}
         | set(plan.undecidable)
+        | set(plan.inert)
     )
     assert seen == {i.id for i in output.uncertain_inputs.items}
     text = render(output)
-    assert "decision regret" in text
+    assert "decision regret" in text or "moves the recommendation" in text
 
 
 def test_a_budget_defers_what_does_not_fit(monkeypatch, domain_file) -> None:

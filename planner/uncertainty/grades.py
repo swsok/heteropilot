@@ -5,10 +5,19 @@ come from. Absolute rule A1 is enforced mechanically here rather than trusted:
 
 * a rule that carries a number must carry a non-empty ``source``; the loader
   rejects the table otherwise, so an unattributed range cannot reach a plan;
-* a (kind, grade) combination the table does not mention is ``unbounded`` -
-  never a guessed default (§2.2's closing rule).
+* a (kind, grade) combination the table does not mention has no ROW-level
+  width; what it falls back to is the grade's *default* range, and a grade with
+  no default is ``unbounded`` (§2.2's closing rule, as amended by the
+  domain-scoping work order S2 / deviations D111).
 
 The *numbers* live in the YAML; only the *formulas* live in code.
+
+**Defaults are a second layer, never a merged one.** A row in ``defaults:``
+says how wide an input of a given grade is assumed to be when nothing measured
+its own width. Every default carries its own ``source`` exactly as a rule does,
+and a range built from one is tagged ``range_source: default`` all the way to
+the rendered measurement plan, so a policy assumption is never read as this
+input's own measurement (D111).
 """
 
 from __future__ import annotations
@@ -90,10 +99,92 @@ class GradeRule(_Strict):
         return self
 
 
+class DefaultRule(str, enum.Enum):
+    """How a *default* turns a nominal value into a range.
+
+    Two shapes, because the registry holds two shapes of quantity. A bandwidth,
+    a latency or a profile multiplier is a SCALE - what is uncertain is the
+    factor reality sits at, so its default is relative. A ``sim_error`` item is
+    an ERROR FRACTION - an additive quantity that can be zero or negative, on
+    which a relative width is meaningless (and, at a nominal of zero, empty).
+    """
+
+    #: ``[nominal * lo, nominal * hi]``, endpoints ordered afterwards so a
+    #: negative nominal does not invert the interval.
+    RELATIVE = "relative"
+    #: ``[nominal - half_width, nominal + half_width]`` in the item's own unit.
+    ABSOLUTE = "absolute"
+
+
+class GradeDefault(_Strict):
+    """One row of ``defaults:``: how wide an input of a grade is ASSUMED to be.
+
+    Reached only when the (kind, grade) rule produces no width of its own. A
+    row may name a ``kind`` to override the grade-level default for that kind -
+    which `link_lat` needs, because a spec bandwidth is an upper bound on
+    reality while a spec latency is a lower one.
+
+    Absolute rule A1 still holds, in the form the domain-scoping work order S2
+    sets: a default is a stated policy with a cited basis, never an invented
+    number, and it is labelled as a default wherever it is used (D111).
+    """
+
+    grade: str
+    #: Empty means "any kind"; a value narrows the row to that kind and wins
+    #: over the grade-level row.
+    kind: str = ""
+    rule: DefaultRule = DefaultRule.RELATIVE
+    #: RELATIVE only: multipliers on the nominal. `lo` may exceed 1 - a spec
+    #: latency is a lower bound, so reality is at or above it.
+    lo: float | None = Field(default=None, gt=0)
+    hi: float | None = Field(default=None, gt=0)
+    #: ABSOLUTE only: half-width in the item's own unit.
+    half_width: float | None = Field(default=None, gt=0)
+    source: str = ""
+    note: str = ""
+
+    @property
+    def id(self) -> str:
+        return f"{self.kind or '*'}/{self.grade}"
+
+    @model_validator(mode="after")
+    def _shape_and_source(self) -> GradeDefault:
+        if not self.source.strip():
+            raise ValueError(
+                f"grades.yaml default {self.id}: carries a width but no source - "
+                f"an unattributed default range is forbidden (absolute rule A1). "
+                f"A grade with no defensible default has NO ROW, which is how it "
+                f"stays undecidable."
+            )
+        if self.rule is DefaultRule.RELATIVE:
+            if self.lo is None or self.hi is None:
+                raise ValueError(f"grades.yaml default {self.id}: rule relative needs lo and hi")
+            if self.hi <= self.lo:
+                raise ValueError(
+                    f"grades.yaml default {self.id}: relative range needs hi > lo, "
+                    f"got [{self.lo}, {self.hi}]"
+                )
+            if self.half_width is not None:
+                raise ValueError(
+                    f"grades.yaml default {self.id}: rule relative takes no half_width"
+                )
+        else:
+            if self.half_width is None:
+                raise ValueError(f"grades.yaml default {self.id}: rule absolute needs half_width")
+            if self.lo is not None or self.hi is not None:
+                raise ValueError(f"grades.yaml default {self.id}: rule absolute takes no lo/hi")
+        return self
+
+
 class GradesTable(_Strict):
     """The whole of ``grades.yaml``, indexed by (kind, grade)."""
 
     rules: list[GradeRule] = Field(default_factory=list)
+    #: The fallback layer (S2, D111): what an input of a grade is assumed to be
+    #: worth when its own row sources no width. A grade absent from here has no
+    #: default, which is what keeps "cannot be decided before measuring" a real
+    #: category rather than a formality.
+    defaults: list[GradeDefault] = Field(default_factory=list)
     #: sha256 of the file this was read from; empty for a synthesised table.
     digest: str = ""
     path: str = ""
@@ -105,7 +196,39 @@ class GradesTable(_Strict):
             if rule.id in seen:
                 raise ValueError(f"grades.yaml: duplicate row {rule.id}")
             seen.add(rule.id)
+        seen_defaults: set[str] = set()
+        for default in self.defaults:
+            if default.id in seen_defaults:
+                raise ValueError(f"grades.yaml: duplicate default {default.id}")
+            seen_defaults.add(default.id)
         return self
+
+    def without_defaults(self) -> GradesTable:
+        """The same table with the defaults layer removed (pre-S2 behaviour).
+
+        For the one caller that needs both answers from one file: an experiment
+        comparing what the default ranges changed. Planning always uses the
+        table as loaded.
+        """
+        return self.model_copy(update={"defaults": []})
+
+    def default_for(self, kind: str, grade: str) -> GradeDefault | None:
+        """The default range for a (kind, grade), or None when none is defined.
+
+        A kind-specific row wins over the grade-level one; None is the answer
+        that keeps an input undecidable, and it is returned rather than a
+        zero-width stand-in so the caller cannot accidentally treat "no policy"
+        as "no uncertainty".
+        """
+        fallback: GradeDefault | None = None
+        for default in self.defaults:
+            if default.grade != grade:
+                continue
+            if default.kind == kind:
+                return default
+            if not default.kind and fallback is None:
+                fallback = default
+        return fallback
 
     def rule_for(self, kind: str, grade: str) -> GradeRule:
         """The row for a (kind, grade), or an unbounded stand-in.
@@ -192,7 +315,12 @@ def load_grades(path: str | Path | None = None) -> GradesTable:
     path = Path(path) if path is not None else DEFAULT_GRADES_PATH
     raw = _read_mapping(path, "grades.yaml")
     table = GradesTable.model_validate(
-        {"rules": raw.get("rules", []), "digest": prov.hash_file(path) or "", "path": str(path)}
+        {
+            "rules": raw.get("rules", []),
+            "defaults": raw.get("defaults", []),
+            "digest": prov.hash_file(path) or "",
+            "path": str(path),
+        }
     )
     return table
 

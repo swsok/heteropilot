@@ -1,0 +1,293 @@
+feasible: false
+service_model: meta-llama/Llama-3.1-8B
+cluster_id: pd-rngd-gpu-card
+recommended: null
+alternatives: []
+unscored: []
+rejected_summary:
+  outside_calibration_domain: 324
+evaluated_candidates: 324
+generated_candidates: 324
+reason: 'every simulated candidate was undecidable: all 324 of them run at an operating
+  point outside the measured accuracy domain'
+closest_plan: null
+violated_constraints: []
+suggestions:
+- no candidates were generated at all; check the cluster spec and profiles
+- '324 candidate(s) could not be judged: their operating point lies outside every
+  measured accuracy domain (or their hardware has none), so no margin applies. They
+  are undecidable, not infeasible (outside_calibration_domain).'
+- 'the strongest of them by minimize_energy is furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t8192
+  (5.005e+04) at an unknown operating point - measure the envelope there to decide
+  it, or set outside_domain: widen_error_bars to accept an extrapolation. Reason:
+  the predictor reported no operating point for this run, so no accuracy domain can
+  be consulted - the candidate is undecidable, not infeasible'
+provenance:
+  git_commit: 4690f3510ce8ee56d28f39a4ed1fe43d7f752cbc
+  git_dirty: true
+  llmservingsim_commit: 2c2042ce4bf1b0283ebeed1db95db6f25e3e7511
+  vllm_version: null
+  backend_version: null
+  model_revision: null
+  hardware_profile_hash: e85d5f866ec847c6eab1755182b964a3966bac3dcaeefbebf0935e8306954f54
+  cluster_spec_hash: a663850533202d6b34fe38e7126592163fecae323daa7e42693c9289ccec4b14
+  service_spec_hash: 860c8a567b759ac948d4ae16951a5c878e7654201d9e89b08bf21e6e38f4880c
+  dataset_hash: e9dd5a8476087bdbeb6cdcfb0cfa762092abea25b417e13cd158e0bded37d540
+  random_seed: 42
+  command: __main__.py plan --service examples/service_specs/llama31-8b.yaml --cluster
+    experiments/configs/clusters/pd-rngd-gpu-card.yaml --num-requests 300 --seed 42
+    --cache-dir outputs/uncertainty/ea1/cache --accuracy-domain --measurement-plan
+    --output outputs/uncertainty/s2/plan_defaults.yaml
+  timestamp: '2026-09-17T07:17:18.686806+00:00'
+  python_version: 3.10.20
+  platform: Linux-5.4.0-216-generic-x86_64-with-glibc2.31
+  hostname: s8
+  cpu_count: 64
+  accelerators:
+    cuda:
+      count: 8
+      model: NVIDIA A40
+    rngd_cards: null
+    atom_devices: 0
+  cpu_placement:
+    affinity_cpus: 64
+    numa_nodes: 2
+    numa_node_of_affinity:
+    - 0
+    - 1
+  workload:
+    path: /tmp/hp-4y270or3/workload.jsonl
+    num_requests: 300
+    random_seed: 42
+    total_input_tokens: 262617
+    total_output_tokens: 190920
+    horizon_s: 30.301
+  gpu_memory_utilization: 0.9
+  activation_reserve_gb: 0.0
+  enable_prefix_caching: false
+  bound_pruning: true
+  enable_pd: false
+  surrogate: null
+  top_k: null
+  uncertainty:
+    policy: accuracy_domain
+    calibration_files: ./profiles/calibration/*.yaml
+    bucket: in_lt1024-out_ge512-rps_lt20
+    shape: in_lt1024-out_ge512
+    grades_digest: 940e3b60fe4c2b24e899c50efd70c28237231e8fb6eb73ae3523310644634554
+    costs_digest: 709992a76cdaf902c788fa17a646366d97a00b7dd1445220ab5ea0b85670156c
+    domains:
+      A40:
+        conc_min: 4.043
+        conc_max: 170.56
+        outside_domain: widen_error_bars
+        workload_shape: null
+      RNGD:
+        conc_min: 1.832
+        conc_max: 79.028
+        outside_domain: widen_error_bars
+        workload_shape: null
+      RNGD-CARD:
+        conc_min: 1.02
+        conc_max: 76.0
+        outside_domain: widen_error_bars
+        workload_shape: null
+  topology:
+    link_bw_gbps: 12.9
+    link_latency_ns: 20000.0
+    basis: 'Level-1 bottleneck over 4 island(s): min bandwidth, max latency. The simulator
+      has no link graph, so contention_group and per-link energy are dropped here
+      (deviations D3).'
+    assumptions: []
+    model_level: 1
+    path_aware: false
+  accuracy_domain:
+  - A40
+  - RNGD
+  - RNGD-CARD
+  envelope_prefilter: null
+  manual_margin_percent:
+    ttft: 0.0
+    tpot: 0.0
+  profile_tier: measured
+  profile_tiers:
+    cuda-a40-node_a40a: measured
+    cuda-a40-node_a40b: measured
+    furiosa-rngd-card-node_rngd0: measured
+    furiosa-rngd-card-node_rngd1: measured
+  envelope_cache:
+    hits: 324
+    misses: 0
+caveats:
+- 'Prefix caching is disabled for every candidate. With it enabled the simulator''s
+  prefix-cache memory grows monotonically and the run dies on any device small enough
+  to saturate (docs/deviations.md D12). Consequence: ServiceSpec.traffic.prefix_share_ratio
+  has no effect on these predictions, and TTFT is pessimistic for workloads with genuinely
+  shared prefixes.'
+- 324 candidate(s) produced no readable operating point, so no accuracy-domain margin
+  could be applied and they were left undecided (outside_calibration_domain)
+profile_tier: measured
+profile_tiers:
+  cuda-a40-node_a40a: measured
+  cuda-a40-node_a40b: measured
+  furiosa-rngd-card-node_rngd0: measured
+  furiosa-rngd-card-node_rngd1: measured
+uncertain_inputs:
+  items:
+  - id: link_bw:pcie-a40a-02
+    kind: link_bw
+    grade: vendor_spec
+    nominal: 64.0
+    range:
+      lo: 8.0
+      hi: 64.0
+      unit: gbps
+      source: defaults:*/vendor_spec
+      range_source: default
+    cost:
+      method: experiments/scripts/gpu_host_bandwidth.py / rngd_device_facts.py
+      hours: 0.114
+      exclusive: true
+      source: 'DERIVED, not logged. Neither probe writes a timestamped log and neither
+        artifact records an elapsed time, so this is computed from the committed script
+        constants and the artifacts'' own parameters. GPU probe: sustained phase 12
+        rows x 3 trials x 2 directions x duration_s 5.0 = 360 s, plus a parallel phase
+        of ~45 s and single-stream of ~1 s, = ~410 s = 0.114 h.
+
+        '
+    affects:
+    - cuda-a40-node_a40a
+    note: link PCIE node_a40a/gpu0 -> node_a40a/gpu2; source=vendor_spec
+  - id: link_lat:pcie-a40a-02
+    kind: link_lat
+    grade: vendor_spec
+    nominal: 2000.0
+    range:
+      lo: 2000.0
+      hi: 16000.0
+      unit: ns
+      source: defaults:link_lat/vendor_spec
+      range_source: default
+    cost:
+      method: not implemented
+      hours: null
+      exclusive: false
+      source: ''
+    affects:
+    - cuda-a40-node_a40a
+    note: link PCIE node_a40a/gpu0 -> node_a40a/gpu2; source=vendor_spec
+  - id: link_bw:pcie-a40b-02
+    kind: link_bw
+    grade: vendor_spec
+    nominal: 64.0
+    range:
+      lo: 8.0
+      hi: 64.0
+      unit: gbps
+      source: defaults:*/vendor_spec
+      range_source: default
+    cost:
+      method: experiments/scripts/gpu_host_bandwidth.py / rngd_device_facts.py
+      hours: 0.114
+      exclusive: true
+      source: 'DERIVED, not logged. Neither probe writes a timestamped log and neither
+        artifact records an elapsed time, so this is computed from the committed script
+        constants and the artifacts'' own parameters. GPU probe: sustained phase 12
+        rows x 3 trials x 2 directions x duration_s 5.0 = 360 s, plus a parallel phase
+        of ~45 s and single-stream of ~1 s, = ~410 s = 0.114 h.
+
+        '
+    affects:
+    - cuda-a40-node_a40b
+    note: link PCIE node_a40b/gpu0 -> node_a40b/gpu2; source=vendor_spec
+  - id: link_lat:pcie-a40b-02
+    kind: link_lat
+    grade: vendor_spec
+    nominal: 2000.0
+    range:
+      lo: 2000.0
+      hi: 16000.0
+      unit: ns
+      source: defaults:link_lat/vendor_spec
+      range_source: default
+    cost:
+      method: not implemented
+      hours: null
+      exclusive: false
+      source: ''
+    affects:
+    - cuda-a40-node_a40b
+    note: link PCIE node_a40b/gpu0 -> node_a40b/gpu2; source=vendor_spec
+  - id: sim_error:A40/in_lt1024-out_ge512-rps_lt20
+    kind: sim_error
+    grade: measured
+    nominal: 0.011288148489136266
+    range:
+      lo: 0.008369194449837815
+      hi: 0.014207102528434717
+      unit: fraction
+      source: sim_error/measured
+      range_source: sourced
+    cost:
+      method: serve the model, then one bench run (bench_furiosa_endpoint.py or vLLM
+        bench)
+      hours: 0.041
+      exclusive: true
+      source: 'MEASURED (bench leg only). outputs/rngd_envelope/edf/real_c{16,32,64,128}
+        .json field `wall_s`: 146.65 / 94.526 / 130.768 / 132.818 s, self-timed by
+        bench_furiosa_endpoint.py (perf_counter_ns at :128, emitted as "wall_s" at
+        :143). The largest, 146.65 s, is 0.041 h; the mean is 0.035 h.
+
+        '
+    affects:
+    - cuda-a40-node_a40a
+    - cuda-a40-node_a40b
+    note: 'tpot binds: mean +0.0113, p95_abs 0.0142, n=5; ttft mean +0.0184, p95_abs
+      0.0197'
+  - id: sim_error:RNGD-CARD/sharegpt-llama31-8b-20
+    kind: sim_error
+    grade: measured
+    nominal: 0.1028663855274929
+    range:
+      lo: 0.012609350128105018
+      hi: 0.19312342092688078
+      unit: fraction
+      source: sim_error/measured
+      range_source: sourced
+    cost:
+      method: serve the model, then one bench run (bench_furiosa_endpoint.py or vLLM
+        bench)
+      hours: 0.041
+      exclusive: true
+      source: 'MEASURED (bench leg only). outputs/rngd_envelope/edf/real_c{16,32,64,128}
+        .json field `wall_s`: 146.65 / 94.526 / 130.768 / 132.818 s, self-timed by
+        bench_furiosa_endpoint.py (perf_counter_ns at :128, emitted as "wall_s" at
+        :143). The largest, 146.65 s, is 0.041 h; the mean is 0.035 h.
+
+        '
+    affects:
+    - furiosa-rngd-card-node_rngd0
+    - furiosa-rngd-card-node_rngd1
+    note: 'ttft binds: mean +0.1029, p95_abs 0.1931, n=5; tpot mean +0.0191, p95_abs
+      0.0347'
+  measured_count:
+    link_bw: 10
+    link_lat: 10
+    power: 4
+    profile: 4
+  grades_digest: 940e3b60fe4c2b24e899c50efd70c28237231e8fb6eb73ae3523310644634554
+  costs_digest: 709992a76cdaf902c788fa17a646366d97a00b7dd1445220ab5ea0b85670156c
+measurement_plan:
+  items: []
+  budget_hours: null
+  covered_regret: 0.0
+  uncovered: []
+  undecidable:
+  - link_bw:pcie-a40a-02
+  - link_lat:pcie-a40a-02
+  - link_bw:pcie-a40b-02
+  - link_lat:pcie-a40b-02
+  - sim_error:A40/in_lt1024-out_ge512-rps_lt20
+  - sim_error:RNGD-CARD/sharegpt-llama31-8b-20
+  inert: []
+  exclusive_hours: 0.0

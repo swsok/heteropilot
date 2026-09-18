@@ -233,7 +233,7 @@ def _build_uncertainty(args, spec, cluster, profiles, islands, provenance):
         override = {"requested": requested, "used": bucket}
     shape = shape_of_bucket(bucket)
 
-    grades, costs = load_grades(), load_costs()
+    grades, costs = load_grades(getattr(args, "grades", None)), load_costs()
     registry = build_registry(
         cluster, profiles, islands, calibration, grades, spec, costs,
     )
@@ -1327,6 +1327,13 @@ def build_parser() -> argparse.ArgumentParser:
                            "closest_plan. `warn` applies the domain anyway and records "
                            "the mismatch - for measuring what the refusal costs, not "
                            "for planning. Only meaningful with --accuracy-domain.")
+    plan.add_argument("--grades", default=None, metavar="GRADES_YAML",
+                      help="read the source-grade table from this file instead of "
+                           "profiles/uncertainty/grades.yaml. The one reason to: "
+                           "comparing what the grade DEFAULT ranges change, by "
+                           "pointing at a copy with the `defaults:` section removed "
+                           "(domain-scoping S2, D111). Recorded in provenance either "
+                           "way through `grades_digest`.")
     plan.add_argument("--calibration-bucket", default=None, metavar="CANONICAL_KEY",
                       help="Override the workload bucket the scalar calibration is "
                            "looked up under (and the token-mix shape a scoped domain "

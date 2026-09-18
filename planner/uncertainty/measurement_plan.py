@@ -14,6 +14,15 @@ Three rules the work order sets and this enforces:
   It has no regret to compare because nothing bounds it, so it goes in its own
   list under "cannot be decided before measuring", which is a stronger statement
   than any ranking.
+
+Since the domain-scoping work order S2 (D111), that last list is much shorter
+and means something narrower. An input whose own (kind, grade) sources no width
+now takes the GRADE'S DEFAULT range from ``grades.yaml`` and is ranked on it,
+marked ``range_source: default``; only a grade with no default row at all is
+undecidable. The path this closes cost a real measurement: V3's
+``link_bw:pcie-a40a-02`` was a ``vendor_spec`` link with no sourced range, so it
+sat in "cannot be decided" and out of the ranking, while being the input that
+explained a -43.4 % TPOT error for 0.114 h of measurement.
 """
 
 from __future__ import annotations
@@ -53,6 +62,11 @@ class MeasurementItem(_Strict):
     #: True when `--resimulate-top` checked this item by really simulating both
     #: ends of its range, so `delta_regret` is not a first-order stand-in.
     resimulated: bool = False
+    #: ``default`` when the regret was computed over the grade's default range
+    #: rather than a width measured for this input (S2, D111). Shown wherever
+    #: the rank is: it is the difference between "this is worth 3 hours" and
+    #: "this is worth 3 hours IF the assumed range is right".
+    range_source: str = "sourced"
     note: str = ""
 
 
@@ -66,9 +80,18 @@ class MeasurementPlan(_Strict):
     covered_regret: float = 0.0
     #: Worth doing, but the budget ran out.
     uncovered: list[MeasurementItem] = Field(default_factory=list)
-    #: Inputs with no sourced range: no regret can be defined, so they are
-    #: neither ranked nor budgeted. Listed by id with their reason.
+    #: Inputs with no range at all - their own (kind, grade) sources no width
+    #: AND their grade has no default (S2, D111). No regret can be defined, so
+    #: they are neither ranked nor budgeted. Listed by id.
     undecidable: list[str] = Field(default_factory=list)
+    #: Inputs that WERE swept and moved nothing: a defined regret of zero.
+    #: §2.5 keeps them out of the queue - an input the sweep cannot move is not
+    #: worth a server-hour - but they are not undecidable either, and the
+    #: difference is the whole of what a measurement would buy. Before S2 most
+    #: of these were undecidable for want of a range, so the two answers were
+    #: indistinguishable; now they are not, and each input lands in exactly one
+    #: of items / uncovered / undecidable / inert.
+    inert: list[str] = Field(default_factory=list)
     #: Hours the planned items occupy a device exclusively, which a shared lab
     #: schedules differently from wall-clock.
     exclusive_hours: float = 0.0
@@ -99,6 +122,10 @@ def build(
     worthwhile = [
         s for s in sensitivities if s.delta_regret is not None and s.delta_regret > 0
     ]
+    inert = [
+        s.input_id for s in sensitivities
+        if s.delta_regret is not None and s.delta_regret <= 0
+    ]
 
     def order(s: Sensitivity) -> tuple:
         per_hour = s.regret_per_hour
@@ -123,6 +150,7 @@ def build(
             flip=s.flip,
             approximation=s.approximation,
             resimulated=s.resimulated,
+            range_source=s.range_source,
             note=s.note,
         )
         cost = item.cost_hours or 0.0
@@ -141,6 +169,7 @@ def build(
         covered_regret=sum(i.delta_regret for i in planned),
         uncovered=deferred,
         undecidable=undecidable,
+        inert=inert,
         exclusive_hours=sum(
             (i.cost_hours or 0.0) for i in planned if i.exclusive
         ),

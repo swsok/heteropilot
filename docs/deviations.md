@@ -3616,3 +3616,95 @@ is not "unknown" but "measure here" — which is the point. Relaxing the rule
 `planner/render.py`, `planner/__main__.py`, `profiles/calibration/index.yaml`,
 the four domain files, `tests/test_calibration_condition.py`,
 `experiments/p2_evidence/results/v3_verdict_accuracy.md` §6.3 and A.3.
+
+---
+
+## D111 — an input with no sourced width left the measurement plan entirely; the grade now carries a default · Recorded 2026-09-17
+
+*`WORK_ORDER_domain_scoping.md` STEP S2, the second entry from the same
+`D110–D119` block D110 opens. It amends how absolute rule A1 of
+`WORK_ORDER_uncertainty_planner.md` is enforced, so read that rule and D33
+first.*
+
+**What the code did.** `grades.yaml` maps a (kind, grade) to a rule that turns a
+nominal value into a range. A combination it does not cover, or covers with
+`rule: unbounded`, produced `Range(lo=None, hi=None)`, and everything downstream
+followed honestly from there: `sensitivity.analyze` returns `delta_regret=None`
+for an unbounded item, `measurement_plan.build` puts it in `undecidable`, and the
+renderer prints "CANNOT BE DECIDED BEFORE MEASURING". The item never competed
+for a server-hour, because comparing it to one that had a range would have meant
+inventing its width.
+
+**What that cost, measured.** V3 traced a −43.4 % TPOT error on an A40 TP=4
+deployment to one input: `link_bw:pcie-a40a-02`, the PCIe path the all-reduce
+crosses, `source: vendor_spec` at 64.0 GB/s against 8.8 GB/s measured. That
+input was `vendor_spec`, `link_bw/vendor_spec` is an `unbounded` row (and the
+row explains at length why no honest `r_min` could be formed for it), so the
+planner's own measurement plan had listed it as undecidable and ranked nothing.
+`costs.yaml` prices the measurement at **0.114 h**. The queue the operator was
+handed could not recommend the six minutes that would have explained the whole
+error.
+
+**How we adapt.** `grades.yaml` gains a second layer, `defaults:`, reached only
+when the (kind, grade) rule sources no width of its own:
+
+1. **A default is per grade**, with an optional `kind` override. `vendor_spec`
+   is `[1/8, 1] × nominal`, from V3's own measurement (8.8 / 64.0 = 0.1375,
+   rounded down; a spec bandwidth is an upper bound). `link_lat/vendor_spec`
+   overrides it with `[1, 8]`, because the grade-level row is the wrong shape
+   for a latency — a spec latency is a *lower* bound, and applying the
+   bandwidth row would have claimed every link beats its datasheet.
+   `analytical`, `calibrated` and `placeholder`/`unknown` take E2's measured
+   MAPEs (0.3888 / 0.2951 / 0.4288). `sim_error` takes **absolute** half-widths
+   (0.02 for `measured`, from the two repeat measurements in the repo; 0.446 for
+   unfitted hardware, from V3's own worst end-to-end error), because an error
+   fraction is additive and may be zero — a relative width on a nominal of 0.0
+   is exactly the silent zero the registry exists to refuse.
+2. **`user_defined` has no default, deliberately.** A what-if is the user's
+   number, not a population, so "cannot be decided before measuring" stays a
+   real category rather than a formality.
+3. **A default is labelled, everywhere.** `Range.range_source` is `sourced` or
+   `default`, and it travels to `Sensitivity`, to `MeasurementItem`, to the
+   registry table (`~` and its legend) and to the plan's rows
+   (`[default range]`). A default never replaces a sourced width, and a range
+   built by a caller — which is how E-B1/B2/B3 supply their degraded intervals —
+   is `sourced` and untouched by this table.
+4. **Absolute rule A1 still holds, in the form S2 sets it**: every default
+   carries its own `source` and the loader refuses one that does not. What
+   changed is not "a number may now be invented" but "a stated policy with a
+   cited basis may stand in for a missing measurement, while saying that it is
+   one".
+
+**A fourth bucket, because the third stopped covering.** With ranges where there
+were none, an input can now be *decidable and worthless*: swept over its range,
+it moves the recommendation by exactly zero. §2.5 keeps it out of the queue, it
+is not undecidable, and before S2 it had been hidden inside `undecidable` for
+want of a range. `MeasurementPlan.inert` names it, so every registry input lands
+in exactly one of `items` / `uncovered` / `undecidable` / `inert` — a property
+`tests/test_cli_accuracy_domain.py` asserts.
+
+**What the measurement showed, which is not what S2 predicted.** The work order's
+hypothesis was that `link_bw:pcie-a40a-02` would rank **first**. On the E-A1
+corpus it does not rank at all: it moves from `undecidable` to **`inert`**
+(`experiments/uncertainty/results/s2_default_ranges.md`, both arms of the same
+run). The reason is not the range. It is that a link bandwidth reaches a
+predicted metric through exactly one path — `apply_pd_transfer_cost`'s
+prefill→decode KV transfer (`perturb._reprice_transfer`) — and the E-A1 corpus
+was generated with `enable_pd=False`, so it holds no P/D candidate for any link
+to be on the path of. A link that carries a TP all-reduce *inside* an island has
+no route into any predicted metric at all.
+
+So S2 changes the diagnosis from "we cannot say what this link is worth" to "we
+can say, and on this corpus it is worth nothing" — which is a real improvement
+and is still not the V3 answer. **What is missing is the LINK_BW item's
+meaning**, which is STEP S3's subject: the registry prices a link as a KV
+transfer, while the error V3 measured came from the same link carrying a
+collective inside one island.
+
+**Where.** `profiles/uncertainty/grades.yaml` (`defaults:`),
+`planner/uncertainty/grades.py` (`GradeDefault`, `DefaultRule`,
+`GradesTable.default_for` / `without_defaults`),
+`planner/uncertainty/registry.py` (`_default_range`, `Range.range_source`),
+`planner/uncertainty/sensitivity.py`, `planner/uncertainty/measurement_plan.py`
+(`inert`), `planner/render.py`, `planner/__main__.py` (`--grades`),
+`tests/test_default_range.py`, `experiments/uncertainty/s2_default_ranges.py`.

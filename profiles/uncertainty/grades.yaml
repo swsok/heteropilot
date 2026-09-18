@@ -1,14 +1,21 @@
 # Source grades -> error ranges (WORK_ORDER_uncertainty_planner.md §2.2).
 #
-# Every number in this file has a source, and a (kind, grade) combination that
-# is absent, or present with `rule: unbounded`, is UNBOUNDED - not a plausible
-# default (absolute rule A1). `planner/uncertainty/grades.py` rejects the table
-# if a row carries a number without a `source`, so the rule is enforced rather
-# than trusted. No number from this file is hardcoded in code; only the
-# formulas are.
+# Every number in this file has a source. `planner/uncertainty/grades.py`
+# rejects the table if a row carries a number without a `source`, so the rule is
+# enforced rather than trusted. No number from this file is hardcoded in code;
+# only the formulas are.
+#
+# A (kind, grade) that is absent from `rules:`, or present with
+# `rule: unbounded`, sources NO WIDTH OF ITS OWN. Since the domain-scoping work
+# order S2 (deviations D111) that is no longer the end of the road: it falls
+# through to the grade's row in `defaults:` at the foot of this file, and only a
+# grade with no default row is unbounded - "cannot be decided before measuring".
+# A default is a stated policy with a cited basis, and every range built from
+# one is labelled `range_source: default` wherever it is shown, so it is never
+# read as this input's own measurement.
 #
 # Rules:
-#   unbounded            no sourced width exists
+#   unbounded            no sourced width of its own; falls through to `defaults:`
 #   symmetric_fraction   [nominal*(1-value), nominal*(1+value)]
 #   ratio_floor          [nominal*r_min, nominal]  (a spec is an upper bound)
 #   calibration_derived  width comes from the calibration store, not this file
@@ -258,3 +265,165 @@ rules:
     grade: user_defined
     rule: unbounded
     unit: fraction
+
+# ---------------------------------------------------------------------------
+# DEFAULT RANGES BY GRADE (domain-scoping work order S2; deviations D111)
+#
+# The rows above say what a (kind, grade)'s width IS. These say what it is
+# ASSUMED to be when the row above sources no width - which, before S2, sent the
+# item out of the measurement plan's ranking entirely and into "cannot be
+# decided before measuring". V3 is why that path had to go: `link_bw:
+# pcie-a40a-02` was a `vendor_spec` with no sourced range, so it was undecidable
+# and unranked, while it was in fact the input that explained the whole of a
+# -43.4 % TPOT error and cost 0.114 h to measure.
+#
+# WHAT A DEFAULT IS, AND IS NOT. It is a stated policy with a cited basis, and
+# it is labelled `range_source: default` from the registry through to the
+# rendered plan, so it is never read as this input's own measurement. It is NOT
+# a measurement of this input, and it is NOT a claim that the true value lies in
+# the interval - it is the interval the planner will search when nothing better
+# exists. A grade with no defensible default has NO ROW here, and stays
+# undecidable; `user_defined` is that case, deliberately (a what-if is the
+# user's number, not a population).
+#
+# The magnitudes are settings. S2's purpose is to remove the "no range -> no
+# rank" path, not to justify these values; each is sourced to the widest
+# relevant observation the repository actually holds, and tightening one is a
+# later job that needs measurements, not an argument.
+#
+# `rule: relative` multiplies the nominal (a bandwidth, a latency, a profile or
+# power multiplier). `rule: absolute` adds either side of it, for `sim_error`,
+# whose nominal is an error fraction that may be zero or negative and on which a
+# multiplicative width would be meaningless.
+# ---------------------------------------------------------------------------
+
+defaults:
+  - grade: vendor_spec
+    rule: relative
+    lo: 0.125
+    hi: 1.0
+    source: >
+      experiments/p2_evidence/results/v3_verdict_accuracy.md A.1 and A.4:
+      the TP=4 all-reduce effective bus bandwidth over the A40 node's PCIe path
+      measured 8.8 GB/s against the 64.0 GB/s `source: vendor_spec` written on
+      the same link (ratio 0.1375), reproduced on a second GPU group
+      (outputs/p2_evidence/link/tp4.json, link47/tp4.json).
+    note: >
+      n = 1 link, on one node, for one collective. Rounded DOWN to 1/8 rather
+      than fitted, and the upper end is the spec itself because a vendor
+      bandwidth is an upper bound: no deployment exceeded its spec here, and the
+      D2/D7 history is of specs being optimistic rather than conservative. Read
+      as "a spec bandwidth may be worth as little as an eighth of itself in
+      deployment", which is what was measured, not as a distribution.
+
+  - grade: vendor_spec
+    kind: link_lat
+    rule: relative
+    lo: 1.0
+    hi: 8.0
+    source: >
+      The same A.1 measurement, read in the direction latency runs: a link that
+      delivers 1/8 of its spec bandwidth moves a message of a given size in 8x
+      the spec-implied time.
+    note: >
+      The grade-level vendor_spec default is the WRONG SHAPE for latency and
+      would have claimed reality sits between an eighth of the spec and the spec
+      - i.e. faster than the datasheet. A spec latency is a LOWER bound. No link
+      latency in this repository is measured (see the link_lat/vendor_spec row
+      above), so this row transports a bandwidth observation onto a latency
+      axis; it is the weakest default here and is marked as such wherever an
+      item cites it.
+
+  - grade: analytical
+    rule: relative
+    lo: 0.6112418899357999
+    hi: 1.3887581100642001
+    source: >
+      outputs/tier_validation/e2/e2_budget_pareto.json, condition A_tier0,
+      mape_vs_tier2 = 0.38875811006420014 over 10,091 hold-out rows with 0
+      measured points. The same number the profile/analytical row above uses.
+    note: >
+      Generalises that row to the kinds that have no row of their own. It
+      carries the same three caveats: a MEAN not a p95, per-OPERATOR not
+      end-to-end, and A40 / Llama-3.1-8B bf16 TP=1 only.
+
+  - grade: calibrated
+    rule: relative
+    lo: 0.7049407018550206
+    hi: 1.2950592981449794
+    source: >
+      outputs/tier_validation/e2/e2_budget_pareto.json, condition
+      B_attention_anchors, mape_vs_tier2 = 0.2950592981449794 (200 anchors,
+      9,891 hold-out rows). The same number the profile/calibrated row uses.
+    note: Same caveats as the analytical default.
+
+  - grade: placeholder
+    rule: relative
+    lo: 0.5711773330349045
+    hi: 1.4288226669650955
+    source: >
+      outputs/tier_validation/e2/e2_budget_pareto.json, condition
+      C_uniform_anchors, mape_vs_tier2 = 0.4288226669650955 - the WORST of the
+      four conditions, and the one docs/tier0_calibration.md reads as "a badly
+      anchored Tier 1 is worse than Tier 0".
+    note: >
+      A placeholder is a number nobody stands behind, so the widest grounded
+      error the repository has measured is the floor of what it could be wrong
+      by, not an estimate of it. This default is certainly too NARROW for the
+      proxy case the registry exists to catch (ascend-sim-proxy borrows a
+      measured GPU bundle for an NPU); it buys that item a rank in the queue,
+      which is the point, and the item's own note still says the error is
+      unknown.
+
+  - grade: unknown
+    rule: relative
+    lo: 0.5711773330349045
+    hi: 1.4288226669650955
+    source: >
+      Same as the placeholder default (E2 C_uniform_anchors, 0.4288226669650955).
+    note: >
+      `unknown`, `placeholder` and `user_defined` share rank 0 in the grade
+      scale, but not a default: the first two are "nobody measured this", which
+      this row prices, while the third is a deliberate what-if whose range is
+      the user's to state.
+
+  - grade: measured
+    kind: sim_error
+    rule: absolute
+    half_width: 0.02
+    source: >
+      Repeat spread of a re-measurement, bounded by the two repeats this
+      repository holds: PR #104 re-ran the A40 accuracy ladder with explicit
+      NUMA binding and reproduced its three points to 0.42 % / 0.37 % / 0.46 %,
+      and D94 re-ran the RNGD bucket1024 grid bound and reproduced it to
+      <= 0.24 %.
+    note: >
+      2 % is ~4x the worse of those two, deliberately: both repeats were of a
+      quiet lab with one workload, and the quantity this widens is an END-TO-END
+      error fraction, not the device cycles D94 measured. Reached only when a
+      calibration bucket's p95_abs_error equals its |mean_error|, i.e. when the
+      store records a spread of exactly zero - which is a sample-count artifact,
+      not a perfect simulator.
+
+  - grade: placeholder
+    kind: sim_error
+    rule: absolute
+    half_width: 0.446
+    source: >
+      experiments/p2_evidence/results/v3_verdict_accuracy.md §6.3: the largest
+      end-to-end simulator error measured against hardware in this repository,
+      -44.63 % on p99 TPOT (predicted 36.547 ms, delivered 66.012 ms), A40
+      TP=4 open-loop.
+    note: >
+      The item this reaches is `sim_error:<hw>/unfitted` - hardware whose
+      simulator error has NEVER been measured, nominal 0.0. A relative width
+      would be zero there, which is the one answer that is certainly wrong. So
+      the width is absolute and is the worst error the repository has actually
+      seen; n = 1, and a hardware nobody has calibrated can of course be worse.
+
+  - grade: unknown
+    kind: sim_error
+    rule: absolute
+    half_width: 0.446
+    source: Same as the sim_error/placeholder default (v3_verdict_accuracy.md §6.3).
+    note: Kept in step with the grade-level unknown/placeholder pairing above.

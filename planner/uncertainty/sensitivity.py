@@ -87,6 +87,10 @@ class Sensitivity(_Strict):
     resimulated: bool = False
     #: Hours from costs.yaml, for B3's dR/cost ordering. None sorts last.
     cost_hours: float | None = None
+    #: ``default`` when the swept interval is the grade's default rather than
+    #: this input's own sourced width (S2, D111). The regret is then a regret
+    #: over an assumed range, and every consumer says so.
+    range_source: str = "sourced"
     note: str = ""
 
     @property
@@ -316,10 +320,11 @@ def _analyze_one(
     item: UncertainInput, points: list[_Swept], penalty: float
 ) -> Sensitivity:
     cost_hours = item.cost.hours if item.cost is not None else None
+    range_source = item.range.range_source
     if not points:
         return Sensitivity(
             input_id=item.id, kind=item.kind.value, flip=False, delta_regret=None,
-            cost_hours=cost_hours,
+            cost_hours=cost_hours, range_source=range_source,
             note=(
                 "range is unbounded, so there is no interval to sweep and no regret "
                 "to define - this input cannot be decided before measuring it"
@@ -353,10 +358,15 @@ def _analyze_one(
     )
     if notes:
         note += "; " + "; ".join(dict.fromkeys(notes))
+    if range_source == "default":
+        note += (
+            f"; the interval is the {item.grade.value} DEFAULT from grades.yaml "
+            f"({item.range.source}), not a measured width of this input"
+        )
     return Sensitivity(
         input_id=item.id, kind=item.kind.value, flip=flipped,
         delta_regret=delta_regret, grid=grid, approximation=approximation,
-        cost_hours=cost_hours, note=note,
+        cost_hours=cost_hours, range_source=range_source, note=note,
     )
 
 
@@ -390,6 +400,7 @@ def analyze(
                 input_id=item.id, kind=item.kind.value, flip=False,
                 delta_regret=None,
                 cost_hours=item.cost.hours if item.cost is not None else None,
+                range_source=item.range.range_source,
                 note="no recommendation to flip: the search found nothing feasible",
             )
             for item in registry.items

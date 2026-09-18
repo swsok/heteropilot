@@ -31,7 +31,7 @@ from planner.uncertainty import (
     load_costs,
     load_grades,
 )
-from planner.uncertainty.grades import GradeRule, GradesTable, RangeRule
+from planner.uncertainty.grades import DefaultRule, GradeRule, GradesTable, RangeRule
 from planner.util import tier as tierutil
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -93,28 +93,65 @@ def test_link_items_cover_exactly_the_non_measured_links(llama_spec, grades, cos
     assert reg.total_for(UncertainKind.LINK_BW) == sum(sources.values())
 
 
-def test_placeholder_links_are_unbounded_and_vendor_spec_follows_grades(
+def _expected_range(grades, item):
+    """What grades.yaml says this item's range must be - rule first, then default.
+
+    The test computes it the way the registry is specified to, from the table
+    rather than from a copy of its numbers, so editing grades.yaml moves the
+    expectation with it instead of breaking an unrelated assertion.
+    """
+    rule = grades.rule_for(item.kind.value, item.grade.value)
+    if rule.rule is RangeRule.RATIO_FLOOR and rule.r_min is not None:
+        return (item.nominal * rule.r_min, item.nominal, "sourced")
+    if rule.rule is RangeRule.SYMMETRIC_FRACTION and rule.value is not None:
+        return (item.nominal * (1 - rule.value), item.nominal * (1 + rule.value), "sourced")
+    default = grades.default_for(item.kind.value, item.grade.value)
+    if default is None:
+        return None
+    if default.rule is DefaultRule.ABSOLUTE:
+        ends = (item.nominal - default.half_width, item.nominal + default.half_width)
+    else:
+        ends = tuple(sorted((item.nominal * default.lo, item.nominal * default.hi)))
+    if ends[1] <= ends[0]:
+        return None
+    return (ends[0], ends[1], "default")
+
+
+def _assert_range_follows_the_table(grades, item) -> None:
+    expected = _expected_range(grades, item)
+    if expected is None:
+        assert item.range.is_unbounded
+        return
+    lo, hi, range_source = expected
+    assert not item.range.is_unbounded
+    assert item.range.lo == pytest.approx(lo)
+    assert item.range.hi == pytest.approx(hi)
+    assert item.range.range_source == range_source
+
+
+def test_placeholder_and_vendor_spec_links_follow_grades_rules_then_defaults(
     llama_spec, grades, costs
 ) -> None:
-    """Which links get a finite range is decided by grades.yaml, not by this test."""
+    """Which links get a finite range is decided by grades.yaml, not by this test.
+
+    Since S2 (D111) that decision has two layers: the (kind, grade) rule, and -
+    only when it sources no width - the grade's default. A link that takes the
+    default is still uncertain and still ranked; what changes is that it is
+    ranked at all.
+    """
     sources = _link_sources(PD_FIXTURE)
     reg = _registry(PD_FIXTURE, llama_spec, grades, costs)
     bw = {i.id: i for i in reg.by_kind(UncertainKind.LINK_BW)}
 
     placeholders = [i for i in bw.values() if i.grade is Grade.PLACEHOLDER]
     assert len(placeholders) == sources[Source.PLACEHOLDER.value]
-    assert all(i.range.is_unbounded for i in placeholders)
+    for item in placeholders:
+        _assert_range_follows_the_table(grades, item)
 
     vendor = [i for i in bw.values() if i.grade is Grade.VENDOR_SPEC]
     assert len(vendor) == sources[Source.VENDOR_SPEC.value]
-    rule = grades.rule_for("link_bw", "vendor_spec")
-    if rule.rule is RangeRule.RATIO_FLOOR:
-        for item in vendor:
-            assert not item.range.is_unbounded
-            assert item.range.hi == pytest.approx(item.nominal)
-            assert item.range.lo == pytest.approx(item.nominal * rule.r_min)
-    else:
-        assert all(i.range.is_unbounded for i in vendor)
+    for item in vendor:
+        _assert_range_follows_the_table(grades, item)
 
 
 def test_no_item_has_zero_width(llama_spec, grades, costs) -> None:
@@ -178,18 +215,28 @@ def test_calibrated_hardware_gets_one_item_per_bucket(llama_spec, grades, costs)
     assert item.range.hi - item.range.lo == pytest.approx(2 * half)
 
 
-def test_hardware_with_no_calibration_is_unbounded_not_silently_zero(
+def test_hardware_with_no_calibration_is_never_silently_zero(
     llama_spec, grades, costs
 ) -> None:
     """Today `CalibrationModel.margins` returns (0, 0) for unfitted hardware.
 
     That is indistinguishable from "the simulator is exact here", which is the
-    gap STEP A3 closes. The registry must say unbounded instead.
+    gap STEP A3 closes. Before S2 the registry said unbounded; since S2 it says
+    unbounded OR the grade's default, and the one thing it must never say is a
+    width of zero - a nominal of 0.0 with no interval reads exactly like the
+    silent zero this item exists to refuse.
     """
     reg = _registry(PD_FIXTURE, llama_spec, grades, costs)
     items = {i.id: i for i in reg.by_kind(UncertainKind.SIM_ERROR)}
     assert "sim_error:A40/unfitted" in items
-    assert items["sim_error:A40/unfitted"].range.is_unbounded
+    item = items["sim_error:A40/unfitted"]
+    assert item.nominal == 0.0
+    _assert_range_follows_the_table(grades, item)
+    if not item.range.is_unbounded:
+        # A relative default would have collapsed on a nominal of zero, which is
+        # why the sim_error rows are absolute.
+        assert item.range.range_source == "default"
+        assert item.range.lo < 0.0 < item.range.hi
 
 
 # --- profiles: the weaker of two signals ----------------------------------
@@ -222,7 +269,9 @@ def test_proxy_profile_is_graded_placeholder_despite_a_measured_bundle(
     assert proxies, "the NPU islands must produce PROFILE items"
     for item in proxies:
         assert item.grade is Grade.PLACEHOLDER
-        assert item.range.is_unbounded
+        # The grade is the assertion; the range follows grades.yaml, which since
+        # S2 gives a placeholder the default rather than nothing (D111).
+        _assert_range_follows_the_table(grades, item)
         assert "proxy:" in item.note
         assert "bundle RTXPRO6000 tier=measured" in item.note
         assert "profile source=placeholder" in item.note
@@ -372,21 +421,34 @@ def test_dump_carries_the_registry_when_it_is_present(
 
 # --- renderer -------------------------------------------------------------
 
-def test_renderer_shows_coverage_and_marks_unbounded(llama_spec, grades, costs) -> None:
+def test_renderer_shows_coverage_and_orders_by_how_known_the_width_is(
+    llama_spec, grades, costs
+) -> None:
+    """Reading order: unbounded, then defaulted, then sourced (D111).
+
+    Which of the three groups this fixture actually produces is grades.yaml's
+    business, so the test asserts the ORDER and the legend rather than that any
+    particular group is non-empty.
+    """
     from planner.render import render_uncertain_inputs
 
     reg = _registry(PD_FIXTURE, llama_spec, grades, costs)
     text = render_uncertain_inputs(reg)
     assert "coverage:" in text
     assert "link_bw 16/26 uncertain" in text
-    assert "**" in text
-    # Unbounded items head the table: every marked row precedes every plain one.
+
     ids = {i.id for i in reg.items}
     rows = [ln for ln in text.splitlines() if any(i in ln for i in ids)]
     assert len(rows) == len(reg.items)
-    marked = [ln.strip().startswith("**") for ln in rows]
-    assert marked[0] is True
-    assert marked == sorted(marked, reverse=True)
+
+    def group(line: str) -> int:
+        stripped = line.strip()
+        return 0 if stripped.startswith("**") else (1 if stripped.startswith("~") else 2)
+
+    groups = [group(ln) for ln in rows]
+    assert groups == sorted(groups)
+    assert ("**" in text) == bool(reg.unbounded())
+    assert ("~ " in text) == bool(reg.defaulted())
 
 
 def test_renderer_section_is_absent_without_a_registry(llama_spec) -> None:
