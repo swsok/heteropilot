@@ -32,6 +32,7 @@ from planner.uncertainty import (
     load_grades,
 )
 from planner.uncertainty.grades import DefaultRule, GradeRule, GradesTable, RangeRule
+from planner.uncertainty.registry import parse_link_item_id
 from planner.util import tier as tierutil
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -164,7 +165,10 @@ def test_no_item_has_zero_width(llama_spec, grades, costs) -> None:
 
 def test_link_affects_names_the_islands_the_link_serves(llama_spec, grades, costs) -> None:
     reg = _registry(PD_FIXTURE, llama_spec, grades, costs)
-    onpkg = next(i for i in reg.by_kind(UncertainKind.LINK_BW) if i.id.endswith("onpkg-rngd0-01"))
+    onpkg = next(
+        i for i in reg.by_kind(UncertainKind.LINK_BW)
+        if parse_link_item_id(i.id).link_id == "onpkg-rngd0-01"
+    )
     # An on-package PE-to-PE link sits inside one island and serves only it.
     assert onpkg.affects == ["furiosa-rngd-node_rngd0"]
 

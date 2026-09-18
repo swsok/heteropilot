@@ -33,8 +33,16 @@ for one kind it means nothing at all:
 * `POWER` - scale the profile's power block and re-evaluate. No files: the power
   model is a handful of fields on the profile the planner already loaded.
 * `LINK_BW` / `LINK_LAT` - rewrite the link in a copy of the cluster spec and
-  re-evaluate. Included for completeness; their closed form is already exact, so
-  E-B3 expects no rank movement from them and any movement is a bug in the rule.
+  re-evaluate. For a `p2p` LINK_BW item and for LINK_LAT the closed form is
+  already exact, so E-B3 expects no rank movement and any movement is a bug in
+  the rule. For an `all_reduce` LINK_BW item this module is not a cross-check
+  but the ONLY way to price it: the value enters through the simulator's own
+  `link_bw`, which `island_interconnect` reduces from these links, and no
+  arithmetic outside the simulator reproduces a collective cost model. Those
+  items arrive here with no closed-form dR to compare against - they are the
+  `needs_resimulation` list, not a discrepancy (S3, D112). An earlier version of
+  this docstring said their closed form was already exact, which was true only
+  of the handoff half.
 * `SIM_ERROR` - **there is nothing to simulate.** A prediction error is a claim
   about the margin, not about the prediction, so moving it changes no simulator
   input. Its closed form is exact by construction and this module refuses rather
@@ -54,7 +62,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from planner.uncertainty.registry import UncertainInput, UncertainKind
+from planner.uncertainty.registry import (
+    UncertainInput,
+    UncertainKind,
+    parse_link_item_id,
+)
 
 if TYPE_CHECKING:
     from planner.inventory import AcceleratorProfile, ExecutionIsland
@@ -315,7 +327,7 @@ def _powered_profiles(item, value, islands, profiles):
 
 
 def _relinked_cluster(item, value, cluster):
-    link_id = item.id.split(":", 1)[-1]
+    link_id = parse_link_item_id(item.id).link_id
     field = (
         "bandwidth_gbps" if item.kind is UncertainKind.LINK_BW else "latency_ns"
     )

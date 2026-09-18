@@ -24,12 +24,13 @@ measuring" rather than quietly scoring as zero regret.
 from __future__ import annotations
 
 import enum
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from planner.inventory import Source
+from planner.inventory import Collective, MsgSizeClass, Source
 from planner.topology import TopologyError, TopologyGraph
 from planner.uncertainty.grades import CostsTable, DefaultRule, GradesTable, RangeRule
 from planner.util import tier as tierutil
@@ -301,6 +302,126 @@ def _cost_for(costs: CostsTable | None, kind: UncertainKind) -> MeasurementCost 
 
 
 # ---------------------------------------------------------------------------
+# Link item keys (domain-scoping S3, D112)
+# ---------------------------------------------------------------------------
+
+@dataclass(frozen=True)
+class LinkTraffic:
+    """What a link carries in one deployment, and for whom.
+
+    A LINK_BW item used to be one per link, which read the link's datasheet
+    number as though a wire had one bandwidth. It does not: the A40 node's PCIe
+    bridge sustains 25.0 GB/s for a direct copy, 19.3 for a two-rank all-reduce
+    and 8.8 for the four-rank all-reduce a tp=4 island actually runs, against a
+    `vendor_spec` 64.0. So the item is keyed by the traffic instead, and the
+    same link carrying two kinds is two items with two measurement costs.
+    """
+
+    collective: Collective
+    msg_size_class: MsgSizeClass
+    binding: str
+    world_size: int
+    #: island ids (intra-island traffic) or "<island>-><island>" pairs (inter).
+    affects: tuple[str, ...] = ()
+
+
+def link_item_id(
+    kind: UncertainKind, link_id: str, traffic: LinkTraffic | None = None
+) -> str:
+    """`link_bw:<link>@<collective>/w<N>/<class>/<binding>`, or `link_bw:<link>`.
+
+    The unkeyed form is for a link no selected island's traffic crosses - there
+    is no collective to name - and for LINK_LAT, whose value the planner applies
+    to every kind of traffic alike (`path_latency_ns` sums it regardless) and of
+    which this repository holds no measurement at all.
+    """
+    if traffic is None:
+        return f"{kind.value}:{link_id}"
+    return (
+        f"{kind.value}:{link_id}@{traffic.collective}/w{traffic.world_size}/"
+        f"{traffic.msg_size_class}/{traffic.binding}"
+    )
+
+
+@dataclass(frozen=True)
+class LinkItemKey:
+    """A LINK_BW/LINK_LAT item id, taken apart. `collective` is None if unkeyed."""
+
+    link_id: str
+    collective: Collective | None = None
+    world_size: int | None = None
+    msg_size_class: MsgSizeClass = "bulk"
+    binding: str = "unknown"
+
+
+def parse_link_item_id(item_id: str) -> LinkItemKey:
+    """Split a link item id back into its parts.
+
+    Every consumer that used to do `item.id.split(":", 1)[1]` and treat the
+    remainder as a link id goes through this instead; a bare split now yields
+    `pcie-a40a-02@all_reduce/bulk/unpinned`, which matches no link.
+    """
+    rest = item_id.split(":", 1)[1] if ":" in item_id else item_id
+    if "@" not in rest:
+        return LinkItemKey(link_id=rest)
+    link_id, _, cond = rest.partition("@")
+    parts = cond.split("/")
+    if len(parts) != 4 or not parts[1].startswith("w") or not parts[1][1:].isdigit():
+        raise ValueError(
+            f"link item id {item_id!r}: expected "
+            f"'<link>@<collective>/w<world_size>/<msg_size_class>/<binding>'"
+        )
+    return LinkItemKey(
+        link_id=link_id,
+        collective=parts[0],  # type: ignore[arg-type]
+        world_size=int(parts[1][1:]),
+        msg_size_class=parts[2],  # type: ignore[arg-type]
+        binding=parts[3],
+    )
+
+
+def _link_traffic(
+    cluster: ClusterSpecV2, islands: list[ExecutionIsland]
+) -> dict[str, list[LinkTraffic]]:
+    """link id -> every kind of traffic the selected islands put on it.
+
+    Built from `_link_affects`, which already separates the two cases: an entry
+    that names an island is that island's TP collective, and one that names a
+    pair is the P/D handoff between them. Both are asked for at `bulk`, the
+    band the simulator's asymptotic `link_bw` term is about.
+    """
+    affects = _link_affects(cluster, islands)
+    by_id = {island.id: island for island in islands}
+    binding = {node.id: node.device_binding for node in cluster.nodes}
+    out: dict[str, list[LinkTraffic]] = {}
+
+    for link_id, who in affects.items():
+        intra = sorted(w for w in who if "->" not in w)
+        inter = sorted(w for w in who if "->" in w)
+        traffic: list[LinkTraffic] = []
+        if intra:
+            # One item per distinct TP degree: two islands of different size on
+            # this link need two measurements, not one.
+            for size in sorted({by_id[i].size for i in intra if i in by_id}):
+                members = [i for i in intra if i in by_id and by_id[i].size == size]
+                traffic.append(LinkTraffic(
+                    collective="all_reduce", msg_size_class="bulk",
+                    binding=binding.get(by_id[members[0]].node_id, "unknown"),
+                    world_size=size, affects=tuple(members),
+                ))
+        if inter:
+            first = inter[0].split("->")[0]
+            traffic.append(LinkTraffic(
+                collective="p2p", msg_size_class="bulk",
+                binding=binding.get(
+                    by_id[first].node_id if first in by_id else "", "unknown"),
+                world_size=2, affects=tuple(inter),
+            ))
+        out[link_id] = traffic
+    return out
+
+
+# ---------------------------------------------------------------------------
 # affects: which islands a link sits between
 # ---------------------------------------------------------------------------
 
@@ -387,8 +508,17 @@ def build_registry(
 
 
 def _link_items(cluster, islands, grades, costs, count_measured) -> list[UncertainInput]:
-    """LINK_BW and LINK_LAT items for every link that is not a measurement."""
+    """LINK_BW and LINK_LAT items for every link that is not a measurement.
+
+    Since S3 (D112) a LINK_BW item is per (link, traffic): what is uncertain is
+    not "this wire" but "what this wire delivers for the collective this
+    deployment runs over it", and a `measured` figure for one collective says
+    nothing about another. A link whose spec value is itself `measured` is still
+    credited wholesale, as before - the schema has no way to say which traffic
+    that claim covers, which is exactly why the `measurements:` array exists.
+    """
     affects = _link_affects(cluster, islands)
+    traffic_by_link = _link_traffic(cluster, islands)
     out: list[UncertainInput] = []
 
     for link in cluster.links:
@@ -405,23 +535,80 @@ def _link_items(cluster, islands, grades, costs, count_measured) -> list[Uncerta
         # that split, so a `measured` link's latency is credited as measured
         # too. Recorded rather than silently corrected - see the PR notes.
         note = f"link {link.type.value} {link.src} -> {link.dst}; source={link.source.value}"
-        for kind, nominal, unit in (
-            (UncertainKind.LINK_BW, link.bandwidth_gbps, "gbps"),
-            (UncertainKind.LINK_LAT, link.latency_ns, "ns"),
-        ):
-            rng = _range_from_rule(grades, kind, grade, nominal, unit)
+
+        # LINK_BW: one item per kind of traffic this deployment puts on the link.
+        traffics = traffic_by_link.get(link.id) or []
+        for traffic in traffics:
+            hit = link.measurement_for(
+                traffic.collective, traffic.msg_size_class, traffic.binding,
+                world_size=traffic.world_size,
+            )
+            if hit is not None and Grade.from_source(hit.source).is_measurement:
+                # This traffic's bandwidth IS measured, whatever the datasheet
+                # column beside it says. Counted, not listed - the registry's
+                # standing rule for a measured input.
+                count_measured(UncertainKind.LINK_BW)
+                continue
+            rng = _range_from_rule(
+                grades, UncertainKind.LINK_BW, grade, link.bandwidth_gbps, "gbps"
+            )
             out.append(
                 UncertainInput(
-                    id=f"{kind.value}:{link.id}",
-                    kind=kind,
+                    id=link_item_id(UncertainKind.LINK_BW, link.id, traffic),
+                    kind=UncertainKind.LINK_BW,
                     grade=grade,
-                    nominal=nominal,
+                    nominal=link.bandwidth_gbps,
                     range=rng,
-                    cost=_cost_for(costs, kind),
-                    affects=affects.get(link.id, []),
-                    note=note,
+                    cost=_cost_for(costs, UncertainKind.LINK_BW),
+                    affects=list(traffic.affects),
+                    note=(
+                        f"{note}; {traffic.collective} at world_size "
+                        f"{traffic.world_size}, {traffic.msg_size_class} messages, "
+                        f"binding {traffic.binding}. The nominal is the spec value: "
+                        f"no measurement answers for these conditions"
+                    ),
                 )
             )
+        if not traffics:
+            # No selected island's traffic crosses this link, so there is no
+            # collective to name. Kept rather than dropped: a link outside this
+            # deployment's paths is still an uncertain input of the spec, and a
+            # later candidate may use it.
+            rng = _range_from_rule(
+                grades, UncertainKind.LINK_BW, grade, link.bandwidth_gbps, "gbps"
+            )
+            out.append(
+                UncertainInput(
+                    id=link_item_id(UncertainKind.LINK_BW, link.id),
+                    kind=UncertainKind.LINK_BW,
+                    grade=grade,
+                    nominal=link.bandwidth_gbps,
+                    range=rng,
+                    cost=_cost_for(costs, UncertainKind.LINK_BW),
+                    affects=affects.get(link.id, []),
+                    note=f"{note}; no selected island's traffic crosses it",
+                )
+            )
+
+        # LINK_LAT stays one item per link: `path_latency_ns` applies it to every
+        # kind of traffic alike, and no link latency in this repository is
+        # measured at all (grades.yaml's link_lat/vendor_spec row), so there is
+        # nothing for a key to select between.
+        rng = _range_from_rule(
+            grades, UncertainKind.LINK_LAT, grade, link.latency_ns, "ns"
+        )
+        out.append(
+            UncertainInput(
+                id=link_item_id(UncertainKind.LINK_LAT, link.id),
+                kind=UncertainKind.LINK_LAT,
+                grade=grade,
+                nominal=link.latency_ns,
+                range=rng,
+                cost=_cost_for(costs, UncertainKind.LINK_LAT),
+                affects=affects.get(link.id, []),
+                note=note,
+            )
+        )
     return out
 
 

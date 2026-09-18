@@ -18,7 +18,14 @@ import itertools
 from collections import deque
 from dataclasses import dataclass, field
 
-from planner.inventory import ClusterSpecV2, ExecutionIsland, Link, LinkType
+from planner.inventory import (
+    ClusterSpecV2,
+    Collective,
+    ExecutionIsland,
+    Link,
+    LinkType,
+    MsgSizeClass,
+)
 
 #: Representative Level-1 values per interconnect class, used only when the
 #: cluster spec has no link describing a hop. Every one is a placeholder: no
@@ -181,14 +188,78 @@ class TopologyGraph:
         return True
 
     @staticmethod
+    def link_bandwidth_gbps(
+        link: Link,
+        *,
+        collective: Collective | None = None,
+        msg_size_class: MsgSizeClass = "bulk",
+        binding: str = "unknown",
+        world_size: int | None = None,
+    ) -> tuple[float, str | None]:
+        """One link's bandwidth for a stated kind of traffic, GB/s, and a note.
+
+        Returns the measured effective figure when the link carries one for
+        these exact conditions, and the spec `bandwidth_gbps` otherwise. The
+        note is None when nothing needed saying, and a sentence for
+        `TopologyReduction.assumptions` when a measurement was used or when one
+        exists but does not answer the question asked (S3, D112).
+
+        `collective=None` asks for the nominal value and consults no
+        measurement, which is what every caller that predates S3 wants: a
+        bandwidth with no stated traffic kind cannot select among figures that
+        differ by a factor of 4 on the same wire.
+        """
+        if collective is None or not link.measurements:
+            return link.bandwidth_gbps, None
+
+        hit = link.measurement_for(
+            collective, msg_size_class, binding, world_size=world_size
+        )
+        if hit is None:
+            kinds = ", ".join(
+                f"{m.collective}/{m.msg_size_class}/{m.binding} w{m.world_size}"
+                for m in link.measurements
+            )
+            return link.bandwidth_gbps, (
+                f"link {link.id}: no measurement answers for "
+                f"{collective}/{msg_size_class}/{binding} "
+                f"w{world_size if world_size is not None else '*'}; used the spec "
+                f"{link.bandwidth_gbps:g} GB/s (source={link.source.value}). "
+                f"Measurements it does carry: {kinds}"
+            )
+
+        unchecked = " binding unstated on one side, so unchecked" if (
+            hit.binding == "unknown" or binding == "unknown"
+        ) else ""
+        return hit.bus_bw_gbps, (
+            f"link {link.id}: used the measured {collective} effective bandwidth "
+            f"{hit.bus_bw_gbps:g} GB/s (world_size {hit.world_size}, "
+            f"{hit.msg_size_class}, binding {hit.binding}) in place of the "
+            f"{link.source.value} {link.bandwidth_gbps:g} GB/s; "
+            f"method={hit.method or 'unstated'}{unchecked}"
+        )
+
+    @staticmethod
     def effective_bandwidth_gbps(
-        path: list[Link], concurrent_flows: dict[str, int] | None = None
+        path: list[Link],
+        concurrent_flows: dict[str, int] | None = None,
+        *,
+        collective: Collective | None = None,
+        msg_size_class: MsgSizeClass = "bulk",
+        binding: str = "unknown",
+        world_size: int | None = None,
+        notes: list[str] | None = None,
     ) -> float:
         """Bottleneck bandwidth along a path, GB/s.
 
         Links sharing a `contention_group` split their nominal bandwidth by the
         number of active flows in that group - the simple model §5.3 specifies
         for Level 1. Links with no group are assumed uncontended.
+
+        With a `collective`, each hop contributes its measured effective
+        bandwidth for that traffic where it has one (S3, D112); `notes` collects
+        what was substituted. Without one the nominal values are used and the
+        result is what every pre-S3 caller got.
         """
         if not path:
             return float("inf")
@@ -196,7 +267,13 @@ class TopologyGraph:
         per_link = []
         for link in path:
             share = flows.get(link.contention_group, 1) if link.contention_group else 1
-            per_link.append(link.bandwidth_gbps / max(1, share))
+            bw, note = TopologyGraph.link_bandwidth_gbps(
+                link, collective=collective, msg_size_class=msg_size_class,
+                binding=binding, world_size=world_size,
+            )
+            if note is not None and notes is not None:
+                notes.append(note)
+            per_link.append(bw / max(1, share))
         return min(per_link)
 
     @staticmethod
@@ -235,8 +312,29 @@ class TopologyGraph:
 
     # -- Level 1 -----------------------------------------------------------
 
-    def island_interconnect(self, island: ExecutionIsland) -> tuple[float, float, list[str]]:
-        """Representative (bandwidth GB/s, latency ns) inside one island."""
+    def _binding_of(self, node_id: str) -> str:
+        """How the deployment drives that node, in `Node.device_binding`'s terms.
+
+        `unknown` for a node the spec does not name, which is the same answer a
+        node that does not state its binding gives, and is treated the same way:
+        not stated, so not compared (S1's convention, D110).
+        """
+        for node in self.cluster.nodes:
+            if node.id == node_id:
+                return node.device_binding
+        return "unknown"
+
+    def island_interconnect(
+        self, island: ExecutionIsland, *, world_size: int | None = None
+    ) -> tuple[float, float, list[str]]:
+        """Representative (bandwidth GB/s, latency ns) inside one island.
+
+        What crosses these links is the island's TP all-reduce, so that is what
+        the bandwidth is asked for (S3, D112). `world_size` is the TP degree
+        about to be simulated and defaults to the island's size; a measurement
+        taken at a different group size does not answer, because a two-rank and
+        a four-rank all-reduce over one path differ by 2.2x on the A40 bridge.
+        """
         assumptions: list[str] = []
         members = [f"{island.node_id}/{a}" for a in island.accelerator_ids]
 
@@ -246,9 +344,19 @@ class TopologyGraph:
             if link.src in members and link.dst in members
         ]
         if observed:
-            bw = min(link.bandwidth_gbps for link in observed)
+            ranks = world_size if world_size is not None else island.size
+            binding = self._binding_of(island.node_id)
+            per_link: list[float] = []
+            for link in observed:
+                bw, note = self.link_bandwidth_gbps(
+                    link, collective="all_reduce", msg_size_class="bulk",
+                    binding=binding, world_size=ranks,
+                )
+                if note is not None:
+                    assumptions.append(f"island {island.id} (tp={ranks}): {note}")
+                per_link.append(bw)
             lat = max(link.latency_ns for link in observed)
-            return bw, lat, assumptions
+            return min(per_link), lat, assumptions
 
         if island.size == 1:
             # Nothing crosses a wire inside a one-device island.
@@ -263,7 +371,9 @@ class TopologyGraph:
         )
         return CLASS_DEFAULT_GBPS[kind], CLASS_DEFAULT_LATENCY_NS[kind], assumptions
 
-    def reduce_for_simulator(self, islands: list[ExecutionIsland]) -> TopologyReduction:
+    def reduce_for_simulator(
+        self, islands: list[ExecutionIsland], *, world_sizes: list[int] | None = None
+    ) -> TopologyReduction:
         """Collapse the graph to the scalar pair the simulator accepts (D3).
 
         Bottleneck semantics: the slowest interconnect any selected island relies
@@ -277,8 +387,10 @@ class TopologyGraph:
         assumptions: list[str] = []
         bandwidths: list[float] = []
         latencies: list[float] = []
-        for island in islands:
-            bw, lat, notes = self.island_interconnect(island)
+        for idx, island in enumerate(islands):
+            bw, lat, notes = self.island_interconnect(
+                island, world_size=world_sizes[idx] if world_sizes else None
+            )
             assumptions.extend(notes)
             bandwidths.append(bw)
             latencies.append(lat)
@@ -308,7 +420,7 @@ class TopologyGraph:
         return TopologyReduction(bw, lat, basis, assumptions)
 
     def reduce_for_simulator_perdim(
-        self, islands: list[ExecutionIsland]
+        self, islands: list[ExecutionIsland], *, world_sizes: list[int] | None = None
     ) -> PerDimReduction:
         """Level-2 reduction: separate intra-TP and cross-instance bottlenecks.
 
@@ -327,8 +439,10 @@ class TopologyGraph:
         assumptions: list[str] = []
         intra_bws: list[float] = []
         intra_lats: list[float] = []
-        for island in islands:
-            bw, lat, notes = self.island_interconnect(island)
+        for idx, island in enumerate(islands):
+            bw, lat, notes = self.island_interconnect(
+                island, world_size=world_sizes[idx] if world_sizes else None
+            )
             assumptions.extend(notes)
             intra_bws.append(bw)
             intra_lats.append(lat)
@@ -385,8 +499,15 @@ class TopologyGraph:
                 CLASS_DEFAULT_LATENCY_NS[LinkType.INFINIBAND],
                 assumptions,
             )
-        return (
-            self.effective_bandwidth_gbps(path),
-            self.path_latency_ns(path),
-            assumptions,
+        # What crosses an island boundary here is one sender to one receiver -
+        # the P/D KV handoff - not a collective, so the figure asked for is a
+        # point-to-point one. On the A40 bridge that is 25.0 GB/s where the
+        # four-rank all-reduce over the same wire is 8.8: selecting by traffic
+        # kind is the whole point of the key (S3, D112).
+        notes: list[str] = []
+        bw = self.effective_bandwidth_gbps(
+            path, collective="p2p", msg_size_class="bulk",
+            binding=self._binding_of(a.node_id), world_size=2, notes=notes,
         )
+        assumptions.extend(f"{a.id}->{b.id}: {n}" for n in notes)
+        return (bw, self.path_latency_ns(path), assumptions)

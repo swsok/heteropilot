@@ -15,6 +15,13 @@ Three rules the work order sets and this enforces:
   list under "cannot be decided before measuring", which is a stronger statement
   than any ranking.
 
+Since S3 (D112) an input can be unranked for a THIRD reason, beside "no
+interval" and "the interval moves nothing". An input that reaches a prediction
+only through the simulator - an intra-island link's effective collective
+bandwidth - has a known interval that no closed form can price, so it goes in
+``needs_resimulation`` and ``--resimulate-top`` is what turns it into a rank.
+Collapsing it into ``inert`` is what made V3's link look not worth measuring.
+
 Since the domain-scoping work order S2 (D111), that last list is much shorter
 and means something narrower. An input whose own (kind, grade) sources no width
 now takes the GRADE'S DEFAULT range from ``grades.yaml`` and is ranked on it,
@@ -90,8 +97,15 @@ class MeasurementPlan(_Strict):
     #: difference is the whole of what a measurement would buy. Before S2 most
     #: of these were undecidable for want of a range, so the two answers were
     #: indistinguishable; now they are not, and each input lands in exactly one
-    #: of items / uncovered / undecidable / inert.
+    #: of items / uncovered / undecidable / inert / needs_resimulation.
     inert: list[str] = Field(default_factory=list)
+    #: Inputs whose interval is known but whose regret no closed form can
+    #: compute, because they reach a prediction only through the simulator
+    #: (S3, D112: an intra-island link's effective collective bandwidth).
+    #: The third way to be unranked, and the one that had been collapsed into
+    #: `inert`: these may be the most valuable measurements on the list and the
+    #: sweep cannot say. `--resimulate-top` moves them into the ranking.
+    needs_resimulation: list[str] = Field(default_factory=list)
     #: Hours the planned items occupy a device exclusively, which a shared lab
     #: schedules differently from wall-clock.
     exclusive_hours: float = 0.0
@@ -118,7 +132,14 @@ def build(
     consumes no budget, because pretending to know its cost would be the
     invention the whole work order forbids.
     """
-    undecidable = [s.input_id for s in sensitivities if s.delta_regret is None]
+    needs_resim = [
+        s.input_id for s in sensitivities
+        if s.delta_regret is None and s.requires_resimulation
+    ]
+    undecidable = [
+        s.input_id for s in sensitivities
+        if s.delta_regret is None and not s.requires_resimulation
+    ]
     worthwhile = [
         s for s in sensitivities if s.delta_regret is not None and s.delta_regret > 0
     ]
@@ -170,6 +191,7 @@ def build(
         uncovered=deferred,
         undecidable=undecidable,
         inert=inert,
+        needs_resimulation=needs_resim,
         exclusive_hours=sum(
             (i.cost_hours or 0.0) for i in planned if i.exclusive
         ),

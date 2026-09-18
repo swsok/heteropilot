@@ -203,9 +203,22 @@ def active_records(records) -> list:
     from BOTH sides on purpose. An item the closed form calls zero and the
     resimulation does not is the most interesting row this experiment can
     produce, and taking `active` from the closed form alone would drop it.
+
+    An item with NO closed form (S3, D112: an intra-island link's collective
+    bandwidth) has no left-hand side, so it cannot appear in a closed-form vs
+    resimulation comparison at all. It is excluded here and counted in
+    `no_closed_form` rather than dropped silently - the resimulation is still
+    the only price it has, it just is not a comparison.
     """
-    return [r for r in records if not r.skipped
+    return [r for r in records
+            if not r.skipped
+            and r.closed_form is not None and r.resimulated is not None
             and max(abs(r.closed_form), abs(r.resimulated)) > 0.0]
+
+
+def no_closed_form(records) -> list:
+    """Refinements of items the closed form cannot price at all (S3, D112)."""
+    return [r for r in records if not r.skipped and r.closed_form is None]
 
 
 def spearman_refusal(n_active: int, n_checked: int) -> str | None:
@@ -372,6 +385,13 @@ def merge_shards(paths: list[Path]) -> dict:
         "resimulation_coverage": coverage_verdict,
         "resimulation_coverage_detail": coverages,
         "link_exactness_checks": link_checks,
+        # Items resimulation priced but the closed form never could (S3, D112).
+        # Reported so a reader can see that they were refined and simply have no
+        # comparison, rather than wondering where they went.
+        "no_closed_form": [
+            {"input_id": r.input_id, "kind": r.kind, "resimulated": r.resimulated}
+            for r in no_closed_form(records)
+        ],
         "refinements": list(refinements.values()),
         "identity_controls": controls,
         "provenance": prov.collect(random_seed=0),
@@ -446,7 +466,9 @@ def main() -> int:
             if r.get("skipped"):
                 print(f"  SKIPPED {r['input_id']}: {str(r['skipped'])[:80]}")
             else:
-                print(f"  {r['input_id']}: closed={r['closed_form']:,.4g} "
+                closed = ("no closed form" if r["closed_form"] is None
+                          else f"{r['closed_form']:,.4g}")
+                print(f"  {r['input_id']}: closed={closed} "
                       f"resim={r['resimulated']:,.4g}")
         note = payload["spearman_not_computed_because"]
         print(f"  spearman = {payload['spearman_delta_regret_on_checked']}"
@@ -640,14 +662,22 @@ def main() -> int:
     unexplained = identity_verdict["unexplained"]
     coverage_verdict = coverage_gate(coverages)
 
-    # The second identity control: LINK_BW and LINK_LAT re-price a term the
-    # planner adds itself, so their closed form is exact and the resimulation
-    # must land on it. A disagreement here is a bug in the rule, not a cost of
-    # approximation, and it is the one place this experiment can say so.
+    # The second identity control: LINK_LAT and the `p2p` half of LINK_BW
+    # re-price a term the planner adds itself, so their closed form is exact and
+    # the resimulation must land on it. A disagreement there is a bug in the
+    # rule, not a cost of approximation, and it is the one place this experiment
+    # can say so.
+    #
+    # It does NOT cover an `all_reduce` LINK_BW item, which has no closed form
+    # to land on: that value enters through the simulator's own `link_bw` and
+    # only resimulation prices it (S3, D112). `checked` already excludes those -
+    # asserting exactness of a rule that does not exist would report a bug in
+    # every one of them.
     link_checks = []
     for r in checked:
         if r.kind not in ("link_bw", "link_lat"):
             continue
+        assert r.closed_form is not None and r.resimulated is not None
         scale = max(abs(r.closed_form), abs(r.resimulated), 1.0)
         rel = abs(r.closed_form - r.resimulated) / scale
         link_checks.append({
@@ -673,6 +703,13 @@ def main() -> int:
         "resimulation_coverage": coverage_verdict,
         "resimulation_coverage_detail": coverages,
         "link_exactness_checks": link_checks,
+        # Items resimulation priced but the closed form never could (S3, D112).
+        # Reported so a reader can see that they were refined and simply have no
+        # comparison, rather than wondering where they went.
+        "no_closed_form": [
+            {"input_id": r.input_id, "kind": r.kind, "resimulated": r.resimulated}
+            for r in no_closed_form(records)
+        ],
         "corpus_size": len(world.candidates),
         "excluded_mirror_at_build": world.excluded_mirror,
         "excluded_uncached": world.excluded_uncached,
@@ -707,7 +744,9 @@ def main() -> int:
         if r.skipped:
             print(f"  SKIPPED {r.input_id}: {r.skipped[:90]}")
         else:
-            print(f"  {r.input_id}: closed={r.closed_form:,.4g} "
+            closed = ("no closed form" if r.closed_form is None
+                      else f"{r.closed_form:,.4g}")
+            print(f"  {r.input_id}: closed={closed} "
                   f"resim={r.resimulated:,.4g} in {r.seconds:.0f}s "
                   f"({r.simulated} runs)")
     if world.predictor is not None:

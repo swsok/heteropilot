@@ -86,6 +86,115 @@ INTRA_ISLAND_LINKS = frozenset({
 })
 
 
+#: What traffic the bandwidth was measured (or is being asked) for. A link does
+#: not have one bandwidth: on the A40 node's PCIe bridge a direct
+#: device-to-device copy sustains 25.0 GB/s, a two-rank all-reduce over the same
+#: path 19.3, and the four-rank all-reduce the TP group actually runs 8.8
+#: (experiments/p2_evidence/results/v3_verdict_accuracy.md A.1). Asking for the
+#: wrong one is how V3's simulator read a 64.0 GB/s datasheet number for a hop
+#: that delivered an eighth of it - domain-scoping S3, deviations D112.
+Collective = Literal["all_reduce", "all_gather", "p2p"]
+
+#: The message-size band the figure belongs to. Collective bandwidth is not
+#: scale-free: on that same path the measured all-reduce busbw climbs from 0.23
+#: GB/s at 8 KiB to a plateau of 8.8-9.1 from 4 MiB up (14 points, PR #100).
+#: `bulk` is the plateau and the only band that answers the simulator's
+#: question, whose `link_bw` is an asymptotic bytes/bandwidth term with the
+#: small-message cost carried separately by `link_latency`.
+#:   small - below 1 MiB, latency-dominated and far below plateau
+#:   mid   - 1 MiB to below 4 MiB, still climbing
+#:   bulk  - 4 MiB and above; 4-64 MiB agree to 4 % on the measured path
+MsgSizeClass = Literal["small", "mid", "bulk"]
+
+#: Byte bounds of each band, as [lo, hi). Used to classify a measurement's own
+#: sweep and to reject a `msg_size_class` that its `msg_bytes` contradicts.
+MSG_SIZE_CLASS_BYTES: dict[str, tuple[int, float]] = {
+    "small": (0, 1 << 20),
+    "mid": (1 << 20, 4 << 20),
+    "bulk": (4 << 20, float("inf")),
+}
+
+
+def msg_size_class_of(num_bytes: float) -> MsgSizeClass:
+    """Which band a message size falls in."""
+    for name, (lo, hi) in MSG_SIZE_CLASS_BYTES.items():
+        if lo <= num_bytes < hi:
+            return name  # type: ignore[return-value]
+    raise ValueError(f"message size {num_bytes} falls in no band")
+
+
+class LinkMeasurement(_Strict):
+    """One measured effective bandwidth of a link, with the conditions it holds under.
+
+    The link's own `bandwidth_gbps` stays whatever its datasheet says and is
+    never edited by anything here (absolute rule A3): a measurement is
+    *additional* provenance beside the spec value, so the two can be compared
+    rather than one silently replacing the other.
+
+    Every field of the key - `collective`, `world_size`, `msg_size_class`,
+    `binding` - is a condition the figure holds under, following the same
+    convention S1 gave an accuracy domain (D110): a condition this measurement
+    does not state cannot be used to refuse a deployment, so `binding: unknown`
+    is compared against nothing and is not the same claim as `unpinned`.
+    """
+
+    collective: Collective
+    msg_size_class: MsgSizeClass
+    #: How the measuring process was bound to the node, in `Node.device_binding`'s
+    #: vocabulary. `unknown` means the harness did not record it.
+    binding: Literal["numa_pinned", "unpinned", "unknown"] = "unknown"
+    #: Effective bus bandwidth, GB/s - the figure a collective actually achieves,
+    #: not the wire rate. Compared against `Link.bandwidth_gbps`, same unit.
+    bus_bw_gbps: float = Field(gt=0)
+    #: How many ranks took part. A two-rank and a four-rank all-reduce over one
+    #: path are different measurements (19.3 against 8.8 on the A40 bridge).
+    world_size: int = Field(default=2, ge=2)
+    source: Source = Source.MEASURED
+    #: The tool and its version, e.g. "torch 2.10 + NCCL 2.27.5 under torchrun".
+    #: Not free text for its own sake: `nccl-tests all_reduce_perf` and this
+    #: repo's torch probe are not interchangeable evidence (S6(ii) is still open
+    #: for exactly that reason).
+    method: str = ""
+    #: The sizes actually swept, bytes. Checked against `msg_size_class`.
+    msg_bytes: list[int] = Field(default_factory=list)
+    date: str = ""
+    #: Path to the raw artefact, repo-relative.
+    raw: str = ""
+    note: str = ""
+
+    @model_validator(mode="after")
+    def _bytes_match_class(self) -> LinkMeasurement:
+        lo, hi = MSG_SIZE_CLASS_BYTES[self.msg_size_class]
+        for size in self.msg_bytes:
+            if not lo <= size < hi:
+                raise ValueError(
+                    f"LinkMeasurement: msg_size_class={self.msg_size_class!r} covers "
+                    f"[{lo}, {hi}) bytes but msg_bytes lists {size}; a figure "
+                    f"labelled with the wrong band would be selected for traffic it "
+                    f"was never measured at"
+                )
+        if self.source is Source.MEASURED and not self.method.strip():
+            raise ValueError(
+                "LinkMeasurement: source=measured must name its `method` - an "
+                "unattributed number is not a measurement (absolute rule 3)"
+            )
+        return self
+
+    @property
+    def key(self) -> tuple[str, int, str, str]:
+        """What this figure answers for, and nothing else.
+
+        The work order names `(link_id, collective, msg_size_class,
+        device_binding)`. `world_size` is a fourth component this repository's
+        own data forces: the A40 bridge measures 8.8 GB/s for a four-rank
+        all-reduce and 19.29 for a two-rank one, both `bulk`, both `unpinned`,
+        both from the same run. Without it the two collide and one silently
+        answers for the other - which is the substitution the key exists to
+        stop. Recorded as a deviation in D112 rather than left implicit.
+        """
+        return (self.collective, self.world_size, self.msg_size_class, self.binding)
+
+
 class Nic(_Strict):
     id: str
     type: str
@@ -158,9 +267,11 @@ class Node(_Strict):
     #: How a serving process on this node is bound to it - `numa_pinned` when
     #: the deployment pins CPU and memory to the NUMA node the accelerators sit
     #: on, `unpinned` when it does not. An APPLICATION CONDITION of an accuracy
-    #: domain (domain-scoping S1, D110), not a performance input: nothing in the
-    #: compiler reads it, and it exists so a domain measured unbound is not
-    #: consulted for a deployment that pins, or the reverse. It is worth 1.93x
+    #: domain (domain-scoping S1, D110) so that a domain measured unbound is not
+    #: consulted for a deployment that pins, or the reverse. Since S3 (D112) it
+    #: is also read on the way IN: it selects which of a link's measured
+    #: effective bandwidths the simulator is given, because the same link
+    #: measured bound and unbound are two different figures. It is worth 1.93x
     #: of throughput on the A40 node's second NUMA group
     #: (experiments/p2_evidence/results/v3_verdict_accuracy.md A.3), which is why
     #: it is a condition rather than a note. `unknown` - the default, and what
@@ -186,6 +297,13 @@ class Link(_Strict):
     duplex: str = "full"
     contention_group: str | None = None
     source: Source = Source.PLACEHOLDER
+    #: Measured effective bandwidths for this link, one per
+    #: `(collective, msg_size_class, binding)`. `bandwidth_gbps` above is left
+    #: alone whatever these say (A3); `effective_bandwidth_gbps` picks between
+    #: them. Empty - what every committed fixture said before S3 - means the
+    #: spec value is all there is, and the registry keeps grading it at
+    #: `source` so it stays in the measurement queue.
+    measurements: list[LinkMeasurement] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _endpoint_format(self) -> Link:
@@ -202,6 +320,60 @@ class Link(_Strict):
     def endpoints(self) -> tuple[tuple[str, str], tuple[str, str]]:
         (sn, sd), (dn, dd) = self.src.split("/"), self.dst.split("/")
         return (sn, sd), (dn, dd)
+
+    @model_validator(mode="after")
+    def _one_measurement_per_key(self) -> Link:
+        seen: set[tuple[str, int, str, str]] = set()
+        for m in self.measurements:
+            if m.key in seen:
+                raise ValueError(
+                    f"link {self.id}: two measurements for {m.collective}/w"
+                    f"{m.world_size}/{m.msg_size_class}/{m.binding}; the key exists "
+                    f"so one figure answers for one set of conditions"
+                )
+            seen.add(m.key)
+        return self
+
+    def measurement_for(
+        self,
+        collective: Collective,
+        msg_size_class: MsgSizeClass,
+        binding: str,
+        *,
+        world_size: int | None = None,
+    ) -> LinkMeasurement | None:
+        """The measurement that answers for these conditions, or None.
+
+        `collective` and `msg_size_class` must match exactly - a p2p copy is not
+        an all-reduce and a 64 KiB figure does not answer for 16 MiB, and
+        substituting either is the category error D112 records.
+
+        `binding` follows S1's convention (D110): `unknown` on either side is
+        *not stated*, so it is not compared. The caller is told which fields
+        went unchecked through `effective_bandwidth_gbps`'s note, because an
+        unchecked condition is not a satisfied one.
+
+        `world_size` is part of the key and must match exactly: the planner asks
+        with the TP degree it is about to simulate, and a four-rank figure
+        standing in for a two-rank one understates a small group by 2.2x on the
+        measured path. `None` means the caller states no group size, which
+        selects any - only `island_interconnect`'s island-size default and
+        direct callers do that, and both record which figure they got.
+        """
+        best: LinkMeasurement | None = None
+        for m in self.measurements:
+            if m.collective != collective or m.msg_size_class != msg_size_class:
+                continue
+            if world_size is not None and m.world_size != world_size:
+                continue
+            stated_both = m.binding != "unknown" and binding != "unknown"
+            if stated_both and m.binding != binding:
+                continue
+            # A figure whose binding is stated AND agrees is strictly better
+            # evidence than one that leaves it unstated, so prefer it.
+            if best is None or (m.binding != "unknown" and best.binding == "unknown"):
+                best = m
+        return best
 
 
 class ClusterSpecV2(_Strict):

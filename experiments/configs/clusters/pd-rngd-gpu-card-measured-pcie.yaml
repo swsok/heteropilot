@@ -1,20 +1,64 @@
-# COPY of pd-rngd-gpu-card.yaml with the cross-pair PCIe links set to the
-# MEASURED TP=4 effective all-reduce bandwidth instead of the vendor_spec 64.0.
+# COPY of pd-rngd-gpu-card.yaml carrying the MEASURED effective all-reduce
+# bandwidth of the cross-pair PCIe links, filed under the conditions it holds
+# under instead of written over the datasheet column.
+#
 # A3: the committed fixture is NOT edited -- E-A1 and every result replayed from
 # it keep their cluster unchanged.
 #
-# `pcie-a40a-02` and `pcie-a40b-02`: 64.0 vendor_spec -> **8.8 measured**.
+# WHAT CHANGED HERE AT S3 (deviations D112). This file used to set
+# `bandwidth_gbps: 8.8, source: measured` on `pcie-a40a-02` and `pcie-a40b-02`.
+# That lost two things at once: the 64.0 the vendor actually claims, and the
+# fact that 8.8 is a FOUR-RANK ALL-REDUCE figure rather than a property of the
+# wire. The same wire measures 25.0 GB/s for a direct copy and 19.3 for a
+# two-rank all-reduce -- so "the bandwidth of this link" is not a quantity, and
+# the label decides which number is right. The spec value and its `source` are
+# therefore restored, and the measurements sit beside them in `measurements:`,
+# keyed by (collective, world_size, msg_size_class, binding).
+# `Link.measurement_for` picks
+# the one that answers the question the planner is asking.
 #
-# Measured 2026-09-17 with torch + NCCL 2.27.5 over the four GPUs of one island,
-# 64 MiB all-reduce: 8.81 GB/s busbw on CUDA 0-3 and 8.78 on CUDA 4-7, agreeing
-# to 0.5 % across two independent NUMA groups. That is the bandwidth the TP group
-# actually gets, which is what this link stands for in the simulator.
+# The simulator receives the same 8.8 GB/s it did before for the tp=4 A40
+# island -- verified, and pinned by tests/test_link_effective_bw.py -- because
+# that is what `island_interconnect` now asks for: the bulk all_reduce figure at
+# world_size 4. A tp=2 candidate on the same island no longer silently inherits
+# it; it gets the two-rank figure measured in the same run, 19.29 GB/s, which is
+# the other half of what the key is for -- 8.8 and 19.29 are one wire under two
+# group sizes, 2.2x apart.
 #
-# Two other defensible values are recorded beside it in
+# THE TWO-RANK FIGURE IS WEAKER EVIDENCE THAN THE FOUR-RANK ONE, and its note
+# says so. The four-rank curve is flat across the bulk band (4-64 MiB within
+# 4 %), so one scalar represents it. The two-rank curve is still climbing there
+# -- 16.05 GB/s at 4 MiB to 19.29 at 64, a 20.2 % spread -- so no plateau was
+# reached and the filed value is the 64 MiB endpoint, the closest thing to the
+# asymptote the simulator's `link_bw` term assumes. It is filed rather than
+# omitted because the alternative is not "no answer" but the 64.0 datasheet
+# number, which is 4x the worst point on that curve.
+#
+# Measured 2026-09-17 with torch 2.10 + NCCL 2.27.5 under torchrun, sweeping
+# 8 KiB to 64 MiB over the four GPUs of one island: 8.81 GB/s busbw on CUDA 0-3
+# and 8.78 on CUDA 4-7, agreeing to 0.5 % across two independent NUMA groups.
+# 8.8 is the plateau (4-64 MiB agree to 4 %), which is the band the simulator's
+# asymptotic `link_bw` term is about.
+#
+# `nccl-tests` could NOT be used -- the only build on that host needs GLIBC 2.34
+# and Ubuntu 20.04 has 2.31 -- so `method` names the torch probe, and the work
+# order's S6(ii) remains open for a figure from the vendor tool.
+#
+# BINDING. The probe drivers (experiments/p2_evidence/run_link_probe*.sh) wrap
+# nothing in `numactl`, so these figures are `unpinned`, and V3's deploy backend
+# pinned nothing either (A.3), so the nodes say `unpinned` too. Both sides state
+# it, so the condition is CHECKED rather than skipped -- which is the point of
+# recording it: on this node binding is worth up to 1.93x of deployment
+# throughput, though the link probe itself agreed to 0.5 % across the two NUMA
+# groups, so what binding moves here is host memory placement and not this wire.
+#
+# Two other defensible values are recorded beside these in
 # experiments/p2_evidence/results/v3_verdict_accuracy.md appendix A, and they
-# BRACKET this one rather than compete with it:
+# BRACKET the all-reduce figure rather than compete with it:
 #   25.0 GB/s  a direct device-to-device copy across the same path -- the link
-#              with no collective algorithm on top of it
+#              with no collective algorithm on top of it. Filed below as the
+#              `p2p` measurement, so a P/D handoff over this wire would be
+#              priced at 25.0 and never at 8.8.
 #   7.5-8.4    what V4's perturbation had to assume to reproduce the measurement
 #
 # The NVLink links are left at 112.5 although the same probe measured 52.2 GB/s
@@ -58,6 +102,7 @@ nodes:
     base_node_power: 60.0
     source: placeholder
 - id: node_a40a
+  device_binding: unpinned
   accelerators:
   - id: gpu0
     type: GPU
@@ -98,6 +143,7 @@ nodes:
   power:
     source: placeholder
 - id: node_a40b
+  device_binding: unpinned
   accelerators:
   - id: gpu0
     type: GPU
@@ -158,10 +204,52 @@ links:
   src: node_a40a/gpu0
   dst: node_a40a/gpu2
   type: PCIE
-  bandwidth_gbps: 8.8
+  bandwidth_gbps: 64.0
   latency_ns: 2000
   contention_group: a40a-pcie
-  source: measured
+  source: vendor_spec
+  measurements:
+  - collective: all_reduce
+    msg_size_class: bulk
+    binding: unpinned
+    bus_bw_gbps: 8.8
+    world_size: 4
+    source: measured
+    method: torch 2.10 + NCCL 2.27.5 under torchrun, link_probe.py
+    msg_bytes: [4194304, 8388608, 16777216, 33554432, 67108864]
+    date: '2026-09-17'
+    raw: outputs/p2_evidence/link/tp4.json
+    note: >-
+      8.81 GB/s on CUDA 0-3 and 8.78 on 4-7 (link47/tp4.json), 0.5 % apart.
+      Plateau value; 4-64 MiB agree to 4 %.
+  - collective: all_reduce
+    msg_size_class: bulk
+    binding: unpinned
+    bus_bw_gbps: 19.29
+    world_size: 2
+    source: measured
+    method: torch 2.10 + NCCL 2.27.5 under torchrun, link_probe.py
+    msg_bytes: [4194304, 8388608, 16777216, 33554432, 67108864]
+    date: '2026-09-17'
+    raw: outputs/p2_evidence/link/pair_pcie_02.json
+    note: >-
+      NOT a plateau: 16.047 GB/s at 4 MiB climbing to 19.287 at 64 MiB, a 20.2 %
+      spread across the band, so this is the 64 MiB endpoint and not a flat
+      region. 19.33 on the second GPU group, 0.2 % apart. Weaker evidence than
+      the four-rank figure beside it, which is flat to 4 %.
+  - collective: p2p
+    msg_size_class: bulk
+    binding: unpinned
+    bus_bw_gbps: 25.0
+    world_size: 2
+    source: measured
+    method: torch 2.10 cudaMemcpyPeer, link_probe.py --p2p-pairs
+    date: '2026-09-17'
+    raw: outputs/p2_evidence/link/pair_pcie_02.json
+    note: >-
+      25.01 GB/s on both GPU groups. A direct copy over the same wire the
+      four-rank all-reduce gets 8.8 on: the collective algorithm, not the link,
+      is what costs the difference.
 - id: nvlink-a40b-01
   src: node_a40b/gpu0
   dst: node_a40b/gpu1
@@ -182,10 +270,52 @@ links:
   src: node_a40b/gpu0
   dst: node_a40b/gpu2
   type: PCIE
-  bandwidth_gbps: 8.8
+  bandwidth_gbps: 64.0
   latency_ns: 2000
   contention_group: a40b-pcie
-  source: measured
+  source: vendor_spec
+  measurements:
+  - collective: all_reduce
+    msg_size_class: bulk
+    binding: unpinned
+    bus_bw_gbps: 8.8
+    world_size: 4
+    source: measured
+    method: torch 2.10 + NCCL 2.27.5 under torchrun, link_probe.py
+    msg_bytes: [4194304, 8388608, 16777216, 33554432, 67108864]
+    date: '2026-09-17'
+    raw: outputs/p2_evidence/link/tp4.json
+    note: >-
+      8.81 GB/s on CUDA 0-3 and 8.78 on 4-7 (link47/tp4.json), 0.5 % apart.
+      Plateau value; 4-64 MiB agree to 4 %.
+  - collective: all_reduce
+    msg_size_class: bulk
+    binding: unpinned
+    bus_bw_gbps: 19.29
+    world_size: 2
+    source: measured
+    method: torch 2.10 + NCCL 2.27.5 under torchrun, link_probe.py
+    msg_bytes: [4194304, 8388608, 16777216, 33554432, 67108864]
+    date: '2026-09-17'
+    raw: outputs/p2_evidence/link47/pair_pcie_46.json
+    note: >-
+      NOT a plateau: 16.047 GB/s at 4 MiB climbing to 19.287 at 64 MiB, a 20.2 %
+      spread across the band, so this is the 64 MiB endpoint and not a flat
+      region. 19.33 on the second GPU group, 0.2 % apart. Weaker evidence than
+      the four-rank figure beside it, which is flat to 4 %.
+  - collective: p2p
+    msg_size_class: bulk
+    binding: unpinned
+    bus_bw_gbps: 25.0
+    world_size: 2
+    source: measured
+    method: torch 2.10 cudaMemcpyPeer, link_probe.py --p2p-pairs
+    date: '2026-09-17'
+    raw: outputs/p2_evidence/link/pair_pcie_02.json
+    note: >-
+      25.01 GB/s on both GPU groups. A direct copy over the same wire the
+      four-rank all-reduce gets 8.8 on: the collective algorithm, not the link,
+      is what costs the difference.
 - id: fabric-rngd0-a40a
   src: node_rngd0/card0
   dst: node_a40a/gpu0

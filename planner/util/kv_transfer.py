@@ -92,7 +92,12 @@ def kv_transfer_cost(
 
     xfer_ms = transfer_ms(
         kv_bytes,
-        bandwidth_gbps=TopologyGraph.effective_bandwidth_gbps(path),
+        # A KV handoff is a p2p bulk copy, which is what the topology is asked
+        # for here so that this term and the simulator's own figure for the same
+        # hop cannot disagree (S3, D112).
+        bandwidth_gbps=TopologyGraph.effective_bandwidth_gbps(
+            path, collective="p2p", msg_size_class="bulk", world_size=2
+        ),
         latency_ns=TopologyGraph.path_latency_ns(path),
     )
 

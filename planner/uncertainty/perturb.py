@@ -11,15 +11,29 @@ Every function here is pure. Inputs are never mutated - a perturbed metric set
 is always a `model_copy`, which is also what lets B2 evaluate grid points in any
 order without them contaminating each other.
 
-**Where a rule is exact and where it is not.** The `LINK_BW` and `LINK_LAT`
-rules are EXACT, which the work order expected to have to approximate. The
-reason is that the simulator does not model the P/D handoff at all - it
-reallocates KV in zero simulated time - so the transfer term is not something
-the simulator buried inside a queueing model. The planner adds it afterwards, by
-plain addition per TTFT percentile, in `exhaustive.apply_pd_transfer_cost`.
-Perturbing it is therefore recomputing one addend with the same helper that
-produced it (`kv_transfer.transfer_ms`), not approximating a simulated effect.
-`PROFILE` and `POWER` are first-order scalings and say so.
+**Where a rule is exact and where it is not.** The `LINK_LAT` rule and the
+`p2p` half of `LINK_BW` are EXACT, which the work order expected to have to
+approximate. The reason is that the simulator does not model the P/D handoff at
+all - it reallocates KV in zero simulated time - so the transfer term is not
+something the simulator buried inside a queueing model. The planner adds it
+afterwards, by plain addition per TTFT percentile, in
+`exhaustive.apply_pd_transfer_cost`. Perturbing it is therefore recomputing one
+addend with the same helper that produced it (`kv_transfer.transfer_ms`), not
+approximating a simulated effect. `PROFILE` and `POWER` are first-order scalings
+and say so.
+
+**The `all_reduce` half of `LINK_BW` has no closed form at all, and an earlier
+version of this module said otherwise.** It claimed the transfer term was "the
+only place a link bandwidth reaches a predicted metric today". It is not: an
+intra-island link's bandwidth is the min that `island_interconnect` reduces to
+the simulator's own `link_bw`, so it prices every TP collective inside
+ASTRA-Sim - which is where V3's -43.4 % TPOT error came from, on a candidate
+with no P/D handoff at all. The closed form returned those candidates untouched
+and the item scored zero regret, i.e. `inert`: the one input that explained the
+error was reported as not worth measuring. Such an item is now returned with
+`requires_resimulation`, which is a third answer beside "moved it" and "nothing
+moves" and lands in the measurement plan's own list. `--resimulate-top` prices
+it exactly, by rewriting the link and re-simulating. Domain-scoping S3, D112.
 """
 
 from __future__ import annotations
@@ -31,7 +45,11 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from planner.plan import PredictedMetrics, Role, ServingArch
 from planner.topology import TopologyError, TopologyGraph
-from planner.uncertainty.registry import UncertainInput, UncertainKind
+from planner.uncertainty.registry import (
+    UncertainInput,
+    UncertainKind,
+    parse_link_item_id,
+)
 from planner.util import kv_transfer
 
 if TYPE_CHECKING:
@@ -128,6 +146,11 @@ class PerturbResult(_Strict):
     #: True when the rule is a first-order stand-in rather than the same
     #: arithmetic the planner itself uses. The measurement plan marks these.
     approximation: bool = False
+    #: True when no closed form exists for this item and the honest answer is
+    #: "simulate it". Distinct from `approximation`, which still produces a
+    #: number: here the metrics come back untouched and must NOT be read as "no
+    #: effect" (S3, D112). `--resimulate-top` is the escape hatch.
+    requires_resimulation: bool = False
     #: Candidate ids whose metrics actually moved.
     affected: list[str] = Field(default_factory=list)
     #: For SIM_ERROR only: the error fraction to apply INSTEAD of the accuracy
@@ -172,6 +195,9 @@ def perturb(
     if item.kind is UncertainKind.POWER:
         return _scale_power(item, value, metrics, context)
     if item.kind in (UncertainKind.LINK_BW, UncertainKind.LINK_LAT):
+        key = parse_link_item_id(item.id)
+        if key.collective == "all_reduce":
+            return _collective_needs_simulation(item, value, metrics, key)
         return _reprice_transfer(item, value, metrics, context)
     raise ValueError(f"no perturbation rule for kind {item.kind}")
 
@@ -319,6 +345,30 @@ def _scale_power(item, value, metrics, context) -> PerturbResult:
 # LINK_BW / LINK_LAT: exact, because the planner owns the term
 # ---------------------------------------------------------------------------
 
+def _collective_needs_simulation(item, value, metrics, key) -> PerturbResult:
+    """An intra-island collective bandwidth: no closed form, so say so (D112).
+
+    This bandwidth enters the prediction as the simulator's own `link_bw`, which
+    ASTRA-Sim applies to every collective in the trace. Reproducing that by
+    arithmetic would mean reimplementing the collective cost model outside the
+    simulator, and a first-order stand-in would be inventing physics the repo
+    refuses to invent. The metrics are returned untouched, but flagged, so no
+    caller can read them as "this input does not matter" - the failure mode this
+    exists to stop.
+    """
+    return PerturbResult(
+        metrics=dict(metrics),
+        requires_resimulation=True,
+        note=(
+            f"{item.id}: {key.link_id} {item.nominal:g} -> {value:g} GB/s is the "
+            f"effective {key.collective} bandwidth of an intra-island link, which "
+            f"reaches a prediction only through the simulator's own link_bw. No "
+            f"closed form exists; run --resimulate-top to price it. Reported as "
+            f"needing simulation, NOT as zero regret"
+        ),
+    )
+
+
 def _link_by_id(context: PerturbContext, link_id: str):
     for link in context.cluster.links:
         if link.id == link_id:
@@ -354,15 +404,37 @@ def _reprice_transfer(item, value, metrics, context) -> PerturbResult:
 
     Only P/D candidates whose path actually crosses this link move. Everything
     else - a single-island candidate, a P/D routed elsewhere - is returned
-    untouched, which is the honest answer and not an omission: the transfer term
-    is the only place a link bandwidth reaches a predicted metric today.
+    untouched, which for THIS item is the honest answer: a p2p item is about the
+    handoff, and a candidate with no handoff does not have one to re-price.
+    What it is not is a general statement about link bandwidth. The intra-island
+    all_reduce item covers the other path and is routed to
+    `_collective_needs_simulation` instead (S3, D112); before the two were
+    separated, this function answered for both and returned zero for the one it
+    could not price.
     """
-    link_id = item.id.split(":", 1)[1] if ":" in item.id else item.id
+    link_id = parse_link_item_id(item.id).link_id
     link = _link_by_id(context, link_id)
     if link is None:
         return PerturbResult(
             metrics=dict(metrics),
             note=f"{item.id}: no link {link_id!r} in the cluster; nothing to perturb",
+        )
+
+    if item.kind is UncertainKind.LINK_BW and link.measurement_for(
+        "p2p", "bulk", "unknown", world_size=2
+    ) is not None:
+        # Unreachable through `build_registry`, which counts a measured traffic
+        # rather than listing it - asserted rather than handled so it stays
+        # unreachable. Perturbing a spec value the selection rule overrides
+        # would return a shift of zero and read as "this input does not matter".
+        return PerturbResult(
+            metrics=dict(metrics),
+            requires_resimulation=True,
+            note=(
+                f"{item.id}: {link_id} carries a measured p2p bandwidth, so the "
+                f"spec value this item names is not what the planner charges; "
+                f"there is nothing for the closed form to move"
+            ),
         )
 
     tok = context.spec.traffic.input_tokens
@@ -393,7 +465,12 @@ def _reprice_transfer(item, value, metrics, context) -> PerturbResult:
         if not any(hop.id == link.id for hop in path):
             continue
 
-        before_bw = TopologyGraph.effective_bandwidth_gbps(path)
+        # `p2p`/bulk/w2, the same question `apply_pd_transfer_cost` asks the
+        # topology for this hop. Asking differently would break the exactness
+        # this rule rests on the moment a link carried a p2p measurement.
+        before_bw = TopologyGraph.effective_bandwidth_gbps(
+            path, collective="p2p", msg_size_class="bulk", world_size=2
+        )
         before_lat = TopologyGraph.path_latency_ns(path)
         if item.kind is UncertainKind.LINK_BW:
             moved = [
@@ -405,7 +482,9 @@ def _reprice_transfer(item, value, metrics, context) -> PerturbResult:
                 hop.model_copy(update={"latency_ns": value}) if hop.id == link.id
                 else hop for hop in path
             ]
-        after_bw = TopologyGraph.effective_bandwidth_gbps(moved)
+        after_bw = TopologyGraph.effective_bandwidth_gbps(
+            moved, collective="p2p", msg_size_class="bulk", world_size=2
+        )
         after_lat = TopologyGraph.path_latency_ns(moved)
 
         m = metrics[cid]

@@ -346,3 +346,79 @@ def test_an_endpoint_returns_the_whole_metric_set_not_just_what_moved(
     assert endpoint.metrics["A"].total_energy_j == 5000.0      # resimulated
     assert endpoint.metrics["B"].total_energy_j == 1000.0      # carried over
     assert endpoint.simulated == 1
+
+
+def test_an_item_with_no_closed_form_is_refined_not_skipped(world: _World) -> None:
+    """The escape hatch S3 (D112) points `needs_resimulation` at must fire.
+
+    An `all_reduce` LINK_BW item has no closed form, so `analyze` gives it
+    `delta_regret=None` and `requires_resimulation=True`. `refine` used to skip
+    every item whose `delta_regret` was None - a rule written for an UNBOUNDED
+    range, where there is genuinely nothing to simulate at. Applied here it
+    would leave the only inputs that need simulation permanently unpriced, which
+    would make S3's whole answer ("run --resimulate-top") untrue.
+    """
+    link = next(
+        link for link in world.cluster.links
+        if link.src.startswith("node_a40a/") and link.dst.startswith("node_a40a/")
+    )
+    item = UncertainInput(
+        id=f"link_bw:{link.id}@all_reduce/w4/bulk/unpinned",
+        kind=UncertainKind.LINK_BW, grade=Grade.VENDOR_SPEC, nominal=64.0,
+        range=Range(lo=8.0, hi=64.0, unit="gbps", source="tests"),
+        cost=MeasurementCost(method="nccl-tests", hours=0.114, source="tests"),
+    )
+    registry = UncertainInputRegistry(items=[item])
+    policy = GlobalMargin()
+    sensitivities = analyze(
+        _output(world, "B"), registry, world.metrics, policy, world.spec,
+        world.context, world.island_hw, slo_penalty=2000.0,
+    )
+    assert sensitivities[0].delta_regret is None
+    assert sensitivities[0].requires_resimulation is True
+
+    class _Endpoint(NamedTuple):
+        value: float
+        metrics: JudgedMetrics
+        seconds: float
+        simulated: int
+
+    class _Result(NamedTuple):
+        lo: _Endpoint
+        hi: _Endpoint
+
+    def fake(_item):
+        # At 8 GB/s the simulator says the INCUMBENT's own TP all-reduce is
+        # expensive enough to cost it the win - the movement the closed form
+        # could not see, and the only shape that carries regret: a grid point
+        # where the recommendation is no longer the best plan.
+        return _Result(
+            lo=_Endpoint(8.0, JudgedMetrics.trusted({
+                "A": _metrics(energy=2000.0),
+                "B": _metrics(energy=9000.0),
+            }), 40.0, 2),
+            hi=_Endpoint(64.0, world.metrics, 38.0, 2),
+        )
+
+    refined, records = refine(
+        sensitivities, registry, fake, world.metrics, policy, world.spec,
+        world.context, world.island_hw, "B", top=1, slo_penalty=2000.0,
+    )
+    assert len(records) == 1, "the item must be refined, not skipped over"
+    assert records[0].skipped == ""
+    assert records[0].closed_form is None, (
+        "there is no closed form to compare against; a 0.0 here would read as "
+        "'the closed form says this input does not matter'"
+    )
+    assert refined[0].delta_regret is not None, "resimulation must price it"
+    assert refined[0].resimulated is True
+    assert refined[0].requires_resimulation is False, (
+        "once priced it is a ranked item, not a pending one"
+    )
+
+    # And it leaves the needs_resimulation bucket for the queue proper.
+    from planner.uncertainty.measurement_plan import build as build_plan
+
+    plan = build_plan(refined)
+    assert plan.needs_resimulation == []
+    assert [i.input_id for i in plan.items] == [item.id]

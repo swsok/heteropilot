@@ -175,7 +175,14 @@ def apply_pd_transfer_cost(
     class_default = False
     try:
         path = topology.path(prefill_ep, decode_ep)
-        bw_gbps = TopologyGraph.effective_bandwidth_gbps(path)
+        # The handoff is one sender to one receiver, so it is priced as a p2p
+        # bulk copy - the same question `_inter_island` asks the topology for
+        # this hop. Asking differently would let the two halves of one
+        # prediction disagree about the same wire (S3, D112).
+        bw_gbps = TopologyGraph.effective_bandwidth_gbps(
+            path, collective="p2p", msg_size_class="bulk", world_size=2,
+            notes=assumptions,
+        )
         latency_ns = TopologyGraph.path_latency_ns(path)
         energy_carrying = any(link.energy_per_bit_pj is not None for link in path)
     except TopologyError:

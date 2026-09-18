@@ -1139,18 +1139,67 @@ def cmd_measure_apply(args: argparse.Namespace) -> int:
             print("error: --cluster is needed to apply a link measurement",
                   file=sys.stderr)
             return 1
+        from planner.uncertainty.registry import parse_link_item_id
+
         target = source.with_suffix(".measured.yaml")
         raw = yaml.safe_load(source.read_text())
-        link_id = args.input.split(":", 1)[1]
+        key = parse_link_item_id(args.input)
+        keyed = kind == "link_bw" and key.collective is not None
+        if keyed and args.source == "measured" and not args.method.strip():
+            print("error: --method is needed for a keyed link_bw measurement; a "
+                  "figure is only as interchangeable as the tool that produced it "
+                  "(this repo's torch probe is not nccl-tests)", file=sys.stderr)
+            return 1
+        # The group size comes from the key, not from a separate flag: it is part
+        # of what the figure answers for, so two sources for it could disagree.
+        world_size = key.world_size
         field = "bandwidth_gbps" if kind == "link_bw" else "latency_ns"
         hit = False
         for link in raw.get("links", []):
-            if link.get("id") == link_id:
+            if link.get("id") != key.link_id:
+                continue
+            hit = True
+            if keyed:
+                # A keyed link_bw measurement is ADDITIONAL provenance: the spec
+                # value and its `source` are left exactly as they were (absolute
+                # rule A3), and `Link.measurement_for` selects between them at
+                # simulation time. Overwriting the column instead - which this
+                # command used to do - destroys the comparison that makes the
+                # measurement worth having, and V3 had to keep a hand-edited
+                # copy of the fixture to work around it (S3, D112).
+                entry = {
+                    "collective": key.collective,
+                    "msg_size_class": key.msg_size_class,
+                    "binding": key.binding,
+                    "bus_bw_gbps": args.value,
+                    "world_size": world_size,   # from the key
+                    "source": args.source,
+                }
+                if args.method.strip():
+                    entry["method"] = args.method.strip()
+                if args.raw.strip():
+                    entry["raw"] = args.raw.strip()
+                if args.evidence:
+                    entry["note"] = args.evidence
+                existing = link.setdefault("measurements", [])
+                replaced = False
+                for i, m in enumerate(existing):
+                    if (m.get("collective"), m.get("world_size"),
+                            m.get("msg_size_class"), m.get("binding")) == (
+                            key.collective, world_size, key.msg_size_class,
+                            key.binding):
+                        existing[i] = entry
+                        replaced = True
+                        break
+                if not replaced:
+                    existing.append(entry)
+            else:
+                # An unkeyed id names no traffic, so there is nothing to file it
+                # under; it moves the spec value as it always did.
                 link[field] = args.value
                 link["source"] = args.source
-                hit = True
         if not hit:
-            print(f"error: no link {link_id!r} in {source}", file=sys.stderr)
+            print(f"error: no link {key.link_id!r} in {source}", file=sys.stderr)
             return 1
         target.write_text(yaml.safe_dump(raw, sort_keys=False))
         written.append(target)
@@ -1425,7 +1474,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     measure.add_argument("--plan", required=True, help="a PlannerOutput YAML")
     measure.add_argument("--input", required=True, metavar="INPUT_ID",
-                         help="registry id, e.g. link_bw:fabric-rngd0-a40a")
+                         help="registry id, e.g. "
+                              "link_bw:pcie-a40a-02@all_reduce/w4/bulk/unpinned. A "
+                              "link id with no "
+                              "@<collective>/w<ranks>/<class>/<binding> suffix is "
+                              "still accepted and applied to the spec value")
     measure.add_argument("--value", required=True, type=float,
                          help="the measured value: GB/s or ns for a link; for sim_error "
                               "the simulator's signed TPOT error in percent, "
@@ -1444,6 +1497,13 @@ def build_parser() -> argparse.ArgumentParser:
     measure.add_argument("--replan-command", default=None,
                          help="shell command to re-run afterwards, normally the same "
                               "`plan` invocation with the copy and the same --cache-dir")
+    measure.add_argument("--method", default="",
+                         help="the tool a link measurement was taken with, e.g. "
+                              "'nccl-tests all_reduce_perf 2.27.5'. Required for a "
+                              "keyed link_bw measurement: the figure is only as "
+                              "interchangeable as the tool that produced it")
+    measure.add_argument("--raw", default="",
+                         help="repo-relative path to the raw artefact")
     measure.add_argument("--no-replan", action="store_true")
     measure.set_defaults(func=cmd_measure_apply)
 

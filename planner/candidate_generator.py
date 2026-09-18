@@ -535,7 +535,15 @@ class CandidateGenerator:
         if tp == 1:
             return True
 
-        bw_gbps, lat_ns, _ = self.topology.island_interconnect(island)
+        # world_size=tp, not the island's size: the bound must be computed on
+        # the bandwidth THIS group gets, which since S3 (D112) can differ by
+        # 2.2x between a two- and a four-rank all-reduce over one wire. Taking
+        # the island default would price a tp=2 group at the tp=4 figure, make
+        # the floor larger than the truth, and reject candidates §5.6 accepts -
+        # a pruning stage must be a relaxation of the feasibility test.
+        bw_gbps, lat_ns, _ = self.topology.island_interconnect(
+            island, world_size=tp
+        )
         if bw_gbps == float("inf"):
             return True
 
