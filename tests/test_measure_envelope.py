@@ -386,3 +386,205 @@ def test_the_nvidia_sampler_records_a_failed_query_as_a_hole(tmp_path):
     assert stats["samples"] == 0
     assert stats["dropped_samples"] == len(rows)
     assert stats["power_w"] is None
+
+
+# --- open-loop mode (S7.2) -------------------------------------------------
+#
+# `WORK_ORDER_domain_scoping.md` S7.2. The open-loop SERVER route exists because
+# the other open-loop route cannot be ported: `measure_envelope_openloop.py` is
+# `python -m bench run`, an in-process vLLM AsyncLLM replay, and furiosa-llm is a
+# server. These tests are the same shape as the closed-loop ones above -- pure
+# functions of a client report and a sampler CSV, no hardware.
+
+
+def _replay(offered_rps: float, pairs: list[tuple[float, float]],
+            window_s: float, ok: int | None = None, failed: int = 0,
+            tpot_p99: float = 42.0) -> dict:
+    """A `replay_to_endpoint.py --open-loop --out` report.
+
+    `pairs` are (arrival_s, ttft_s) per successful request, which is what the
+    saturation test reads.
+    """
+    per_request = [
+        {"ok": True, "arrival_s": a, "first_token_s": a + ttft,
+         "completion_s": a + ttft + 1.0, "streamed_chunks": 20}
+        for a, ttft in pairs
+    ]
+    per_request += [{"ok": False, "arrival_s": 0.0, "first_token_s": None,
+                     "completion_s": None, "streamed_chunks": 0}] * failed
+    return {
+        "mode": "open_loop", "trace_rps": 10.0, "warm_up_s": 5.0,
+        "ignore_eos": True,
+        "summary": {
+            "requests": len(pairs) + failed, "ok": ok if ok is not None else len(pairs),
+            "failed": failed, "offered_rps": offered_rps, "window_s": window_s,
+            "served_concurrency": 37.5,
+            "ttft_ms": {"mean": 400.0, "p50": 390.0, "p95": 500.0, "p99": 600.0},
+            "tpot_ms": {"mean": 35.0, "p50": 34.0, "p95": 40.0, "p99": tpot_p99},
+            "output_tokens": 20 * len(pairs), "output_tok_s": 123.0,
+        },
+        "per_request": per_request,
+    }
+
+
+def test_a_queue_that_keeps_up_has_no_ttft_drift():
+    flat = [(float(i), 0.40) for i in range(40)]
+    slope = me.ttft_drift_slope([{"ok": True, "arrival_s": a,
+                                  "first_token_s": a + t} for a, t in flat])
+    assert slope is not None
+    assert abs(slope) < 1e-9
+
+
+def test_a_growing_queue_is_caught_by_the_slope_not_by_the_ttft_value():
+    # TTFT starts high (prefill + transport) but FLAT: a big intercept must not
+    # read as saturation, which is the whole reason the slope is the test.
+    big_but_flat = [{"ok": True, "arrival_s": float(i), "first_token_s": float(i) + 9.0}
+                    for i in range(40)]
+    assert me.ttft_drift_slope(big_but_flat) == pytest.approx(0.0, abs=1e-9)
+    # Growing at 0.2 s per second of arrivals: over the threshold.
+    growing = [{"ok": True, "arrival_s": float(i), "first_token_s": float(i) + 0.2 * i}
+               for i in range(40)]
+    slope = me.ttft_drift_slope(growing)
+    assert slope == pytest.approx(0.2, rel=1e-6)
+    assert slope > me.QUEUE_GROWTH_SLOPE
+
+
+def test_the_slope_ignores_failed_requests_and_needs_two_points():
+    assert me.ttft_drift_slope([]) is None
+    assert me.ttft_drift_slope([{"ok": True, "arrival_s": 0.0, "first_token_s": 1.0}]) is None
+    # A failed request carries no first_token_s; it must not be read as 0.
+    assert me.ttft_drift_slope([
+        {"ok": True, "arrival_s": 0.0, "first_token_s": 0.4},
+        {"ok": False, "arrival_s": 1.0, "first_token_s": None},
+    ]) is None
+
+
+def test_an_open_loop_point_is_flagged_when_the_queue_grew(tmp_path):
+    growing = [(float(i), 0.2 * i) for i in range(40)]
+    csv = _sampler_csv(tmp_path, [(1000.0 + i, 300.0, 90.0) for i in range(20)])
+    rows = me.read_sampler_csv(csv)
+    point = me.summarise_openloop_point(
+        _replay(4.0, growing, window_s=60.0), rows,
+        me.Window(1000.0, 1019.0), me.Window(900.0, 950.0), device_sn="RNGD-A")
+    assert point is not None
+    assert point["saturated"] is True
+    assert point["ttft_drift_slope_s_per_s"] > me.QUEUE_GROWTH_SLOPE
+    # Flagged, never dropped -- a suppressed point leaves a hole a fit crosses.
+    assert point["served_concurrency"] == 37.5
+    assert any("the queue grew" in n for n in point["notes"])
+
+
+def test_a_healthy_open_loop_point_is_not_flagged(tmp_path):
+    flat = [(float(i), 0.4) for i in range(40)]
+    csv = _sampler_csv(tmp_path, [(1000.0 + i, 300.0, 90.0) for i in range(20)])
+    point = me.summarise_openloop_point(
+        _replay(2.0, flat, window_s=150.0), me.read_sampler_csv(csv),
+        me.Window(1000.0, 1019.0), me.Window(900.0, 950.0), device_sn="RNGD-A")
+    assert point is not None
+    assert point["saturated"] is False
+    assert not any("queue grew" in n for n in point["notes"])
+
+
+def test_open_loop_latencies_come_from_the_client_not_a_second_derivation(tmp_path):
+    """A second percentile implementation is the error this repo keeps hitting.
+
+    `replay_to_endpoint` already derives TTFT/TPOT through
+    `planner/util/percentile.py`, so the point must carry those values through
+    rather than recompute them from `per_request`.
+    """
+    flat = [(float(i), 0.4) for i in range(40)]
+    replay = _replay(2.0, flat, window_s=150.0, tpot_p99=41.23456)
+    point = me.summarise_openloop_point(
+        replay, [], me.Window(0.0, 1.0), me.Window(0.0, 1.0))
+    assert point is not None
+    assert point["tpot_ms"] is replay["summary"]["tpot_ms"]
+    assert point["ttft_ms"] is replay["summary"]["ttft_ms"]
+    assert point["served_concurrency"] is replay["summary"]["served_concurrency"]
+
+
+def test_an_open_loop_point_records_its_protocol_and_harness(tmp_path):
+    """Two protocols must never share one interpolation axis (D19, D113), and two
+    harnesses must not either (D102), so a point says which it is."""
+    point = me.summarise_openloop_point(
+        _replay(2.0, [(float(i), 0.4) for i in range(10)], window_s=60.0),
+        [], me.Window(0.0, 1.0), me.Window(0.0, 1.0))
+    assert point is not None
+    assert point["protocol"] == "open_loop"
+    assert point["harness"] == "deployed-server-over-http"
+
+
+def test_failed_open_loop_requests_are_counted_and_noted(tmp_path):
+    point = me.summarise_openloop_point(
+        _replay(2.0, [(float(i), 0.4) for i in range(10)], window_s=60.0, failed=3),
+        [], me.Window(0.0, 1.0), me.Window(0.0, 1.0))
+    assert point is not None
+    assert point["requests_total"] == 13
+    assert point["requests_ok"] == 10
+    assert any("3 request(s) failed" in n for n in point["notes"])
+
+
+def test_a_point_with_no_successful_request_is_no_point_at_all():
+    assert me.summarise_openloop_point(
+        _replay(2.0, [], window_s=0.0, ok=0), [],
+        me.Window(0.0, 1.0), me.Window(0.0, 1.0)) is None
+
+
+def test_the_open_loop_client_always_passes_ignore_eos():
+    """V2 §1: without it the engine stops at EOS and the two sides of a
+    comparison run different workloads. It is not a flag an operator may forget."""
+    cmd = me.openloop_client_command(
+        "/usr/bin/python3", 8000, "meta-llama/Llama-3.1-8B",
+        Path("workloads/x.jsonl"), 3.5, 300, Path("/tmp/out.json"))
+    assert "--ignore-eos" in cmd
+    assert "--open-loop" in cmd
+    assert cmd[cmd.index("--target-rps") + 1] == "3.5"
+    assert cmd[cmd.index("--num-reqs") + 1] == "300"
+    assert cmd[0] == "/usr/bin/python3"
+    assert cmd[2].endswith("replay_to_endpoint.py")
+
+
+def test_the_open_loop_client_is_bound_with_the_server():
+    """The client has to keep up with the schedule; one that drifts across the
+    bridge reports its own lateness as the server's TTFT."""
+    cmd = me.openloop_client_command(
+        "/usr/bin/python3", 8000, "m", Path("d.jsonl"), 1.0, 300,
+        Path("/tmp/o.json"), numa=["numactl", "--cpunodebind=0", "--membind=0"])
+    assert cmd[:3] == ["numactl", "--cpunodebind=0", "--membind=0"]
+    assert cmd[3] == "/usr/bin/python3"
+
+
+def test_open_loop_works_on_both_backends_because_the_server_half_is_shared():
+    """The open-loop mode adds no vendor knowledge: it reuses `server_command`,
+    so a fourth backend row would light up both protocols at once."""
+    for backend in sorted(me.BACKENDS):
+        cmd, env = me.server_command(backend, "art", 8000, 1, 1, engine={})
+        assert cmd and isinstance(env, dict)
+
+
+@pytest.mark.parametrize("argv,expected", [
+    (["--mode", "open"], "needs --rps"),
+    (["--rps", "2"], "open-mode flag"),
+])
+def test_the_mode_flags_refuse_a_contradictory_invocation(argv, expected, tmp_path):
+    proc = subprocess.run(
+        [sys.executable, str(SCRIPT), "--artifact", "a", "--dataset", "d",
+         "--out", str(tmp_path / "o"), *argv],
+        capture_output=True, text=True, cwd=ROOT, timeout=120,
+    )
+    assert proc.returncode == 1, proc.stderr
+    assert expected in proc.stderr
+
+
+def test_every_artifact_of_one_open_loop_point_shares_one_stem():
+    """A dot in a filename is not a cosmetic problem.
+
+    The first open-loop run wrote `power_r0p5.csv` and `replay_r0p5.json` from
+    `run_point_open`, and `point_r0.5.json` beside them from `main`'s own copy of
+    the expression -- one directory, two schemes, and a stem a shell glob treats
+    differently from its siblings. The tag is computed once now.
+    """
+    assert me.openloop_tag(0.5) == "r0p5"
+    assert me.openloop_tag(3.5, 2) == "r3p5_rep2"
+    assert me.openloop_tag(2.0) == "r2"
+    assert me.openloop_tag(10) == "r10"
+    assert "." not in me.openloop_tag(0.25, 1)

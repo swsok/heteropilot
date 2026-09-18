@@ -239,35 +239,83 @@ V3의 구조를 그대로 따른다: 선정은 CPU 절반이고, 승인 전에�
 이고, `warn` arm은 "조건 검사가 없었다면 무엇을 판정했을 것인가"를 보이는 열로만
 쓴다. 두 arm을 같은 표에 두고 어느 쪽이 기본인지 명시한다.
 
-#### S7.2 furiosa 개루프 하네스 (카드 필요, 1.5~2일)
+#### S7.2 furiosa 개루프 하네스 (카드 필요, 1.5~2일) — **실행됨, D114로 경로 변경**
 
-**이것이 S7 비용의 대부분이다.** 두 하네스는 **벤더가 아니라 프로토콜로**
-갈린다(`docs/HANDOVER.md` §2.10.1):
+> **개정 rev 3 (2026-09-18).** 아래 초안은 "`measure_envelope_openloop.py`에
+> `furiosa` 백엔드를 추가한다"였고 **그 파일은 그 변경을 담을 수 없다.** 그 파일의
+> 본체는 `python -m bench run`이고 `bench/core/runner.py`는
+> `vllm.v1.engine.async_llm.AsyncLLM`을 **인프로세스로** 구동한다 — furiosa-llm은
+> 서버이고 AsyncLLM 등가물이 없다. §2.2가 찾은 세 이음매(서버 기동·샘플러·인터프리터)가
+> 이 파일에는 **존재하지 않는다**: 엔진이 파이썬 객체이므로 바꿀 기동 줄이 없다.
+> `bench/`에 두 번째 엔진 경로를 넣는 것은 절대 규칙 1(Phase 5 전 upstream 불변)이
+> 막는다. **전체 근거는 `docs/deviations.md` D114.**
+>
+> 실제로 한 일: **개루프 *프로토콜*을 `measure_envelope.py`에 추가**했다. 그 파일이
+> 이미 백엔드별 기동 줄(`server_command`), 서버·클라이언트 양쪽 NUMA 바인딩
+> (`numa_prefix`, 기본 `auto`), 전력 샘플러, settle/idle 창, 프로세스 그룹 종료를
+> 갖고 있어서, `--mode open`이 바꾸는 것은 **부하 생성기 하나**다 —
+> `bench_furiosa_endpoint.py --concurrency N` → `replay_to_endpoint.py --open-loop
+> --target-rps R`. `--mode closed`가 기본이므로 커밋된 호출은 전부 그대로 돈다.
 
-| 하네스 | 프로토콜 | 백엔드 |
-| --- | --- | --- |
-| `measure_envelope.py` | 폐루프(고정 크기 요청 풀) | `furiosa`, `cuda` |
-| `measure_envelope_openloop.py` | 개루프(도착 트레이스 재생) | **`cuda`만** |
+| 경로 | 프로토콜 | 하네스 | 백엔드 |
+| --- | --- | --- | --- |
+| `measure_envelope.py --mode closed` | 폐루프 | 배포 서버 + HTTP | `furiosa`, `cuda` |
+| **`measure_envelope.py --mode open`** | **개루프** | **배포 서버 + HTTP** | **`furiosa`, `cuda`** |
+| `measure_envelope_openloop.py` | 개루프 | 인프로세스 `bench run` | `cuda`만 (이식 불가) |
 
-작업은 §2.2가 기록한 CUDA 포팅의 **거울상**이고, 하드코딩된 세 곳이 대상이다 —
-서버 기동, 전력 샘플러, 벤치 인터프리터. `measure_envelope.py`의 `BACKENDS` 사전이
-그 세 값의 기존 예시다.
+**이 경로가 A40의 어느 도메인과 비교 가능한지가 S7.3을 좌우한다.** A40에는 개루프
+도메인이 **둘** 있고 D102가 하네스가 달라서 파일을 분리해 둔다 —
+`a40.accuracy.yaml`(bench-run)과 `openloop/a40.accuracy.openloop.yaml`(배포 서버 +
+HTTP). RNGD 재적합은 **후자와** 프로토콜·하네스가 모두 같아지므로, 그 파일의 실측
+주의사항을 물려받는다: HTTP 경유에서 **TPOT는 전송 비용이 없고**(클라이언트 36.64 ms
+대 엔진 36.62, +0.06 %) **TTFT는 클라이언트측 전송 +20.26 ms**(그 부하에서 +9.5 %)를
+포함하며 값은 보정하지 않고 원시로 기록된다. 엔진측 수치와 비교하는 소비자는 이
+오프셋을 감안해야 한다.
 
-- 클라이언트는 새로 쓰지 않는다. `replay_to_endpoint.py --open-loop`이 이미 요청별
+실행 내역:
+
+- 클라이언트는 새로 쓰지 않았다. `replay_to_endpoint.py --open-loop`이 이미 요청별
   도착·최초 토큰·완료 타임스탬프와 `L_meas = Σ residency / window`를 기록하고,
   평범한 OpenAI 호환 클라이언트이므로 `furiosa-llm serve`를 그대로 구동한다.
-- **`--numa-bind`를 첫 커밋부터 싣는다.** `measure_envelope_openloop.py`에는 "numa"
-  라는 문자열이 없다. 싣지 않으면 §2.10.1 항목 2가 다시 재측정해야 하고 카드를 두
-  번 재는 셈이다. 노드 해석은 `furiosa-smi info`의 BDF → `/sys/bus/pci/devices/<bdf>/numa_node`
-  로 하고(`/sys/class/rngd_mgmt/*`에는 PCI 부모가 없어 조용히 실패한다),
-  `taskset -cp`로 검증한다. RNGD 3장은 모두 **NUMA 노드 0**이다.
-- A5 규칙은 `summarise_point`에 있어 백엔드가 닿지 못하므로 그대로 적용된다.
-  폐루프 규칙 (b)는 **큐 지연 기울기** `d(scheduled−queued)/d(arrival)`로 대체되며
-  이미 개루프 하네스에 있다.
-- 테스트: 기존 A40 개루프 경로의 회귀가 0변경(커밋된 `requests.jsonl`에 대해
-  170.5619 재현이 그 축의 검사다).
+  `--target-rps`가 트레이스 자신의 간격을 재조정하므로 rate별 재간격 사본을 쓰지
+  않는다. **`--ignore-eos`는 선택이 아니다**(V2 §1) — 테스트가 고정한다.
+- **`--numa-bind`는 공짜로 따라왔다.** 이미 구현돼 있고 기본이 `auto`다. §2.10.1
+  항목 2가 요구한 "첫 커밋부터"를 규율이 아니라 **구조로** 만족한다 — 카드를 두 번
+  재지 않는다. 노드 해석은 `furiosa-smi info`의 BDF →
+  `/sys/bus/pci/devices/<bdf>/numa_node`(`/sys/class/rngd_mgmt/*`에는 PCI 부모가
+  없어 조용히 실패한다), `taskset -cp`로 검증. RNGD 3장은 모두 **NUMA 노드 0**.
+- **포화 판정은 다른 양이고 이름도 다르다.** A5(b)는 폐루프 규칙이다. bench-run
+  경로는 엔진의 `scheduled_ts − queued_ts`로 대체했지만 HTTP 서버는 그것을 내주지
+  않으므로, `ttft_drift_slope`는 **클라이언트측 TTFT**(대기 + prefill + 전송)의
+  기울기를 읽는다. 절편은 비교 불가, **기울기는 비교 가능**이며 임계값
+  `QUEUE_GROWTH_SLOPE = 0.05`은 일부러 공유한다. 크지만 평평한 TTFT가 포화로 읽히면
+  안 되고 그것을 고정하는 테스트가 있다.
+- 지연·동시성은 **재계산하지 않는다**. `replay_to_endpoint`가 이미
+  `planner/util/percentile.py`로 산출하므로 두 번째 보간을 만들지 않는다. 이 파일이
+  더하는 것은 클라이언트가 볼 수 없는 것 — 창별 전력·이용률, 비교용 idle 창, 포화
+  판정이다.
+- `envelope.json`의 run 블록과 각 point가 `protocol`·`harness`를 싣는다.
+  `closed_loop: true`는 모드가 하나일 때 하드코딩된 리터럴이었고, 그대로 두면 모든
+  개루프 아티팩트를 잘못 라벨했을 것이다.
 
-**산출물** 포팅된 하네스 + `docs/HANDOVER.md` §2.10.1 항목 1·2 완료 표시.
+**테스트** `tests/test_measure_envelope.py` — 기존 18개 무수정 통과(폐루프 경로 불변),
+신규 14개: 기울기(평평/증가/표본 부족/실패 요청 제외), point 요약(포화 플래그 + 주석,
+정상 point 미플래그, 지연은 클라이언트 값 통과, protocol/harness 기록, 실패 요청 계수,
+성공 0건이면 point 아님), 클라이언트 명령(`--ignore-eos` 항상, numa 접두, replay 호출),
+양쪽 백엔드에서 서버 절반 공유, 모순된 플래그 조합 거부.
+
+**하드웨어 1회 검증(실행됨).** 단위 테스트가 보일 수 없는 것 — 벤더 서버·sysfs에서
+읽은 NUMA 바인딩·전력 샘플러·HTTP 클라이언트가 네 개의 프로세스로 맞물리는 것 — 을
+카드에서 한 번 확인했다. npu0(`0000:03:00.0`), 20 요청, `--rps 0.5`:
+`numa_bind: node0`, `launch_error_ms` 평균 0.78 / 최대 1.95, bench 창 69.86 W @
+28.07 % 대 idle 38.67 W @ 0.0 %(A5(c) 충족), `ttft_drift_slope` +0.0026 s/s로
+`saturated: false`. **이것은 배관 점검이고 적합점이 아니다** — 20 요청은 D32의 배수
+꼬리(−31.7 %) 아래이므로 도메인 점으로 쓰면 안 된다. 기록:
+`experiments/results/s72_openloop_smoke.md`, 아티팩트는 `outputs/s72_smoke/`(비추적).
+
+**산출물** `--mode open`을 갖춘 `measure_envelope.py` + 테스트 + `docs/deviations.md`
+D114 + `experiments/results/s72_openloop_smoke.md` + `docs/HANDOVER.md` §2.10.1
+항목 1·2 갱신.
 
 #### S7.3 RNGD-CARD 개루프 재적합 (카드 필요, 반나절~1일)
 
