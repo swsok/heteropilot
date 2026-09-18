@@ -131,7 +131,28 @@ def _refusing(domains: dict[str, AccuracyDomain]) -> dict[str, AccuracyDomain]:
     return {hw: d.model_copy(update={"outside_domain": "refuse"}) for hw, d in domains.items()}
 
 
-def _conditions(domains, calibration, bucket: str, shape: str) -> list[Condition]:
+def _conditions(
+    domains, calibration, bucket: str, shape: str, *, scope: dict,
+) -> list[Condition]:
+    """The four original rules, plus S4's (e).
+
+    (a)-(d) are frozen: they are what `ea1_margin_modes.md` records and what
+    D22's revalidation is anchored to, so they are built with
+    `condition_mismatch="warn"`. That is not a default they were written with -
+    the argument did not exist - but it is what reproduces them now that S1
+    (D110) ships `refuse`. Under the planner's own default every candidate on
+    this fixture is held, (c) and (d) both report 0 feasible, and 50/244/30
+    cannot be reproduced at all. `warn` applies the domain under protest and
+    records the mismatch, which is what keeps (a)-(d) a comparison of MARGIN
+    rules rather than a rerun of S1.
+
+    (e) is S1's verdict: the same per-operating-point rule, refusing both an
+    operating point outside the measured range AND a configuration no domain
+    was measured under. `scope` carries the identifying fields the comparison
+    needs - model, variant, arrival process, per-island binding - so the check
+    compares everything both sides state.
+    """
+    warn = {"condition_mismatch": "warn"}
     return [
         Condition("a_margin0", "(a) no margin", None),
         Condition(
@@ -140,12 +161,21 @@ def _conditions(domains, calibration, bucket: str, shape: str) -> list[Condition
         ),
         Condition(
             "c_accuracy_domain", "(c) accuracy domain (committed policy: widen)",
-            AccuracyDomainMargin(domains, shape=shape, calibration=calibration, bucket=bucket),
+            AccuracyDomainMargin(domains, shape=shape, calibration=calibration,
+                                 bucket=bucket, **warn),
         ),
         Condition(
             "d_refuse", "(d) accuracy domain, outside_domain: refuse",
             AccuracyDomainMargin(_refusing(domains), shape=shape,
-                                 calibration=calibration, bucket=bucket),
+                                 calibration=calibration, bucket=bucket, **warn),
+        ),
+        Condition(
+            "e_condition_refuse",
+            "(e) + application-condition refuse (S1, D110)",
+            AccuracyDomainMargin(
+                _refusing(domains), shape=shape, calibration=calibration,
+                bucket=bucket, condition_mismatch="refuse", **scope,
+            ),
         ),
     ]
 
@@ -223,6 +253,26 @@ def main() -> int:
 
     _tiers, island_hw, _warnings = _profile_tiers(spec, islands, profiles)
 
+    # (e)'s application conditions, built exactly as `python -m planner plan`
+    # builds them (planner/__main__.py `_margin_policy`), so the experiment and
+    # the planner cannot disagree about what this run presents to a domain.
+    # `open_loop` is a statement about the planner and not a setting: `plan`
+    # always replays an arrival trace, so a domain fitted closed-loop is
+    # measured under a different process (D19) and says so through the same
+    # match test.
+    from planner.predictor.calibration import load_domain_index
+    from planner.util.tier import resolve_variant
+
+    scope = {
+        "model": spec.model,
+        "variant": resolve_variant(spec.service.dtype, spec.service.kv_cache_dtype),
+        "arrival_process": "open_loop",
+        "device_binding": {
+            i.id: cluster.node(i.node_id).device_binding for i in islands
+        },
+        "index": load_domain_index("."),
+    }
+
     args.work_dir.mkdir(parents=True, exist_ok=True)
     trace = generate_trace(
         spec, args.work_dir / "workload.jsonl",
@@ -243,7 +293,7 @@ def main() -> int:
     by_id = {i.id: i for i in islands}
     results: dict[str, dict] = {}
     try:
-        for condition in _conditions(domains, calibration, bucket, shape):
+        for condition in _conditions(domains, calibration, bucket, shape, scope=scope):
             from planner.candidate_generator import CandidateGenerator
 
             generation = CandidateGenerator(

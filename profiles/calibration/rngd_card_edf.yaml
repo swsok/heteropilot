@@ -53,6 +53,29 @@ hardware:
       # SILICON as eight PEs at tp=8; the two files differ on this field and that
       # is exactly the point of carrying it.)
       parallelism: {tp: 1, pp: 1, dp: 1}
+      # CLOSED_LOOP, added 2026-09-18 (domain-scoping S4). Not a judgement call:
+      # `provenance.bucket_migration.why_unresolved` below already says it in
+      # full -- "The fit is a burst against a closed-loop client: the sim side
+      # ran outputs/envcheck/rngd20_burst.jsonl with every arrival_time_ns
+      # zeroed, and the real side, bench_furiosa_endpoint.py, IGNORES
+      # arrival_time_ns and drives a fixed concurrency of 64 (D19)". A closed
+      # -loop burst has an offered rate of infinity, so this domain does not
+      # answer for the arrival-trace replay `plan` performs.
+      #
+      # THIS FIELD CHANGES THE VERDICT ON THIS FIXTURE and that is S4's finding,
+      # not a side effect: the twelve single-card RNGD candidates of E-A1 match
+      # every other condition and were held as `outside_calibration_domain`;
+      # with this stated they are held as `calibration_condition_mismatch`
+      # instead. Same hold, different measurement requested -- an envelope point
+      # above c=76 no longer answers them; an open-loop refit is what does.
+      arrival_process: closed_loop
+      # NEITHER `model` NOR `variant` is stated here, and unlike the A40 domain
+      # not even the dtype is: `fitted_from` is one summary table
+      # (outputs/rngd_bench/rngd-card-edf-burst_summary.txt) which records no
+      # model and no dtype, and the bucket label `sharegpt-llama31-8b-20` names
+      # a family, not an HF string or a precision. Writing one would be the
+      # guess absolute rule 3 forbids. See the A40 domain for why `model` is
+      # withheld even where the family IS recorded.
       placement:
         islands: 1
         # UNKNOWN, not `unpinned`. Nothing in this file's provenance or in the

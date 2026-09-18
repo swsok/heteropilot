@@ -292,15 +292,29 @@ at served concurrency 3.9 and −18 % at 76, so one number is too loose somewher
 everywhere else (D29). A candidate whose operating point no domain covers is rejected as
 `outside_calibration_domain`: **unmeasured, not infeasible**, and never offered as `closest_plan`.
 `--measurement-plan` (which requires `--accuracy-domain`) then sweeps every uncertain input across
-its *sourced* range and ranks what to measure next by regret removed per hour, `ΔR_i / cost_i`; an
-input with no sourced range is listed as undecidable rather than scored zero. `measure-apply` folds
-a measurement back into a **copy** of the spec and re-plans off the same cache.
+its range and ranks what to measure next by regret removed per hour, `ΔR_i / cost_i`. `measure-apply`
+folds a measurement back into a **copy** of the spec and re-plans off the same cache.
+
+**`WORK_ORDER_domain_scoping.md` (D110–D113) amended all of this and the amendments bite.** A domain
+now answers only for the **configuration** it was measured under — hardware, `parallelism {tp,pp,dp}`,
+`placement {islands, device_binding}`, `arrival_process` — and a candidate that differs is rejected as
+`calibration_condition_mismatch`, a **different** refusal from `outside_calibration_domain` because
+the two ask for different measurements. `--condition-mismatch {refuse,warn}` is the key and **`refuse`
+is the default**: every committed domain is fitted at one island with `dp=1`, and at `tp=1` except
+`rngd_perpe.yaml` (tp=8), so on a fixture whose candidates are not, the planner holds most of them
+and recommends nothing. On E-A1 that is **312 of 324 held, 0 feasible** — the policy working, not
+a broken run (D113), and it is why re-running an
+experiment written before S1 needs `--condition-mismatch warn` to reproduce its numbers. An input
+with no sourced range now takes its **grade's default** range rather than dropping out of the
+ranking (D111), and a `link_bw` item is keyed by the traffic crossing the link — the same wire
+measures 25.0 / 19.29 / 8.8 GB/s for a copy, a two-rank and a four-rank all-reduce (D112).
 
 ```bash
 python -m planner plan ... --accuracy-domain --measurement-plan --budget-hours 8
 python -m planner fit-accuracy-domain --real ...json --sim ...csv --hardware RNGD-CARD --out ...yaml
 python -m planner measure-apply --plan out.yaml --input link_bw:fabric-rngd0-a40a --value 13.0 \
     --source measured --cluster experiments/configs/clusters/pd-rngd-gpu-card.yaml
+python -m planner plan ... --accuracy-domain --condition-mismatch warn   # reproduce a pre-S1 result
 ```
 
 Without `--accuracy-domain` no automatic margin is applied and the output is byte-identical to the
@@ -477,6 +491,10 @@ whose operating point no domain covers is `outside_calibration_domain` — unmea
 infeasible. Stage B sits on top: `planner/uncertainty/{perturb,sensitivity,measurement_plan}.py`
 re-judge perturbed metrics through the same `judge()`/`rank_plans()` the search uses, and
 `plan --accuracy-domain --measurement-plan` emits what to measure next, ranked by regret per hour.
+**Since D110 that is not the only refusal** — a candidate whose *configuration* no domain was
+measured under is `calibration_condition_mismatch`, which asks for a measurement at that
+configuration rather than a wider load range; see the *Uncertainty-aware planning* section above
+before reading any count from an experiment written before it.
 
 Derive schemas from real artifacts, with one trap: **`outputs/example_*_run.csv` are stale** and
 must not be used as golden references — their `output` column counts `input + output` tokens while

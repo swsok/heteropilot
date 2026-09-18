@@ -23,9 +23,9 @@ domains:
 - path: profiles/calibration/a40.accuracy.yaml
   hardware: A40
   model: ''
-  variant: ''
+  variant: bf16
   workload_shape: ''
-  arrival_process: unknown
+  arrival_process: open_loop
   parallelism:
     tp: 1
     pp: 1
@@ -55,7 +55,7 @@ domains:
   model: ''
   variant: ''
   workload_shape: ''
-  arrival_process: unknown
+  arrival_process: closed_loop
   parallelism:
     tp: 1
     pp: 1
@@ -67,9 +67,9 @@ domains:
 - path: profiles/calibration/rngd_perpe.yaml
   hardware: RNGD
   model: ''
-  variant: ''
+  variant: bf16
   workload_shape: ''
-  arrival_process: unknown
+  arrival_process: closed_loop
   parallelism:
     tp: 8
     pp: 1

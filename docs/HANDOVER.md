@@ -1,9 +1,10 @@
 # HeteroPilot — current state and what to do next
 
-> **This is the live handover.** Last updated **2026-09-18** with
-> `WORK_ORDER_domain_scoping.md` S1 and S2 (PRs #106 and #107, both on `main` at
-> `3cbc8a0`) — see §2.10 for where that work order stands and what S3 is. The
-> body below was rewritten 2026-09-10 at the end of
+> **This is the live handover.** Last updated **2026-09-18** at the end of
+> `WORK_ORDER_domain_scoping.md`'s CPU half — S1 through S5, PRs #106, #107,
+> #109, #110, #111 and the landing PR #112. **§2.10 is where that work order
+> stands; §2.10.1 is what to do on the RNGD node**, which is where the next
+> session is going. The body below was rewritten 2026-09-10 at the end of
 > `WORK_ORDER_rps_aware.md` rev 2 (STEP 0–6, PRs #60–#72). **The whole stack is on
 > `main` as of `3aadc2b`** and every `feat/rps-step*` branch, plus
 > `spike/d14-asym-tp`, has been deleted — `origin` holds `main` and nothing else.
@@ -14,6 +15,22 @@
 > MERGED on GitHub while being absent from `main`. PR #72 landed them. If a future
 > stack is merged bottom-up again, check
 > `git rev-list --count origin/main..<tip>` before believing the PR list.
+>
+> **It happened again on 2026-09-18, in the same shape, eight seconds apart.**
+> #109 (S3) merged into `main` at 04:47:14Z; #110 (S4) merged into
+> `feat/ds-s3-link-effective-bw` at 04:47:22Z and #111 (S5) into
+> `feat/ds-s4-ea1-condition-refuse` at 04:47:32Z — both parents already on
+> `main`, so both children went into branches nothing merges from again. All
+> three read MERGED while `main` had no `D113` and no
+> `tests/test_domain_conditions_stated.py`. **PR #112 landed S4, S5 and this
+> handover revision together**, which is also why they arrive in one commit
+> range rather than three.
+>
+> Twice now the warning above was in this file and did not prevent it, because
+> it is read after the merge rather than before. **The rule that would have:
+> merge a stack top-down — retarget the tip PR at `main` first — or merge each
+> PR into `main` one at a time, rebasing as you go.** Bottom-up is what fails,
+> and `git rev-list --count origin/main..<tip>` is the only check that notices.
 >
 > It is **node-agnostic**:
 > every open item says which machine it needs. Earlier handovers are historical
@@ -41,6 +58,25 @@ pytest -q     976 passed, 1 skipped in 107.80s   # A40 node, 2026-09-18
 ruff check .  All checks passed!
 mypy          Success: no issues found in 47 source files
 ```
+
+**Gates at S5's tip**, the commit PR #112 lands, **A5000 node**:
+
+```
+pytest -q     1014 passed in 127.33s             # A5000 node, 2026-09-18
+ruff check .  All checks passed!
+mypy          Success: no issues found in 47 source files
+```
+
+The A5000 node is the third machine and this is the first gate run recorded on
+it. Nothing in S1–S5 needed an accelerator: the whole CPU half of the
+domain-scoping work order replays a warm cache.
+
+**The three counts differ by node and that is expected**, so do not read a
+smaller number on the RNGD node as a regression. 681 is the NPU node at
+`main`'s state on 2026-09-11, before the ~330 tests the last two sprints added;
+a fresh run there should now land near the A5000's 1014, minus whatever skips
+on that hardware. Compare like for like: re-run on the node you are on and
+compare against the previous run **on that node**, not across this table.
 
 622 of those are the count this handover was written at, on the NPU node. One of
 them **failed on the A40 node** before any new work:
@@ -124,11 +160,26 @@ bucket named in the file.**
 
 Since 2026-09-17 every accuracy domain also **states the configuration it was
 measured under** — hardware, `parallelism {tp,pp,dp}`, `placement {islands,
-device_binding}` — and `profiles/calibration/index.yaml` lists them all. A
-candidate that differs on one of those is refused as
-`calibration_condition_mismatch`: unmeasured **at its own configuration**, which
-is a different gap from an operating point past the end of the load axis, and it
-asks for a different measurement. D110, §2.10.
+device_binding}`, and since S4 `arrival_process` and `variant` — and
+`profiles/calibration/index.yaml` lists them all. A candidate that differs on one
+of those is refused as `calibration_condition_mismatch`: unmeasured **at its own
+configuration**, which is a different gap from an operating point past the end of
+the load axis, and it asks for a different measurement. D110, D113, §2.10.
+
+**What the four domains state, because this decides what gets refused:**
+
+| domain | tp | islands | binding | arrival | variant |
+| --- | ---: | ---: | --- | --- | --- |
+| `a40.accuracy.yaml` | 1 | 1 | `unpinned` | `open_loop` | `bf16` |
+| `openloop/a40.accuracy.openloop.yaml` | 1 | 1 | `unpinned` | `open_loop` | — |
+| `rngd_card_edf.yaml` | 1 | 1 | `unknown` | **`closed_loop`** | — |
+| `rngd_perpe.yaml` | **8** | 1 | `unknown` | **`closed_loop`** | `bf16` |
+
+The two `closed_loop` rows are why **every RNGD candidate is now held** —
+§2.10.1 item 1. `model` is stated on none of them on purpose: this repo holds
+two strings for one set of weights (`meta-llama/Llama-3.1-8B` in the envelope
+paths, `NousResearch/Meta-Llama-3.1-8B` in the open-loop A40 domain's own
+provenance), so a string comparison would refuse on the mirror name (D113).
 
 **Two new artifact kinds, and the rule attached to each:**
 
@@ -136,6 +187,7 @@ asks for a different measurement. D110, §2.10.
 | --- | --- | --- |
 | `profiles/envelopes/<HW>/…/tp<N>.yaml` | a measured performance curve | `concurrency_metric: served` and `validity` are mandatory; a file missing either **does not load** |
 | `accuracy_domain:` inside a calibration | the predictor's own error vs operating point | outside the measured points the margin **widens with distance and never caps**; hardware without one gets margin 0 and a note |
+| `measurements:` on a cluster link (S3) | the effective bandwidth for one kind of traffic | keyed by `(collective, world_size, msg_size_class, binding)`; the datasheet `bandwidth_gbps` is never edited (A3), and `source: measured` without a `method` is refused |
 
 **What can be claimed right now, with the label each claim earns, is one page:
 `docs/CLAIMS.md`.** It is the input to the paper outline — Established / Not
@@ -186,12 +238,13 @@ not a gap to paper over.
 
 ## 2. Next work, in priority order
 
-### 2.10 `WORK_ORDER_domain_scoping.md` — **S1 and S2 done 2026-09-17/18 (PRs #106, #107), S3 next**
+### 2.10 `WORK_ORDER_domain_scoping.md` — **S1–S5 done 2026-09-17/18. The CPU half is finished; S6 and S7 need nodes**
 
 The newest item and the front of the queue. It exists because STEP V3 of
 `WORK_ORDER_p2_regular_spec_evidence.md` (PR #98) found two defects that the
-disclosure's own claims rest on. **S1–S5 are CPU work, any node. S6 needs the A40
-node, S7 the RNGD node; both are optional.**
+disclosure's own claims rest on. **S1–S5 were CPU work and are done.** What is
+left needs hardware: **S6 the A40 node, S7 the RNGD node.** §2.10.1 is the RNGD
+list, and it is longer than S7 because S4 added to it.
 
 **S1 — an accuracy domain answers only for the configuration it was measured
 under (D110, PR #106).** V3 deployed P1, one A40 island at **tp=4**, whose margin
@@ -216,39 +269,137 @@ from one is labelled `range_source: default` end to end, `user_defined` still ha
 none on purpose, and `MeasurementPlan.inert` is new because with ranges where
 there were none an input can be *decidable and worth zero*.
 
-**What S2 measured is not what it predicted, and it is the reason S3 matters.**
-The hypothesis was that the V3 link would rank first. It does not rank at all: it
-moves from `undecidable` to **`inert`**. A link bandwidth reaches a predicted
+**What S2 measured is not what it predicted, and it is why S3 existed.**
+The hypothesis was that the V3 link would rank first. It did not rank at all: it
+moved from `undecidable` to **`inert`**. A link bandwidth reached a predicted
 metric through exactly one path — the prefill→decode KV transfer — and the E-A1
-corpus was built with `enable_pd=False`, so nothing crosses any link. **The
-registry prices a link as a KV transfer; the error V3 measured came from the same
-link carrying a TP all-reduce inside one island.**
+corpus was built with `enable_pd=False`, so nothing crossed any link.
 (`experiments/uncertainty/results/s2_default_ranges.md`.)
 
-**Next, in order:**
+**S3 — a link does not have one bandwidth (D112, PR #109).** The same A40 PCIe
+bridge measures **25.0** GB/s for a direct copy, **19.29** for a two-rank
+all-reduce and **8.8** for the four-rank all-reduce a tp=4 island runs, against
+a `vendor_spec` **64.0**. So the LINK_BW item is keyed by the traffic —
+`(collective, world_size, msg_size_class, binding)` — and `Link.measurements[]`
+files the figures *beside* the datasheet value, never over it (A3).
+`world_size` is in the key although the work order named only four parts: 8.8
+and 19.29 differ by nothing else and the fixture carrying both would not load.
+That is the field V3 asked for in as many words.
 
-- **S3 (CPU, ~1 day) — redefine the LINK_BW item** as the *effective collective
-  bandwidth of the deployment*, keyed by `(link_id, collective, msg_size_class,
-  device_binding)`, with a `measurements:` array on the cluster link schema and
-  the vendor value left untouched (A3). **The measurements already exist**: PR
-  #100 put 8.8 GB/s against a `vendor_spec` 64.0 in
-  `outputs/p2_evidence/link*/`. They come from `experiments/p2_evidence/link_probe.py`
-  (torch), **not** `nccl-tests`, so S6(ii) is still open if the work order's tool
-  is required.
-- **S4 (CPU, ~0.5 day) — re-run E-A1 under S1 and re-judge V3's P1.** The counts
-  will move and the moved counts are the disclosure's numbers; the existing
-  50/244/30 stays as the rule-(d) result and the new table is printed beside it.
-  S4 also owns the two fields S1 deliberately left unstated (`arrival_process`,
-  `model`/`variant`): filling them makes `rngd_card_edf.yaml` closed-loop (D19)
-  and refuses every RNGD candidate, which is a decision about the counts and not
-  a side effect.
-- **S5 (CPU, ~0.5 day)** — `docs/uncertainty_planner.md` is stale (it describes
-  B4 as unrun and resimulate as unimplemented); `patent2_evidence_map.md` needs
-  V3's ending and the patent-3 line.
+S3 also found the reason S2 saw `inert`. An intra-island link's bandwidth is the
+`min` that `island_interconnect` reduces into the simulator's own `link_bw`, so
+it prices **every TP collective**, and no closed form can reach it. Such an item
+now lands in `MeasurementPlan.needs_resimulation` — a fifth bucket — instead of
+scoring a confident zero. (`s3_link_effective_bw.md`.)
+
+**S4 — what the condition refusal costs, and V3's P1 ending (D113, PR #110).**
+Rule (e) on E-A1: **312 of 324 held, 0 feasible, no recommendation.** Two things
+came out of it that were not predicted:
+
+* **The refused axis is wider than parallelism.** Per field: `dp` **228**,
+  `islands` 132, `tp` **66**, `arrival_process` 42. A measurement programme
+  aimed only at `tp` would close less than a quarter of the holds. The
+  disclosure must not call the axis "the parallelism degree".
+* **The committed E-A1 script no longer reproduces the committed E-A1 numbers.**
+  Under the planner's own `refuse` default, (c) and (d) return 0 feasible and
+  50/244/30 cannot be got back. `--condition-mismatch warn` is what asks the
+  older question, and (a)–(d) then reproduce exactly. Any experiment written
+  before S1 needs it. (`ea1_s4_condition_refuse.md`, `v3_addendum_s4.md`.)
+
+**S5 — documentation (PR #111).** `docs/uncertainty_planner.md` had no mention
+of S1 at all; `patent2_evidence_map.md` still claimed `AccuracyDomain` has no
+parallelism axis. Both fixed, plus `CLAUDE.md` and the registry docstring. One
+finding is worth carrying out of it: **the patent-3 embodiment's first step is
+not established.** "The registry names the input" is what S2 predicted and
+measured as `inert`, and S3 as `needs_resimulation` — a human investigating V3
+named it. The mechanism is fixed; the demonstration has not been done.
+
+**What is left, and both need hardware:**
+
 - **S6 (A40 node, half a day, optional)** — NUMA-pinned P1 re-measurement,
   `nccl-tests all_reduce_perf` on 4 GPUs and a TP=2 run inside one NV4 pair.
-- **S7 (RNGD node, optional)** — V3-R, the only source for §6's verdict-flip
-  numbers, since the margin is ≈21 % only in the RNGD region.
+  S3's measurements come from `experiments/p2_evidence/link_probe.py` (torch),
+  **not** `nccl-tests`, so S6(ii) is still open if the work order's tool is
+  required. S6(i) is also what would margin P1's residual −7.01 %: no A40
+  domain is fitted at tp=4, which is exactly what rule (e) says.
+- **S7 (RNGD node, optional)** — see §2.10.1, which is where it now lives.
+
+### 2.10.1 The RNGD node list — **read this one before travelling**
+
+Five things want the RNGD card. They are ordered by what they unblock, and the
+first two are new as of this sprint.
+
+**1. An OPEN-LOOP refit of the RNGD-CARD accuracy domain.** *This did not exist
+as a task before S4.* `rngd_card_edf.yaml` now states
+`arrival_process: closed_loop`, sourced from its own provenance — the fit is a
+burst against a closed-loop client and `bench_furiosa_endpoint.py` ignores
+`arrival_time_ns` (D19). `python -m planner plan` always replays an arrival
+trace, so **every RNGD candidate is now held as
+`calibration_condition_mismatch`**, and an envelope point above c=76 no longer
+answers them. What does is an open-loop refit, and **it is a port, not a
+re-run**: the two harnesses split by protocol, not by vendor.
+
+| harness | protocol | backends |
+| --- | --- | --- |
+| `experiments/scripts/measure_envelope.py` | **closed loop** — a request pool of fixed size | `furiosa` and `cuda` |
+| `experiments/scripts/measure_envelope_openloop.py` | **open loop** — an arrival trace replayed at a rate | `cuda` only (it writes `"backend": "cuda"`) |
+
+So the RNGD card has a closed-loop harness and the open-loop one has no furiosa
+path. The job is the **mirror image** of the CUDA porting §2.2 records — server
+launch, sampler, bench interpreter — and §2.2's own list is the template.
+Budget it as that, not as a measurement afternoon.
+
+**Do not add an open-loop point to the existing closed-loop domain.** Two
+protocols on one interpolation axis is the class of error D22 was, and
+`a40.accuracy.yaml`'s header is the precedent: it went open-loop *because* its
+existing 170.56 point came from an arrival replay, and consistency with the
+point being joined beat consistency with the other device's curve. A refit is a
+new domain file, not three more points in this one.
+
+**2. Re-take the RNGD envelope and accuracy domain NUMA-BOUND (D94).** Both
+were taken unbound. STEP C's cost model re-measured bound agreed to 0.24 %
+because it reads device cycles, but the wall-clock half of
+`measure_envelope.py` did not get that check, and binding is worth up to 1.93×
+on the A40 node. Both harnesses now take `--numa-bind`, **default `auto`**, and
+record the affinity mask. **Trap:** `/sys/class/rngd_mgmt/*` are virtual devices
+with no PCI parent, so resolve the node through `furiosa-smi info` and the BDF,
+and verify with `taskset -cp` rather than trusting the flag.
+
+**Items 1 and 2 are the same trip and should be one.** `measure_envelope_openloop.py`
+has no NUMA handling at all — the string "numa" does not appear in it — so a
+furiosa open-loop path written for item 1 should carry `--numa-bind` from the
+first commit rather than producing a second unbound curve that item 2 then has
+to retake. Doing them separately means measuring the card twice.
+
+**3. S7 / V3-R** — one RNGD candidate each of the P2 and P3 shapes, steady-state
+workload, p99/p99. **The only source for the disclosure's §6 verdict-flip
+numbers**, because the margin is ≈21 % only in the RNGD region. Note it interacts
+with item 1: under the default `refuse` those candidates are held before any
+verdict, so V3-R must either run `--condition-mismatch warn` and say so, or wait
+for the open-loop refit. That is a choice to make deliberately, not at the
+prompt.
+
+**4. The NPU exec-model spike's leftovers** (§2.0): a **wide-KV workload** to
+test C.3's bucket-ladder explanation, **B.3's hold-out** (needs C.4, needs a
+card), and **C.2** — whether the runtime alternates prefill and decode steps or
+drains the prefill queue. C.2 cannot be settled by running both knob values
+(they differ by 0.03 pp); it needs a step-timestamp logging option from Furiosa.
+
+**5. ATOM (D20)** — still blocked on the vendor. Host I/O exceeds the kernels
+and the device tracer's `.pb` schema is undocumented. Unchanged; listed so it is
+not rediscovered.
+
+**Two things the RNGD node cannot fix, so do not try.** The 10 rps E6 cell's
+per-PE operating point is 139.4 against an envelope ceiling of 107.2, and the
+envelope says that ceiling is pool-bound — no simulated point up there can be
+given a measured reference (§2.3). And the residual on V3's P1 is an **A40**
+measurement (S6(i)), not an RNGD one.
+
+**Before running anything here**, `bash scripts/whichnode.sh`, and read
+`docs/nodes/npu.md` — in particular the trap that cost a device slot: `npu0` was
+held throughout by another tenant's pod while `alloc_status`, `furiosa-smi ps`
+and the power reading all said it was free. Read the process list for `--chip`
+flags instead. Today's `npu2` is the card the four-card inventory called `npu3`.
 
 ### 2.0 `WORK_ORDER_npu_exec_model_spike.md` — **STEP 0/A/B/C done 2026-09-17, conclusion (ii)**
 
@@ -680,11 +831,27 @@ Recorded because they are not discoverable from the code.
   that asks a different question (S2 asked what the default ranges change) must
   pass `--condition-mismatch warn` and say so in its output header; the
   measurement-plan numbers are otherwise about S1 and nothing else.
+  **S4 quantified it: 312 of 324 held, 0 feasible, and the refused axis is
+  `dp` (228) far more than `tp` (66).**
+- **A committed experiment script can stop reproducing its own committed
+  numbers, with nothing broken.** `ea1_margin_modes.py` on `main` returns 0
+  feasible for conditions (c) and (d), where `ea1_margin_modes.md` publishes
+  50/244/30 — because the planner's default changed under it (S1). The fix is
+  `--condition-mismatch warn`, which asks the question the script was written
+  to ask. Before concluding a script is broken, check whether a *default* moved;
+  before re-publishing its numbers, check which question the flags now ask.
 - **`--out-dir` does not redirect `--out-json`.** `eb1_regret_vs_budget.py`
   defaults its JSON to the fixed `outputs/uncertainty/eb1/eb1_regret_vs_budget.json`
   — a **committed** artifact — whatever `--out-dir` says. A re-run overwrote it on
   2026-09-17 and it was restored from git. Pass `--out-json` explicitly, and
   `git status outputs/` after any experiment re-run.
+- **A script whose default output path is a committed artifact will overwrite
+  it, and `v3_slo_sweep.py` was the second one found.** It wrote
+  `experiments/p2_evidence/results/v3_slo_sweep.json` with no way to redirect,
+  and fired once during S4 before `git status` caught it. It now takes
+  `--out-json`, and `--ea1` requires it. **Two of these have now been found by
+  tripping over them**; if you add an experiment script, give it an output flag
+  before you give it a default.
 - **Reproduce an E-B result with the invocation the result md records, not the
   script's defaults.** E-B1's committed numbers are `--exhaustive --k 1 2 3`, 231
   degraded sets; without `--exhaustive` it samples ten sets per k, which is a

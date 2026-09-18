@@ -10,6 +10,13 @@ itself.** Two implementations of "the simulator's error as a function of the
 operating point" were built in parallel; one was kept, and D33 records which and
 why. This document describes what landed.
 
+**A second work order has since amended it.** `WORK_ORDER_domain_scoping.md`
+S1–S4 (**D110–D113**) added the application conditions a domain answers under,
+a default range per grade, the traffic key on a link item, and the measurement
+of what the first of those costs. Where this document says "domain" without
+qualification it now means "domain **for this configuration**"; §2.2.1 is the
+part to read first.
+
 **Everything here is opt-in.** Without `--accuracy-domain` the planner applies no
 automatic margin and its output is byte-identical to the pre-uncertainty path
 (work order rule A4, guarded by the golden-output regression tests).
@@ -103,9 +110,71 @@ in `planner/predictor/accuracy_domain.py` (which holds nothing else since D33):
 **Outside the measured range the default is `refuse`.** The candidate comes back
 `unmeasured` and is rejected as `outside_calibration_domain` — *not* as
 infeasible. The alternative, `widen_error_bars`, extrapolates the nearest error
-by |slope| × distance and is what the three committed domains still carry
-explicitly, so every E5/E6 number predating D33 is unchanged. Flipping those to
-`refuse` is a science change and is deliberately not done here (D33 §2).
+by |slope| × distance and is what the three domains on the default load path
+still carry explicitly, so every E5/E6 number predating D33 is unchanged. (The
+fourth, D102's open-loop A40 domain in `profiles/calibration/openloop/`, carries
+`refuse`; `load_accuracy_domains` globs non-recursively and never sees it unless
+it is named, which is why it can exist beside the other A40 one at all.)
+Flipping those three to `refuse` is a science change and is deliberately not
+done here (D33 §2).
+
+#### 2.2.1 The conditions a domain answers under (S1, D110)
+
+A domain is not only a curve over `L`. It also states **the configuration its
+real side was measured under**, and it may not be consulted for a candidate
+that differs on one:
+
+| field | example | what it is |
+| --- | --- | --- |
+| `hardware` | `A40` | which accelerator; refused if the file is mis-filed |
+| `parallelism` | `{tp: 1, pp: 1, dp: 1}` | the degrees the REAL side ran at |
+| `placement` | `{islands: 1, device_binding: unpinned}` | how many islands of this hardware, bound how |
+| `arrival_process` | `open_loop` / `closed_loop` | how load was offered (D19, S4) |
+| `model`, `variant`, `workload_shape` | `bf16` | what was served |
+
+`AccuracyDomain.check_conditions()` compares them **per island assignment**,
+because a candidate may put two islands of one hardware at different
+parallelism and there is no honest single `tp` for that pair.
+
+**Not stated on either side means not compared** — the same convention
+`model`/`variant`/`workload_shape` have had since D33. An unstated condition is
+carried as a `skipped` warning, never as a match: a plan resting on an unchecked
+condition should say so. This is why `binding: unknown` is not the same claim as
+`unpinned`.
+
+**A mismatch is its own refusal**, `CALIBRATION_CONDITION_MISMATCH`, carrying
+`mismatch_fields` and `required_measurement` — the configuration a measurement
+would have to be taken at. It is a **different** refusal from
+`OUTSIDE_CALIBRATION_DOMAIN`, and the two ask for different measurements: a
+wider load range against a measurement at the candidate's own configuration.
+
+The policy key is `--condition-mismatch {refuse,warn}`, **default `refuse`**,
+symmetric with `outside_domain: refuse`. `warn` applies the domain anyway and
+records the mismatch; it exists to measure what the refusal costs, not to plan
+with.
+
+`profiles/calibration/index.yaml` lists every registered domain and its
+conditions, so a refusal can say what *does* exist ("measured at tp=1; you asked
+for tp=4") instead of only that nothing matched. It is a copy, and
+`tests/test_calibration_condition.py` rebuilds it from the files and compares —
+regenerate it rather than hand-editing.
+
+**What the committed domains state**, after S4 (D113):
+
+| domain | tp | islands | binding | arrival | variant |
+| --- | ---: | ---: | --- | --- | --- |
+| `a40.accuracy.yaml` | 1 | 1 | `unpinned` | `open_loop` | `bf16` |
+| `openloop/a40.accuracy.openloop.yaml` | 1 | 1 | `unpinned` | `open_loop` | — |
+| `rngd_card_edf.yaml` | 1 | 1 | `unknown` | `closed_loop` | — |
+| `rngd_perpe.yaml` | 8 | 1 | `unknown` | `closed_loop` | `bf16` |
+
+**`model` is stated on none of them, deliberately.** This repository holds two
+strings for one set of weights — `meta-llama/Llama-3.1-8B` in the envelope paths
+and `NousResearch/Meta-Llama-3.1-8B` in the open-loop A40 domain's own
+provenance — and the check compares strings, so stating either would refuse on
+the mirror name rather than on a model difference. It needs an alias policy that
+does not exist. Measured: stating `model` and `variant` on all three changes no
+count (D113).
 
 ### 2.3 Per-candidate margins and the three-way verdict
 
@@ -125,7 +194,12 @@ of the whole exercise:
 1. nothing could be margined at all → `UNMEASURED`, decided *before* the SLO
    check, and never entered as an infeasibility — an undecidable candidate must
    not surface as `closest_plan`, which is a claim about how narrowly something
-   missed;
+   missed. Since S1 this case has **two distinct grounds**, and the rejection
+   says which: `OUTSIDE_CALIBRATION_DOMAIN` (a domain applies here but the
+   operating point is past the end of its load axis) and
+   `CALIBRATION_CONDITION_MISMATCH` (no domain was measured under this
+   configuration at all — §2.2.1). Collapsing them would hide that they ask for
+   different measurements;
 2. it **passed**, but on a metric whose margin is unknown → `UNMEASURED`. A
    violation is real whatever the coverage, because a margin only inflates; a
    *pass* that rests on an unmeasured metric is a gap, not a verdict;
@@ -135,6 +209,11 @@ Coverage can be partial. A domain fitted by comparing a burst simulation against
 a closed-loop bench has TPOT points and no TTFT ones — queued requests inflate
 sim TTFT by two orders of magnitude there, so there is nothing honest to compare
 (D19). Such a decision margins TPOT and reports TTFT in `unmeasured_metrics`.
+
+Since S4 that same fact is also a **stated condition**: `rngd_card_edf.yaml`
+says `arrival_process: closed_loop`, so under the default `refuse` an open-loop
+run does not reach the partial-coverage path at all — it is held first. The two
+mechanisms overlap and the condition is the blunter one; see §5.
 
 ### 2.4 Closed-form perturbation
 
@@ -297,6 +376,15 @@ python -m planner measure-apply --plan outputs/plans/plan.yaml \
 
 Notes that are easy to get wrong:
 
+* `--condition-mismatch {refuse,warn}` decides what happens when no domain was
+  measured under a candidate's configuration (§2.2.1). **`refuse` is the
+  default**, and on a fixture whose candidates are not `tp=1, dp=1, islands=1`
+  it holds a great many of them — on E-A1 it holds 312 of 324 and leaves no
+  recommendation (only `rngd_perpe.yaml` is fitted at tp=8; the rest are tp=1,
+  and all four are one island at dp=1). **That is the policy working, not a broken run**, and the
+  suggestions name the measurements. `warn` measures what the refusal costs;
+  an experiment that passes it must say so in its output header, because the
+  numbers are then about something else.
 * `--measurement-plan` **requires** `--accuracy-domain`. Without the domain there
   is no margin policy to compute regret against, and the CLI says so rather than
   falling back.
@@ -337,6 +425,48 @@ worth carrying: (b) reproduces D22's winner and tok/J to the last digit, so the
 chain from fixture to verdict is anchored; and the difference between (c) and (d)
 is **30 candidates that stop being called infeasible and start being called
 unmeasured** — the same evidence, a different and more honest verdict.
+
+**Reproducing that table now needs `--condition-mismatch warn`**, and this is
+the first thing to know before re-running anything here. The committed script
+under the planner's own default returns **0 feasible for (c) and (d)** with 276
+held, because every committed domain is fitted at one island with `dp=1` — and
+at `tp=1` except `rngd_perpe.yaml`, which is tp=8 — while this fixture's
+candidates are spread over tp 1–4, dp 1–2 and two islands. Nothing regressed; the default changed
+(S1, D110), and `warn` is what asks the older question. See §4's E-A1 (e).
+
+### E-A1 (e) — what the condition refusal costs (S4, D113)
+
+`experiments/uncertainty/results/ea1_s4_condition_refuse.md`. The same cache
+and the same four rules, plus **(e)**: per-operating-point margin refusing both
+an operating point outside the measured range and a configuration no domain was
+measured under.
+
+| | (d) | **(e)** |
+| --- | ---: | ---: |
+| feasible | 50 | **0** |
+| slo_violated | 244 | 6 |
+| outside_calibration_domain | 30 | 6 |
+| calibration_condition_mismatch | — | **312** |
+| recommended | `…a40a-tp4-dp1-s128-t8192` | **none** |
+
+**The field that does it is not the one the work order expected.** Per field:
+`dp` **228**, `islands` 132, `tp` 66, `arrival_process` 42. `tp` explains only
+66 of 312 holds and `dp` alone is the largest single group at 108 — replication
+and placement are refused more often than parallelism is, so a measurement
+programme aimed only at `tp` would close less than a quarter of them.
+
+**Stating `arrival_process` moved 36 candidates and exactly the right ones**:
+all 42 it touches are RNGD-touching, and no A40-only candidate moved, because
+the A40 domain is open-loop and so is `plan`. The 12 single-card RNGD candidates
+change from `outside_calibration_domain` to `calibration_condition_mismatch` —
+**same hold, different measurement requested**: an envelope point above c=76 no
+longer answers them, an open-loop refit does.
+
+**V3's P1 gets its ending** (`experiments/p2_evidence/results/v3_addendum_s4.md`):
+held at every TPOT SLO from 38 to 50 ms, identically, because a condition
+mismatch is decided before any margin exists and no threshold can move it.
+Rules (a)–(d) made 6 / 3 / 6 / 6 false passes on that grid; (e) makes none, and
+none of the correct rejections either.
 
 ### E-A2 — the RNGD accuracy domain
 
@@ -433,7 +563,26 @@ against 25,962 s of resimulation, **36,566×**.
 
 ## 5. Limits
 
-Four, in the order they are likely to bite.
+Six, in the order they are likely to bite. The first two are the domain-scoping
+work order's and are the newest.
+
+**The condition refusal is whole-domain.** A single disagreeing field withdraws
+the TTFT *and* the TPOT error together. For `arrival_process` that is demonstrably
+blunter than the evidence: D19's finding is that a burst and a spread arrival
+process differ and *"the difference lands entirely in TTFT"*, so a closed-loop
+domain's TPOT error may well survive into an open-loop deployment. Refusing it
+is conservative, not correct, and on E-A1 it is what holds all 42 RNGD-touching
+candidates (D113). Per-metric condition scoping would express it; it is not
+built.
+
+**A run that judges nothing still suggests relaxing the SLO.** When
+`condition_mismatch: refuse` holds every candidate there is no verdict to
+explain, but the infeasible-run reporting path still emits "relax the TPOT SLO
+from 50 ms to at least 116 ms" alongside the `measure at: {...}` lines that are
+the real answer. The measurement requests are right and complete; the SLO advice
+is about the wrong thing. Cosmetic, and listed so a reader does not act on it.
+
+Then the four that predate S1:
 
 **The closed form is first-order for two of five kinds.** `PROFILE` and `POWER`
 are scalings, not re-simulations. `PROFILE`'s energy term carries an extra
@@ -538,4 +687,7 @@ nothing else. Quote it with that sentence attached or not at all.
 | flips and `ΔR` | `planner/uncertainty/sensitivity.py` |
 | the measurement queue | `planner/uncertainty/measurement_plan.py` |
 | CLI | `planner/__main__.py` |
-| decisions | `docs/deviations.md` D19, D22, D29, D32, **D33**, **D34**, **D35** |
+| application conditions | `planner/predictor/calibration.py` (`DomainParallelism`, `DomainPlacement`, `CandidateConditions`, `check_conditions`), `profiles/calibration/index.yaml` |
+| link measurements by traffic | `planner/inventory.py` (`LinkMeasurement`), `planner/topology.py` (`link_bandwidth_gbps`) |
+| decisions | `docs/deviations.md` D19, D22, D29, D32, **D33**, **D34**, **D35**, and the domain-scoping block **D110** (conditions) **D111** (default ranges) **D112** (link traffic key) **D113** (arrival process, and what the refusal costs) |
+| what the refusal costs, measured | `experiments/uncertainty/results/ea1_s4_condition_refuse.md`, `experiments/p2_evidence/results/v3_addendum_s4.md` |

@@ -49,8 +49,15 @@ TPOT_SLO_MS = 50.0
 TTFT_SLO_MS = 25000.0
 
 
-def load() -> tuple[dict, dict]:
-    ea1 = json.loads(EA1.read_text())
+def load(ea1_path: Path | None = None) -> tuple[dict, dict]:
+    """The E-A1 record and the envelope cache.
+
+    `ea1_path` defaults to the COMMITTED record. S4 passes its own re-run
+    instead, which reproduces (a)-(d) exactly and adds rule (e) - the committed
+    file is not regenerated, so V3's published numbers keep their source
+    (domain-scoping S4).
+    """
+    ea1 = json.loads((ea1_path or EA1).read_text())
     cache = {}
     for path in glob.glob(str(CACHE / "*.json")):
         entry = json.loads(Path(path).read_text())
@@ -96,14 +103,14 @@ def parse_reason(reason: str) -> dict:
     return out
 
 
-def row_for(cid: str, ea1: dict, cache: dict) -> dict:
-    v = {r: ea1["conditions"][r]["verdicts"][cid] for r in RULES}
+def row_for(cid: str, ea1: dict, cache: dict, rules: tuple[str, ...] = RULES) -> dict:
+    v = {r: ea1["conditions"][r]["verdicts"][cid] for r in rules}
     entry = cache.get(cid, {})
     metrics = entry.get("metrics", {})
     # A rejected verdict states the metrics it judged; a feasible one does not,
     # so the cache is the only source for those.
     from_reason: dict = {}
-    for r in RULES:
+    for r in rules:
         from_reason.update(parse_reason(v[r].get("reason", "")))
     return {
         "candidate_id": cid,
@@ -114,13 +121,13 @@ def row_for(cid: str, ea1: dict, cache: dict) -> dict:
         "p99_ttft_ms": metrics.get("p99_ttft_ms") or from_reason.get("p99_ttft_ms"),
         "served_concurrency": metrics.get("served_concurrency"),
         "tokens_per_joule": metrics.get("tokens_per_joule"),
-        "verdicts": {r: v[r]["verdict"] for r in RULES},
-        "stages": {r: v[r]["stage"] for r in RULES},
-        "tpot_margin_pct": {r: v[r].get("tpot_percent") for r in RULES},
-        "operating_point": {r: v[r].get("concurrency") for r in RULES},
+        "verdicts": {r: v[r]["verdict"] for r in rules},
+        "stages": {r: v[r]["stage"] for r in rules},
+        "tpot_margin_pct": {r: v[r].get("tpot_percent") for r in rules},
+        "operating_point": {r: v[r].get("concurrency") for r in rules},
         "basis": v["c_accuracy_domain"].get("basis", ""),
-        "ttft_margin_pct": {r: v[r].get("ttft_percent") for r in RULES},
-        "reasons": {r: v[r].get("reason", "") for r in RULES},
+        "ttft_margin_pct": {r: v[r].get("ttft_percent") for r in rules},
+        "reasons": {r: v[r].get("reason", "") for r in rules},
     }
 
 

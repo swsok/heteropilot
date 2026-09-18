@@ -35,6 +35,18 @@ hardware:
       # PE, a card is a TP-8 island" -- not an inference. Binding unknown, as for
       # the card-as-device sibling.
       parallelism: {tp: 8, pp: 1, dp: 1}
+      # CLOSED_LOOP, added 2026-09-18 (domain-scoping S4), and it is the MEASURED
+      # half that decides this field. The simulated half ran at constant arrival
+      # spacing, but the real side this domain is fitted against is the RNGD-CARD
+      # envelope, whose own file states `closed_loop: true` and warns that its
+      # `ttft_*` "is closed-loop -- the whole request pool is fired at once
+      # (D19) -- and must not be compared with an open-loop Poisson p99".
+      # A domain answers for the conditions its REAL side was measured under.
+      arrival_process: closed_loop
+      # bf16 from this file's own first line and the `.../bf16/tp1.yaml`
+      # envelope in `fitted_from`. `model` withheld for the mirror-name reason
+      # the A40 domain records.
+      variant: bf16
       placement: {islands: 1, device_binding: unknown}
       # The concurrency the per-PE model was first validated at: served 17.342 in
       # the simulator against 17.738 on the hardware, TPOT p50 35.809 vs 28.664 ms

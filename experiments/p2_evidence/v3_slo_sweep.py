@@ -43,12 +43,22 @@ P1 = "cuda-a40-node_a40a-tp4-dp1-s128-t2048"
 SLO_GRID_MS = (38.0, 40.0, 42.0, 44.0, 46.0, 50.0)
 TTFT_SLO_MS = 25000.0
 LABELS = {"a_margin0": "(a) no margin", "b_global18": "(b) global 18 %",
-          "c_accuracy_domain": "(c) per-point", "d_refuse": "(d) per-point + refuse"}
+          "c_accuracy_domain": "(c) per-point", "d_refuse": "(d) per-point + refuse",
+          "e_condition_refuse": "(e) + condition refuse"}
+
+#: Rule (e) (domain-scoping S1/S4, D110) is NOT a fifth threshold comparison.
+#: A condition mismatch is decided before any margin exists: no domain was
+#: measured under this candidate's configuration, so none may be consulted, and
+#: there is no robust value to compare against an SLO. Its cell is therefore the
+#: same at every threshold, which is the point - the sweep's other four columns
+#: move with the grid and this one cannot.
+E_RULE = "e_condition_refuse"
 
 
-def robust_values(candidate: str = P1) -> dict:
-    ea1, cache = load()
-    row = row_for(candidate, ea1, cache)
+def robust_values(candidate: str = P1, ea1_path=None) -> dict:
+    ea1, cache = load(ea1_path)
+    rules = RULES + ((E_RULE,) if E_RULE in ea1["conditions"] else ())
+    row = row_for(candidate, ea1, cache, rules)
     out = {"candidate": candidate,
            "predicted_p99_tpot_ms": row["p99_tpot_ms"],
            "predicted_p99_ttft_ms": row["p99_ttft_ms"],
@@ -61,6 +71,12 @@ def robust_values(candidate: str = P1) -> dict:
             "tpot_margin_pct": mt, "ttft_margin_pct": mf,
             "robust_tpot_ms": row["p99_tpot_ms"] * (1 + mt / 100.0),
             "robust_ttft_ms": row["p99_ttft_ms"] * (1 + mf / 100.0),
+        }
+    if E_RULE in rules:
+        out["held"] = {
+            "label": LABELS[E_RULE],
+            "stage": row["stages"][E_RULE],
+            "reason": row["reasons"][E_RULE],
         }
     return out
 
@@ -85,6 +101,12 @@ def sweep(base: dict, measured_tpot_ms: float | None) -> list[dict]:
                     "FALSE REJECTION" if not passes and truth else
                     "correct rejection")
             cells[rule] = cell
+        if "held" in base:
+            # Neither a pass nor a rejection: the candidate is UNMEASURED at its
+            # own configuration, so the rule declines to answer and there is no
+            # outcome to score against the measurement (S1, D110).
+            cells[E_RULE] = {"verdict": "held", "bound_by": None,
+                             "outcome": "held (condition mismatch)"}
         rows.append({"tpot_slo_ms": slo, "measured_satisfies": truth, "rules": cells})
     return rows
 
@@ -93,9 +115,27 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--measured", type=float, default=None,
                     help="measured p99 TPOT in ms; omit to print the rule side only")
+    ap.add_argument("--out-json", type=Path, default=None,
+                    help="where to write the record. The default is V3's own "
+                         "COMMITTED artifact, so a re-run that asks a different "
+                         "question must redirect it - the same trap "
+                         "eb1_regret_vs_budget.py sprang on 2026-09-17, which "
+                         "cost a `git checkout` to undo (docs/HANDOVER.md §3)")
+    ap.add_argument("--ea1", type=Path, default=None,
+                    help="an E-A1 record other than the committed one. S4 passes "
+                         "its re-run, which reproduces (a)-(d) exactly and adds "
+                         "rule (e); the committed file stays as V3 published it")
     args = ap.parse_args()
 
-    base = robust_values()
+    if args.ea1 is not None and args.out_json is None:
+        print("error: --ea1 asks a different question from the committed sweep, so "
+              "--out-json is required; writing this run over "
+              "experiments/p2_evidence/results/v3_slo_sweep.json would replace "
+              "V3's published record with one its own text does not describe",
+              file=sys.stderr)
+        return 1
+
+    base = robust_values(ea1_path=args.ea1)
     print(f"candidate      : {base['candidate']}")
     print(f"predicted p99  : TPOT {base['predicted_p99_tpot_ms']:.5f} ms, "
           f"TTFT {base['predicted_p99_ttft_ms']:.1f} ms, L {base['predicted_concurrency']:.4f}")
@@ -105,22 +145,31 @@ def main() -> int:
         print(f"{r['label']:24s} {r['tpot_margin_pct']:11.4f}% {r['robust_tpot_ms']:12.5f} "
               f"{r['robust_ttft_ms']:12.1f}")
 
+    if "held" in base:
+        print(f"\n{base['held']['label']:24s} {base['held']['stage']}")
+        print(f"  {base['held']['reason'][:150]}")
+
     rows = sweep(base, args.measured)
-    print(f"\n{'TPOT SLO':>9s} " + " ".join(f"{LABELS[r]:>22s}" for r in RULES)
+    shown = RULES + ((E_RULE,) if "held" in base else ())
+    print(f"\n{'TPOT SLO':>9s} " + " ".join(f"{LABELS[r]:>22s}" for r in shown)
           + ("   measured satisfies?" if args.measured else ""))
     for row in rows:
         cells = " ".join(
             f"{(row['rules'][r].get('outcome') or row['rules'][r]['verdict']):>22s}"
-            for r in RULES)
+            for r in shown)
         tail = ("" if row["measured_satisfies"] is None
                 else f"   {'YES' if row['measured_satisfies'] else 'no'}")
         print(f"{row['tpot_slo_ms']:9.0f} {cells}{tail}")
 
-    out = REPO / "experiments/p2_evidence/results/v3_slo_sweep.json"
+    out = args.out_json or REPO / "experiments/p2_evidence/results/v3_slo_sweep.json"
     out.write_text(json.dumps(
         {"base": base, "ttft_slo_ms": TTFT_SLO_MS, "slo_grid_ms": list(SLO_GRID_MS),
          "measured_p99_tpot_ms": args.measured, "sweep": rows}, indent=2) + "\n")
-    print(f"\nwrote {out.relative_to(REPO)}")
+    try:
+        shown = out.relative_to(REPO)
+    except ValueError:
+        shown = out
+    print(f"\nwrote {shown}")
     return 0
 
 
