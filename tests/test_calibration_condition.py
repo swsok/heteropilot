@@ -329,3 +329,132 @@ def test_a_domain_filed_under_the_wrong_hardware_is_refused(tmp_path):
     save_calibration(model, path)
     with pytest.raises(ValueError, match="filed under"):
         load_accuracy_domains(tmp_path, [path])
+
+
+# --- compared_metric (S7.3) ------------------------------------------------
+#
+# `WORK_ORDER_domain_scoping.md` S7.3. The margin is applied to a p99 (D101)
+# while every domain committed before 2026-09-18 was fitted on a p50 and says
+# nothing about it. A domain that DECLARES p50 gets a warning; silence does not,
+# because warning on silence would fire on every run and tell nobody anything.
+
+
+def _domain_with(**kw):
+    from planner.predictor.calibration import AccuracyDomain
+
+    base = {
+        "fitted_at_concurrency": 10.0,
+        "points": [{"conc": 5.0, "tpot_err_pct": -10.0},
+                   {"conc": 50.0, "tpot_err_pct": -20.0}],
+        "outside_domain": "widen_error_bars",
+        "hardware": "RNGD-CARD",
+    }
+    return AccuracyDomain(**{**base, **kw})
+
+
+def test_a_domain_may_record_the_percentile_it_was_fitted_on():
+    d = _domain_with(compared_metric="tpot_p99")
+    assert d.compared_metric == "tpot_p99"
+    # Unstated is "" and NOT p50: stating it for the committed domains is a
+    # migration with its own measurement question, not a field default.
+    assert _domain_with().compared_metric == ""
+
+
+def test_a_point_may_carry_the_p50_error_beside_the_fitted_one():
+    """Recorded, never consulted: `tpot_err_pct` is what gets interpolated."""
+    d = _domain_with(points=[{"conc": 5.0, "tpot_err_pct": -18.0,
+                              "tpot_err_pct_p50": -11.0},
+                             {"conc": 50.0, "tpot_err_pct": -20.0}])
+    assert d.points[0].tpot_err_pct_p50 == -11.0
+    assert d.points[1].tpot_err_pct_p50 is None
+    # The interpolation reads tpot_err_pct, whatever the p50 column says.
+    assert d.tpot_error_at(5.0) == -18.0
+
+
+def test_an_unknown_domain_field_is_still_refused():
+    """`extra=forbid` is what makes a typo in a committed yaml loud, and adding
+    two fields must not have loosened it."""
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        _domain_with(comparedmetric="tpot_p99")
+
+
+def test_a_domain_that_declares_p50_warns_but_is_still_consulted():
+    """D101's mismatch, made visible where a reader will see it.
+
+    The margin is applied to a p99. A domain fitted on a p50 is being charged on
+    a basis it was not measured on -- but it IS a measurement of this hardware at
+    this operating point, so refusing it would throw away real information. The
+    warning goes in the basis, beside the closed-loop one it is modelled on.
+    """
+    policy = AccuracyDomainMargin(
+        {HW: _domain(compared_metric="tpot_p50")}, shape=SHAPE)
+    decision = _decide(policy, _candidate(tp=1), conc=20.0)
+
+    assert not decision.is_unmeasured, "a basis mismatch is a warning, not a refusal"
+    assert decision.tpot_percent > 0.0
+    assert "fitted on a p50" in decision.basis
+    assert "D101" in decision.basis
+
+
+def test_a_domain_fitted_on_p99_does_not_warn():
+    policy = AccuracyDomainMargin(
+        {HW: _domain(compared_metric="tpot_p99")}, shape=SHAPE)
+    assert "fitted on a p50" not in _decide(
+        policy, _candidate(tp=1), conc=20.0).basis
+
+
+def test_silence_about_the_basis_does_not_warn():
+    """Every committed domain is p50 in fact and says nothing. Warning on silence
+    would fire on every run while telling nobody anything new, and stating it for
+    them is a migration with its own measurement question."""
+    policy = AccuracyDomainMargin({HW: _domain()}, shape=SHAPE)
+    assert "fitted on a p50" not in _decide(
+        policy, _candidate(tp=1), conc=20.0).basis
+
+
+def test_the_index_copies_the_basis_rather_than_defaulting_it():
+    """A field the entry carries but `of()` never fills is worse than no field:
+    the drift test cannot see it, because stored and rebuilt are both empty."""
+    from planner.predictor.calibration import DomainIndexEntry
+
+    entry = DomainIndexEntry.of("p.yaml", HW, _domain(compared_metric="tpot_p99"))
+    assert entry.compared_metric == "tpot_p99"
+    assert "compared_metric=tpot_p99" in entry.conditions_summary()
+    # Unstated reads as unstated in the summary too, not as a silent p50.
+    assert "compared_metric=not stated" in (
+        DomainIndexEntry.of("p.yaml", HW, _domain()).conditions_summary())
+
+
+def test_the_index_regenerator_refuses_a_domain_it_has_no_note_for(tmp_path):
+    """The note is the one field a generator cannot derive.
+
+    `index.yaml` says "Regenerate rather than hand-edit" and until S7.3 nothing
+    could -- `build_domain_index` existed for the drift test but no command wrote
+    its output. The gap matters precisely when a domain is added, so the tool
+    that closes it must not paper over the one thing it cannot know.
+    """
+    import importlib.util
+    import subprocess
+    import sys as _sys
+
+    script = ROOT / "experiments/scripts/rebuild_domain_index.py"
+    assert script.exists()
+    spec = importlib.util.spec_from_file_location("rebuild_domain_index_ut", script)
+    assert spec is not None and spec.loader is not None
+    mod = importlib.util.module_from_spec(spec)
+    _sys.modules[spec.name] = mod
+    spec.loader.exec_module(mod)
+
+    # The leading comment block is preserved verbatim: it carries D102's
+    # explanation, which no field encodes.
+    header = mod.leading_comment(ROOT / "profiles/calibration/index.yaml")
+    assert header.startswith("#")
+    assert "D102" in header
+
+    # --check is non-destructive and reports rather than writes.
+    before = (ROOT / "profiles/calibration/index.yaml").read_bytes()
+    subprocess.run([_sys.executable, str(script), "--check"],
+                   cwd=ROOT, capture_output=True, timeout=120)
+    assert (ROOT / "profiles/calibration/index.yaml").read_bytes() == before

@@ -95,7 +95,7 @@ def write_trace(out: Path, dataset: Path, rps: float, n: int) -> Path:
     return out
 
 
-def score(env, raw: dict, match: str) -> dict:
+def score(env, raw: dict, match: str, stat: str = "p50") -> dict:
     """Pair one simulated run with the measured curve and score its TPOT error.
 
     There are two defensible pairings and which one is right depends on how
@@ -134,14 +134,15 @@ def score(env, raw: dict, match: str) -> dict:
         comparable = abs(conc_gap) <= 20.0
     else:
         try:
-            ref = env.metric_at(raw["conc_sim"], "tpot_p50")
+            ref = env.metric_at(raw["conc_sim"], f"tpot_{stat}")
         except EnvelopeError as exc:
             # `extrapolation: refuse` reaching up through the envelope. A sim
             # operating point outside the measured range has no reference TPOT
             # and inventing one is what the policy exists to prevent.
             ref, refused = None, str(exc)
         if ref is None and refused is None:
-            refused = "tpot_p50 is unmeasured at an end of the bracketing interval"
+            refused = (f"tpot_{stat} is unmeasured at an end of the bracketing "
+                       f"interval")
         comparable = ref is not None
     out["tpot_err_pct"] = (None if not ref
                            else (raw["tpot_sim_ms"] - ref) / ref * 100)
@@ -157,7 +158,11 @@ def score(env, raw: dict, match: str) -> dict:
 
 
 def sim_metrics(csv: Path) -> dict:
-    """Served concurrency (Little's law) and TPOT p50 from the simulator CSV."""
+    """Served concurrency (Little's law) and TPOT percentiles from the sim CSV.
+
+    Both percentiles are computed whichever one `--compare-stat` asks for, so the
+    artifact records what was available rather than only what was used.
+    """
     lines = csv.read_text().splitlines()
     header = [h.strip() for h in lines[0].split(",")]
     i_lat, i_tpot = header.index("latency"), header.index("TPOT")
@@ -177,6 +182,7 @@ def sim_metrics(csv: Path) -> dict:
         "n": len(lat),
         "served_conc": sum(lat) / wall if wall else 0.0,
         "tpot_p50_ms": percentile(tpot, 50) if tpot else None,
+        "tpot_p99_ms": percentile(tpot, 99) if tpot else None,
         "wall_ns": wall,
     }
 
@@ -195,7 +201,8 @@ def _write(args, results: list[dict]) -> None:
         "max_conc": args.max_conc,
         **({"min_conc": args.min_conc} if args.min_conc else {}),
         "run_prefix": args.run_prefix,
-        "compared_metric": "tpot_p50",
+        "compared_metric": ("tpot_p50" if args.compare_stat == "p50"
+                            else f"tpot_{args.compare_stat}"),
         "note": "TPOT only. The bench side is closed-loop and the simulator "
                 "replays an arrival process, so TTFT is not comparable (D19).",
     }
@@ -232,6 +239,16 @@ def main() -> int:
     ap.add_argument("--run-prefix", default="lowload",
                     help="--run-id prefix, so two devices' runs cannot collide in "
                          "one ASTRA-Sim input root")
+    ap.add_argument("--compare-stat", choices=("p50", "p99", "both"),
+                    default="p50",
+                    help="which TPOT percentile to compare. Default `p50`, which "
+                         "is what every committed domain point was fitted on, so "
+                         "a committed invocation writes the same artifact it "
+                         "wrote before. `p99` is what the margin is actually "
+                         "applied to (D101) and what S7.3 onward fits on; `both` "
+                         "emits a record per stat. Migrating the committed "
+                         "domains onto p99 is a separate step and this flag is "
+                         "what it will use.")
     ap.add_argument("--match", choices=("offered", "served"), default="offered",
                     help="how a simulated run is paired with the measured curve; "
                          "see score(). The default is what the committed RNGD and "
@@ -258,6 +275,8 @@ def main() -> int:
                          "nothing and re-running the simulator to get it would be "
                          "hours of compute for the same answer.")
     args = ap.parse_args()
+    # Resolved once so the loop below reads a list, not a mode string.
+    args._stats = ("p50", "p99") if args.compare_stat == "both" else (args.compare_stat,)
     args.out.mkdir(parents=True, exist_ok=True)
 
     env = load_envelope(args.envelope)
@@ -329,19 +348,27 @@ def main() -> int:
             print(f"    exit {rc}", file=sys.stderr)
             continue
         m = sim_metrics(csv)
-        rec = score(env, {
-            "conc_measured": pt.conc, "conc_sim": m["served_conc"],
-            "offered_rps": rps, "tpot_measured_ms": pt.tpot_p50,
-            "tpot_sim_ms": m["tpot_p50_ms"], "requests": m["n"], "rc": rc,
-        }, args.match)
-        results.append(rec)
-        ref = rec.get("tpot_ref_ms") or pt.tpot_p50
-        err = rec["tpot_err_pct"]
-        print(f"    sim served {m['served_conc']:.2f} "
-              f"(gap {rec['conc_gap_pct']:+.1f}%)  "
-              f"tpot {m['tpot_p50_ms']:.2f} vs {ref:.2f}  "
-              f"err {'refused' if err is None else f'{err:+.2f}%'}",
-              file=sys.stderr)
+        measured_of = {"p50": pt.tpot_p50, "p99": pt.tpot_p99}
+        for stat in args._stats:
+            rec = score(env, {
+                "conc_measured": pt.conc, "conc_sim": m["served_conc"],
+                "offered_rps": rps, "tpot_measured_ms": measured_of[stat],
+                "tpot_sim_ms": m[f"tpot_{stat}_ms"], "requests": m["n"], "rc": rc,
+            }, args.match, stat)
+            # Only the extra stats are tagged, so a default `p50` run writes the
+            # same record shape it always wrote.
+            if args.compare_stat != "p50":
+                rec["compared_metric"] = f"tpot_{stat}"
+            results.append(rec)
+            ref = rec.get("tpot_ref_ms") or measured_of[stat]
+            err = rec["tpot_err_pct"]
+            simv = m[f"tpot_{stat}_ms"]
+            print(f"    sim served {m['served_conc']:.2f} "
+                  f"(gap {rec['conc_gap_pct']:+.1f}%)  "
+                  f"tpot {stat} {simv:.2f} vs "
+                  f"{'n/a' if ref is None else f'{ref:.2f}'}  "
+                  f"err {'refused' if err is None else f'{err:+.2f}%'}",
+                  file=sys.stderr)
 
     _write(args, results)
     return 0

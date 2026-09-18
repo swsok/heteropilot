@@ -391,6 +391,12 @@ def summarise_openloop_point(replay: dict, rows: list[SamplerRow],
         "saturated": saturated,
         "requests_ok": summary.get("ok"),
         "requests_total": summary.get("requests"),
+        #: Chunks the server actually streamed. Carried so a consumer can check
+        #: the invariant `a40.accuracy.openloop.yaml` states -- with --ignore-eos
+        #: the run must deliver the TRACE's output_toks, because the simulator
+        #: generates exactly those. A completion cap below the trace's longest row
+        #: silently breaks it, and did (S7.3; D115).
+        "output_tokens": summary.get("output_tokens"),
         "wall_s": summary.get("window_s"),
         "throughput_tok_s": summary.get("output_tok_s"),
         "ttft_ms": summary.get("ttft_ms"),
@@ -571,10 +577,59 @@ def server_command(backend: str, artifact: str, port: int,
     raise ValueError(f"unknown backend: {backend}")
 
 
+def dataset_max_output_toks(dataset: Path) -> int:
+    """The longest completion the trace asks for.
+
+    This exists because a default truncated a measurement. `replay_to_endpoint`
+    applies `max_tokens = min(row["output_toks"], cap)` with `cap` defaulting to
+    **512**, and the committed sharegpt trace has a p50 of 632 and a max of 1021:
+    299 of its 300 rows exceed 512. The first open-loop points measured here
+    therefore generated 153 600 tokens where the simulator generated 195 753 --
+    **78.5 % of the work** -- and the resulting served concurrency was lower for
+    that reason alone. Paired against the simulator it read as the simulator
+    over-predicting concurrency by 18-37 %, which is not a simulator error at all.
+
+    It is the same failure `--ignore-eos` exists to prevent (V2 §1: without it the
+    engine stops at EOS and the two sides run different workloads), arriving
+    through a different door. So the cap is resolved FROM THE TRACE by default
+    rather than carrying a number, and a cap that would truncate has to be asked
+    for and is recorded when it is.
+    """
+    longest = 0
+    for line in dataset.read_text().splitlines():
+        if not line.strip():
+            continue
+        try:
+            longest = max(longest, int(json.loads(line).get("output_toks", 0)))
+        except (ValueError, json.JSONDecodeError):
+            continue
+    if longest <= 0:
+        raise SystemExit(
+            f"{dataset}: no usable `output_toks` found, so the completion cap "
+            f"cannot be resolved from the trace. Pass --max-tokens-cap N."
+        )
+    return longest
+
+
+def dataset_truncated_rows(dataset: Path, cap: int) -> int:
+    """How many rows an explicit cap would shorten. Reported, never ignored."""
+    n = 0
+    for line in dataset.read_text().splitlines():
+        if not line.strip():
+            continue
+        try:
+            if int(json.loads(line).get("output_toks", 0)) > cap:
+                n += 1
+        except (ValueError, json.JSONDecodeError):
+            continue
+    return n
+
+
 def openloop_client_command(bench_python: str, port: int, model: str,
                             dataset: Path, rps: float, num_reqs: int,
                             out_json: Path,
-                            numa: list[str] | None = None) -> list[str]:
+                            numa: list[str] | None = None,
+                            max_tokens_cap: int | None = None) -> list[str]:
     """The load generator for an open-loop point.
 
     `replay_to_endpoint.py --open-loop` is reused rather than reimplemented: it
@@ -589,6 +644,12 @@ def openloop_client_command(bench_python: str, port: int, model: str,
 
     **`--ignore-eos` is not optional** (V2 §1): without it the engine stops at EOS
     and the two sides of a comparison run different workloads.
+
+    **Neither is the completion cap.** `replay_to_endpoint` defaults it to 512 and
+    the committed trace asks for up to 1021, so leaving it alone truncates 299 of
+    300 rows and the card does 78.5 % of the simulator's work. It is passed
+    explicitly here and resolved from the trace by default -- see
+    `dataset_max_output_toks`.
     """
     return [
         *(numa or []),
@@ -601,6 +662,8 @@ def openloop_client_command(bench_python: str, port: int, model: str,
         "--target-rps", str(rps),
         "--num-reqs", str(num_reqs),
         "--ignore-eos",
+        *(["--max-tokens-cap", str(max_tokens_cap)]
+          if max_tokens_cap is not None else []),
         "--out", str(out_json),
     ]
 
@@ -800,7 +863,8 @@ def run_point_open(args, rps: float, out_dir: Path, repeat: int = 0) -> dict | N
         subprocess.run(
             openloop_client_command(args.bench_python, args.port, model,
                                     args.dataset, rps, args.num_reqs,
-                                    replay_json, numa=numa),
+                                    replay_json, numa=numa,
+                                    max_tokens_cap=args.max_tokens_cap),
             cwd=REPO_ROOT, check=False, timeout=args.bench_timeout,
         )
         bench_window = Window(bench_t0, time.time())
@@ -855,6 +919,14 @@ def main() -> int:
                     help="closed mode only: comma-separated pool concurrencies")
     ap.add_argument("--rps", default=None,
                     help="open mode only: comma-separated arrival rates")
+    ap.add_argument("--max-tokens-cap", default="auto",
+                    help="open mode only: the completion cap handed to the "
+                         "replay client. `auto` (the default) resolves it from "
+                         "the trace's longest `output_toks`, so the card "
+                         "generates what the simulator generated. An explicit "
+                         "number that would shorten any row is reported, because "
+                         "a cap of 512 against this trace silently ran 78.5 %% of "
+                         "the work and read as an 18-37 %% concurrency error.")
     ap.add_argument("--num-reqs", type=int, default=300,
                     help="open mode only: requests per point. Not below 300 "
                          "without a reason -- D32 measured the drain tail at "
@@ -911,6 +983,23 @@ def main() -> int:
         print("error: --rps is an open-mode flag; pass --mode open",
               file=sys.stderr)
         return 1
+    if args.mode == "open":
+        if args.max_tokens_cap == "auto":
+            args.max_tokens_cap = dataset_max_output_toks(args.dataset)
+            print(f"completion cap resolved from the trace: "
+                  f"{args.max_tokens_cap} tokens", file=sys.stderr)
+        else:
+            args.max_tokens_cap = int(args.max_tokens_cap)
+            truncated = dataset_truncated_rows(args.dataset, args.max_tokens_cap)
+            if truncated:
+                print(f"WARNING: --max-tokens-cap {args.max_tokens_cap} shortens "
+                      f"{truncated} row(s) of {args.dataset}. The card will not "
+                      f"generate what the simulator generates, so these points "
+                      f"are not comparable with a simulation of the same trace.",
+                      file=sys.stderr)
+            args._cap_truncates = truncated
+    else:
+        args.max_tokens_cap = None
     if args.bench_python is None:
         args.bench_python = BACKENDS[args.backend]["bench_python"]
     args.engine = {}
@@ -1002,6 +1091,8 @@ def main() -> int:
                 "protocol": "closed_loop" if args.mode == "closed" else "open_loop",
                 "harness": ("deployed-server-over-http"),
                 "num_reqs": args.num_reqs if args.mode == "open" else None,
+                "max_tokens_cap": args.max_tokens_cap,
+                "cap_truncated_rows": getattr(args, "_cap_truncates", 0),
                 "numa_bind_requested": args.numa_bind,
                 "repeats": args.repeats,
             },
