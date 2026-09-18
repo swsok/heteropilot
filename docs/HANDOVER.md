@@ -345,9 +345,27 @@ re-run**: the two harnesses split by protocol, not by vendor.
 | `experiments/scripts/measure_envelope_openloop.py` | **open loop** — an arrival trace replayed at a rate | `cuda` only (it writes `"backend": "cuda"`) |
 
 So the RNGD card has a closed-loop harness and the open-loop one has no furiosa
-path. The job is the **mirror image** of the CUDA porting §2.2 records — server
-launch, sampler, bench interpreter — and §2.2's own list is the template.
-Budget it as that, not as a measurement afternoon.
+path. **This entry used to say the job was the mirror image of §2.2's CUDA port.
+It is not, and that file cannot host it** — `measure_envelope_openloop.py` runs
+`python -m bench run`, i.e. `vllm.v1.engine.async_llm.AsyncLLM` **in process**,
+and furiosa-llm is a server with no AsyncLLM equivalent. There is no launch line
+to swap. Full reasoning in `docs/deviations.md` **D114**.
+
+**S7.2 is DONE (2026-09-18) and it took the other route**: the open-loop
+*protocol* was added to `measure_envelope.py`, which already owned server launch
+per backend, NUMA binding of both halves, the power sampler and the settle/idle
+windows. `--mode open` swaps one thing, the load generator:
+
+```bash
+experiments/scripts/measure_envelope.py --backend furiosa --mode open \
+    --rps 0.5,1,2 --num-reqs 300 --artifact "$ART" --dataset <sharegpt.jsonl> \
+    --card 0 --port 8020 --out outputs/rngd_openloop_envelope
+```
+
+`--mode closed` is the default, so every committed invocation runs unchanged.
+**`--numa-bind` came for free** — already implemented there and already
+defaulting to `auto` — which is item 2 below satisfied by construction rather
+than by discipline, so the card is not measured twice.
 
 **Do not add an open-loop point to the existing closed-loop domain.** Two
 protocols on one interpolation axis is the class of error D22 was, and
@@ -365,11 +383,13 @@ record the affinity mask. **Trap:** `/sys/class/rngd_mgmt/*` are virtual devices
 with no PCI parent, so resolve the node through `furiosa-smi info` and the BDF,
 and verify with `taskset -cp` rather than trusting the flag.
 
-**Items 1 and 2 are the same trip and should be one.** `measure_envelope_openloop.py`
-has no NUMA handling at all — the string "numa" does not appear in it — so a
-furiosa open-loop path written for item 1 should carry `--numa-bind` from the
-first commit rather than producing a second unbound curve that item 2 then has
-to retake. Doing them separately means measuring the card twice.
+**Items 1 and 2 were the same trip and S7.2 made them one.** The furiosa
+open-loop path lives in the harness that already had `--numa-bind` at default
+`auto`, so it cannot produce an unbound curve by accident and item 2 does not
+have to retake anything S7.3 measures. What item 2 still covers is the
+**existing committed** RNGD envelope and card domain, both taken unbound: those
+are closed-loop artifacts and re-taking them bound is a separate decision from
+the open-loop refit.
 
 **3. S7 / V3-R** — one RNGD candidate each of the P2 and P3 shapes, steady-state
 workload, p99/p99. **The only source for the disclosure's §6 verdict-flip

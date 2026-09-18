@@ -45,6 +45,45 @@ The bench client is shared as-is. `bench_furiosa_endpoint.py` is named for the
 node it was written on but is a plain `AsyncOpenAI` client, so it drives a vLLM
 OpenAI server unchanged. It is CLOSED-LOOP: note D19 before comparing anything it
 produces against `python -m serving`, which replays an arrival process.
+
+**Two protocols since 2026-09-18** (`WORK_ORDER_domain_scoping.md` S7.2), and the
+axis that varies is the load generator, not the vendor:
+
+    measure_envelope.py --mode closed   pool of N in flight   bench_furiosa_endpoint.py
+    measure_envelope.py --mode open     trace at R rps        replay_to_endpoint.py --open-loop
+
+`--mode closed` is the default, so every committed invocation runs unchanged.
+
+**Why the open-loop server route is here rather than in
+`measure_envelope_openloop.py`.** That file is the OTHER open-loop route and it
+cannot be ported: its core is `python -m bench run`, an in-process
+`vllm.v1.engine.async_llm.AsyncLLM` replay, and there is no FuriosaAI equivalent
+of AsyncLLM -- furiosa-llm is a server. `bench/` is upstream and frozen until
+Phase 5 (absolute rule 1), so writing a furiosa in-process driver is not on the
+table either. What RNGD needs is the route the A40's
+`profiles/calibration/openloop/a40.accuracy.openloop.yaml` was measured through:
+a deployed server driven over HTTP. This file already owned server launch per
+backend, NUMA binding of both halves, the power sampler and the settle/idle
+windows, so the open-loop mode is those same parts with a different client --
+whereas a third script would have re-derived the launch line. `docs/deviations.md`
+records this as a deviation from the work order's stated plan.
+
+**So there are now three envelope routes and an artifact says which one it is.**
+`envelope.json`'s run block carries `protocol` and `harness`, and a point carries
+them too. Two protocols must never share one accuracy-domain interpolation axis
+(D19; D113 made a mismatch a refusal), and neither must two harnesses -- the A40
+has one domain file per harness for exactly this reason (D102).
+
+| route | protocol | harness | backends |
+| --- | --- | --- | --- |
+| `measure_envelope.py --mode closed` | closed | deployed server over HTTP | furiosa, cuda |
+| `measure_envelope.py --mode open` | open | deployed server over HTTP | furiosa, cuda |
+| `measure_envelope_openloop.py` | open | in-process `bench run` | cuda only |
+
+**The open-loop saturation test is not the same quantity as the bench-run one.**
+`ttft_drift_slope` reads client-side TTFT, because a server driven over HTTP does
+not hand out the engine's `scheduled_ts`/`queued_ts`. Its slope is comparable;
+its intercept is not. See that function.
 """
 
 from __future__ import annotations
@@ -75,6 +114,10 @@ SERVED_RATIO_FLOOR = 0.9
 #: A5(b). The pool must be at least this multiple of the requested concurrency.
 POOL_MULTIPLE = 4
 MIN_POOL = 300
+#: Open loop only, and the SAME threshold `measure_envelope_openloop.py` uses, so
+#: the two open-loop routes agree on what "saturated" means. Seconds of TTFT
+#: growth per second of elapsed arrival time.
+QUEUE_GROWTH_SLOPE = 0.05
 
 
 # ---------------------------------------------------------------------------
@@ -256,6 +299,111 @@ def summarise_point(bench: dict, rows: list[SamplerRow], bench_window: Window,
     }
 
 
+def ttft_drift_slope(per_request: list[dict]) -> float | None:
+    """Seconds of TTFT gained per second of elapsed arrival time.
+
+    This is the open-loop saturation test, and it is a **client-side stand-in for
+    a different quantity**, which is why it has its own name. The bench-run route
+    (`measure_envelope_openloop.py`) reads the engine's own `scheduled_ts -
+    queued_ts` -- time a request spent waiting for capacity -- because an
+    in-process AsyncLLM hands those out. A server driven over HTTP does not: the
+    client sees arrival and first token and nothing between them, so TTFT here is
+    queue wait PLUS prefill PLUS transport.
+
+    That makes the absolute value useless and the SLOPE usable. Prefill and
+    transport are roughly constant across a point, so they set the intercept, not
+    the trend: an offered rate below capacity holds TTFT flat and one above it
+    accumulates without bound. The threshold is shared with the other route
+    (`QUEUE_GROWTH_SLOPE`) because the trend is the same physical thing even
+    though the intercept is not.
+
+    Least squares rather than first-vs-last, so one slow request cannot set the
+    verdict.
+    """
+    pairs = sorted(
+        (r["arrival_s"], r["first_token_s"] - r["arrival_s"])
+        for r in per_request
+        if r.get("ok") and r.get("arrival_s") is not None
+        and r.get("first_token_s") is not None
+    )
+    if len(pairs) < 2:
+        return None
+    t0 = pairs[0][0]
+    xs = [a - t0 for a, _ in pairs]
+    ys = [d for _, d in pairs]
+    n = len(xs)
+    mx, my = sum(xs) / n, sum(ys) / n
+    denom = sum((x - mx) ** 2 for x in xs)
+    if denom == 0:
+        return None
+    return sum((x - mx) * (y - my) for x, y in zip(xs, ys, strict=True)) / denom
+
+
+def summarise_openloop_point(replay: dict, rows: list[SamplerRow],
+                             bench_window: Window, idle_window: Window,
+                             device_sn: str | None = None) -> dict | None:
+    """One open-loop envelope point, from the replay client's own report.
+
+    The latency and concurrency half is NOT recomputed here. `replay_to_endpoint
+    --open-loop` already derives served concurrency by Little's law over
+    residency-from-arrival, and its TTFT/TPOT percentiles come from
+    `planner/util/percentile.py` -- the same util the planner and the simulator
+    use. Re-deriving them from `per_request` would introduce a second
+    interpolation, which is the class of error this repository keeps hitting.
+    What this function adds is the part the client cannot see: power and
+    utilisation over the bench window, the idle window to compare against, and
+    the saturation verdict.
+
+    The A5 rules carry over except (b), which is a closed-loop rule -- there is
+    no pool to be 4x anything. Its purpose survives as the slope above.
+    """
+    summary = replay.get("summary") or {}
+    if not summary.get("ok"):
+        return None
+    slope = ttft_drift_slope(replay.get("per_request") or [])
+    saturated = slope is not None and slope > QUEUE_GROWTH_SLOPE
+
+    notes: list[str] = []
+    if saturated:
+        notes.append(
+            f"TTFT grew at {slope:+.3f} s per second of arrivals "
+            f"(> {QUEUE_GROWTH_SLOPE}) against an offered "
+            f"{summary.get('offered_rps', float('nan')):.3f} rps: the queue grew, "
+            f"so this point measures saturation and its concurrency is a backlog "
+            f"depth, not the offered load"
+        )
+    if slope is None:
+        notes.append("fewer than two usable arrival/first-token pairs: "
+                     "saturation unknown")
+    failed = summary.get("failed") or 0
+    if failed:
+        notes.append(f"{failed} request(s) failed and are excluded from every "
+                     f"latency and concurrency figure")
+
+    return {
+        "protocol": "open_loop",
+        "harness": "deployed-server-over-http",
+        "offered_rps": summary.get("offered_rps"),
+        "trace_rps": replay.get("trace_rps"),
+        "served_concurrency": summary.get("served_concurrency"),
+        "ttft_drift_slope_s_per_s": slope,
+        #: The open-loop analogue of `pool_binding`: reported, never dropped.
+        "saturated": saturated,
+        "requests_ok": summary.get("ok"),
+        "requests_total": summary.get("requests"),
+        "wall_s": summary.get("window_s"),
+        "throughput_tok_s": summary.get("output_tok_s"),
+        "ttft_ms": summary.get("ttft_ms"),
+        "tpot_ms": summary.get("tpot_ms"),
+        "launch_error_ms": summary.get("launch_error_ms"),
+        "warm_up_s": replay.get("warm_up_s"),
+        "ignore_eos": replay.get("ignore_eos"),
+        "bench_window": window_stats(rows, bench_window, device_sn),
+        "idle_window": window_stats(rows, idle_window, device_sn),
+        "notes": notes,
+    }
+
+
 # ---------------------------------------------------------------------------
 # orchestration -- needs the hardware
 # ---------------------------------------------------------------------------
@@ -423,6 +571,40 @@ def server_command(backend: str, artifact: str, port: int,
     raise ValueError(f"unknown backend: {backend}")
 
 
+def openloop_client_command(bench_python: str, port: int, model: str,
+                            dataset: Path, rps: float, num_reqs: int,
+                            out_json: Path,
+                            numa: list[str] | None = None) -> list[str]:
+    """The load generator for an open-loop point.
+
+    `replay_to_endpoint.py --open-loop` is reused rather than reimplemented: it
+    already fires each row at its own `arrival_time_ns` with no concurrency
+    bound, records per-request arrival / first-token / completion client-side, and
+    derives served concurrency the way the disclosure defines it. It is a plain
+    `AsyncOpenAI` client, so it drives `furiosa-llm serve` and `vllm serve`
+    unchanged -- the same reason `bench_furiosa_endpoint.py` works on both.
+
+    `--target-rps` rescales the trace's own offsets, so one dataset serves every
+    point of a sweep and no re-spaced copy is written per rate.
+
+    **`--ignore-eos` is not optional** (V2 §1): without it the engine stops at EOS
+    and the two sides of a comparison run different workloads.
+    """
+    return [
+        *(numa or []),
+        bench_python, "-u",
+        str(REPO_ROOT / "experiments/scripts/replay_to_endpoint.py"),
+        "--base-url", f"http://127.0.0.1:{port}/v1",
+        "--model", model,
+        "--dataset", str(dataset),
+        "--open-loop",
+        "--target-rps", str(rps),
+        "--num-reqs", str(num_reqs),
+        "--ignore-eos",
+        "--out", str(out_json),
+    ]
+
+
 def gpu_uuid(card: int) -> str | None:
     """The pinned GPU's UUID, for the A5(c) analysis filter.
 
@@ -551,6 +733,104 @@ def run_point(args, concurrency: int, out_dir: Path, repeat: int = 0) -> dict | 
     return point
 
 
+def openloop_tag(rps: float, repeat: int = 0) -> str:
+    """The stem every artifact of one open-loop point shares.
+
+    It exists because it was duplicated: `run_point_open` named the sampler CSV
+    and the replay report `r0p5`, while `main` named the point JSON beside them
+    from its own `f"r{rps:g}"`, which is `r0.5`. One directory, two schemes, and a
+    dot in a filename that a shell glob treats differently. Computed once instead.
+    """
+    return f"r{rps:g}".replace(".", "p") + (f"_rep{repeat}" if repeat else "")
+
+
+def run_point_open(args, rps: float, out_dir: Path, repeat: int = 0) -> dict | None:
+    """One open-loop point: the same server, bound the same way, different load.
+
+    Everything before and after the load generator is shared verbatim with
+    `run_point` -- `server_command`, `numa_prefix`, the power sampler, the settle
+    and idle windows, and teardown by process group. That is the whole reason the
+    open-loop server route lives in this file: the alternative was a third
+    harness that re-derived the launch line, and the repo already pays for two.
+    """
+    tag = openloop_tag(rps, repeat)
+    sampler_csv = out_dir / f"power_{tag}.csv"
+    replay_json = out_dir / f"replay_{tag}.json"
+    log_path = out_dir / f"serve_{tag}.log"
+
+    cmd, env_overlay = server_command(
+        args.backend, str(args.artifact), args.port, args.card, args.tp,
+        engine=args.engine)
+    # Server AND client on the accelerator's node. In an OPEN loop the client is
+    # not in the latency path the way a closed-loop bench client is -- it fires
+    # and forgets -- but it still has to keep up with the schedule, and a client
+    # that drifts across the bridge reports its own lateness as the server's
+    # TTFT. `launch_error_ms` in the artifact is what catches that.
+    numa, numa_label = numa_prefix(args.numa_bind, args.backend, args.card)
+    cmd = numa + cmd
+    env = {**os.environ, **env_overlay}
+    with log_path.open("w") as log:
+        server = subprocess.Popen(
+            cmd, stdout=log, stderr=log, start_new_session=True, env=env,
+        )
+    sampler = subprocess.Popen(
+        [str(REPO_ROOT / BACKENDS[args.backend]["sampler"]),
+         "--out", str(sampler_csv)] +
+        (["--devices", args.sample_devices] if args.sample_devices else []),
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True,
+    )
+    try:
+        model = wait_for_server(args.port, args.startup_timeout)
+        if model is None:
+            print(f"{tag}: server never came up; see {log_path}", file=sys.stderr)
+            return None
+
+        # (d) settle, then the idle window the point is compared against. Same
+        # windows as the closed-loop path, so a bound open-loop point and a bound
+        # closed-loop one are priced against the same kind of idle.
+        print(f"{tag}: settling {SETTLE_S:.0f} s", file=sys.stderr)
+        time.sleep(SETTLE_S)
+        idle_start = time.time()
+        time.sleep(IDLE_WINDOW_S)
+        idle_window = Window(idle_start, time.time())
+
+        print(f"{tag}: offering {rps:g} rps over {args.num_reqs} requests "
+              f"(~{args.num_reqs / rps / 60:.0f} min)", file=sys.stderr)
+        bench_t0 = time.time()
+        subprocess.run(
+            openloop_client_command(args.bench_python, args.port, model,
+                                    args.dataset, rps, args.num_reqs,
+                                    replay_json, numa=numa),
+            cwd=REPO_ROOT, check=False, timeout=args.bench_timeout,
+        )
+        bench_window = Window(bench_t0, time.time())
+
+        print(f"{tag}: trailing idle {IDLE_WINDOW_S:.0f} s", file=sys.stderr)
+        time.sleep(IDLE_WINDOW_S)
+    finally:
+        sampler.terminate()
+        try:
+            sampler.wait(timeout=15)
+        except subprocess.TimeoutExpired:
+            sampler.kill()
+        os.killpg(os.getpgid(server.pid), signal.SIGTERM)
+        try:
+            server.wait(timeout=90)
+        except subprocess.TimeoutExpired:
+            os.killpg(os.getpgid(server.pid), signal.SIGKILL)
+
+    if not replay_json.exists():
+        print(f"{tag}: the replay client wrote no report", file=sys.stderr)
+        return None
+    replay = json.loads(replay_json.read_text())
+    rows = read_sampler_csv(sampler_csv)
+    point = summarise_openloop_point(replay, rows, bench_window, idle_window,
+                                     device_sn=args.device_sn)
+    if point is not None:
+        point["numa_bind"] = numa_label
+    return point
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -563,7 +843,22 @@ def main() -> int:
     ap.add_argument("--artifact", required=True)
     ap.add_argument("--dataset", type=Path, required=True)
     ap.add_argument("--out", type=Path, required=True)
-    ap.add_argument("--concurrency", default="1,2,4,8,16")
+    ap.add_argument("--mode", choices=("closed", "open"), default="closed",
+                    help="how load is offered. `closed` (default) holds a fixed "
+                         "pool of requests in flight; `open` replays the trace at "
+                         "a fixed arrival rate with no concurrency bound, so the "
+                         "served concurrency is an OUTCOME. Default stays "
+                         "`closed` so every committed invocation of this script "
+                         "runs unchanged. D19: the two are not interchangeable "
+                         "and a domain must not mix them on one axis.")
+    ap.add_argument("--concurrency", default="1,2,4,8,16",
+                    help="closed mode only: comma-separated pool concurrencies")
+    ap.add_argument("--rps", default=None,
+                    help="open mode only: comma-separated arrival rates")
+    ap.add_argument("--num-reqs", type=int, default=300,
+                    help="open mode only: requests per point. Not below 300 "
+                         "without a reason -- D32 measured the drain tail at "
+                         "-31.7 %% on a 20-request run.")
     ap.add_argument("--card", type=int, default=0,
                     help="PHYSICAL device index. On CUDA it becomes "
                          "CUDA_VISIBLE_DEVICES for the server (which then sees it "
@@ -609,6 +904,13 @@ def main() -> int:
     ap.add_argument("--bench-timeout", type=float, default=7200.0)
     args = ap.parse_args()
 
+    if args.mode == "open" and not args.rps:
+        print("error: --mode open needs --rps", file=sys.stderr)
+        return 1
+    if args.mode == "closed" and args.rps:
+        print("error: --rps is an open-mode flag; pass --mode open",
+              file=sys.stderr)
+        return 1
     if args.bench_python is None:
         args.bench_python = BACKENDS[args.backend]["bench_python"]
     args.engine = {}
@@ -634,24 +936,45 @@ def main() -> int:
 
     out_dir = args.out
     out_dir.mkdir(parents=True, exist_ok=True)
-    points = [int(v) for v in args.concurrency.split(",") if v]
 
     results = []
-    for c in points:
-        for rep in range(args.repeats):
-            r = run_point(args, c, out_dir, repeat=rep)
-            if r is None:
-                print(f"c{c} r{rep}: no result", file=sys.stderr)
-                continue
-            r["repeat"] = rep
-            results.append(r)
-            tag = f"c{c}" + (f"_r{rep}" if rep else "")
-            (out_dir / f"point_{tag}.json").write_text(json.dumps(r, indent=2) + "\n")
-            flag = "  POOL-BINDING" if r["pool_binding"] else ""
-            pw = r["bench_window"].get("power_w")
-            pstr = f" {pw['mean']:.1f} W" if pw else " (no power)"
-            print(f"c{c} r{rep}: served {r['served_concurrency']:.2f} "
-                  f"(ratio {r['served_ratio']:.3f}){pstr}{flag}", file=sys.stderr)
+    if args.mode == "open":
+        for rps in [float(v) for v in args.rps.split(",") if v]:
+            for rep in range(args.repeats):
+                label = openloop_tag(rps, rep)
+                r = run_point_open(args, rps, out_dir, repeat=rep)
+                if r is None:
+                    print(f"{label}: no result", file=sys.stderr)
+                    continue
+                r["repeat"] = rep
+                results.append(r)
+                (out_dir / f"point_{label}.json").write_text(
+                    json.dumps(r, indent=2) + "\n")
+                flag = "  SATURATED" if r["saturated"] else ""
+                pw = r["bench_window"].get("power_w")
+                pstr = f" {pw['mean']:.1f} W" if pw else " (no power)"
+                served = r["served_concurrency"]
+                sstr = f"{served:.2f}" if served is not None else "n/a"
+                print(f"{label}: offered {rps:g} rps -> served {sstr}"
+                      f"{pstr}{flag}", file=sys.stderr)
+    else:
+        for c in [int(v) for v in args.concurrency.split(",") if v]:
+            for rep in range(args.repeats):
+                r = run_point(args, c, out_dir, repeat=rep)
+                if r is None:
+                    print(f"c{c} r{rep}: no result", file=sys.stderr)
+                    continue
+                r["repeat"] = rep
+                results.append(r)
+                tag = f"c{c}" + (f"_r{rep}" if rep else "")
+                (out_dir / f"point_{tag}.json").write_text(
+                    json.dumps(r, indent=2) + "\n")
+                flag = "  POOL-BINDING" if r["pool_binding"] else ""
+                pw = r["bench_window"].get("power_w")
+                pstr = f" {pw['mean']:.1f} W" if pw else " (no power)"
+                print(f"c{c} r{rep}: served {r['served_concurrency']:.2f} "
+                      f"(ratio {r['served_ratio']:.3f}){pstr}{flag}",
+                      file=sys.stderr)
 
     # The run block is new with the CUDA backend and is not decoration: an
     # envelope file that does not say which backend, which artifact and which
@@ -670,7 +993,16 @@ def main() -> int:
                 "sample_devices": args.sample_devices,
                 "bench_python": args.bench_python,
                 "engine": args.engine,
-                "closed_loop": True,
+                # The protocol is a FACT ABOUT THE POINTS, not a label: a domain
+                # fitted on one must not be consulted for a candidate served
+                # under the other (D19, and D113 made it a refusal). It was a
+                # hardcoded `true` while this script had one mode; leaving it so
+                # would have mislabelled every open-loop artifact.
+                "closed_loop": args.mode == "closed",
+                "protocol": "closed_loop" if args.mode == "closed" else "open_loop",
+                "harness": ("deployed-server-over-http"),
+                "num_reqs": args.num_reqs if args.mode == "open" else None,
+                "numa_bind_requested": args.numa_bind,
                 "repeats": args.repeats,
             },
             "points": results,
