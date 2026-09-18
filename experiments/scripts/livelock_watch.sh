@@ -70,7 +70,13 @@ fi
 
 FIFO=$(mktemp -u -t livelock_watch.XXXXXX)
 mkfifo "$FIFO" || exit 2
-cleanup() { rm -f "$FIFO"; }
+cleanup() {
+    # A drain, if one was started, must not outlive us. Killed by PID, never by
+    # pattern -- `pkill -f livelock_watch` would match this very script.
+    [ -n "${DRAIN:-}" ] && kill "$DRAIN" 2>/dev/null
+    exec 3<&- 2>/dev/null
+    rm -f "$FIFO"
+}
 trap cleanup EXIT
 
 # Own process group, so a kill reaches the simulator's children (python -m serving
@@ -81,6 +87,25 @@ else
     setsid "$@" >"$FIFO" 2>&1 &
 fi
 CHILD=$!
+
+# Open the read end ONCE, on fd 3, and read the loop and the drain from it.
+#
+# This has to happen after the child is launched: opening a FIFO read-only
+# blocks in open(2) until a writer appears, and the child's `>"$FIFO"` is that
+# writer. The two rendezvous here, exactly as the old `done <&3` did.
+#
+# Why a named fd at all: the drain below used to reopen the FIFO with
+# `cat "$FIFO"`, and by then the child had already been TERMed, so there was no
+# writer left and that open() parked in `wait_for_partner` forever. It was
+# never killed or waited for, and the EXIT trap then unlinked the name out from
+# under it. **250 orphaned `cat` processes accumulated that way between
+# 2026-09-10 and 2026-09-18**, one per run ending in verdict 3 or 4. Reading
+# from an already-open descriptor cannot block in open() and cannot leak.
+#
+# Read-only and not `3<>`: holding a write end too would mean the loop never
+# sees EOF when the child exits, and a clean run would be misreported as a
+# no-progress livelock.
+exec 3<"$FIFO"
 
 VERDICT=0          # 0 none, 3 livelock, 4 no-progress
 STARTED=$(date +%s)
@@ -148,10 +173,16 @@ while true; do
 done <"$FIFO"
 
 # Drain anything still buffered so the child is not killed by SIGPIPE mid-write.
+# `<&3` inherits the descriptor opened above instead of reopening the FIFO, so
+# it cannot park in open(); and it is reaped here rather than left to init.
 if [ "$VERDICT" -ne 0 ]; then
-    cat "$FIFO" >/dev/null 2>&1 &
+    cat <&3 >/dev/null 2>&1 &
+    DRAIN=$!
     sleep 1
     kill -KILL -"$CHILD" 2>/dev/null
+    kill "$DRAIN" 2>/dev/null
+    wait "$DRAIN" 2>/dev/null
+    DRAIN=""
 fi
 
 wait "$CHILD"
