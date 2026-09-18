@@ -3708,3 +3708,161 @@ collective inside one island.
 `planner/uncertainty/sensitivity.py`, `planner/uncertainty/measurement_plan.py`
 (`inert`), `planner/render.py`, `planner/__main__.py` (`--grades`),
 `tests/test_default_range.py`, `experiments/uncertainty/s2_default_ranges.py`.
+
+## D112 — a link does not have one bandwidth; the LINK_BW item is keyed by the traffic that crosses it · Recorded 2026-09-18
+
+*`WORK_ORDER_domain_scoping.md` STEP S3, the third entry from the `D110–D119`
+block D110 opens. It finishes what D111 ends by naming, so read D111's closing
+paragraph first, and A.4 of
+`experiments/p2_evidence/results/v3_verdict_accuracy.md` for the measurement.*
+
+**What the code did.** `Link.bandwidth_gbps` was a single number per link and
+`link_bw:<link_id>` a single registry item per link, so both the simulator input
+and the uncertainty accounting treated "the bandwidth of this wire" as a
+quantity. The same PCIe bridge on the A40 node measures, in one run:
+
+| what crosses it | measured | against a `vendor_spec` 64.0 |
+| --- | ---: | ---: |
+| a direct device-to-device copy | 25.0 GB/s | 0.39× |
+| a two-rank all-reduce | 19.29 GB/s | 0.30× |
+| the four-rank all-reduce a tp=4 island runs | 8.8 GB/s | **0.1375×** |
+
+So the datasheet number is not merely optimistic — there is no single figure for
+it to be optimistic *about*. Which of the three is right depends on the
+collective, the group size, the message size and the binding, and V3 said so
+outright: *"a static per-link field cannot hold a quantity that depends on how
+many devices a candidate spans and which ones"*.
+
+**What that cost, twice.** First, the simulator got 64.0 for a hop that
+delivered 8.8, which is the whole of V3's **−43.44 %** p99 TPOT error on P1.
+Re-simulated at 8.8 the same candidate predicts 60.09 ms against 64.62 measured,
+an error of **−7.01 %**, and served concurrency lands within **0.73 %**
+(`experiments/p2_evidence/results/v5_resim_measured_link.json`). The one input
+was worth 23.5 ms of the 28.1 ms error.
+
+Second — and this is the part S2 could not reach — the registry could not point
+at it. `perturb._reprice_transfer` was the only LINK_BW rule, and it re-prices
+`apply_pd_transfer_cost`'s prefill→decode handoff, so on a corpus built with
+`enable_pd=False` it moved nothing, every LINK_BW item swept to a regret of
+exactly zero, and the measurement plan reported them as **`inert`**: "measured,
+they would change no plan". Both of E-A1's uncertain LINK_BW items are
+intra-island, including `pcie-a40a-02` itself. The plan's own words for the
+input that explained the error were that it was not worth 0.114 h. The module
+docstring stated the premise that made this look correct — "the transfer term is
+the only place a link bandwidth reaches a predicted metric today" — and it was
+false: an intra-island link's bandwidth is the `min` that
+`island_interconnect` reduces into the simulator's own scalar `link_bw`, which
+prices every TP collective inside ASTRA-Sim.
+
+**How we adapt.**
+
+1. **The schema carries measurements beside the spec value, never over it.**
+   `Link.measurements[]` holds a `LinkMeasurement` per
+   `(collective, world_size, msg_size_class, binding)` with `bus_bw_gbps`,
+   `method`, `msg_bytes`, `date` and `raw`. `bandwidth_gbps` and its `source`
+   are untouched (absolute rule A3), so the comparison that makes a measurement
+   worth having survives. `source: measured` without a `method` is refused: the
+   torch probe this repo used and `nccl-tests all_reduce_perf` are not
+   interchangeable evidence, and S6(ii) is open for exactly that reason.
+2. **`world_size` is in the key, which the work order did not ask for.** §S3
+   names `(link_id, collective, msg_size_class, device_binding)`. 8.8 and 19.29
+   differ *only* by group size, so under the four-part key they collide and one
+   silently answers for the other — the fixture carrying both would not load.
+   This is the field V3 asked for in the sentence quoted above. Recorded here
+   rather than left implicit; the real data wins.
+3. **The simulator is asked for a stated traffic kind.** `island_interconnect`
+   asks for `all_reduce` at `bulk` and the island's TP degree;
+   `_inter_island` asks for `p2p` at `bulk`, world_size 2, because a P/D handoff
+   is one sender and one receiver. A hit is used and recorded in
+   `TopologyReduction.assumptions`; a miss falls back to the spec value and
+   records *that*, naming the measurements the link does carry. Every caller
+   that states no collective — which is every caller predating S3 — gets the
+   nominal value unchanged, so no committed result moves.
+4. **The band boundaries come from the curve, not from round numbers.** Measured
+   all-reduce busbw on that path climbs from 0.23 GB/s at 8 KiB and is flat only
+   from 4 MiB up (4–64 MiB within 4 %), so `bulk` starts at 4 MiB and is the
+   only band that answers the simulator's asymptotic `link_bw` term. A
+   `msg_size_class` its own `msg_bytes` contradicts is refused.
+5. **An item no closed form can price is reported as such, not as inert.** An
+   `all_reduce` LINK_BW item returns `requires_resimulation` from `perturb`,
+   `delta_regret=None` from `sensitivity`, and lands in
+   `MeasurementPlan.needs_resimulation` — a fifth bucket beside `items`,
+   `uncovered`, `undecidable` and `inert`, and the partition stays total.
+   `--resimulate-top` prices it exactly by rewriting the link and re-simulating,
+   which is the only way to price it: reproducing ASTRA-Sim's collective cost
+   model in arithmetic outside the simulator would be inventing physics.
+   `resimulate.py`'s docstring claimed these items' closed form was "already
+   exact, so any movement is a bug in the rule"; that was true of the handoff
+   half only and is corrected.
+
+   **Three things had to move before that escape hatch actually fired**, and
+   each of them would have silently made the new bucket a dead end:
+
+   * `sensitivity.refine` skipped every item whose `delta_regret` was None. The
+     rule was written for an *unbounded* range, where there is nothing to
+     simulate at; applied to an item that has an interval and only lacks a
+     pricing rule it skipped exactly the inputs `--resimulate-top` exists for.
+     It now takes them, and `tests/test_resimulate.py` pins that.
+   * `Refinement.closed_form` was `float` and got `closed.delta_regret or 0.0`.
+     For an item with no closed form that records a **zero**, which reads as
+     "the closed form says this input does not matter" — the exact claim S3
+     removed. It is `float | None` now.
+   * E-B3's link identity control asserted that a LINK_BW item's closed form is
+     exact and any disagreement with simulation is a bug in the rule. For an
+     `all_reduce` item there is no rule to be exact, so it would have reported a
+     bug in every one of them; `active_records` excludes them and
+     `no_closed_form` counts them instead of dropping them.
+6. **`measure-apply` files a measurement instead of overwriting a column.** A
+   keyed `--input` appends to (or replaces by key) `measurements[]` on the copy;
+   an unkeyed one still moves the spec value, so the pre-S3 invocation works.
+
+**What this does NOT fix, and it is V3's item #2.** The simulator has no
+representation of *which* devices inside an island a TP group occupies, so it
+routes a tp=2 group over the cross-pair link although the hardware's tp=2 runs
+inside the NVLink pair and never touches it. S3 fixes the group-**size** axis:
+a tp=2 candidate now gets the 19.29 GB/s two-rank figure instead of inheriting
+the four-rank 8.8. It does not fix the device-**identity** axis, and the +18.21 %
+error V3 measured by giving tp=2 the tp=4 value is only partly removed by that.
+
+**Two smaller consequences worth knowing.**
+
+*A `vendor_spec` link with a measured collective now reports an uncertain
+latency.* In the S3 fixture the two PCIe links go back to `source: vendor_spec`
+with a measured `all_reduce`, so their bandwidth leaves the registry while their
+latency correctly enters it — no link latency in this repository is measured.
+The old hand-edited copy wrote `source: measured` and had been crediting those
+latencies as measurements.
+
+*On `pd-rngd-gpu.yaml` all 16 uncertain LINK_BW items are intra-island*, so
+until `--resimulate-top` runs, `--measurement-plan` ranks no link on that
+fixture at all. That is a truthful "cannot say without simulating" replacing a
+false "not worth measuring", and quantifying what it does to E-A1's counts is
+STEP S4's job, not this entry's.
+
+**Where.** `planner/inventory.py` (`LinkMeasurement`, `Link.measurements`,
+`Link.measurement_for`, `Collective`, `MsgSizeClass`, `MSG_SIZE_CLASS_BYTES`,
+`msg_size_class_of`), `planner/topology.py` (`link_bandwidth_gbps`,
+`effective_bandwidth_gbps`'s optional request, `island_interconnect`,
+`_inter_island`, `_binding_of`, `world_sizes` on both reductions),
+`planner/predictor/llmservingsim.py` (passes the per-assignment TP degree),
+`planner/uncertainty/registry.py` (`LinkTraffic`, `LinkItemKey`,
+`link_item_id`, `parse_link_item_id`, `_link_traffic`, `_link_items`),
+`planner/uncertainty/perturb.py` (`_collective_needs_simulation`,
+`requires_resimulation`, and the handoff rule now asking for `p2p` so it and
+`apply_pd_transfer_cost` cannot disagree about one wire),
+`planner/uncertainty/sensitivity.py` (`requires_resimulation` through
+`_Swept`/`Sensitivity`, `refine` no longer skipping these items,
+`Refinement.closed_form` nullable),
+`planner/uncertainty/measurement_plan.py` (`needs_resimulation`),
+`planner/uncertainty/resimulate.py`, `planner/render.py`,
+`planner/optimizer/exhaustive.py` and `planner/util/kv_transfer.py` (the handoff
+priced as a p2p bulk copy), `planner/candidate_generator.py` (the all-reduce
+floor asks with the CANDIDATE's tp, not the island's size - a bound computed on
+another group's bandwidth is not a relaxation),
+`planner/__main__.py` (`measure-apply`),
+`experiments/uncertainty/eb3_closed_form_vs_resim.py` (`no_closed_form`),
+`experiments/uncertainty/s2_default_ranges.py` (reports the new bucket),
+`tests/test_resimulate.py`,
+`experiments/configs/clusters/pd-rngd-gpu-card-measured-pcie.yaml` (rewritten
+onto the schema; the simulator still receives 8.8 for the tp=4 island, verified),
+`tests/test_link_effective_bw.py`.

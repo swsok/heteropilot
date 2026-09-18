@@ -201,7 +201,10 @@ def compile_to_sim_config(
     computed against nominal capacity.
     """
     selected = [islands[a.island_id] for a in candidate.assignments]
-    reduction = topology.reduce_for_simulator(selected)
+    # The TP degree per assignment, so a link's measured effective all-reduce
+    # bandwidth is only used for the group size it was measured at (S3, D112).
+    tp_sizes = [a.tp_size for a in candidate.assignments]
+    reduction = topology.reduce_for_simulator(selected, world_sizes=tp_sizes)
 
     by_node: dict[str, list[dict]] = {}
     for assignment in candidate.assignments:
@@ -282,7 +285,7 @@ def compile_to_sim_config(
     link_bw: float | list[float] = reduction.link_bw_gbps
     link_latency: float | list[float] = reduction.link_latency_ns
     if topology_level == 2:
-        perdim = topology.reduce_for_simulator_perdim(selected)
+        perdim = topology.reduce_for_simulator_perdim(selected, world_sizes=tp_sizes)
         flattened = [inst for node in nodes for inst in node["instances"]]
         num_dims = len(_compute_network_dims(flattened))
         if perdim.cross_bw_gbps is not None and num_dims == 2:

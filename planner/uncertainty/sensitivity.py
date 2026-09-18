@@ -26,7 +26,7 @@ to a number that never contained it. Use `metrics_from_evaluation`.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -83,6 +83,10 @@ class Sensitivity(_Strict):
     delta_regret: float | None
     grid: list[GridPoint] = Field(default_factory=list)
     approximation: bool = False
+    #: True when this item has no closed form and its regret is undefined until
+    #: it is simulated (S3, D112). `delta_regret` is None, but for a different
+    #: reason from an unbounded range: the interval is known, the pricing is not.
+    requires_resimulation: bool = False
     #: Set when --resimulate-top replaced this item's closed-form dR.
     resimulated: bool = False
     #: Hours from costs.yaml, for B3's dR/cost ordering. None sorts last.
@@ -208,6 +212,8 @@ class _Swept:
     #: How badly the incumbent missed, when it did not.
     overshoot: float
     approximation: bool
+    #: Set when the rule declined to price this point at all (S3, D112).
+    requires_resimulation: bool
     #: True when the best plan here is not the incumbent.
     flip: bool
     #: Every objective value seen here, for the penalty's default.
@@ -225,10 +231,13 @@ def _sweep_point(
     incumbent_id: str,
 ) -> _Swept:
     result = perturb(item, value, metrics, context)
-    return _swept_from(
+    swept = _swept_from(
         value, result.metrics, result.approximation, result.sim_error_override,
         context, spec, policy, island_hw, incumbent_id,
     )
+    if result.requires_resimulation:
+        swept = replace(swept, requires_resimulation=True)
+    return swept
 
 
 def _swept_from(
@@ -280,7 +289,7 @@ def _swept_from(
     return _Swept(
         value=value, best_plan_id=best_id, best_value=best_value,
         incumbent_value=incumbent_value, overshoot=overshoot,
-        approximation=approximation,
+        approximation=approximation, requires_resimulation=False,
         flip=bool(best_id) and best_id != incumbent_id,
         values=[_value_of(p, spec) for p in feasible],
     )
@@ -328,6 +337,21 @@ def _analyze_one(
             note=(
                 "range is unbounded, so there is no interval to sweep and no regret "
                 "to define - this input cannot be decided before measuring it"
+            ),
+        )
+
+    if any(p.requires_resimulation for p in points):
+        # NOT inert and NOT undecidable: the interval is known and the pricing
+        # is not. Reporting a regret of 0 here is what hid V3's link (D112).
+        return Sensitivity(
+            input_id=item.id, kind=item.kind.value, flip=False, delta_regret=None,
+            requires_resimulation=True, cost_hours=cost_hours,
+            range_source=range_source,
+            note=(
+                f"no closed form prices this input: it reaches a prediction only "
+                f"through the simulator's own link_bw over "
+                f"[{item.range.lo:.6g}, {item.range.hi:.6g}]. Run "
+                f"--resimulate-top to obtain its regret. This is not zero regret"
             ),
         )
 
@@ -470,8 +494,11 @@ class Refinement(_Strict):
 
     input_id: str
     kind: str
-    closed_form: float
-    resimulated: float
+    #: None when the item has NO closed form (S3, D112) - an intra-island link's
+    #: collective bandwidth - so there is nothing to compare the simulation to.
+    closed_form: float | None
+    #: None only on a `skipped` row for an item that had no closed form either.
+    resimulated: float | None
     #: Wall seconds the two simulations took, and how many candidates they ran.
     seconds: float = 0.0
     simulated: int = 0
@@ -513,7 +540,14 @@ def refine(
         if done >= top:
             break
         item = items.get(sensitivity.input_id)
-        if item is None or sensitivity.delta_regret is None:
+        if item is None:
+            continue
+        if sensitivity.delta_regret is None and not sensitivity.requires_resimulation:
+            # No interval, so nothing to simulate at. An item that HAS an
+            # interval and only lacks a closed form is the opposite case and
+            # must come through here: resimulation is the only way it will ever
+            # get a regret, so skipping it would leave `needs_resimulation`
+            # permanently unpriced (S3, D112).
             continue
         try:
             result = resimulate(item)
@@ -524,6 +558,8 @@ def refine(
                 resimulated=sensitivity.delta_regret,
                 skipped=str(error),
             ))
+            # A refusal leaves a `needs_resimulation` item exactly where it was:
+            # still unpriced, and now with the reason recorded beside it.
             continue
 
         exact_points = [
@@ -540,22 +576,32 @@ def refine(
         ]
         exact = _analyze_one(item, exact_points, slo_penalty)
         closed = _analyze_one(item, closed_points, slo_penalty)
+        # `closed` is None for an item with no closed form - which is the
+        # point of resimulating it - and E-B3's like-for-like comparison simply
+        # has no left-hand side for those. `None`, not 0.0: a zero would read as
+        # "the closed form said this input does not matter", which is the claim
+        # S3 removed.
         refinements.append(Refinement(
             input_id=sensitivity.input_id, kind=sensitivity.kind,
-            closed_form=closed.delta_regret or 0.0,
+            closed_form=closed.delta_regret,
             resimulated=exact.delta_regret or 0.0,
             seconds=result.lo.seconds + result.hi.seconds,
             simulated=result.lo.simulated + result.hi.simulated,
         ))
+        said = (
+            "no closed form exists" if closed.delta_regret is None
+            else f"{closed.delta_regret:,.4g}"
+        )
         replaced[sensitivity.input_id] = sensitivity.model_copy(update={
             "delta_regret": exact.delta_regret,
             "flip": exact.flip,
             "approximation": False,
             "resimulated": True,
+            "requires_resimulation": False,
             "grid": exact.grid,
             "note": (
                 f"{sensitivity.note} | RESIMULATED at both endpoints: closed form "
-                f"said {closed.delta_regret:,.4g}, simulation says "
+                f"said {said}, simulation says "
                 f"{exact.delta_regret:,.4g} over {result.lo.simulated + result.hi.simulated} "
                 f"candidate run(s) in {result.lo.seconds + result.hi.seconds:.1f} s"
             ),

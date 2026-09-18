@@ -207,6 +207,7 @@ def test_the_applied_link_is_no_longer_uncertain_in_the_registry(tmp_path) -> No
     from planner.predictor.calibration import CalibrationModel
     from planner.spec import load_service_spec
     from planner.uncertainty import build_registry, load_costs, load_grades
+    from planner.uncertainty.registry import UncertainKind, parse_link_item_id
 
     source = tmp_path / "cluster.yaml"
     source.write_text(
@@ -214,8 +215,12 @@ def test_the_applied_link_is_no_longer_uncertain_in_the_registry(tmp_path) -> No
     )
     plan_yaml = tmp_path / "plan.yaml"
     plan_yaml.write_text(yaml.safe_dump({"feasible": True, "provenance": {}}))
-    # A placeholder on-package link: uncertain before, measured after.
+    # A placeholder on-package link: uncertain before, measured after. The id
+    # is deliberately the UNKEYED form, which since S3 (D112) means "no traffic
+    # named", and which `measure-apply` still applies to the spec value itself -
+    # so this also pins that the pre-S3 invocation keeps working.
     target = "link_bw:onpkg-rngd0-01"
+    link_id = "onpkg-rngd0-01"
 
     args = build_parser().parse_args([
         "measure-apply", "--plan", str(plan_yaml), "--input", target,
@@ -236,8 +241,14 @@ def test_the_applied_link_is_no_longer_uncertain_in_the_registry(tmp_path) -> No
 
     before = registry_for(source)
     after = registry_for(source.with_suffix(".measured.yaml"))
-    assert any(i.id == target for i in before.items)
-    assert all(i.id != target for i in after.items), "measured inputs leave the registry"
+    def bw_ids(reg):
+        return {
+            parse_link_item_id(i.id).link_id
+            for i in reg.by_kind(UncertainKind.LINK_BW)
+        }
+
+    assert link_id in bw_ids(before)
+    assert link_id not in bw_ids(after), "measured inputs leave the registry"
     assert after.measured_count["link_bw"] == before.measured_count["link_bw"] + 1
 
 

@@ -66,6 +66,16 @@ What that yields today (`profiles/uncertainty/grades.yaml`):
 | `profile` | `vendor_spec` / `placeholder` / `user_defined` | `unbounded` |
 | `link_bw`, `link_lat`, `power` | every grade present | `unbounded` |
 
+**Since S3 (D112) a `link_bw` item is one per link PER TRAFFIC KIND**, not one
+per link: `link_bw:pcie-a40a-02@all_reduce/w4/bulk/unpinned`. A link does not
+have one bandwidth — the A40 node's PCIe bridge measures 25.0 GB/s for a direct
+copy, 19.29 for a two-rank all-reduce and 8.8 for the four-rank all-reduce a
+tp=4 island runs, against a `vendor_spec` 64.0 — so the item is keyed by
+`(collective, world_size, msg_size_class, binding)` and the same wire carrying
+two kinds is two items with two measurement costs. `link_lat` stays one item per
+link: `path_latency_ns` applies it to all traffic alike and no link latency here
+is measured at all. Use `parse_link_item_id` rather than splitting on `:`.
+
 Twelve of the fifteen rows are `unbounded`. That is the honest state of this
 repository's inputs, not a placeholder to be filled in later: `link_bw`'s
 vendor-spec ratio was retracted (the numerator was a host↔device measurement and
@@ -138,7 +148,8 @@ weeks.
 | `SIM_ERROR` | the margin `m_c` | the domain's interpolated value is moved inside its range; **the prediction does not move** | exact by construction |
 | `PROFILE` | TTFT, TPOT, throughput, **energy** | `×(1+δ)` on latencies and on energy, `/(1+δ)` on rates; watts untouched | first-order |
 | `POWER` | energy, tokens/J | `×(1+δ)` on average power; latency unchanged | first-order |
-| `LINK_BW`, `LINK_LAT` | TTFT of P/D candidates | the KV transfer is re-priced with `kv_transfer.transfer_ms`, the same helper the planner itself uses | **exact** |
+| `LINK_BW` (`p2p`), `LINK_LAT` | TTFT of P/D candidates | the KV transfer is re-priced with `kv_transfer.transfer_ms`, the same helper the planner itself uses | **exact** |
+| `LINK_BW` (`all_reduce`) | nothing — **it declines to answer** | the value enters through the simulator's own `link_bw`; no closed form exists, so the item returns `requires_resimulation` | **not priceable** |
 
 **`PROFILE` moves energy, and that is a correction** (D34). The rule originally
 held energy fixed, reasoning that energy was `POWER`'s and moving it here would
@@ -151,7 +162,21 @@ it: `serving/core/power_model.py` accumulates active energy as
 happened to cross an SLO boundary, so the plan systematically under-valued the
 most expensive measurement in `costs.yaml`.
 
-`LINK_BW` is exact for a reason worth knowing: the envelope cache stores the raw
+**An intra-island `LINK_BW` item cannot be priced in closed form, and saying so
+is the correction S3 made** (D112). The rule used to be the P/D one for every
+link, and the module claimed the handoff was "the only place a link bandwidth
+reaches a predicted metric today". It is not: an intra-island link's bandwidth is
+the `min` that `island_interconnect` reduces into the simulator's scalar
+`link_bw`, which prices every TP collective inside ASTRA-Sim. On a corpus built
+with `enable_pd=False` the closed form therefore moved nothing, and every such
+item swept to a regret of exactly zero and was reported `inert` — "measured, it
+would change no plan" — including `pcie-a40a-02`, the input that explained V3's
+−43.44 % TPOT error for 0.114 h of measurement. These items now go in their own
+`needs_resimulation` bucket and `--resimulate-top` prices them for real: at 8.8
+GB/s instead of 64.0 the same candidate predicts 60.09 ms p99 TPOT against 64.62
+measured, an error of −7.01 %.
+
+`LINK_BW`'s `p2p` rule is exact for a reason worth knowing: the envelope cache stores the raw
 simulator output from *before* `apply_pd_transfer_cost`, and the planner adds the
 transfer term itself afterwards. Applying the rule to post-evaluation metrics is
 therefore the same arithmetic, not an approximation. Applying it to raw cache
@@ -201,6 +226,22 @@ It dominates the ranking, so it is recorded in
   regret to compare because nothing bounds it, so it goes in its own
   `undecidable` list.
 
+Every input lands in exactly one of five buckets, and the last two are the ones
+that are easy to conflate:
+
+| bucket | what it means |
+| --- | --- |
+| `items` | ranked and inside the budget |
+| `uncovered` | worth doing, the budget ran out |
+| `inert` | swept, and moving across its whole range changed no decision |
+| `undecidable` | no width of its own **and** no default for its grade (D111) |
+| `needs_resimulation` | width known, **no closed form prices it** (D112) |
+
+`inert` and `needs_resimulation` are opposite claims and were one bucket until
+S3. An `inert` input is one a measurement would not repay; a
+`needs_resimulation` input may be the most valuable on the list and the sweep
+cannot say. Run `--resimulate-top` to turn it into a rank.
+
 An item whose cost is unknown is still planned and sorts last; pretending to know
 its cost would be the invention the work order forbids. Ranks number the
 *queue*, so an item that did not fit the budget keeps the rank it would have had
@@ -244,6 +285,14 @@ python -m planner fit-accuracy-domain \
 python -m planner measure-apply --plan outputs/plans/plan.yaml \
     --input link_bw:fabric-rngd0-a40a --value 13.0 --source measured \
     --cluster experiments/configs/clusters/pd-rngd-gpu-card.yaml
+
+# A keyed link_bw measurement is FILED beside the spec value, not written over
+# it: the group size comes from the key and --method is required (S3, D112).
+python -m planner measure-apply --plan outputs/plans/plan.yaml \
+    --input 'link_bw:pcie-a40a-02@all_reduce/w4/bulk/unpinned' --value 8.8 \
+    --method 'nccl-tests all_reduce_perf 2.27.5' \
+    --raw outputs/p2_evidence/link/tp4.json \
+    --cluster experiments/configs/clusters/pd-rngd-gpu-card.yaml
 ```
 
 Notes that are easy to get wrong:
@@ -259,6 +308,12 @@ Notes that are easy to get wrong:
   in the output.
 * `measure-apply` never overwrites a measured file. It writes a **copy** of the
   cluster or calibration yaml and prints the re-plan command (absolute rule A3).
+* A **keyed** `link_bw` input appends to the link's `measurements[]` on that copy
+  and leaves `bandwidth_gbps` and its `source` alone, so the datasheet figure and
+  the measured one can still be compared. An **unkeyed** one names no traffic and
+  so moves the spec value itself, as it did before S3. `--method` is mandatory for
+  a keyed `measured` figure: this repo's torch probe and `nccl-tests` are not
+  interchangeable evidence, which is why S6(ii) is still open.
 
 ---
 

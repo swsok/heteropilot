@@ -380,8 +380,17 @@ def test_a_measurement_plan_ranks_the_placeholder_links_of_a_mixed_cluster(
         | {i.input_id for i in plan.uncovered}
         | set(plan.undecidable)
         | set(plan.inert)
+        | set(plan.needs_resimulation)
     )
     assert seen == {i.id for i in output.uncertain_inputs.items}
+    # The partition is a partition: since S3 (D112) there are five buckets and
+    # an input must still land in exactly one of them.
+    buckets = [
+        [i.input_id for i in plan.items], [i.input_id for i in plan.uncovered],
+        plan.undecidable, plan.inert, plan.needs_resimulation,
+    ]
+    flat = [input_id for bucket in buckets for input_id in bucket]
+    assert len(flat) == len(set(flat))
     text = render(output)
     assert "decision regret" in text or "moves the recommendation" in text
 

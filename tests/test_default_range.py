@@ -24,7 +24,12 @@ from planner.spec import load_service_spec
 from planner.uncertainty import Grade, UncertainKind, build_registry, load_costs, load_grades
 from planner.uncertainty.grades import DefaultRule, GradeDefault, GradeRule, GradesTable
 from planner.uncertainty.measurement_plan import build as build_plan
-from planner.uncertainty.registry import Range, UncertainInput, _range_from_rule
+from planner.uncertainty.registry import (
+    Range,
+    UncertainInput,
+    _range_from_rule,
+    parse_link_item_id,
+)
 from planner.uncertainty.sensitivity import Sensitivity
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -65,7 +70,14 @@ def _s(input_id: str, kind: str, delta_regret, cost_hours, range_source="sourced
 def test_the_v3_link_is_ranked_instead_of_undecidable(grades, costs) -> None:
     """`pcie-a40a-02` is the case the whole step exists for."""
     reg = _registry(V3_FIXTURE, grades, costs)
-    item = next(i for i in reg.items if i.id == "link_bw:pcie-a40a-02")
+    # Since S3 (D112) the id carries the traffic the link carries, so the item
+    # is found by its link id rather than by string equality. What S2 asserts
+    # about it - a default range, labelled as one - is unchanged.
+    item = next(
+        i for i in reg.items
+        if i.kind is UncertainKind.LINK_BW
+        and parse_link_item_id(i.id).link_id == "pcie-a40a-02"
+    )
 
     assert item.grade is Grade.VENDOR_SPEC
     assert grades.rule_for("link_bw", "vendor_spec").rule.value == "unbounded", (

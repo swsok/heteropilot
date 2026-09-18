@@ -399,7 +399,8 @@ def render_measurement_plan(plan: MeasurementPlan, *, top_n: int = 20) -> str:
     deciding on.
     """
     lines = [_rule("Measurement plan")]
-    if not plan.items and not plan.uncovered and not plan.undecidable:
+    if (not plan.items and not plan.uncovered and not plan.undecidable
+            and not plan.needs_resimulation):
         lines.append("  nothing to measure: no uncertain input moves the recommendation")
         if plan.inert:
             lines.append(
@@ -467,6 +468,19 @@ def render_measurement_plan(plan: MeasurementPlan, *, top_n: int = 20) -> str:
             f"  {len(plan.inert)} input(s) are swept and INERT: their range is known "
             f"and moving across it changes no decision, so they are worth no hours."
         )
+
+    if plan.needs_resimulation:
+        lines.append("")
+        lines.append(
+            f"  {len(plan.needs_resimulation)} input(s) NEED SIMULATION TO PRICE: "
+            f"their range is known but they reach a prediction only through the "
+            f"simulator, so no closed form gives them a regret. This is NOT zero "
+            f"regret - re-run with --resimulate-top to rank them:"
+        )
+        for input_id in plan.needs_resimulation[:8]:
+            lines.append(f"      {input_id}")
+        if len(plan.needs_resimulation) > 8:
+            lines.append(f"      ... {len(plan.needs_resimulation) - 8} more")
 
     if plan.undecidable:
         lines.append("")

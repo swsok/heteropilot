@@ -66,8 +66,20 @@ from planner.uncertainty.sensitivity import analyze
 from planner.util import provenance as prov
 from planner.util.workload import generate_trace
 
-#: The input V3 traced its error to, and the reason this experiment exists.
-V3_INPUT = "link_bw:pcie-a40a-02"
+#: The link V3 traced its error to, and the reason this experiment exists. Since
+#: S3 (D112) a link_bw item id carries the traffic that crosses the link, so the
+#: row is found by LINK ID: `link_bw:pcie-a40a-02@all_reduce/w4/bulk/unknown` on
+#: this fixture. Matching the bare string reported "not present" and read as
+#: though the input had disappeared.
+V3_LINK = "pcie-a40a-02"
+
+
+def _is_v3_input(input_id: str) -> bool:
+    from planner.uncertainty.registry import parse_link_item_id
+
+    if not input_id.startswith("link_bw:"):
+        return False
+    return parse_link_item_id(input_id).link_id == V3_LINK
 
 
 def _plan_for(grades, *, registry_args, analyze_args, costs, budget_hours):
@@ -90,7 +102,13 @@ def _rows(registry, plan) -> list[dict]:
             where = "undecidable"
         elif item.id in set(plan.inert):
             where = "inert"
-        else:  # pragma: no cover - the four buckets are exhaustive
+        elif item.id in set(plan.needs_resimulation):
+            # S3's bucket (D112). Added here because without it this script's
+            # accounting silently DROPPED items: S2's own corpus moves both
+            # link_bw items out of `inert`, and "inert 4 -> 2" with nothing
+            # absorbing the difference is not a readable result.
+            where = "needs_resimulation"
+        else:  # pragma: no cover - the five buckets are exhaustive
             where = "unaccounted"
         out.append({
             "input_id": item.id,
@@ -220,18 +238,24 @@ def main() -> int:
             "ranked": [i.input_id for i in plan.items],
             "undecidable": plan.undecidable,
             "inert": plan.inert,
+            "needs_resimulation": plan.needs_resimulation,
             "covered_regret": plan.covered_regret,
             "rows": rows,
+            "v3_input_id": next(
+                (r["input_id"] for r in rows if _is_v3_input(r["input_id"])), None
+            ),
             "v3_input_rank": next(
-                (r["rank"] for r in rows if r["input_id"] == V3_INPUT), None
+                (r["rank"] for r in rows if _is_v3_input(r["input_id"])), None
             ),
             "v3_input_where": next(
-                (r["where"] for r in rows if r["input_id"] == V3_INPUT), None
+                (r["where"] for r in rows if _is_v3_input(r["input_id"])), None
             ),
         }
         print(f"{key}: ranked={len(plan.items)} inert={len(plan.inert)} "
               f"undecidable={len(plan.undecidable)} "
-              f"{V3_INPUT} -> {results[key]['v3_input_where']} "
+              f"needs_resim={len(plan.needs_resimulation)} "
+              f"{results[key]['v3_input_id']} -> "
+              f"{results[key]['v3_input_where']} "
               f"rank={results[key]['v3_input_rank']}")
 
     recommended = output.recommended
@@ -255,7 +279,8 @@ def main() -> int:
             "",
             _table(res["rows"]),
             "",
-            f"`{V3_INPUT}`: **{res['v3_input_where']}**"
+            f"`{res['v3_input_id'] or ('link_bw:' + V3_LINK)}`: "
+            f"**{res['v3_input_where']}**"
             + (f", rank **{res['v3_input_rank']}**" if res["v3_input_rank"] else ""),
             "",
         ]
