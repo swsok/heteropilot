@@ -1,0 +1,88 @@
+=== rps 0.5: 6 single-card candidates
+  s32-t2048    L=   7.326 tpot=  26.536 ttft=   346.8 feas/feas/feas/feas/reje -
+  s32-t8192    L=   7.325 tpot=  26.551 ttft=   293.1 feas/feas/feas/feas/reje -
+  s128-t2048   L=   7.326 tpot=  26.536 ttft=   346.8 feas/feas/feas/feas/reje -
+  s128-t8192   L=   7.325 tpot=  26.551 ttft=   293.1 feas/feas/feas/feas/reje -
+  s256-t2048   L=   7.326 tpot=  26.536 ttft=   346.8 feas/feas/feas/feas/reje -
+  s256-t8192   L=   7.325 tpot=  26.551 ttft=   293.1 feas/feas/feas/feas/reje -
+=== rps 1: 6 single-card candidates
+  s32-t2048    L=  16.545 tpot=  29.884 ttft=   386.9 feas/feas/feas/feas/reje -
+  s32-t8192    L=  16.547 tpot=  29.967 ttft=   313.3 feas/feas/feas/feas/reje -
+  s128-t2048   L=  16.545 tpot=  29.884 ttft=   386.9 feas/feas/feas/feas/reje -
+  s128-t8192   L=  16.547 tpot=  29.967 ttft=   313.3 feas/feas/feas/feas/reje -
+  s256-t2048   L=  16.545 tpot=  29.884 ttft=   386.9 feas/feas/feas/feas/reje -
+  s256-t8192   L=  16.547 tpot=  29.967 ttft=   313.3 feas/feas/feas/feas/reje -
+=== rps 1.5: 6 single-card candidates
+  s32-t2048    L=  27.853 tpot=  32.274 ttft=  5250.0 feas/feas/feas/feas/reje -
+  s32-t8192    L=  27.879 tpot=  32.221 ttft=  5262.2 feas/feas/feas/feas/reje -
+  s128-t2048   L=  27.002 tpot=  33.056 ttft=   412.5 feas/feas/feas/feas/reje -
+  s128-t8192   L=  27.005 tpot=  33.050 ttft=   323.5 feas/feas/feas/feas/reje -
+  s256-t2048   L=  27.002 tpot=  33.056 ttft=   412.5 feas/feas/feas/feas/reje -
+  s256-t8192   L=  27.005 tpot=  33.050 ttft=   323.5 feas/feas/feas/feas/reje -
+=== rps 2: 6 single-card candidates
+  s32-t2048    L=  55.799 tpot=  32.556 ttft= 35260.2 reje/reje/reje/reje/reje -
+  s32-t8192    L=  55.871 tpot=  32.659 ttft= 35445.3 reje/reje/reje/reje/reje -
+  s128-t2048   L=  37.965 tpot=  35.332 ttft=   420.5 feas/feas/feas/feas/reje -
+  s128-t8192   L=  37.975 tpot=  35.380 ttft=   368.0 feas/feas/feas/feas/reje -
+  s256-t2048   L=  37.965 tpot=  35.332 ttft=   420.5 feas/feas/feas/feas/reje -
+  s256-t8192   L=  37.975 tpot=  35.380 ttft=   368.0 feas/feas/feas/feas/reje -
+=== rps 2.5: 6 single-card candidates
+  s32-t2048    L=  76.231 tpot=  32.551 ttft= 63064.2 reje/reje/reje/reje/reje -
+  s32-t8192    L=  76.294 tpot=  32.626 ttft= 63241.1 reje/reje/reje/reje/reje -
+  s128-t2048   L=  49.527 tpot=  38.480 ttft=   449.9 feas/feas/feas/feas/reje -
+  s128-t8192   L=  49.462 tpot=  38.384 ttft=   407.2 feas/feas/feas/feas/reje -
+  s256-t2048   L=  49.527 tpot=  38.480 ttft=   449.9 feas/feas/feas/feas/reje -
+  s256-t8192   L=  49.462 tpot=  38.384 ttft=   407.2 feas/feas/feas/feas/reje -
+=== rps 3: 6 single-card candidates
+  s32-t2048    L=  90.152 tpot=  32.631 ttft= 82087.1 reje/reje/reje/reje/reje -
+  s32-t8192    L=  90.160 tpot=  32.662 ttft= 82153.9 reje/reje/reje/reje/reje -
+  s128-t2048   L=  61.677 tpot=  42.871 ttft=   471.1 feas/reje/feas/feas/reje P3-shape
+  s128-t8192   L=  61.506 tpot=  42.748 ttft=   446.3 feas/reje/feas/feas/reje P3-shape
+  s256-t2048   L=  61.677 tpot=  42.871 ttft=   471.1 feas/reje/feas/feas/reje P3-shape
+  s256-t8192   L=  61.506 tpot=  42.748 ttft=   446.3 feas/reje/feas/feas/reje P3-shape
+=== rps 3.5: 6 single-card candidates
+  s32-t2048    L= 100.139 tpot=  32.551 ttft= 95779.9 reje/reje/reje/reje/reje -
+  s32-t8192    L= 100.141 tpot=  32.632 ttft= 95880.7 reje/reje/reje/reje/reje -
+  s128-t2048   L=  74.498 tpot=  46.691 ttft=   581.8 feas/reje/reje/reje/reje P2-shape
+  s128-t8192   L=  74.226 tpot=  46.442 ttft=   478.4 feas/reje/reje/reje/reje P2-shape
+  s256-t2048   L=  74.498 tpot=  46.691 ttft=   581.8 feas/reje/reje/reje/reje P2-shape
+  s256-t8192   L=  74.226 tpot=  46.442 ttft=   478.4 feas/reje/reje/reje/reje P2-shape
+=== rps 4: 6 single-card candidates
+  s32-t2048    L= 107.719 tpot=  32.523 ttft=105698.4 reje/reje/reje/reje/reje -
+  s32-t8192    L= 107.739 tpot=  32.632 ttft=105889.4 reje/reje/reje/reje/reje -
+  s128-t2048   L=  87.440 tpot=  50.384 ttft=   626.2 reje/reje/reje/reje/reje -
+  s128-t8192   L=  87.048 tpot=  50.080 ttft=   633.7 reje/reje/reje/reje/reje -
+  s256-t2048   L=  87.440 tpot=  50.386 ttft=   626.2 reje/reje/reje/reje/reje -
+  s256-t8192   L=  87.108 tpot=  50.091 ttft=   601.8 reje/reje/reje/reje/reje -
+=== rps 5: 6 single-card candidates
+  s32-t2048    L= 118.322 tpot=  32.600 ttft=120053.0 reje/reje/reje/reje/reje -
+  s32-t8192    L= 118.311 tpot=  32.659 ttft=120190.5 reje/reje/reje/reje/reje -
+  s128-t2048   L= 105.091 tpot=  51.463 ttft= 10827.2 reje/reje/reje/reje/reje -
+  s128-t8192   L= 104.797 tpot=  51.269 ttft= 10605.9 reje/reje/reje/reje/reje -
+  s256-t2048   L= 115.261 tpot=  61.791 ttft=   880.4 reje/reje/reje/reje/reje -
+  s256-t8192   L= 114.255 tpot=  60.422 ttft=   702.2 reje/reje/reje/reje/reje -
+=== rps 6: 6 single-card candidates
+  s32-t2048    L= 125.417 tpot=  32.683 ttft=129505.6 reje/reje/reje/reje/reje -
+  s32-t8192    L= 125.399 tpot=  32.675 ttft=129511.9 reje/reje/reje/reje/reje -
+  s128-t2048   L= 117.417 tpot=  51.531 ttft= 19752.5 reje/reje/reje/reje/reje -
+  s128-t8192   L= 117.314 tpot=  51.694 ttft= 19704.5 reje/reje/reje/reje/reje -
+  s256-t2048   L= 141.441 tpot=  79.203 ttft= 16176.0 reje/reje/reje/reje/reje -
+  s256-t8192   L= 136.629 tpot=  71.363 ttft= 12478.5 reje/reje/reje/reje/reje -
+=== rps 8: 6 single-card candidates
+  s32-t2048    L= 134.443 tpot=  32.779 ttft=141437.2 reje/reje/reje/reje/reje -
+  s32-t8192    L= 134.405 tpot=  32.735 ttft=141632.5 reje/reje/reje/reje/reje -
+  s128-t2048   L= 133.893 tpot=  53.261 ttft= 30556.1 reje/reje/reje/reje/reje -
+  s128-t8192   L= 133.510 tpot=  52.890 ttft= 30336.0 reje/reje/reje/reje/reje -
+  s256-t2048   L= 165.009 tpot=  92.210 ttft= 31990.9 reje/reje/reje/reje/reje -
+  s256-t8192   L= 164.582 tpot=  93.007 ttft= 32118.8 reje/reje/reje/reje/reje -
+=== rps 10: 6 single-card candidates
+  s32-t2048    L= 139.838 tpot=  32.794 ttft=148739.4 reje/reje/reje/reje/reje -
+  s32-t8192    L= 139.808 tpot=  32.751 ttft=148755.9 reje/reje/reje/reje/reje -
+  s128-t2048   L= 144.609 tpot=  55.723 ttft= 37358.9 reje/reje/reje/reje/reje -
+  s128-t8192   L= 143.875 tpot=  55.123 ttft= 36848.9 reje/reje/reje/reje/reje -
+  s256-t2048   L= 177.564 tpot= 103.629 ttft= 40546.9 reje/reje/reje/reje/reje -
+  s256-t8192   L= 175.409 tpot=  96.881 ttft= 38888.0 reje/reje/reje/reje/reje -
+  mirror control furiosa-rngd-card-node_rngd0: {'p99_tpot_ms': 26.535857869999997, 'p99_ttft_ms': 346.7947381599994, 'served_concurrency': 7.326102846392548, 'tokens_per_joule': 0.5517600138720306}
+  mirror control furiosa-rngd-card-node_rngd1: {'p99_tpot_ms': 26.535857869999997, 'p99_ttft_ms': 346.7947381599994, 'served_concurrency': 7.326102846392548, 'tokens_per_joule': 0.5517600138720306}
+
+wrote experiments/p2_evidence/results/v3r_candidates.json (72 rows)

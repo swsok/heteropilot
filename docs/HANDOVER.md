@@ -373,11 +373,33 @@ to retake. Doing them separately means measuring the card twice.
 
 **3. S7 / V3-R** — one RNGD candidate each of the P2 and P3 shapes, steady-state
 workload, p99/p99. **The only source for the disclosure's §6 verdict-flip
-numbers**, because the margin is ≈21 % only in the RNGD region. Note it interacts
-with item 1: under the default `refuse` those candidates are held before any
-verdict, so V3-R must either run `--condition-mismatch warn` and say so, or wait
-for the open-loop refit. That is a choice to make deliberately, not at the
-prompt.
+numbers.** The gate this entry used to leave open — `--condition-mismatch warn`
+now, or wait for item 1 — **is decided**: `WORK_ORDER_domain_scoping.md` §S7.1
+picks the refit first, because a §6 number obtained with the condition check
+switched off would support the margin claim and contradict the §8(3) scoping
+claim in one table. `warn` survives as a labelled control arm only.
+
+**S7.0 is done (2026-09-18) and it chose the candidates, on CPU, before any card
+was touched** — `experiments/p2_evidence/results/v3r_candidate_selection.md`.
+Three things from it change what this trip is for:
+
+* **Both candidates are single-card `tp1-dp1` on `node_rngd0`**, not P2/P3's
+  original shapes: V3's two are `mix(cuda-a40-…)` and cannot run here at all.
+  They are re-read as verdict shapes — catch and rescue.
+* **P2 case: 3.5 rps, `s128-t2048`, L = 74.498**, at the fixture's own 50 ms —
+  (a) passes by 3.309 ms, (c) rejects by 6.640 ms. **P3 case: 2.0 rps,
+  `s128-t8192`, L = 37.975, at a post-hoc 40 ms SLO** — (b) rejects by 1.748 ms,
+  (c) passes by 1.963 ms. Two deployments, two thresholds, three repeats each.
+* **The ≈21 % margin and the measurable P3 case do not coexist.** 21 % belongs to
+  L ≈ 74.5, which is the P2 case; the P3 case sits at 7.51 %. Do not quote 21 %
+  as the margin that rescued a candidate.
+
+**And S7.0 hands item 1 a requirement:** all three operating points fall in
+`L ∈ (25.181, 76.0)`, where the committed domain **has no point** — its lower
+anchor is measured and its upper one (76.0) is itself interpolated from c64/c128.
+So the refit must place measured points inside that interval, at or above 70 for
+the P2 case and near 38 for the P3 one, or S7.4 will be testing a straight line
+rather than a margin.
 
 **4. The NPU exec-model spike's leftovers** (§2.0): a **wide-KV workload** to
 test C.3's bucket-ladder explanation, **B.3's hold-out** (needs C.4, needs a
