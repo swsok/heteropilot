@@ -902,6 +902,23 @@ Recorded because they are not discoverable from the code.
 
 **Harness**
 
+- **`livelock_watch.sh` leaked one orphaned `cat` per stopped run, for eight
+  days.** 250 of them were found idle on 2026-09-18, oldest 8 days, all
+  `ppid=1` and all blocked in `wait_for_partner` — a FIFO `open()` waiting for
+  a writer that was already dead. The drain at the end reopened the FIFO
+  *after* the child had been TERMed, so nothing was left to open against, and
+  the EXIT trap then unlinked the name. One leak per run ending in verdict 3 or
+  4; ~28 MB PSS and 250 PIDs by the time it was noticed. **Fixed** — the read
+  end is opened once on fd 3 and the drain inherits it (`cat <&3`), so no
+  `open()` can block and the drain is reaped. Measured before and after on the
+  same verdict-3 case: old +1, new +0.
+- **Three different self-match filters in a row found "survivors" that were the
+  checking command itself.** `CLAUDE.md` warns about `pkill -f` and
+  `ps | grep`; the same trap also defeats a *structural* argv match written in
+  Python, because the literal you are matching on is in your own script's text
+  and `/proc` shows your own `bash -c`. **The only filter that held was
+  excluding self AND every ancestor by PID** — walk `PPid:` up to init and skip
+  that set. Do that before believing any "still alive" count.
 - **`experiments/scripts/bench_furiosa_endpoint.py` ignores `arrival_time_ns`** and
   fires everything at once, while `python -m serving` replays it. Feeding both the
   same file compares a burst against a spread arrival process; the difference lands

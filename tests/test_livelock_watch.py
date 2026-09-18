@@ -186,3 +186,89 @@ def test_output_is_forwarded_without_q(tmp_path, stream, expected):
     )
     assert proc.returncode == expected
     assert "Running Instance[0]" in proc.stdout
+
+
+# ---------------------------------------------------------------------------
+# The drain must not outlive the run
+# ---------------------------------------------------------------------------
+
+def _orphaned_drains() -> set[int]:
+    """PIDs of `cat /tmp/livelock_watch.*` processes, excluding our own ancestry.
+
+    Owned by `os` rather than by `ps | grep`, and excluding self AND every
+    ancestor by PID, because a pattern that names the thing you are looking for
+    is also in the command line of the process doing the looking. That trap is
+    `CLAUDE.md`'s, and it defeats a structural argv match just as readily as a
+    `pkill -f`: three filters in a row reported this test's own shell as a
+    survivor before the ancestry exclusion was added.
+    """
+    import os
+    import re
+
+    pattern = re.compile(r"^/tmp/livelock_watch\.[A-Za-z0-9]{6}$")
+
+    ours, pid = set(), os.getpid()
+    while pid and pid not in ours:
+        ours.add(pid)
+        try:
+            with open(f"/proc/{pid}/status") as fh:
+                pid = next(
+                    int(line.split()[1]) for line in fh if line.startswith("PPid:")
+                )
+        except (OSError, StopIteration):
+            break
+
+    found = set()
+    for entry in os.listdir("/proc"):
+        if not entry.isdigit() or int(entry) in ours:
+            continue
+        try:
+            with open(f"/proc/{entry}/cmdline", "rb") as fh:
+                argv = fh.read().split(b"\0")[:-1]
+        except OSError:
+            continue
+        if len(argv) == 2 and argv[0] == b"cat" and pattern.match(
+            argv[1].decode("utf-8", "replace")
+        ):
+            found.add(int(entry))
+    return found
+
+
+@pytest.mark.skipif(not Path("/proc").is_dir(), reason="needs procfs")
+def test_a_stopped_run_leaves_no_orphaned_drain(tmp_path):
+    """The verdict paths must not leak the drain — 250 of them once did.
+
+    Between 2026-09-10 and 2026-09-18 every run ending in verdict 3 or 4 left
+    one `cat` blocked forever in `wait_for_partner`: the drain reopened the FIFO
+    *after* the child had been TERMed, so no writer was left for its `open()` to
+    rendezvous with, it was never killed or waited for, and the EXIT trap then
+    unlinked the FIFO out from under it. 250 had accumulated by the time anyone
+    looked, all `ppid=1`.
+
+    This is the regression test for the fd-3 fix, and it asserts the property
+    that matters — *this run added none* — rather than an absolute count, so a
+    machine with pre-existing orphans from an older checkout does not fail it.
+    """
+    before = _orphaned_drains()
+    proc = run_watch(LIVELOCKED, tmp_path, ticks=3, extra="; sleep 30")
+    assert proc.returncode == 3, "expected the livelock verdict, not this test's subject"
+
+    # The drain is killed and reaped before the script exits, so there is no
+    # settling window to wait out; if one is needed later, that is the bug.
+    assert _orphaned_drains() - before == set(), (
+        "the stopped run left an orphaned drain; see the fd-3 handling in "
+        "livelock_watch.sh and docs/HANDOVER.md §3"
+    )
+
+
+@pytest.mark.skipif(not Path("/proc").is_dir(), reason="needs procfs")
+def test_a_run_caught_by_grace_leaves_no_orphaned_drain(tmp_path):
+    """The other verdict path, which leaked identically."""
+    before = _orphaned_drains()
+    proc = subprocess.run(
+        [str(WATCH), "-n", "999", "-g", "2", "-s", "0", "-q", "--",
+         "bash", "-c", "sleep 60"],
+        capture_output=True, text=True, timeout=60,
+    )
+    assert proc.returncode == 4
+    assert _orphaned_drains() - before == set()
