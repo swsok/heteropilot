@@ -79,15 +79,58 @@ there, not the *verdict*.
 | §5.6 worked example | re-judged: B becomes `unmeasured`, A flips to SLO_VIOLATED | `v1_validation_region.md` §3 | **established** |
 | §5.2/§5.3, claim 2 — lookup coordinate | `L_pred` vs `L_meas` divergence under open-loop load | `v2_openloop_concurrency.md` | **PENDING** (driver ready, PR #95) |
 | **§2** problem definition — a prediction that is confidently wrong | P1: predicted p99 TPOT 36.5 ms, measured **66.0 ms** (−44.6 %); predicted L 127.9, measured 163.4 | `v3_verdict_accuracy.md` §6.3 | **established**, n=1 |
-| **§5.2** application conditions — parallelism and placement | domain fitted at TP=1 answers a TP=4 query; `AccuracyDomain` has no parallelism axis; error −1.05 % at TP=1 against −44.6 % at TP=4 | `v3_verdict_accuracy.md` §6.4 | **established**, n=1, **counterfactual** |
+| **§5.2** application conditions — parallelism and placement | domain fitted at TP=1 answers a TP=4 query; error −1.05 % at TP=1 against −44.6 % at TP=4 | `v3_verdict_accuracy.md` §6.4 | **established**, n=1, **counterfactual** |
+| **§5.2** — the condition axis, now IMPLEMENTED | `AccuracyDomain` carries `hardware` / `parallelism {tp,pp,dp}` / `placement {islands, device_binding}` / `arrival_process` / `variant`; `check_conditions()` compares them per island assignment and a mismatch is its own rejection stage carrying `mismatch_fields` and `required_measurement` | domain-scoping S1, deviations **D110**; `planner/predictor/calibration.py`, `planner/optimizer/margin.py` | **built**, default `refuse`, `profiles/calibration/index.yaml` lists every registered domain |
+| **§5.2** — what the condition axis costs, measured | on E-A1's 324 candidates rule (e) holds **312**, leaves **0 feasible** and **no recommendation**. Per field: `dp` 228, `islands` 132, `tp` 66, `arrival_process` 42 | `ea1_s4_condition_refuse.md`, deviations **D113** | **established** on one fixture |
+| **§5.2** — the axis is WIDER than parallelism | `tp` explains only **66 of 312** holds; `dp` alone is the largest single group at 108. Replication and placement are refused more often than parallelism is | `ea1_s4_condition_refuse.md` §2 | **established** on one fixture. **The specification must not present the axis as "parallelism degree" alone** |
 | §5.2 supporting — an unmeasured input explains it | `link_bw:pcie-a40a-02` measures **8.8 GB/s** effective against a `vendor_spec` 64.0; substituting it drops the TP=4 error from −43.4 % to −7.0 % on TPOT and −21.2 % to −0.7 % on concurrency | `v3_verdict_accuracy.md` Appendix A.1, A.4 | **established by measurement**, reproduced on two GPU groups |
 | §5.2 — the parallelism condition, discriminated | same candidate at TP=2 inside an NVLink pair errs **−5.2 %** where TP=4 across the bridge errs **−43.4 %**, an 8.3× difference from removing one hop | `v3_verdict_accuracy.md` A.2 | **established**, n=1 per arm |
 | §5.2 — device placement, third instance | one static link value cannot serve both candidates: 8.8 fixes TP=4 and breaks TP=2 (−5.2 % → +18.2 %), because the simulator cannot express which devices a TP group occupies | `v3_verdict_accuracy.md` A.4 | **established** |
 | §5.2 — device placement, NUMA | binding the server to the island's NUMA node is worth **1.93×** throughput and 0.37× TTFT, with identical engine init, clocks and power | `v3_verdict_accuracy.md` A.3 | **established**, and it invalidates nothing already measured (A.3 ③) |
+| **§8(3)** grounds for withholding a verdict, distinguished | two refusals, not one: `OUTSIDE_CALIBRATION_DOMAIN` (a domain applies, the operating point is past the end of its load axis) and `CALIBRATION_CONDITION_MISMATCH` (no domain was measured under this configuration at all). They ask for **different measurements** — a wider load range against a measurement at the candidate's own configuration — and the planner prints which, per candidate | deviations **D110**, **D113**; `ea1_s4_condition_refuse.md` §3 | **established**. E-A1's 12 single-card RNGD candidates move from the first to the second when `arrival_process` is stated: same hold, different measurement requested |
 | §6 verdict accuracy, A40 cases | — | **not measurable**: the deploy backend blocks P2 and P3 | `v3_verdict_accuracy.md` §4① | **not established** |
 | §6 cost of holding | all 30 held candidates are also rejected unmargined → holding costs nothing on this fixture | `v3_verdict_accuracy.md` §1 | **established** |
 | §6 verdict accuracy, RNGD regime | — | **V3-R, not scheduled** | **not established** |
+| **§2, §5.2** — V3 P1's ENDING | under rule (e) P1 is **held at every TPOT SLO from 38 to 50 ms, identically** — a condition mismatch is decided before any margin exists, so no threshold can move it. Rules (a)–(d) made 6 / 3 / 6 / 6 false passes on that grid; (e) makes **none**, and none of the correct rejections either | `v3_addendum_s4.md` §1 | **established**, n=1. The case closes as "unmeasured at its own configuration", not as a verdict |
+| §2 — and the prediction was recoverable where the margin was not | with the link priced from measurement (8.8 GB/s) the same candidate predicts **60.09 ms** p99 TPOT against **64.616** measured (−7.01 %) and `L` within **0.73 %** | `v3_addendum_s4.md` §3, `v5_resim_measured_link.json` | **established**. P1 needed a bandwidth that was not a datasheet number, not a 44 % correction |
 | fig. 2 | measured residual curve, sign change, zero-margin span, registered region | `experiments/figures/patent2_fig2_measured.png`, from `v4_figure2.py` | **established** — 8 points on the **p99 basis the verdict reads** (D101); c16.6 is absent because it has no per-request pair |
+
+## 1.5 The patent-3 candidate embodiment, and the one step of it that is not established
+
+The work order asks for a one-line embodiment: *"registry names the input → 0.114 h
+of measurement → cause confirmed (NUMA placement, effective bandwidth ≈ 1/8 of
+spec) → previous measurements re-verified (PR #104, < 0.5 %)."* Three of those
+four steps are established. **The first is not, and this repository's own
+experiments are what refute it.**
+
+| step | state | evidence |
+| --- | --- | --- |
+| 1. the registry names the input | **NOT established** | S2 predicted `link_bw:pcie-a40a-02` would rank first once it had a range. Measured: `inert` — worth nothing (`s2_default_ranges.md`). S3 re-keyed the item and it became `needs_resimulation` — "the sweep cannot price this" (`s3_link_effective_bw.md`). At no point did the ranking name it. A human investigating V3 named it |
+| 2. 0.114 h of measurement | **established** | `profiles/uncertainty/costs.yaml`, the `link_bw` row |
+| 3. cause confirmed | **established by measurement** | effective TP=4 all-reduce **8.8 GB/s** against a `vendor_spec` **64.0** — a ratio of **0.1375** — reproduced on two independent GPU groups (8.81 / 8.78, 0.5 % apart); and NUMA binding worth **1.93×** throughput (`v3_verdict_accuracy.md` A.1, A.3) |
+| 4. previous measurements re-verified | **established** | V2's ladder re-run bound, all five rates: agrees with the unbound stages to **0.42 %** on throughput and **0.37 %** on served concurrency (A.3) |
+
+**So the embodiment may be written as the diagnostic loop it was — measure the
+suspected input cheaply, confirm the cause, re-verify what came before — but not
+as one the registry initiated.** Claiming step 1 would be claiming an effect this
+repository measured and did not find.
+
+**Why it failed is itself the interesting part, and it is fixed in the code
+without yet being demonstrated end to end.** The registry priced a link only
+through the prefill→decode KV transfer, and the E-A1 corpus has no P/D
+candidate, so the item could not move anything and scored exactly zero. The
+error V3 measured came from the same link carrying a **TP all-reduce inside one
+island**, which reaches a prediction through the simulator's own `link_bw` and
+has no closed form at all (D112). Such an item is now reported as
+`needs_resimulation` rather than `inert`, and `--resimulate-top` prices it —
+but **no run has yet been done in which the ranking names this link first**. A
+demonstration would need a corpus where that resimulation is performed; it is
+not in this work order.
+
+**`1/8` is a rounded policy value, not the measurement.** The measured ratio is
+**0.1375**; `profiles/uncertainty/grades.yaml` rounds it DOWN to 1/8 for the
+`vendor_spec` default range (D111). The specification should quote 8.8 against
+64.0, or 0.1375 — not 1/8 as if it were measured.
 
 ## 2. Numbers cleared for use, with their caveats
 
@@ -110,5 +153,17 @@ there, not the *verdict*.
    V3's P3 result must be read against (its margin headroom is 0.623 ms).
 2. **V3** — the A40 verdict table.
 3. **The 58.54 ms caveats** above; V2's open-loop measurement is what settles
-   whether a closed-loop TPOT transfers.
+   whether a closed-loop TPOT transfers. Since S4 the closed-loop/open-loop
+   difference is a **stated condition** on `rngd_card_edf.yaml`
+   (`arrival_process: closed_loop`, D113), so the planner now refuses that
+   transfer rather than performing it silently — but refusing is not the same as
+   measuring, and V2 is still what would settle it.
 4. **V3-R** if an RNGD node becomes available.
+5. **A run in which the registry itself names the V3 link** — §1.5 step 1. The
+   mechanism that made it impossible is fixed (D112); the demonstration has not
+   been done.
+6. **The condition refusal is whole-domain.** `arrival_process` disagreeing
+   withdraws the TTFT *and* the TPOT error together, while D19's evidence is
+   that the difference "lands entirely in TTFT". A closed-loop domain's TPOT
+   error may therefore survive into an open-loop deployment, and the refusal is
+   conservative rather than correct. Per-metric condition scoping is not built.

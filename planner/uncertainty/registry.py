@@ -16,9 +16,17 @@ whose sourced range collapses to a point, is counted in ``measured_count``
 rather than listed. Stage B's perturbation and ranking therefore never need a
 special case for a width of zero.
 
-**A range with no source is ``unbounded``, never a plausible default**
-(absolute rule A1). ``unbounded`` propagates to "cannot be decided before
-measuring" rather than quietly scoring as zero regret.
+**A range is never invented** (absolute rule A1). Until S2 that meant a range
+with no source was ``unbounded``, full stop. Since S2 (D111) there is a second
+layer and the rule is narrower than it used to read: an input whose own
+(kind, grade) sources no width takes the GRADE'S DEFAULT from ``grades.yaml``,
+which is a stated policy with a cited basis and is labelled
+``range_source: default`` everywhere it goes. Only a grade with no default row
+at all stays ``unbounded``, and ``unbounded`` still propagates to "cannot be
+decided before measuring" rather than quietly scoring as zero regret. A default
+is not a measurement of this input and is not a claim that the true value lies
+in the interval - it is the interval the planner will search when nothing
+better exists, and it says so.
 """
 
 from __future__ import annotations

@@ -3605,9 +3605,10 @@ refuse every RNGD candidate; `model` / `variant` are left unstated for the same
 kind of reason (D33: scoping a domain is a measurement claim). Both move E-A1's
 counts, so they belong to STEP S4's re-run, not to a side effect here.
 
-**The risk is accepted, not mitigated.** With every domain at tp=1, the exact
-match rule refuses most multi-GPU candidates. That is the honest state of the
-measurements, and the refusal now carries `required_measurement`, so the output
+**The risk is accepted, not mitigated.** With every domain at tp=1 but one
+(`rngd_perpe.yaml`, tp=8), the exact match rule refuses most multi-GPU
+candidates. That is the honest state of the measurements, and the refusal now
+carries `required_measurement`, so the output
 is not "unknown" but "measure here" — which is the point. Relaxing the rule
 (ignoring `tp`, say) is explicitly not done.
 
@@ -3876,8 +3877,11 @@ the arrival-process evidence.*
 
 **What the code did, and it is a reproduction failure rather than a bug.** S1
 ships `condition_mismatch="refuse"` as the planner's default. Every committed
-accuracy domain is fitted at `tp=1`, `dp=1`, one island. E-A1's fixture
-generates candidates at tp up to 4, dp up to 2 and across two islands. So on
+accuracy domain is fitted at one island with `dp=1`, and at `tp=1` except
+`rngd_perpe.yaml`, which is tp=8. E-A1's fixture generates candidates at tp up
+to 4, dp up to 2 and across two islands. (The tp=8 domain never enters here at
+all: it is filed under hardware `RNGD`, the per-PE model, while this fixture's
+NPU is `RNGD-CARD`. Hardware is matched before parallelism is.) So on
 `main` after S1, `experiments/uncertainty/ea1_margin_modes.py` returns **0
 feasible for conditions (c) and (d)** with 276 candidates held, and the
 **50 / 244 / 30** that `ea1_margin_modes.md` publishes — and that D22's

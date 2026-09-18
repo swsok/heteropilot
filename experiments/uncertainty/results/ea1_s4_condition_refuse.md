@@ -21,9 +21,11 @@ p99 / TPOT 50 ms p99, 324 candidates, warm cache, nothing simulated.
 
 **On `main` today, the committed E-A1 script does not reproduce the committed
 E-A1 numbers.** S1 ships `condition_mismatch="refuse"` as the planner's default,
-`AccuracyDomainMargin` applies it, and every committed domain is fitted at
-`tp=1`, `dp=1`, one island. Run as-is, conditions (c) and (d) both return **0
-feasible** with 276 candidates held, and 50/244/30 cannot be got back at all.
+`AccuracyDomainMargin` applies it, and every committed domain is fitted at one
+island with `dp=1` — and at `tp=1` except `rngd_perpe.yaml`, which is tp=8 —
+while this fixture's candidates spread over tp 1–4, dp 1–2 and two islands. Run
+as-is, conditions (c) and (d) both return **0 feasible** with 276 candidates
+held, and 50/244/30 cannot be got back at all.
 
 That is D110 working, and it is why rules (a)–(d) are now built with
 `condition_mismatch="warn"` — a setting that did not exist when they were
