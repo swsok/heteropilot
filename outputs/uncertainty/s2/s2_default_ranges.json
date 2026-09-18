@@ -68,11 +68,13 @@
   "shape": "in_lt1024-out_ge512",
   "grid": 5,
   "budget_hours": null,
+  "condition_mismatch": "warn",
   "recommended_candidate": "cuda-a40-node_a40a-tp4-dp1-s128-t8192",
   "arms": {
     "with_defaults": {
       "grades_digest": "940e3b60fe4c2b24e899c50efd70c28237231e8fb6eb73ae3523310644634554",
       "defaults": 9,
+      "defaults_dropped": false,
       "ranked": [
         "sim_error:A40/in_lt1024-out_ge512-rps_lt20",
         "sim_error:RNGD-CARD/sharegpt-llama31-8b-20"
@@ -171,6 +173,7 @@
     "without_defaults": {
       "grades_digest": "940e3b60fe4c2b24e899c50efd70c28237231e8fb6eb73ae3523310644634554",
       "defaults": 0,
+      "defaults_dropped": true,
       "ranked": [
         "sim_error:A40/in_lt1024-out_ge512-rps_lt20",
         "sim_error:RNGD-CARD/sharegpt-llama31-8b-20"
@@ -268,7 +271,7 @@
     }
   },
   "provenance": {
-    "git_commit": "4690f3510ce8ee56d28f39a4ed1fe43d7f752cbc",
+    "git_commit": "0d388f4e0a49ba7f0d4219b1238f545658d5344c",
     "git_dirty": true,
     "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
     "vllm_version": null,
@@ -280,7 +283,7 @@
     "dataset_hash": null,
     "random_seed": null,
     "command": "s2_default_ranges.py --cache-dir outputs/uncertainty/ea1/cache --out experiments/uncertainty/results/s2_default_ranges_table.md --json-out outputs/uncertainty/s2/s2_default_ranges.json",
-    "timestamp": "2026-09-17T07:18:28.307858+00:00",
+    "timestamp": "2026-09-18T01:29:24.105973+00:00",
     "python_version": "3.10.20",
     "platform": "Linux-5.4.0-216-generic-x86_64-with-glibc2.31",
     "hostname": "s8",

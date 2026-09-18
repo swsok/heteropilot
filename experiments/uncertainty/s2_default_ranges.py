@@ -25,6 +25,16 @@ policy reads, and it fills the one from the other. Without it every candidate is
 reason that has nothing to do with this experiment - which is exactly what a
 plain `python -m planner plan` against this cache reports.
 
+**`--condition-mismatch` defaults to `warn` here, and that is deliberate.** S1
+(D110) refuses a candidate whose CONFIGURATION no domain was measured under, and
+the only A40 domain is fitted at tp=1 while this fixture's candidates are not.
+Under the planner's own default, `refuse`, every candidate is held, there is no
+recommendation, and all six inputs are undecidable in BOTH arms - which says
+nothing about default ranges and everything about S1. That verdict is correct
+and is STEP S4's subject; this experiment asks the other question, so it applies
+the domain under protest and measures what the ranges do. Run it with
+`--condition-mismatch refuse` to see S1's verdict instead.
+
 Usage::
 
     PYTHONPATH=$PWD .venv/bin/python experiments/uncertainty/s2_default_ranges.py \\
@@ -124,6 +134,14 @@ def main() -> int:
     parser.add_argument("--grid", type=int, default=5)
     parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--timeout", type=float, default=900.0)
+    parser.add_argument(
+        "--condition-mismatch", choices=("refuse", "warn"), default="warn",
+        help="S1's application-condition policy. `warn` (the default HERE, not in "
+             "the planner) applies a domain fitted at another configuration and "
+             "records it, which is what keeps this experiment about ranges. "
+             "`refuse` is the planner's default and holds every candidate on this "
+             "fixture - see the module docstring.",
+    )
     args = parser.parse_args()
 
     fixture = json.loads(MARGIN18.read_text())
@@ -155,7 +173,8 @@ def main() -> int:
 
     by_id = {i.id: i for i in islands}
     policy = AccuracyDomainMargin(
-        domains, shape=shape, calibration=calibration, bucket=bucket
+        domains, shape=shape, calibration=calibration, bucket=bucket,
+        condition_mismatch=args.condition_mismatch,
     )
     try:
         generation = CandidateGenerator(
@@ -221,7 +240,8 @@ def main() -> int:
         "",
         f"Fixture `{fixture['cluster']}` / `{fixture['service']}`, "
         f"{fixture['num_requests']} requests, seed {fixture['seed']}, "
-        f"grid {args.grid}, cache `{args.cache_dir}`.",
+        f"grid {args.grid}, cache `{args.cache_dir}`, "
+        f"`--condition-mismatch {args.condition_mismatch}`.",
         "",
         f"Recommendation: `{recommended.plan.candidate.id if recommended else None}`"
         f" - unchanged between the two arms by construction (only the registry's "
@@ -251,6 +271,7 @@ def main() -> int:
             "shape": shape,
             "grid": args.grid,
             "budget_hours": args.budget_hours,
+            "condition_mismatch": args.condition_mismatch,
             "recommended_candidate": (
                 recommended.plan.candidate.id if recommended else None
             ),

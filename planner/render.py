@@ -194,6 +194,15 @@ def render(output: PlannerOutput, *, top_n: int = 5) -> str:
                 "table does not cover it. Those candidates were NOT judged infeasible "
                 "- they were not judged at all."
             )
+        if "calibration_condition_mismatch" in output.rejected_summary:
+            lines.append(
+                "  NOTE: calibration_condition_mismatch means no accuracy domain was "
+                "measured under this candidate's CONFIGURATION - its parallelism, "
+                "island count, device binding, model, precision, token mix or arrival "
+                "process differs from every domain's. Also unmeasured rather than "
+                "infeasible, but it asks for a different experiment: measure at that "
+                "configuration, not further along the load axis of another one."
+            )
     else:
         lines.append("  (none)")
     lines.append("")

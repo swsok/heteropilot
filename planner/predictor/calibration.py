@@ -32,6 +32,7 @@ from __future__ import annotations
 import itertools
 import re
 from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
@@ -132,6 +133,97 @@ class AccuracyPoint(_Strict):
     note: str = ""
 
 
+#: How the devices an island runs on were bound to the host. `numa_pinned` is
+#: the state PR #104 re-measured the A40 ladder in; `unpinned` is what V3's P1
+#: ran under, and the difference between them was 1.93x of throughput on one
+#: unchanged configuration. `unknown` means nobody recorded it - the condition
+#: check then skips the field and says so rather than assuming either.
+DeviceBinding = Literal["numa_pinned", "unpinned", "unknown"]
+
+
+class DomainParallelism(_Strict):
+    """The parallelism degrees the domain's REAL side was deployed at.
+
+    A required application condition, not a scope refinement (domain-scoping
+    work order S1, deviations D110). The simulator's error is not a property of
+    the hardware alone: V3 measured -44.6 % on an A40 island at tp=4 against a
+    domain fitted at tp=1 whose margin was 1.13 %. The block is absent from a
+    domain that predates the field, which reads as "not stated" - see
+    `AccuracyDomain.check_conditions`.
+    """
+
+    tp: int = Field(ge=1)
+    pp: int = Field(default=1, ge=1)
+    dp: int = Field(default=1, ge=1)
+
+
+class DomainPlacement(_Strict):
+    """Where the domain's REAL side ran: how many islands, bound how.
+
+    `islands` is counted PER HARDWARE, the same unit the domain itself is in:
+    a domain measured on one card is `islands: 1` whether or not other hardware
+    was in the deployment.
+    """
+
+    islands: int = Field(default=1, ge=1)
+    device_binding: DeviceBinding = "unknown"
+
+
+@dataclass(frozen=True)
+class CandidateConditions:
+    """What ONE candidate presents to ONE hardware's domain, for the match test.
+
+    Every field is optional in the sense that it may be "not stated" - "" for
+    the strings, None for the integers, `unknown` for the binding. Not stated on
+    either side means the field is not compared, which is the same convention
+    `model`/`variant`/`workload_shape` have had since D33: a domain that does
+    not say what it was measured under cannot refuse anything on that ground.
+    """
+
+    hardware: str = ""
+    model: str = ""
+    variant: str = ""
+    workload_shape: str = ""
+    arrival_process: str = "unknown"
+    tp: int | None = None
+    pp: int | None = None
+    dp: int | None = None
+    islands: int | None = None
+    device_binding: DeviceBinding = "unknown"
+
+    @property
+    def required_measurement(self) -> dict[str, object]:
+        """The configuration a measurement would have to be taken AT to decide
+        this candidate - the patent's "additional measurement condition"."""
+        return {
+            "hardware": self.hardware,
+            "tp": self.tp,
+            "pp": self.pp,
+            "dp": self.dp,
+            "islands": self.islands,
+            "binding": self.device_binding,
+        }
+
+
+@dataclass(frozen=True)
+class ConditionCheck:
+    """The outcome of comparing a candidate's conditions against a domain's.
+
+    `mismatch` is what both sides stated and disagreed on - the refusal.
+    `skipped` is what one side left unstated, which is NOT a refusal but is
+    carried as a warning: an unstated condition is an unchecked one, and a plan
+    that rests on it should say so.
+    """
+
+    mismatch: tuple[str, ...] = ()
+    skipped: tuple[str, ...] = ()
+    detail: tuple[str, ...] = ()
+
+    @property
+    def matched(self) -> bool:
+        return not self.mismatch
+
+
 class AccuracyDomain(_Strict):
     """Where a predictor's error has been measured, and what it was.
 
@@ -183,6 +275,19 @@ class AccuracyDomain(_Strict):
     #: TTFT error does not transfer to an open-loop deployment; a margin policy
     #: says so in its basis.
     arrival_process: Literal["open_loop", "closed_loop", "unknown"] = "unknown"
+    #: The hardware label this domain was measured on, stated rather than left
+    #: to the enclosing `hardware:` key and the file name. `load_accuracy_domains`
+    #: refuses a domain whose label contradicts the key it is filed under.
+    hardware: str = ""
+    #: The parallelism the REAL side ran at, and where it ran. Both are REQUIRED
+    #: application conditions (domain-scoping S1, D110): unlike `workload_shape`,
+    #: which narrows what a domain claims, these say what the measurement WAS,
+    #: and a candidate that differs on one is `condition_mismatch` - unmeasured
+    #: at its own configuration, not outside the validated region of this one.
+    #: Absent means not stated, which is how every domain written before
+    #: 2026-09-17 reads; an unstated condition is skipped and flagged.
+    parallelism: DomainParallelism | None = None
+    placement: DomainPlacement | None = None
 
     @model_validator(mode="after")
     def _shape_is_canonical(self) -> AccuracyDomain:
@@ -288,6 +393,65 @@ class AccuracyDomain(_Strict):
 
     def ttft_margin_pct(self, conc: float) -> float:
         return self.margin_from_error(self.ttft_error_at(conc))
+
+    # -- the application conditions (S1) --------------------------------------
+
+    def check_conditions(self, cand: CandidateConditions) -> ConditionCheck:
+        """Is this domain allowed to be consulted for that candidate at all?
+
+        The domain-scoping work order S1 match rule: the candidate's
+        `(hardware, model, variant, workload_shape, arrival_process, tp, pp, dp,
+        islands, device_binding)` must be EXACTLY the domain's. Exactly, not
+        nearly - §2.4.1 already forbids fuzzy matching for the workload key and
+        the reason is the same here: V3's P1 differed from its domain on tp
+        alone and the error it inherited was -44.6 % against a 1.13 % margin.
+
+        A field is compared only when BOTH sides state it. That is the D33
+        convention for `model`/`variant`/`workload_shape` and it is kept, for
+        one reason: an unstated condition is not a matching one, it is an
+        unchecked one, and refusing on it would report "measured elsewhere" as
+        "measured differently". The unchecked fields come back in `skipped` so
+        the caller can carry them as a warning instead.
+
+        This is a test of the MEASUREMENT's conditions, run before
+        `errors_at` - which is a test of the operating point inside them.
+        Failing this is `condition_mismatch`; failing that is
+        `outside_calibration_domain`. The two were one bucket until S1 and the
+        difference is what to do next: measure at the candidate's
+        configuration, versus measure further along this domain's load axis.
+        """
+        mismatch: list[str] = []
+        skipped: list[str] = []
+        detail: list[str] = []
+
+        def compare(name: str, mine: object, theirs: object, unset: object) -> None:
+            if mine == unset or theirs == unset:
+                skipped.append(name)
+                return
+            if mine != theirs:
+                mismatch.append(name)
+                detail.append(f"{name}: domain {mine!r}, candidate {theirs!r}")
+
+        compare("hardware", self.hardware, cand.hardware, "")
+        compare("model", self.model, cand.model, "")
+        compare("variant", self.variant, cand.variant, "")
+        compare("workload_shape", self.workload_shape, cand.workload_shape, "")
+        compare("arrival_process", self.arrival_process, cand.arrival_process, "unknown")
+
+        par = self.parallelism
+        for name, theirs in (("tp", cand.tp), ("pp", cand.pp), ("dp", cand.dp)):
+            compare(name, None if par is None else getattr(par, name), theirs, None)
+
+        place = self.placement
+        compare("islands", None if place is None else place.islands, cand.islands, None)
+        compare(
+            "device_binding",
+            "unknown" if place is None else place.device_binding,
+            cand.device_binding,
+            "unknown",
+        )
+
+        return ConditionCheck(tuple(mismatch), tuple(skipped), tuple(detail))
 
     # -- what a margin policy asks -------------------------------------------
 
@@ -720,6 +884,131 @@ def load_accuracy_domains(
                     f"two accuracy domains for {hardware}: {seen[hardware]} and {path}; "
                     f"refusing to choose between them"
                 )
+            domain = cal.accuracy_domain
+            if domain.hardware and domain.hardware != hardware:
+                raise ValueError(
+                    f"{path}: accuracy_domain declares hardware "
+                    f"{domain.hardware!r} but is filed under {hardware!r}; the "
+                    f"label is an application condition, so the two must agree"
+                )
             seen[hardware] = path
-            out[hardware] = cal.accuracy_domain
+            out[hardware] = domain
     return out
+
+
+# -- the domain registry (domain-scoping S1) ---------------------------------
+
+
+class DomainIndexEntry(_Strict):
+    """One registered accuracy domain and the conditions it was measured under.
+
+    A copy of the conditions, not the source of them: `profiles/calibration/`
+    holds the domains and `index.yaml` lists them. The copy exists so a refusal
+    can say what DOES exist ("measured at tp=1, you asked for tp=4") without
+    re-reading every file, and so the set of domains a planning run consulted
+    is one reviewable artifact. `tests/test_calibration_condition.py` asserts
+    the two agree, which is what keeps a copy from becoming a second truth.
+    """
+
+    path: str
+    hardware: str
+    model: str = ""
+    variant: str = ""
+    workload_shape: str = ""
+    arrival_process: Literal["open_loop", "closed_loop", "unknown"] = "unknown"
+    parallelism: DomainParallelism | None = None
+    placement: DomainPlacement | None = None
+    note: str = ""
+
+    @classmethod
+    def of(
+        cls, path: str, hardware: str, domain: AccuracyDomain, note: str = ""
+    ) -> DomainIndexEntry:
+        return cls(
+            path=path, hardware=hardware,
+            model=domain.model, variant=domain.variant,
+            workload_shape=domain.workload_shape,
+            arrival_process=domain.arrival_process,
+            parallelism=domain.parallelism, placement=domain.placement,
+            note=note,
+        )
+
+    def conditions_summary(self) -> str:
+        par = self.parallelism
+        place = self.placement
+        bits = [f"hardware={self.hardware}"]
+        for name, value in (("model", self.model), ("variant", self.variant),
+                            ("workload_shape", self.workload_shape)):
+            bits.append(f"{name}={value or 'any'}")
+        bits.append(f"arrival_process={self.arrival_process}")
+        bits.append(
+            "parallelism=not stated" if par is None
+            else f"tp={par.tp} pp={par.pp} dp={par.dp}"
+        )
+        bits.append(
+            "placement=not stated" if place is None
+            else f"islands={place.islands} binding={place.device_binding}"
+        )
+        return ", ".join(bits)
+
+
+class DomainIndex(_Strict):
+    """`profiles/calibration/index.yaml` - every domain and its conditions."""
+
+    domains: list[DomainIndexEntry] = Field(default_factory=list)
+
+    def for_hardware(self, hardware: str) -> list[DomainIndexEntry]:
+        return [e for e in self.domains if e.hardware == hardware]
+
+
+#: Where the registry lives, relative to the repo root.
+DOMAIN_INDEX_PATH = "profiles/calibration/index.yaml"
+
+
+def load_domain_index(root: Path | str = ".") -> DomainIndex:
+    """The registered domains, or an empty index where the file is absent.
+
+    Absent is not an error: the index is a reviewable listing, and a checkout
+    without one must still plan. What it costs is the detail in a refusal, not
+    the refusal.
+    """
+    path = Path(root) / DOMAIN_INDEX_PATH
+    if not path.exists():
+        return DomainIndex()
+    raw = yaml.safe_load(path.read_text()) or {}
+    return DomainIndex.model_validate(raw)
+
+
+def build_domain_index(
+    root: Path | str = ".", paths: Sequence[Path | str] | None = None
+) -> DomainIndex:
+    """Derive the index from the domain files themselves, for the drift test.
+
+    Unlike `load_accuracy_domains` this does NOT refuse two domains for one
+    hardware: the index lists what is on disk, including the open-loop A40
+    domain that D102 keeps in a subdirectory precisely so the loader never has
+    to choose between them.
+    """
+    entries: list[DomainIndexEntry] = []
+    root_path = Path(root)
+    files = (
+        [Path(p) for p in paths]
+        if paths is not None
+        else sorted(root_path.glob("profiles/calibration/**/*.yaml"))
+    )
+    for path in files:
+        if path.name == Path(DOMAIN_INDEX_PATH).name:
+            continue
+        try:
+            model = load_calibration(path)
+        except (ValidationError, KeyError, TypeError):
+            continue
+        for hardware, cal in sorted(model.hardware.items()):
+            if cal.accuracy_domain is None:
+                continue
+            try:
+                rel = path.relative_to(root_path).as_posix()
+            except ValueError:
+                rel = path.as_posix()
+            entries.append(DomainIndexEntry.of(rel, hardware, cal.accuracy_domain))
+    return DomainIndex(domains=entries)

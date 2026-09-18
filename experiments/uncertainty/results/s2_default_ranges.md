@@ -108,6 +108,33 @@ default is a fixed path rather than the `--out-dir` given on the command line.
 The file was restored from git and the run repeated with the committed
 invocation.
 
+## Running this after S1, which is where it now lives
+
+S1 (D110) refuses a candidate whose CONFIGURATION no accuracy domain was
+measured under. The only A40 domain is fitted at **tp=1**; this fixture's
+recommendation is a **tp=4** island. So under the planner's own default policy,
+`--condition-mismatch refuse`, the same command gives:
+
+```
+with_defaults:     ranked=0 inert=0 undecidable=6
+without_defaults:  ranked=0 inert=0 undecidable=6
+```
+
+Every candidate is held, there is no recommendation to flip, and every input is
+undecidable for a reason that has nothing to do with its range — in both arms.
+**That verdict is correct**, it is exactly what S1 was built to say, and it is
+STEP S4's subject to quantify.
+
+It is also useless for S2's question, so `s2_default_ranges.py` defaults to
+`--condition-mismatch warn`: it applies the tp=1 domain under protest, records
+the mismatch, and measures what the ranges do. The tables above are that run.
+Pass `--condition-mismatch refuse` to see S1's verdict instead.
+
+The two answers are not in tension. S1 says *this margin may not be quoted for
+this configuration*; S2 says *given a margin, here is what each unmeasured input
+is worth*. What S4 has to decide is which of them the E-A1 counts are reported
+under.
+
 ## What this does not settle
 
 * The default magnitudes are settings, not findings. Each is sourced to the

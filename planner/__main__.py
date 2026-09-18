@@ -210,6 +210,7 @@ def _build_uncertainty(args, spec, cluster, profiles, islands, provenance):
 
     from planner.envelope import is_canonical_bucket, shape_of_bucket, workload_bucket
     from planner.optimizer.margin import AccuracyDomainMargin
+    from planner.predictor.calibration import load_domain_index
     from planner.uncertainty import build_registry, load_costs, load_grades
 
     paths = [Path(p) for p in args.accuracy_domain] or None
@@ -251,6 +252,13 @@ def _build_uncertainty(args, spec, cluster, profiles, islands, provenance):
                 "conc_min": d.conc_min, "conc_max": d.conc_max,
                 "outside_domain": d.outside_domain,
                 "workload_shape": d.workload_shape or None,
+                "arrival_process": d.arrival_process,
+                "parallelism": (
+                    None if d.parallelism is None else d.parallelism.model_dump()
+                ),
+                "placement": (
+                    None if d.placement is None else d.placement.model_dump()
+                ),
             }
             for hardware, d in sorted(domains.items())
         },
@@ -260,12 +268,33 @@ def _build_uncertainty(args, spec, cluster, profiles, islands, provenance):
 
     from planner.util.tier import resolve_variant
 
+    # The application conditions this run presents (domain-scoping S1, D110).
+    # `open_loop` is a statement about the planner, not a setting: `plan` always
+    # replays an arrival trace, so a domain fitted closed-loop is measured under
+    # a different process (D19) and says so through the same match test.
+    binding = {i.id: cluster.node(i.node_id).device_binding for i in islands}
+    index = load_domain_index(args.root)
+    provenance["uncertainty"]["conditions"] = {
+        "arrival_process": "open_loop",
+        "condition_mismatch": args.condition_mismatch,
+        "device_binding": dict(sorted(binding.items())),
+        "registered_domains": [
+            {"path": e.path, "hardware": e.hardware,
+             "conditions": e.conditions_summary()}
+            for e in index.domains
+        ],
+    }
+
     policy = AccuracyDomainMargin(
         domains, shape=shape,
         model=spec.model,
         variant=resolve_variant(spec.service.dtype, spec.service.kv_cache_dtype),
         calibration=calibration, bucket=bucket,
         ttft_floor=args.ttft_margin_percent, tpot_floor=args.tpot_margin_percent,
+        arrival_process="open_loop",
+        device_binding=binding,
+        condition_mismatch=args.condition_mismatch,
+        index=index,
     )
     return domains, policy, registry
 
@@ -1286,6 +1315,18 @@ def build_parser() -> argparse.ArgumentParser:
                            "infeasible (uncertainty work order §2.4). Also emits the "
                            "uncertain-input registry. Opt-in: the default path applies "
                            "no automatic margin and its output is unchanged.")
+    plan.add_argument("--condition-mismatch", choices=("refuse", "warn"),
+                      default="refuse",
+                      help="What to do when no accuracy domain was measured under a "
+                           "candidate's CONFIGURATION - parallelism, island count, "
+                           "device binding, model, precision, token mix, arrival "
+                           "process. `refuse` (the default, symmetric with a domain's "
+                           "own outside_domain: refuse) rejects it as "
+                           "calibration_condition_mismatch: unmeasured at its own "
+                           "configuration, not infeasible, and never offered as "
+                           "closest_plan. `warn` applies the domain anyway and records "
+                           "the mismatch - for measuring what the refusal costs, not "
+                           "for planning. Only meaningful with --accuracy-domain.")
     plan.add_argument("--grades", default=None, metavar="GRADES_YAML",
                       help="read the source-grade table from this file instead of "
                            "profiles/uncertainty/grades.yaml. The one reason to: "

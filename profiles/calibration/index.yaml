@@ -1,0 +1,80 @@
+# The registered accuracy domains and the conditions each was measured under.
+#
+# Domain-scoping work order S1; docs/deviations.md D110. The domains themselves
+# live in the sibling files -- this is a LISTING, so that:
+#
+#   * a `condition_mismatch` refusal can say what does exist ("measured at tp=1;
+#     you asked for tp=4") instead of only that nothing matched, and
+#   * the set of domains a planning run could have consulted is one reviewable
+#     artifact rather than a glob result.
+#
+# It is a copy, and a copy is a second truth unless something checks it:
+# `tests/test_calibration_condition.py::test_the_index_matches_the_domain_files`
+# rebuilds this from the files and compares. Regenerate rather than hand-edit.
+#
+# `arrival_process: unknown`, an absent `parallelism` or an absent `placement`
+# mean NOT STATED, which the match test skips and flags -- never "matches
+# anything" and never "matches nothing".
+#
+# NOTE the two A40 rows: `load_accuracy_domains` globs `profiles/calibration/
+# *.yaml` non-recursively and raises on two domains for one hardware, so only the
+# first is on the default path; the open-loop one is loaded explicitly (D102).
+domains:
+- path: profiles/calibration/a40.accuracy.yaml
+  hardware: A40
+  model: ''
+  variant: ''
+  workload_shape: ''
+  arrival_process: unknown
+  parallelism:
+    tp: 1
+    pp: 1
+    dp: 1
+  placement:
+    islands: 1
+    device_binding: unpinned
+  note: bench-run harness, three points 4.043/10.8/170.56; binding unpinned per v3_verdict_accuracy.md
+    A.3
+- path: profiles/calibration/openloop/a40.accuracy.openloop.yaml
+  hardware: A40
+  model: ''
+  variant: ''
+  workload_shape: ''
+  arrival_process: open_loop
+  parallelism:
+    tp: 1
+    pp: 1
+    dp: 1
+  placement:
+    islands: 1
+    device_binding: unpinned
+  note: deployed-server harness over HTTP; kept in a subdirectory so the loader never chooses between
+    two A40 domains (D102)
+- path: profiles/calibration/rngd_card_edf.yaml
+  hardware: RNGD-CARD
+  model: ''
+  variant: ''
+  workload_shape: ''
+  arrival_process: unknown
+  parallelism:
+    tp: 1
+    pp: 1
+    dp: 1
+  placement:
+    islands: 1
+    device_binding: unknown
+  note: card-as-device abstraction, rebuilt at 300 requests (D32)
+- path: profiles/calibration/rngd_perpe.yaml
+  hardware: RNGD
+  model: ''
+  variant: ''
+  workload_shape: ''
+  arrival_process: unknown
+  parallelism:
+    tp: 8
+    pp: 1
+    dp: 1
+  placement:
+    islands: 1
+    device_binding: unknown
+  note: per-PE abstraction of THE SAME card at tp=8; simulator side only, no new hardware measurement

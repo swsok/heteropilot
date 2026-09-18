@@ -25,15 +25,21 @@ read as "infeasible" (deviations D33).
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Protocol
+from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from planner.plan import OperatingPointRecord
-from planner.predictor.calibration import AccuracyDomain
+from planner.predictor.calibration import (
+    AccuracyDomain,
+    CandidateConditions,
+    ConditionCheck,
+    DeviceBinding,
+    DomainIndex,
+)
 
 if TYPE_CHECKING:
-    from planner.plan import CandidateConfig, PredictedMetrics
+    from planner.plan import CandidateConfig, IslandAssignment, PredictedMetrics
     from planner.predictor import SimResult
     from planner.predictor.calibration import CalibrationModel
 
@@ -44,6 +50,20 @@ if TYPE_CHECKING:
 #:                  or the caller chose GlobalMargin)
 #:   unmeasured   - no measurement covers this operating point; no verdict
 MarginStatus = Literal["in_domain", "extrapolated", "scalar", "unmeasured"]
+
+#: WHY a decision is `unmeasured`, when it is. The two are both epistemic and
+#: they are not the same gap (domain-scoping S1, D110):
+#:   outside_domain     - the right domain exists, the operating point is past
+#:                        the end of its measured load axis;
+#:   condition_mismatch - no domain was measured under this candidate's
+#:                        conditions at all, so none may be consulted;
+#:   no_domain          - the hardware carries no calibration whatsoever;
+#:   unreadable         - the run reported no operating point to look up.
+#: `search` maps the first to `OUTSIDE_CALIBRATION_DOMAIN` and the second to
+#: `CALIBRATION_CONDITION_MISMATCH`; the last two keep the historical bucket.
+RefusalKind = Literal[
+    "", "outside_domain", "condition_mismatch", "no_domain", "unreadable"
+]
 
 #: Which SLO metric each P/D phase owns. In a disaggregated deployment the
 #: PREFILL hardware determines TTFT and the DECODE hardware determines TPOT, so
@@ -95,6 +115,19 @@ class MarginDecision(_Strict):
     no_domain: list[str] = Field(default_factory=list)
     #: The run produced no readable operating point at all.
     unreadable: bool = False
+    #: Which gap this is, when `status` is `unmeasured`; "" otherwise.
+    refusal: RefusalKind = ""
+    #: Application conditions stated on BOTH sides that disagreed, e.g. ["tp"].
+    #: Only ever non-empty for `refusal == "condition_mismatch"` or, under the
+    #: `warn` policy, alongside a decision that was allowed through anyway.
+    mismatch_fields: list[str] = Field(default_factory=list)
+    #: The configuration a measurement would have to be taken at to decide this
+    #: candidate - the patent's "additional measurement condition". None unless
+    #: a condition mismatch was found.
+    required_measurement: dict[str, Any] | None = None
+    #: Conditions one side left UNSTATED, so the match test could not check
+    #: them. Not a refusal; a caveat that the domain was applied on trust.
+    condition_warnings: list[str] = Field(default_factory=list)
 
     @property
     def is_unmeasured(self) -> bool:
@@ -197,6 +230,10 @@ class AccuracyDomainMargin:
         bucket: str = "",
         ttft_floor: float = 0.0,
         tpot_floor: float = 0.0,
+        arrival_process: str = "unknown",
+        device_binding: dict[str, DeviceBinding] | None = None,
+        condition_mismatch: Literal["refuse", "warn"] = "refuse",
+        index: DomainIndex | None = None,
     ) -> None:
         from planner.envelope import is_canonical_bucket, is_canonical_shape
 
@@ -218,6 +255,106 @@ class AccuracyDomainMargin:
         self.bucket = bucket
         self.ttft_floor = ttft_floor
         self.tpot_floor = tpot_floor
+        #: How the caller offers load. `plan` replays an arrival trace, so the
+        #: CLI passes `open_loop`; left `unknown` the field is not compared.
+        self.arrival_process = arrival_process
+        #: island id -> how that island's host is bound, from the cluster spec.
+        #: Keyed by ISLAND, not by hardware: one cluster can hold a bound and an
+        #: unbound node of the same accelerator, and collapsing them would hide
+        #: the very difference this field exists to catch. Missing or `unknown`
+        #: means the check skips it and flags it.
+        self.device_binding = device_binding or {}
+        #: `refuse` (default, symmetric with D33's `outside_domain: refuse`) or
+        #: `warn`, which applies the domain anyway and records the mismatch.
+        #: `warn` exists to measure what the refusal costs, not to plan with.
+        self.condition_mismatch = condition_mismatch
+        #: The registry, used only to say what DOES exist in a refusal.
+        self.index = index
+
+    # -- the application conditions (S1) --------------------------------------
+
+    def _conditions(
+        self, candidate: CandidateConfig, hardware: str, island_hw: dict[str, str]
+    ) -> list[CandidateConditions]:
+        """What this candidate presents to `hardware`, one entry per assignment.
+
+        PER ASSIGNMENT rather than aggregated, because a candidate may put two
+        islands of one hardware at different parallelism, and there is no honest
+        single tp for that pair: each island must match the domain on its own.
+        `islands` is the one genuinely per-hardware field - how many islands of
+        this hardware the candidate lights up - and every entry carries it.
+
+        With no island->hardware attribution (the map is optional on `decide`)
+        the parallelism is NOT STATED rather than assumed: the check then skips
+        those fields and flags them, which is the same treatment an unrecorded
+        binding gets. The CLI always supplies the map.
+        """
+        def conditions(assignment: IslandAssignment | None, islands: int | None
+                       ) -> CandidateConditions:
+            return CandidateConditions(
+                hardware=hardware,
+                model=self.model,
+                variant=self.variant,
+                workload_shape=self.shape,
+                arrival_process=self.arrival_process,
+                tp=None if assignment is None else assignment.tp_size,
+                pp=None if assignment is None else assignment.pp_size,
+                dp=None if assignment is None else assignment.dp_replicas,
+                islands=islands,
+                device_binding=(
+                    "unknown" if assignment is None
+                    else self.device_binding.get(assignment.island_id, "unknown")
+                ),
+            )
+
+        mine = [a for a in candidate.assignments if island_hw.get(a.island_id) == hardware]
+        if not mine:
+            return [conditions(None, None)]
+        islands = len({a.island_id for a in mine})
+        return [conditions(a, islands) for a in mine]
+
+    @staticmethod
+    def _merge(checks: list[tuple[CandidateConditions, ConditionCheck]]) -> ConditionCheck:
+        mismatch: list[str] = []
+        skipped: list[str] = []
+        detail: list[str] = []
+        for _cond, check in checks:
+            for name in check.mismatch:
+                if name not in mismatch:
+                    mismatch.append(name)
+            for name in check.skipped:
+                if name not in skipped:
+                    skipped.append(name)
+            for line in check.detail:
+                if line not in detail:
+                    detail.append(line)
+        return ConditionCheck(tuple(mismatch), tuple(skipped), tuple(detail))
+
+    def _required_measurement(
+        self, hardware: str, conds: list[CandidateConditions]
+    ) -> dict[str, Any]:
+        out = dict(conds[0].required_measurement)
+        out["hardware"] = hardware
+        shapes = [(c.tp, c.pp, c.dp) for c in conds]
+        if len(set(shapes)) > 1:
+            # No single tp/pp/dp describes this hardware's share of the
+            # candidate, so state the islands rather than one of them.
+            for name in ("tp", "pp", "dp"):
+                out.pop(name, None)
+            out["per_island"] = [
+                {"tp": tp, "pp": pp, "dp": dp} for tp, pp, dp in shapes
+            ]
+        return out
+
+    def _known_conditions(self, hardware: str) -> str:
+        if self.index is None:
+            return ""
+        rows = self.index.for_hardware(hardware)
+        if not rows:
+            return ""
+        return " | registered domains for this hardware: " + "; ".join(
+            f"{r.path} ({r.conditions_summary()})" for r in rows
+        )
 
     # -- the decision ---------------------------------------------------------
 
@@ -239,6 +376,7 @@ class AccuracyDomainMargin:
                 "accuracy domain can be consulted - the candidate is undecidable, "
                 "not infeasible",
                 unreadable=True,
+                refusal="unreadable",
             )
 
         worst = {"ttft": 0.0, "tpot": 0.0}
@@ -250,6 +388,8 @@ class AccuracyDomainMargin:
         records: list[OperatingPointRecord] = []
         extrapolated: dict[str, float] = {}
         no_domain: list[str] = []
+        condition_warnings: list[str] = []
+        mismatched: list[str] = []
         consulted = False
 
         for hw, raw in sorted(points.items()):
@@ -268,6 +408,7 @@ class AccuracyDomainMargin:
                         + self._available(hw)
                         + ": the simulator's error on this hardware at this workload "
                           "has never been measured",
+                        refusal="no_domain",
                     )
                 records.append(OperatingPointRecord(hardware=hw, concurrency=conc, phase=phase))
                 no_domain.append(hw)
@@ -282,12 +423,38 @@ class AccuracyDomainMargin:
                 consulted = True
                 continue
 
-            mismatch = self._scope_mismatch(domain)
-            if mismatch is not None:
-                return self._unmeasured(
-                    _busiest(sim),
-                    f"{hw} accuracy domain was measured {mismatch}; refusing to apply "
-                    f"an error measured under different conditions (§2.4.1 rev 2)",
+            # The APPLICATION CONDITIONS, before the operating point: may this
+            # domain be consulted for this candidate at all? (S1, D110.) V3 is
+            # the case - a tp=1 domain answering for a tp=4 island, with a
+            # 1.13 % margin against a measured -44.6 %.
+            conds = self._conditions(candidate, hw, island_hw)
+            check = self._merge([(c, domain.check_conditions(c)) for c in conds])
+            if check.mismatch:
+                fields = ", ".join(check.mismatch)
+                detail = "; ".join(check.detail)
+                if self.condition_mismatch == "refuse":
+                    return self._unmeasured(
+                        _busiest(sim),
+                        f"{hw}: the accuracy domain was measured under different "
+                        f"conditions ({fields}) - {detail}. It may not be consulted "
+                        f"here, so this candidate is unmeasured AT ITS OWN "
+                        f"CONFIGURATION, not infeasible (S1, D110)"
+                        + self._known_conditions(hw),
+                        refusal="condition_mismatch",
+                        mismatch_fields=list(check.mismatch),
+                        required_measurement=self._required_measurement(hw, conds),
+                    )
+                mismatched.extend(f for f in check.mismatch if f not in mismatched)
+                condition_warnings.append(
+                    f"{hw}: APPLIED ACROSS A CONDITION MISMATCH ({fields}) - {detail}. "
+                    f"policy condition_mismatch=warn, so the margin below is an error "
+                    f"measured under conditions this candidate does not meet"
+                )
+            if check.skipped:
+                condition_warnings.append(
+                    f"{hw}: unchecked application conditions "
+                    f"({', '.join(check.skipped)}) - one side does not state them, "
+                    f"so the domain is applied on trust for those fields"
                 )
 
             errs = domain.errors_at(conc)
@@ -364,6 +531,8 @@ class AccuracyDomainMargin:
                 f" | measured closed-loop ({', '.join(sorted(closed_loop))}), so its "
                 f"TTFT does not transfer to an open-loop deployment (D19)"
             )
+        for warning in condition_warnings:
+            basis += f" | {warning}"
 
         # A hand-set floor is an explicit instruction not to go below it: the
         # LARGER wins. `source` follows the rps STEP 4.3 rule exactly - the
@@ -390,24 +559,11 @@ class AccuracyDomainMargin:
             source=source,
             extrapolated=extrapolated,
             no_domain=no_domain,
+            mismatch_fields=mismatched,
+            condition_warnings=condition_warnings,
         )
 
     # -- helpers --------------------------------------------------------------
-
-    def _scope_mismatch(self, domain: AccuracyDomain) -> str | None:
-        """Why this domain does not apply to the service, or None if it does.
-
-        Each scope field is checked only when BOTH sides state it: an unscoped
-        domain applies to anything, and a policy built without a model or shape
-        cannot refuse on one.
-        """
-        if domain.workload_shape and self.shape and domain.workload_shape != self.shape:
-            return f"on token mix {domain.workload_shape}, this service is {self.shape}"
-        if domain.model and self.model and domain.model != self.model:
-            return f"on model {domain.model}, this service runs {self.model}"
-        if domain.variant and self.variant and domain.variant != self.variant:
-            return f"at precision {domain.variant}, this service runs {self.variant}"
-        return None
 
     def _scalar_entry(self, hardware: str):
         if self.calibration is None or not self.bucket:
@@ -428,11 +584,20 @@ class AccuracyDomainMargin:
 
     @staticmethod
     def _unmeasured(
-        concurrency: float | None, reason: str, *, unreadable: bool = False
+        concurrency: float | None,
+        reason: str,
+        *,
+        unreadable: bool = False,
+        refusal: RefusalKind = "outside_domain",
+        mismatch_fields: list[str] | None = None,
+        required_measurement: dict[str, Any] | None = None,
     ) -> MarginDecision:
         return MarginDecision(
             ttft_percent=0.0, tpot_percent=0.0, status="unmeasured",
             ttft_status="unmeasured", tpot_status="unmeasured",
             unmeasured_metrics=["ttft", "tpot"],
             concurrency=concurrency, basis=reason, unreadable=unreadable,
+            refusal=refusal,
+            mismatch_fields=mismatch_fields or [],
+            required_measurement=required_measurement,
         )

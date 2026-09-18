@@ -32,6 +32,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SERVICE = ROOT / "examples/service_specs/llama31-8b.yaml"
 CLUSTER = ROOT / "experiments/configs/clusters/a40x8.yaml"
 OUTSIDE = RejectionStage.OUTSIDE_CALIBRATION_DOMAIN.value
+MISMATCH = RejectionStage.CALIBRATION_CONDITION_MISMATCH.value
 
 
 @pytest.fixture
@@ -223,7 +224,7 @@ def test_an_override_is_recorded_and_warned_about(monkeypatch, tmp_path, canonic
     text = render(output)
     assert "BUCKET OVERRIDE" in text
     assert "DIFFERENT workload" in text
-    assert output.rejected_summary.get(OUTSIDE, 0) > 0
+    assert output.rejected_summary.get(MISMATCH, 0) > 0
     assert code == 3
 
 
@@ -427,5 +428,10 @@ def test_a_domain_scoped_to_another_model_is_refused(monkeypatch, tmp_path) -> N
     save_calibration(model, scoped)
     code, output = _run([*BASE, "--accuracy-domain", str(scoped)], monkeypatch, served=60.0)
     assert output is not None
-    assert output.rejected_summary.get(OUTSIDE, 0) > 0
+    # `calibration_condition_mismatch`, not `outside_calibration_domain`: the
+    # model is an APPLICATION CONDITION, so the domain may not be consulted at
+    # all, which is a different gap from an operating point past its load axis
+    # (domain-scoping S1, D110).
+    assert output.rejected_summary.get(MISMATCH, 0) > 0
+    assert output.rejected_summary.get(OUTSIDE, 0) == 0
     assert code == 3
