@@ -3995,3 +3995,97 @@ the scope built as `planner/__main__.py` builds it),
 `experiments/uncertainty/results/ea1_s4_condition_refuse.md`,
 `experiments/p2_evidence/results/v3_addendum_s4.md`,
 `tests/test_domain_conditions_stated.py`.
+
+## D114 — the open-loop harness could not be ported to FuriosaAI, so the open-loop *protocol* was added to the server harness instead · Recorded 2026-09-18
+
+*`WORK_ORDER_domain_scoping.md` STEP S7.2, the fifth entry from the `D110–D119`
+block. Read D19 first (why the two load protocols are not interchangeable), then
+D102 (why two harnesses for one hardware label need two domain files) and D113
+(why the arrival process became a refusal, which is what created this task).*
+
+**What the work order said to do.** S7.2, as written in the rev, said the job was
+"the mirror image of the CUDA porting §2.2 records — server launch, sampler,
+bench interpreter", i.e. add a `furiosa` backend to
+`experiments/scripts/measure_envelope_openloop.py`, the way §2.2 added a `cuda`
+backend to `measure_envelope.py`. `docs/HANDOVER.md` §2.10.1 item 1 said the same
+thing and called it "a port, not a re-run".
+
+**Why that is impossible, and it is not a matter of effort.**
+`measure_envelope_openloop.py` does not launch a server. Its core is
+`python -m bench run`, which is upstream's own harness, and `bench/core/runner.py`
+drives **`vllm.v1.engine.async_llm.AsyncLLM`** in-process. There is no FuriosaAI
+equivalent of AsyncLLM — `furiosa-llm` is a server, addressed over HTTP. So the
+three seams §2.2 found in the closed-loop harness (server launch, power sampler,
+bench interpreter) do not exist in this file: there is no launch line to swap,
+because the engine is a Python object. Writing an in-process FuriosaAI driver
+would mean adding a second engine path to `bench/`, and `bench/` is upstream and
+frozen until Phase 5 (absolute rule 1). The work order named a file that cannot
+host the change.
+
+**What the repository already had that does work.** The A40 has *two* open-loop
+domains, and D102 keeps them in separate files because they came from different
+harnesses:
+
+| domain file | harness |
+| --- | --- |
+| `profiles/calibration/a40.accuracy.yaml` | `python -m bench run`, in-process AsyncLLM replay |
+| `profiles/calibration/openloop/a40.accuracy.openloop.yaml` | **a deployed server driven over HTTP** (`replay_to_endpoint.py --open-loop`), via `planner deploy` |
+
+The second is the route RNGD needs, and its own header says why: it "is what a
+Phase 4 deployment actually is". It also cannot be reused as-is, because it goes
+through `planner deploy` and **there is no furiosa deploy backend** —
+`planner/deploy/` holds `vllm_cuda`, an `vllm_ascend` stub and `kubernetes`.
+Writing one is Phase 4 and out of S7's scope.
+
+**How we adapt.** The open-loop *protocol* is added to `measure_envelope.py`,
+which already owns everything the route needs and owns it per backend: the launch
+line (`server_command`), NUMA binding of both server and client (`numa_prefix`,
+default `auto`), the power sampler, the settle/idle windows and teardown by
+process group. `--mode open` replaces one thing — the load generator —
+substituting `replay_to_endpoint.py --open-loop --target-rps R` for
+`bench_furiosa_endpoint.py --concurrency N`. `--mode closed` is the default, so
+every committed invocation of the script runs unchanged, and the 18 pre-existing
+tests pass untouched.
+
+Three consequences, each of which is the point rather than a side effect:
+
+* **`--numa-bind` came for free**, already implemented and already defaulting to
+  `auto`. `docs/HANDOVER.md` §2.10.1 item 2 asked for the furiosa open-loop path
+  to carry it "from the first commit" precisely so the card would not have to be
+  measured twice; putting the protocol in the harness that already had it
+  satisfies that by construction instead of by discipline.
+* **Both backends gained the open-loop server route at once**, because the mode
+  adds no vendor knowledge. A future A40 point on this route is the same command
+  with `--backend cuda`.
+* **The saturation test is a different quantity and has a different name.** A5(b)
+  is a closed-loop rule; `measure_envelope_openloop.py` replaced its purpose with
+  `d(scheduled_ts − queued_ts)/d(arrival)`, read from the engine's own
+  timestamps. A server over HTTP does not expose those, so `ttft_drift_slope`
+  reads client-side TTFT instead — queue wait **plus prefill plus transport**.
+  The intercept is therefore not comparable with the bench-run route's; the slope
+  is, and the threshold (`QUEUE_GROWTH_SLOPE = 0.05`) is deliberately shared.
+  A large but flat TTFT must not read as saturation, and
+  `test_a_growing_queue_is_caught_by_the_slope_not_by_the_ttft_value` pins that.
+
+**What this means for the refit S7.3 will take.** The RNGD open-loop domain will
+be comparable with `openloop/a40.accuracy.openloop.yaml`, not with
+`a40.accuracy.yaml` — same protocol *and* same harness. It therefore inherits
+that file's measured caveat: over HTTP, TPOT is transport-free (client 36.64 ms
+against the engine's 36.62, +0.06 %) but **TTFT carries +20.26 ms of client-side
+transport**, +9.5 % at that load, and the values are recorded raw with the offset
+not subtracted. A consumer comparing an RNGD open-loop TTFT error against an
+engine-side number must account for it. `launch_error_ms`, which
+`replay_to_endpoint` already records, is what says whether the client kept up.
+
+**A third route now exists and an artifact says which one produced it.**
+`envelope.json`'s run block carries `protocol` and `harness`, and so does every
+point. `closed_loop: true` used to be a hardcoded literal in that block — correct
+while the script had one mode, and it would have mislabelled every open-loop
+artifact.
+
+**Where.** `experiments/scripts/measure_envelope.py` (`--mode`, `--rps`,
+`--num-reqs`, `ttft_drift_slope`, `summarise_openloop_point`,
+`openloop_client_command`, `run_point_open`, the run block's `protocol` /
+`harness` / `closed_loop`), `tests/test_measure_envelope.py` (14 new tests),
+`WORK_ORDER_domain_scoping.md` §S7.2 (amended to name this file),
+`docs/HANDOVER.md` §2.10.1 items 1 and 2.
