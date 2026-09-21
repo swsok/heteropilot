@@ -1,10 +1,18 @@
 # HeteroPilot — current state and what to do next
 
-> **This is the live handover.** Last updated **2026-09-18** at the end of
-> `WORK_ORDER_domain_scoping.md`'s CPU half — S1 through S5, PRs #106, #107,
-> #109, #110, #111 and the landing PR #112. **§2.10 is where that work order
-> stands; §2.10.1 is what to do on the RNGD node**, which is where the next
-> session is going. The body below was rewritten 2026-09-10 at the end of
+> **This is the live handover.** Last updated **2026-09-21**, at the end of
+> `WORK_ORDER_domain_scoping.md` **S7 — the work order is now complete except
+> S6**, which is A40 work. Eleven PRs landed that day: #116–#126.
+>
+> **The next session is on the A40 node. Read §2.12 first** — it is the A40
+> list and it is short. §2.10 is where the work order stands; §2.10.1 is the
+> RNGD list and is now almost entirely closed.
+>
+> **Two things on `main` are not finished and are not S7's:** the
+> `test_livelock_watch.py` flake (§2.11, **for the A40 session**, `main` is
+> intermittently red) and S6 (§2.12).
+>
+> The body below was rewritten 2026-09-10 at the end of
 > `WORK_ORDER_rps_aware.md` rev 2 (STEP 0–6, PRs #60–#72). **The whole stack is on
 > `main` as of `3aadc2b`** and every `feat/rps-step*` branch, plus
 > `spike/d14-asym-tp`, has been deleted — `origin` holds `main` and nothing else.
@@ -124,7 +132,29 @@ claim a result from hardware the detector does not list.
 | 4 Real deploy + calibration | ✅ CUDA. NPU launcher still a stub |
 | 5 Topology-aware P/D | ✅ core, and **asymmetric TP per phase now representable** (D28). Network-aware routing deferred. **D23 resolved** — it was D26, a PATH-resolved Chakra interpreter |
 | **RPS-aware selection** | ✅ **done 2026-09-09** — envelope, accuracy domain, operating-point margins, `plan --rps`. §2.1 |
+| **Domain scoping (`WORK_ORDER_domain_scoping.md`)** | ✅ **S1–S5, S7 done**; only **S6** left (A40, §2.12). D110–D115 |
 | 6 Online replanning | ⛔ not started — **requires explicit user approval** |
+
+**Accuracy domains on `main` as of 2026-09-21** — **five** files, and which one
+the planner reaches matters:
+
+| file | hardware | protocol | basis | on the default glob path? |
+| --- | --- | --- | --- | --- |
+| `a40.accuracy.yaml` | A40 | open loop | not stated | yes |
+| `openloop/a40.accuracy.openloop.yaml` | A40 | open loop | not stated | no — D102 |
+| `rngd_card_edf.yaml` | RNGD-CARD | **closed** loop | not stated | yes |
+| `openloop/rngd_card.accuracy.openloop.yaml` | RNGD-CARD | **open** loop | **`tpot_p99`** | **no** — load explicitly |
+| `rngd_perpe.yaml` | RNGD (per-PE) | closed loop | not stated | yes |
+
+(`rngd_perpe.yaml` is filed under hardware `RNGD`, not `RNGD-CARD`, so it never
+competes with the two above — hardware is matched before anything else.)
+
+`load_accuracy_domains` globs **non-recursively**, so `RNGD-CARD` still resolves
+to the closed-loop file by default and the open-loop one is opt-in
+(`--accuracy-domain <path>`). Since **D115** a domain states the percentile it
+was fitted on; `""` means **not stated**, not p50, and `AccuracyDomainMargin`
+warns only when a file explicitly declares `tpot_p50`. Migrating the three older
+files onto p99 is a separate step and is **not** done.
 
 **ScenarioLab moved out** on 2026-09-03 to `swsok/heteropilot-scenariolab`
 (private), which pins this repo as a submodule at `e79ac4ab`. It imports from
@@ -238,6 +268,43 @@ not a gap to paper over.
 
 ## 2. Next work, in priority order
 
+### 2.12 The A40 node list — **read this one first if you are on the A40**
+
+Two items, and they are unrelated to each other.
+
+**1. S6 — the last step of `WORK_ORDER_domain_scoping.md`.** Optional in the
+work order, and it is what would close the one thing S7 left open on the A40
+side. Three parts, and PR #104 may already contain some of them — check before
+measuring:
+
+* **(i) NUMA-bound P1 (TP=4) open-loop, 3 runs**, against the simulator with
+  S3's measured link value. `v3_addendum_s4.md` §3 has the pairing: with the
+  link priced from measurement the simulator lands within **−7.01 %** on p99
+  TPOT and **−0.73 %** on concurrency. The residual −7.01 % is **not margined by
+  anything** — no A40 domain is fitted at tp=4 — which is exactly what rule (e)
+  says, and S6(i) is the measurement that would close it.
+* **(ii) `nccl-tests all_reduce_perf` on 4 GPUs** over the TP message-size
+  range, plus `p2pBandwidthLatencyTest`, **bound and unbound**, loaded into the
+  S3 (D112) link-measurement schema.
+* **(iii) the same candidate at TP=2 inside an NV4 pair** (GPU0↔1), to check the
+  simulator on an NVLink-only path and rule out a TP-arithmetic explanation.
+
+Workload: lengthen it so a steady-state interval exists and exclude warm-up
+(V3's transient lesson). `binding: unknown` is what the fixture's nodes say, so
+**record the binding** — it is the axis worth 1.93× of throughput here.
+
+**2. The `test_livelock_watch.py` flake** — §2.11 immediately below. It is
+`main`'s current state, it came from #115, and it is the reason a full suite on
+any node may come back red. **Constraints, from the S7 session:** no `retry`, no
+`xfail`; one rerun, recorded in the PR; a red suite is not merged.
+
+**What is NOT on the A40 list.** S7 is finished and needs no A40 work. The
+RNGD-side items in §2.10.1 are closed except where that section says otherwise.
+Do not re-run anything under `experiments/results/s73_npu_6fe246ed1abf/` here:
+those are measurements of **accelerator set `6fe246ed1abf`** (D80) and an A40 box
+is a different machine — `whichnode.sh` prints `accel serials` so the two cannot
+be confused.
+
 ### 2.11 `tests/test_livelock_watch.py` is intermittently red on `main` — **for the A40 session**
 
 *Filed here rather than as a GitHub issue: this token cannot create issues
@@ -297,13 +364,32 @@ measurements did not use `livelock_watch.sh` — the open-loop harness bounds it
 children with the predictor's own `timeout_s`.
 
 
-### 2.10 `WORK_ORDER_domain_scoping.md` — **S1–S5 done 2026-09-17/18. The CPU half is finished; S6 and S7 need nodes**
+### 2.10 `WORK_ORDER_domain_scoping.md` — **S1–S5 and S7 done. Only S6 remains, and it is A40 work**
 
-The newest item and the front of the queue. It exists because STEP V3 of
-`WORK_ORDER_p2_regular_spec_evidence.md` (PR #98) found two defects that the
-disclosure's own claims rest on. **S1–S5 were CPU work and are done.** What is
-left needs hardware: **S6 the A40 node, S7 the RNGD node.** §2.10.1 is the RNGD
-list, and it is longer than S7 because S4 added to it.
+It exists because STEP V3 of `WORK_ORDER_p2_regular_spec_evidence.md` (PR #98)
+found two defects that the disclosure's own claims rest on. **S1–S5 (CPU) and
+S7 (RNGD node, 2026-09-21) are done.** The only step left is **S6, on the A40
+node** — see §2.12.
+
+**S7's result in three lines, because it is not what the work order expected:**
+
+* **§6 is still not established.** The one rankable verdict case is *circular*
+  — the open-loop domain's robust value returns the measurement it was fitted
+  from. Leave-one-out gives ±0.63 ms on held-out interior points, which is
+  predictive accuracy and not a verdict count, and the **boundary points cannot
+  be leave-one-out validated at all**.
+* **What S7 did measure is a counterfactual, and it belongs to §5.2/§8(3):**
+  consulted outside its arrival-process condition, the closed-loop domain
+  **false-passes a violating candidate by 4.911 ms = 42× the run-to-run
+  spread**. D113 asserted that as policy; this is the number.
+* **A new open-loop domain is installed** at
+  `profiles/calibration/openloop/rngd_card.accuracy.openloop.yaml` — six points,
+  sim L 11.730–37.965, `compared_metric: tpot_p99`. It is **not** on the default
+  glob path; `load_accuracy_domains` still resolves `RNGD-CARD` to the
+  closed-loop file (the D102 pattern). Load it explicitly.
+
+Read `experiments/p2_evidence/results/v3r_verdict_accuracy.md` and
+`experiments/results/s73_openloop_refit.md` before quoting any of it.
 
 **S1 — an accuracy domain answers only for the configuration it was measured
 under (D110, PR #106).** V3 deployed P1, one A40 island at **tp=4**, whose margin
@@ -383,10 +469,27 @@ named it. The mechanism is fixed; the demonstration has not been done.
   domain is fitted at tp=4, which is exactly what rule (e) says.
 - **S7 (RNGD node, optional)** — see §2.10.1, which is where it now lives.
 
-### 2.10.1 The RNGD node list — **read this one before travelling**
+### 2.10.1 The RNGD node list — **mostly closed as of 2026-09-21; three items remain**
 
-Five things want the RNGD card. They are ordered by what they unblock, and the
-first two are new as of this sprint.
+> **Items 1, 2 and 3 are DONE** (S7.2/S7.3/S7.4, PRs #116–#126). The open-loop
+> refit exists and is installed, it was taken **NUMA-bound** on npu0, and V3-R
+> ran. What survives from the original five:
+>
+> * **item 4** — the NPU exec-model spike's leftovers (wide-KV workload, B.3's
+>   hold-out, C.2), unchanged;
+> * **item 5** — ATOM (D20), still blocked on the vendor, unchanged;
+> * **one thing S7 added**: §6 of the disclosure is still not established, and
+>   closing it needs a verdict case whose domain point was **not fitted from the
+>   measurement that judges it** — a hold-out design, which the domain's
+>   boundary points cannot support, or a measurement at an operating point the
+>   domain already covers from other data. That is RNGD work and it is not
+>   scheduled.
+>
+> The detail below is kept as written because it records **why** each item
+> existed and what was measured; read it for the reasoning, not for the queue.
+
+Five things wanted the RNGD card. They are ordered by what they unblock, and the
+first two were new as of the 2026-09-18 sprint.
 
 **1. An OPEN-LOOP refit of the RNGD-CARD accuracy domain.** *This did not exist
 as a task before S4.* `rngd_card_edf.yaml` now states
