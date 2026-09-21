@@ -250,6 +250,56 @@ links:
       25.01 GB/s on both GPU groups. A direct copy over the same wire the
       four-rank all-reduce gets 8.8 on: the collective algorithm, not the link,
       is what costs the difference.
+  - collective: all_reduce
+    msg_size_class: bulk
+    binding: numa_pinned
+    bus_bw_gbps: 8.81
+    world_size: 4
+    source: measured
+    method: torch 2.10 + NCCL 2.27.5 under torchrun, link_probe.py under numactl
+    msg_bytes: [4194304, 8388608, 16777216, 33554432, 67108864]
+    date: '2026-09-21'
+    raw: outputs/p2_evidence/link_numa/numa0/tp4.json
+    note: >-
+      S6(ii), the bound half of the key. numactl --cpunodebind=0
+      --membind=0, GPUs 0-3, affinity verified with taskset
+      (binding_proof.txt beside the raw file). Against the unpinned 8.8 above it
+      moves 0.11 %, i.e. nothing: NUMA is worth up to 1.93x of DEPLOYMENT
+      throughput on this node (v3_verdict_accuracy.md A.3) and under 1 % of this
+      wire. What binding moves here is the host memory path, not the
+      GPU-to-GPU link.
+  - collective: all_reduce
+    msg_size_class: bulk
+    binding: numa_pinned
+    bus_bw_gbps: 19.3
+    world_size: 2
+    source: measured
+    method: torch 2.10 + NCCL 2.27.5 under torchrun, link_probe.py under numactl
+    msg_bytes: [4194304, 8388608, 16777216, 33554432, 67108864]
+    date: '2026-09-21'
+    raw: outputs/p2_evidence/link_numa/numa0/pair_pcie_02.json
+    note: >-
+      The bound two-rank figure. Same caveat as the unpinned one above: NOT a
+      plateau, this is the 64 MiB endpoint of a curve still climbing.
+  - collective: p2p
+    msg_size_class: bulk
+    binding: numa_pinned
+    bus_bw_gbps: 25.15
+    world_size: 2
+    source: measured
+    method: torch 2.10 cudaMemcpyPeer, p2p_probe.py at 512 MiB under numactl
+    msg_bytes: [536870912]
+    date: '2026-09-21'
+    raw: outputs/p2_evidence/p2p_control/numa0_pinned.json
+    note: >-
+      THE NCCL-FREE CONTROL, and the reason S6(ii) closes without nccl-tests.
+      A direct peer copy does not go through NCCL at all, so it bounds the wire
+      independently of the collective: 25.15 GB/s here against 8.81 for the
+      four-rank all-reduce and 19.3 for the two-rank one over the SAME wire.
+      The ring uses about a third of what the link can carry, which is what
+      D112's three numbers were always saying, measured here with NCCL out of
+      the path. Median of 20 at 512 MiB, spread under 0.5 %; round trip agrees
+      with one way to 0.04 %, so the link is symmetric per direction.
 - id: nvlink-a40b-01
   src: node_a40b/gpu0
   dst: node_a40b/gpu1
@@ -316,6 +366,56 @@ links:
       25.01 GB/s on both GPU groups. A direct copy over the same wire the
       four-rank all-reduce gets 8.8 on: the collective algorithm, not the link,
       is what costs the difference.
+  - collective: all_reduce
+    msg_size_class: bulk
+    binding: numa_pinned
+    bus_bw_gbps: 8.73
+    world_size: 4
+    source: measured
+    method: torch 2.10 + NCCL 2.27.5 under torchrun, link_probe.py under numactl
+    msg_bytes: [4194304, 8388608, 16777216, 33554432, 67108864]
+    date: '2026-09-21'
+    raw: outputs/p2_evidence/link_numa/numa1/tp4.json
+    note: >-
+      S6(ii), the bound half of the key. numactl --cpunodebind=1
+      --membind=1, GPUs 4-7, affinity verified with taskset
+      (binding_proof.txt beside the raw file). Against the unpinned 8.8 above it
+      moves 0.80 %, i.e. nothing: NUMA is worth up to 1.93x of DEPLOYMENT
+      throughput on this node (v3_verdict_accuracy.md A.3) and under 1 % of this
+      wire. What binding moves here is the host memory path, not the
+      GPU-to-GPU link.
+  - collective: all_reduce
+    msg_size_class: bulk
+    binding: numa_pinned
+    bus_bw_gbps: 19.38
+    world_size: 2
+    source: measured
+    method: torch 2.10 + NCCL 2.27.5 under torchrun, link_probe.py under numactl
+    msg_bytes: [4194304, 8388608, 16777216, 33554432, 67108864]
+    date: '2026-09-21'
+    raw: outputs/p2_evidence/link_numa/numa1/pair_pcie_46.json
+    note: >-
+      The bound two-rank figure. Same caveat as the unpinned one above: NOT a
+      plateau, this is the 64 MiB endpoint of a curve still climbing.
+  - collective: p2p
+    msg_size_class: bulk
+    binding: numa_pinned
+    bus_bw_gbps: 25.15
+    world_size: 2
+    source: measured
+    method: torch 2.10 cudaMemcpyPeer, p2p_probe.py at 512 MiB under numactl
+    msg_bytes: [536870912]
+    date: '2026-09-21'
+    raw: outputs/p2_evidence/p2p_control/numa1_pinned.json
+    note: >-
+      THE NCCL-FREE CONTROL, and the reason S6(ii) closes without nccl-tests.
+      A direct peer copy does not go through NCCL at all, so it bounds the wire
+      independently of the collective: 25.15 GB/s here against 8.73 for the
+      four-rank all-reduce and 19.38 for the two-rank one over the SAME wire.
+      The ring uses about a third of what the link can carry, which is what
+      D112's three numbers were always saying, measured here with NCCL out of
+      the path. Median of 20 at 512 MiB, spread under 0.5 %; round trip agrees
+      with one way to 0.04 %, so the link is symmetric per direction.
 - id: fabric-rngd0-a40a
   src: node_rngd0/card0
   dst: node_a40a/gpu0

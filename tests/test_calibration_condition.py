@@ -458,3 +458,74 @@ def test_the_index_regenerator_refuses_a_domain_it_has_no_note_for(tmp_path):
     subprocess.run([_sys.executable, str(script), "--check"],
                    cwd=ROOT, capture_output=True, timeout=120)
     assert (ROOT / "profiles/calibration/index.yaml").read_bytes() == before
+
+
+# --- (vii) S6: the real A40 domain against V3's real P1 ----------------------
+#
+# Everything above uses a synthetic two-point domain so the mechanism can be
+# exercised in isolation. These two pin the mechanism against the COMMITTED
+# `profiles/calibration/a40.accuracy.yaml` at V3's actual operating point,
+# because that pairing is what S6 leaves standing: the deployment was measured
+# (v3_verdict_accuracy.md A.3, three repeats, NUMA-bound) and no A40 domain is
+# fitted at its tp, so the residual is stated rather than margined.
+
+#: V3's P1: one A40 island, tp=4, measured served concurrency 162.26.
+V3_P1_CONCURRENCY = 162.26
+
+
+def test_the_committed_a40_domain_refuses_v3s_p1_rather_than_margining_it():
+    """The real file, the real operating point, the real refusal.
+
+    162.26 is INSIDE the committed domain's load axis [4.043, 170.56], so the
+    operating-point test passes and the old code would have handed back a
+    margin — it did, and charged 1.13 % where the measured error was -44.63 %.
+    What disqualifies it is tp, and `required_measurement` names the experiment
+    that would qualify it.
+    """
+    real = load_accuracy_domains(ROOT)["A40"]
+    assert real.parallelism.tp == 1, "the committed A40 domain is fitted at tp=1"
+    assert real.in_domain(V3_P1_CONCURRENCY), "so this is not the load-axis refusal"
+
+    policy = AccuracyDomainMargin({HW: real}, shape=SHAPE)
+    decision = _decide(policy, _candidate(tp=4), conc=V3_P1_CONCURRENCY)
+
+    assert decision.is_unmeasured
+    assert decision.refusal == "condition_mismatch"
+    assert decision.mismatch_fields == ["tp"]
+    assert decision.required_measurement["tp"] == 4
+    # No margin leaks through the refusal: unmeasured is not "margined by zero
+    # and carried on", it is a candidate the search may not rank on this basis.
+    assert decision.tpot_percent == 0.0 and decision.ttft_percent == 0.0
+
+
+def test_warn_margins_v3s_p1_but_by_five_times_too_little():
+    """Why S6 closes by STATING the residual instead of margining it.
+
+    `--condition-mismatch warn` is the control arm: it applies the tp=1 domain
+    across the mismatch and says so. The number it produces is the point. With
+    the link priced from S3's measurement the simulator's residual error on P1
+    is -7.01 % (v3_addendum_s4.md §3); the tp=1 domain consulted across the
+    mismatch charges about 1.38 %. Off by ~5x, in the unsafe direction.
+
+    So the residual is NOT margined by anything today, and this pins that it
+    cannot be by reaching for the domain that exists. Closing it needs an A40
+    domain fitted at tp=4 — a fit, not a single point, since one residual at one
+    operating point has no slope to widen along. Skeleton in HANDOVER §2.12.
+    """
+    real = load_accuracy_domains(ROOT)["A40"]
+    policy = AccuracyDomainMargin(
+        {HW: real}, shape=SHAPE, condition_mismatch="warn"
+    )
+    decision = _decide(policy, _candidate(tp=4), conc=V3_P1_CONCURRENCY)
+
+    assert not decision.is_unmeasured, "warn is the arm that does apply it"
+    assert decision.mismatch_fields == ["tp"], "and still reports what it crossed"
+    assert "APPLIED ACROSS" in decision.basis, "never silently"
+
+    charged = decision.tpot_percent
+    assert 1.3 < charged < 1.5, f"the tp=1 domain charges ~1.38 %, got {charged}"
+    measured_residual = 7.01          # v3_addendum_s4.md §3, sim @ 8.8 measured
+    assert measured_residual / charged > 4.0, (
+        "if this ratio ever falls near 1 the domain has become applicable and "
+        "this test is the wrong guard — check whether a tp=4 fit landed"
+    )

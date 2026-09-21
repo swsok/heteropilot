@@ -4285,3 +4285,65 @@ the sim side), `planner/predictor/calibration.py`
 `profiles/calibration/openloop/rngd_card.accuracy.openloop{,.p50}.yaml` (new),
 `profiles/calibration/index.yaml` (regenerated),
 `tests/{test_calibration_condition,test_lowload_sim_error}.py`, D101's addendum.
+
+## D116 — `nccl-tests` is not a second opinion on NCCL, so S6(ii) closes with a peer-copy control instead · Recorded 2026-09-21
+
+*`WORK_ORDER_domain_scoping.md` STEP S6, the seventh entry from the `D110–D119`
+block. Read D112 first — this measures the wire whose three numbers D112 keyed
+by traffic. A40 node, accelerator set `83e3434d7696`. Full record:
+`experiments/p2_evidence/results/s6_link_binding_and_p2p_control.md`.*
+
+**What the work order asked for.** S6(ii) names `nccl-tests all_reduce_perf` and
+`p2pBandwidthLatencyTest`, bound and unbound, filed in S3's schema. S3 filed its
+figures from `experiments/p2_evidence/link_probe.py` (torch), so the vendor-tool
+half stayed open and the handover carried it as such.
+
+**It is not run, for two reasons, and the second is the one that matters.**
+
+1. **It cannot run here, re-verified rather than inherited.** The only build on
+   this host needs `GLIBC_2.34`; this host is `2.31`. It also fails to find
+   `libnccl.so.2`. There is no `nvcc` and no system NCCL header, so rebuilding
+   it means installing a CUDA toolchain. `p2pBandwidthLatencyTest` is absent
+   entirely — no CUDA samples on this host.
+2. **It would not have been a control.** `nccl-tests` links the same NCCL
+   2.27.5 that `link_probe.py` reaches through torch. Two front ends onto one
+   implementation agree by construction. What S6(ii) wanted was a second opinion
+   on the number; what it would have got is a second opinion on the harness.
+
+**What is done instead: the wire measured with NCCL out of the path.** A direct
+`cudaMemcpyPeer` under `Tensor.copy_` (`experiments/p2_evidence/p2p_probe.py`),
+at 64/256/512 MiB, one way and round trip, median of 20 with the spread. Across
+the PCIe bridge it gives **25.15 GB/s**, against **19.3** for the two-rank
+all-reduce and **8.8** for the four-rank one over the same wire, and a datasheet
+**64.0**. Round trip agrees with one way to 0.04 %, so the link is symmetric per
+direction and the legs serialise.
+
+**That changes how D112's three numbers should be read.** They are not three
+opinions about a link's speed: the wire is one number, 25.15, and the collective
+gets **35 %** of it at four ranks and 77 % at two. 8.8 is a property of the ring
+on that path, not of the path. The datasheet 64.0 is 2.5× the wire under any
+traffic at all.
+
+**And the bound half turned out to be the cheap half.** All ten link cases move
+by at most **0.66 %** between `unpinned` and `numa_pinned`, in inconsistent
+directions — while the same binding is worth **1.93×** of deployment throughput
+on this node (`v3_verdict_accuracy.md` A.3). Both are true: NUMA buys the host
+memory path — prefill and queueing — and not the GPU-to-GPU wire. A deployment
+measured unbound is therefore not a link measured wrongly, which is what made
+S3's `unpinned` figures safe to have filed.
+
+**What is filed, and what is not.** Six `numa_pinned` entries on the two PCIe
+links of `pd-rngd-gpu-card-measured-pcie.yaml`, appended after the unpinned ones
+so the planner's current selection is unchanged (`measurement_for` prefers the
+first stated-binding match when the node states `unknown`; both nodes state
+`unpinned`, so the bound entries are filtered out for them). Datasheet values
+untouched (A3). **The NVLink links were measured and deliberately not filed**:
+39.2–39.3 against a datasheet 112.5 would move `island_interconnect`'s `min` for
+every tp=2 candidate inside an NV4 pair, which is a planner behaviour change and
+not what S6 was scoped to do. The figures are in the result document.
+
+**Where.** `experiments/p2_evidence/{p2p_probe.py,run_link_probe_numa.sh}` (new),
+`experiments/configs/clusters/pd-rngd-gpu-card-measured-pcie.yaml` (six entries
+appended), `experiments/p2_evidence/results/s6_link_binding_and_p2p_control.md`
+(new), `tests/test_calibration_condition.py` (§(vii), the committed A40 domain
+against V3's real P1), `outputs/p2_evidence/{link_numa,p2p_control}/`.
