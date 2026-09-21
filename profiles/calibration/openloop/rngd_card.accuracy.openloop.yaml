@@ -33,7 +33,7 @@ hardware:
   RNGD-CARD:
     hardware: RNGD-CARD
     accuracy_domain:
-      fitted_at_concurrency: 11.730
+      fitted_at_concurrency: 11.730193512627324
       # `refuse` is the D33 default for a new domain, and it is
       # kept: these points span a 3.2x concurrency range
       # and say nothing about what happens outside it.
@@ -51,17 +51,17 @@ hardware:
         # BDF and binds server and client to it (default `auto`).
         device_binding: numa_pinned
       points:
-        - {conc: 11.730, tpot_err_pct: 2.02, tpot_err_pct_p50: 7.82, ttft_err_pct: -5.81,
+        - {conc: 11.730193512627324, tpot_err_pct: 2.02, tpot_err_pct_p50: 7.82, ttft_err_pct: -5.81,
            note: "0.75 rps, 300 req, 1 run. measured L 11.31 (gap +3.7%). single run, so no run-to-run spread is known here"}
-        - {conc: 16.545, tpot_err_pct: -0.76, tpot_err_pct_p50: 5.25, ttft_err_pct: -2.42,
+        - {conc: 16.544868569276172, tpot_err_pct: -0.76, tpot_err_pct_p50: 5.25, ttft_err_pct: -2.42,
            note: "1 rps, 300 req, 1 run. measured L 16.17 (gap +2.3%). single run, so no run-to-run spread is known here"}
-        - {conc: 21.668, tpot_err_pct: -2.25, tpot_err_pct_p50: 2.25, ttft_err_pct: -15.32,
+        - {conc: 21.667774996430346, tpot_err_pct: -2.25, tpot_err_pct_p50: 2.25, ttft_err_pct: -15.32,
            note: "1.25 rps, 300 req, 1 run. measured L 21.71 (gap -0.2%). single run, so no run-to-run spread is known here"}
-        - {conc: 27.002, tpot_err_pct: -5.96, tpot_err_pct_p50: -5.56, ttft_err_pct: -22.94,
+        - {conc: 27.001880236823695, tpot_err_pct: -5.96, tpot_err_pct_p50: -5.56, ttft_err_pct: -22.94,
            note: "1.5 rps, 300 req, 1 run. measured L 28.71 (gap -6.0%). single run, so no run-to-run spread is known here"}
-        - {conc: 32.475, tpot_err_pct: -13.10, tpot_err_pct_p50: -10.86, ttft_err_pct: -15.86,
+        - {conc: 32.47461638944143, tpot_err_pct: -13.10, tpot_err_pct_p50: -10.86, ttft_err_pct: -15.86,
            note: "1.75 rps, 300 req, 3 runs. measured L 36.38 (gap -10.7%). p99 TPOT spread over the 3 runs 0.7763 ms"}
-        - {conc: 37.965, tpot_err_pct: -17.63, tpot_err_pct_p50: -14.88, ttft_err_pct: -26.21,
+        - {conc: 37.96546697025815, tpot_err_pct: -17.63, tpot_err_pct_p50: -14.88, ttft_err_pct: -26.21,
            note: "2 rps, 300 req, 3 runs. measured L 44.51 (gap -14.7%). p99 TPOT spread over the 3 runs 0.1161 ms"}
       note: >
         6 open-loop points from a deployed furiosa-llm
