@@ -10,7 +10,8 @@ Harness `measure_envelope.py --mode open` (S7.2, D114); driver
 `replay_to_endpoint.py --open-loop --ignore-eos`; pairing
 `openloop_sim_error.py --match offered`. Simulated side: S7.0's sweep
 (`v3r_candidates.json`) plus four rates it never ran
-(`outputs/s73_sim/v3r_candidates_extra.json`), same fixture, seed 42, 300
+(`experiments/results/s73_npu_6fe246ed1abf/sim_extra_rates.json`, committed
+beside the data), same fixture, seed 42, 300
 requests, candidate `furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t2048`.
 
 > **Read this before using the domain.**
