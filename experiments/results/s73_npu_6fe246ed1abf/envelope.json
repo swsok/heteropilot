@@ -1,0 +1,652 @@
+{
+  "run": {
+    "backend": "furiosa",
+    "protocol": "open_loop",
+    "harness": "deployed-server-over-http",
+    "closed_loop": false,
+    "card": 0,
+    "num_reqs": 300,
+    "max_tokens_cap": 1021,
+    "cap_truncated_rows": 0,
+    "repeats": 1,
+    "note": "assembled from outputs/s73_map2 and outputs/s73_low; one run per rate, the 2.25 rps point was interrupted when the card was released"
+  },
+  "points": [
+    {
+      "protocol": "open_loop",
+      "harness": "deployed-server-over-http",
+      "offered_rps": 0.75,
+      "trace_rps": 10.279688671855757,
+      "served_concurrency": 11.309448094810678,
+      "ttft_drift_slope_s_per_s": -1.9460473643979902e-05,
+      "saturated": false,
+      "requests_ok": 300,
+      "requests_total": 300,
+      "output_tokens": 196053,
+      "wall_s": 416.93158789699373,
+      "throughput_tok_s": 470.2282237450343,
+      "ttft_ms": {
+        "mean": 151.11545737318616,
+        "p50": 129.4275705004111,
+        "p95": 265.07176978921063,
+        "p99": 405.7705855509265
+      },
+      "tpot_ms": {
+        "mean": 23.83659248908849,
+        "p50": 23.773702188819072,
+        "p95": 26.712624757534048,
+        "p99": 27.547919018358584
+      },
+      "launch_error_ms": {
+        "mean": 1.0641004424037614,
+        "p50": 0.8059572501153411,
+        "p99": 4.897163550272408,
+        "max": 12.76528176543934
+      },
+      "warm_up_s": 0.19154835199879017,
+      "ignore_eos": true,
+      "bench_window": {
+        "samples": 1254,
+        "dropped_samples": 0,
+        "duration_s": 418.27,
+        "power_w": {
+          "mean": 76.06858054226475,
+          "p5": 39.0,
+          "p95": 159.0,
+          "min": 39.0,
+          "max": 179.0
+        },
+        "util_pct": {
+          "mean": 28.613038373522365,
+          "max_of_per_pe_max": 96.36985246375076
+        },
+        "dram_used_ratio_mean": 0.3044684853430074
+      },
+      "idle_window": {
+        "samples": 180,
+        "dropped_samples": 0,
+        "duration_s": 60.06,
+        "power_w": {
+          "mean": 39.861111111111114,
+          "p5": 39.0,
+          "p95": 41.0,
+          "min": 39.0,
+          "max": 41.0
+        },
+        "util_pct": {
+          "mean": 0.0,
+          "max_of_per_pe_max": 0.0
+        },
+        "dram_used_ratio_mean": 0.29824561403508737
+      },
+      "notes": [],
+      "numa_bind": "node0",
+      "repeat": 0
+    },
+    {
+      "protocol": "open_loop",
+      "harness": "deployed-server-over-http",
+      "offered_rps": 1.0,
+      "trace_rps": 10.279688671855757,
+      "served_concurrency": 16.169276984316074,
+      "ttft_drift_slope_s_per_s": -4.5723431584644165e-05,
+      "saturated": false,
+      "requests_ok": 300,
+      "requests_total": 300,
+      "output_tokens": 196053,
+      "wall_s": 317.81622581000556,
+      "throughput_tok_s": 616.8753640577271,
+      "ttft_ms": {
+        "mean": 156.39026854667463,
+        "p50": 132.58202750148484,
+        "p95": 291.0161586514733,
+        "p99": 396.4839112912884
+      },
+      "tpot_ms": {
+        "mean": 25.988622209353263,
+        "p50": 26.114857980523638,
+        "p95": 29.105956207362976,
+        "p99": 30.113472148726835
+      },
+      "launch_error_ms": {
+        "mean": 1.0508132402888688,
+        "p50": 0.7400477298915575,
+        "p99": 5.4726320410578175,
+        "max": 21.40886632304273
+      },
+      "warm_up_s": 0.22372973700112198,
+      "ignore_eos": true,
+      "bench_window": {
+        "samples": 957,
+        "dropped_samples": 0,
+        "duration_s": 319.112,
+        "power_w": {
+          "mean": 78.19226750261232,
+          "p5": 39.0,
+          "p95": 166.0,
+          "min": 39.0,
+          "max": 184.0
+        },
+        "util_pct": {
+          "mean": 28.851916609786134,
+          "max_of_per_pe_max": 96.77407487679292
+        },
+        "dram_used_ratio_mean": 0.3048833345531634
+      },
+      "idle_window": {
+        "samples": 180,
+        "dropped_samples": 0,
+        "duration_s": 60.062,
+        "power_w": {
+          "mean": 39.922222222222224,
+          "p5": 39.0,
+          "p95": 41.0,
+          "min": 39.0,
+          "max": 41.0
+        },
+        "util_pct": {
+          "mean": 0.0,
+          "max_of_per_pe_max": 0.0
+        },
+        "dram_used_ratio_mean": 0.29824561403508737
+      },
+      "notes": [],
+      "numa_bind": "node0",
+      "repeat": 0
+    },
+    {
+      "protocol": "open_loop",
+      "harness": "deployed-server-over-http",
+      "offered_rps": 1.25,
+      "trace_rps": 10.279688671855757,
+      "served_concurrency": 21.71102418381825,
+      "ttft_drift_slope_s_per_s": -9.863230242426995e-05,
+      "saturated": false,
+      "requests_ok": 300,
+      "requests_total": 300,
+      "output_tokens": 196053,
+      "wall_s": 258.5578904809954,
+      "throughput_tok_s": 758.2557222882755,
+      "ttft_ms": {
+        "mean": 162.96809606355964,
+        "p50": 139.72569300676696,
+        "p95": 312.2768640401773,
+        "p99": 455.8256410027387
+      },
+      "tpot_ms": {
+        "mean": 28.4130465782683,
+        "p50": 28.62250176738629,
+        "p95": 31.523156528879326,
+        "p99": 32.291774482057825
+      },
+      "launch_error_ms": {
+        "mean": 1.3551001134117266,
+        "p50": 0.8936614579653224,
+        "p99": 9.054401130693385,
+        "max": 11.55288347052874
+      },
+      "warm_up_s": 0.19261464099690784,
+      "ignore_eos": true,
+      "bench_window": {
+        "samples": 780,
+        "dropped_samples": 0,
+        "duration_s": 259.661,
+        "power_w": {
+          "mean": 80.99230769230769,
+          "p5": 39.0,
+          "p95": 177.0,
+          "min": 39.0,
+          "max": 187.0
+        },
+        "util_pct": {
+          "mean": 28.80652904528666,
+          "max_of_per_pe_max": 96.63552329477304
+        },
+        "dram_used_ratio_mean": 0.3048796589654464
+      },
+      "idle_window": {
+        "samples": 180,
+        "dropped_samples": 0,
+        "duration_s": 60.032,
+        "power_w": {
+          "mean": 39.91111111111111,
+          "p5": 39.0,
+          "p95": 41.0,
+          "min": 39.0,
+          "max": 41.0
+        },
+        "util_pct": {
+          "mean": 0.0,
+          "max_of_per_pe_max": 0.0
+        },
+        "dram_used_ratio_mean": 0.29824561403508737
+      },
+      "notes": [],
+      "numa_bind": "node0",
+      "repeat": 0
+    },
+    {
+      "protocol": "open_loop",
+      "harness": "deployed-server-over-http",
+      "offered_rps": 1.5,
+      "trace_rps": 10.279688671855757,
+      "served_concurrency": 28.712804987309685,
+      "ttft_drift_slope_s_per_s": -0.00016101587063589113,
+      "saturated": false,
+      "requests_ok": 300,
+      "requests_total": 300,
+      "wall_s": 218.7386090610089,
+      "throughput_tok_s": 896.2889580472663,
+      "ttft_ms": {
+        "mean": 176.08670603323844,
+        "p50": 149.97651749581564,
+        "p95": 317.84267330949666,
+        "p99": 535.2771138615205
+      },
+      "tpot_ms": {
+        "mean": 31.808478436663098,
+        "p50": 32.71508599218346,
+        "p95": 34.66002627220734,
+        "p99": 35.15225504758477
+      },
+      "launch_error_ms": {
+        "mean": 1.691201981689659,
+        "p50": 0.8714154978903821,
+        "p99": 12.778203722244962,
+        "max": 24.122418881660224
+      },
+      "warm_up_s": 0.1897999950015219,
+      "ignore_eos": true,
+      "bench_window": {
+        "samples": 660,
+        "dropped_samples": 0,
+        "duration_s": 219.78,
+        "power_w": {
+          "mean": 82.28333333333333,
+          "p5": 39.0,
+          "p95": 181.0,
+          "min": 39.0,
+          "max": 203.0
+        },
+        "util_pct": {
+          "mean": 28.584789368026257,
+          "max_of_per_pe_max": 95.51157873571827
+        },
+        "dram_used_ratio_mean": 0.3048454860066683
+      },
+      "idle_window": {
+        "samples": 180,
+        "dropped_samples": 0,
+        "duration_s": 60.06,
+        "power_w": {
+          "mean": 39.333333333333336,
+          "p5": 39.0,
+          "p95": 40.0,
+          "min": 39.0,
+          "max": 40.0
+        },
+        "util_pct": {
+          "mean": 0.0,
+          "max_of_per_pe_max": 0.0
+        },
+        "dram_used_ratio_mean": 0.29824561403508737
+      },
+      "notes": [],
+      "numa_bind": "node0",
+      "repeat": 0
+    },
+    {
+      "protocol": "open_loop",
+      "harness": "deployed-server-over-http",
+      "offered_rps": 1.75,
+      "trace_rps": 10.279688671855757,
+      "served_concurrency": 36.38086690336575,
+      "ttft_drift_slope_s_per_s": -0.00019726436940791813,
+      "saturated": false,
+      "requests_ok": 300,
+      "requests_total": 300,
+      "output_tokens": 196053,
+      "wall_s": 191.1526639599906,
+      "throughput_tok_s": 1025.635719317179,
+      "ttft_ms": {
+        "mean": 183.0426123374491,
+        "p50": 152.3221429961268,
+        "p95": 345.68259846273577,
+        "p99": 564.3375740536426
+      },
+      "tpot_ms": {
+        "mean": 35.24682429228681,
+        "p50": 36.33983173400584,
+        "p95": 38.5994185734876,
+        "p99": 39.437278637642265
+      },
+      "launch_error_ms": {
+        "mean": 1.8759858220931067,
+        "p50": 0.8867938925796182,
+        "p99": 14.795710363716953,
+        "max": 25.39242287693355
+      },
+      "warm_up_s": 0.19339102900994476,
+      "ignore_eos": true,
+      "bench_window": {
+        "samples": 576,
+        "dropped_samples": 0,
+        "duration_s": 192.153,
+        "power_w": {
+          "mean": 85.38194444444444,
+          "p5": 39.0,
+          "p95": 194.0,
+          "min": 39.0,
+          "max": 202.0
+        },
+        "util_pct": {
+          "mean": 28.86329707477442,
+          "max_of_per_pe_max": 95.11495549465593
+        },
+        "dram_used_ratio_mean": 0.304857931865586
+      },
+      "idle_window": {
+        "samples": 168,
+        "dropped_samples": 0,
+        "duration_s": 60.06,
+        "power_w": {
+          "mean": 39.92857142857143,
+          "p5": 39.0,
+          "p95": 41.0,
+          "min": 39.0,
+          "max": 41.0
+        },
+        "util_pct": {
+          "mean": 0.0,
+          "max_of_per_pe_max": 0.0
+        },
+        "dram_used_ratio_mean": 0.2982456140350874
+      },
+      "notes": [],
+      "numa_bind": "node0",
+      "repeat": 0
+    },
+    {
+      "protocol": "open_loop",
+      "harness": "deployed-server-over-http",
+      "offered_rps": 2.0,
+      "trace_rps": 10.279688671855757,
+      "served_concurrency": 44.506278599502025,
+      "ttft_drift_slope_s_per_s": -0.000176222064944428,
+      "saturated": false,
+      "requests_ok": 300,
+      "requests_total": 300,
+      "wall_s": 171.55518420498993,
+      "throughput_tok_s": 1142.798458166894,
+      "ttft_ms": {
+        "mean": 191.36332949303323,
+        "p50": 160.99501150165452,
+        "p95": 340.58159010091936,
+        "p99": 569.9358409058177
+      },
+      "tpot_ms": {
+        "mean": 38.75308677257746,
+        "p50": 39.69588319084213,
+        "p95": 42.63095853045798,
+        "p99": 42.89486915882179
+      },
+      "launch_error_ms": {
+        "mean": 2.11716346190402,
+        "p50": 0.8693463231423948,
+        "p99": 18.101200441313985,
+        "max": 32.92680366016043
+      },
+      "warm_up_s": 0.19065268599661067,
+      "ignore_eos": true,
+      "bench_window": {
+        "samples": 519,
+        "dropped_samples": 0,
+        "duration_s": 172.488,
+        "power_w": {
+          "mean": 86.88824662813101,
+          "p5": 39.0,
+          "p95": 197.09999999999997,
+          "min": 39.0,
+          "max": 209.0
+        },
+        "util_pct": {
+          "mean": 28.84628170731177,
+          "max_of_per_pe_max": 95.47266451317984
+        },
+        "dram_used_ratio_mean": 0.3048280116136266
+      },
+      "idle_window": {
+        "samples": 180,
+        "dropped_samples": 0,
+        "duration_s": 60.06,
+        "power_w": {
+          "mean": 39.82222222222222,
+          "p5": 39.0,
+          "p95": 41.0,
+          "min": 39.0,
+          "max": 41.0
+        },
+        "util_pct": {
+          "mean": 0.0,
+          "max_of_per_pe_max": 0.0
+        },
+        "dram_used_ratio_mean": 0.29824561403508737
+      },
+      "notes": [],
+      "numa_bind": "node0",
+      "repeat": 0
+    },
+    {
+      "protocol": "open_loop",
+      "harness": "deployed-server-over-http",
+      "offered_rps": 2.5,
+      "trace_rps": 10.279688671855757,
+      "served_concurrency": 73.9972457138114,
+      "ttft_drift_slope_s_per_s": 0.00022558528794607284,
+      "saturated": false,
+      "requests_ok": 300,
+      "requests_total": 300,
+      "wall_s": 149.2891070140031,
+      "throughput_tok_s": 1313.2438388931519,
+      "ttft_ms": {
+        "mean": 246.77875997285204,
+        "p50": 218.27087050041882,
+        "p95": 486.21041060032445,
+        "p99": 698.3676022525465
+      },
+      "tpot_ms": {
+        "mean": 56.305569276388255,
+        "p50": 60.67600683240353,
+        "p95": 65.21119843602646,
+        "p99": 65.4220132599255
+      },
+      "launch_error_ms": {
+        "mean": 3.585675196241074,
+        "p50": 0.9481361599554816,
+        "p99": 21.717140618943905,
+        "max": 51.63213799822586
+      },
+      "warm_up_s": 0.19124849198851734,
+      "ignore_eos": true,
+      "bench_window": {
+        "samples": 450,
+        "dropped_samples": 0,
+        "duration_s": 150.184,
+        "power_w": {
+          "mean": 90.60888888888888,
+          "p5": 39.0,
+          "p95": 212.0,
+          "min": 39.0,
+          "max": 218.0
+        },
+        "util_pct": {
+          "mean": 28.9772695756828,
+          "max_of_per_pe_max": 98.3377067573512
+        },
+        "dram_used_ratio_mean": 0.3048688192981032
+      },
+      "idle_window": {
+        "samples": 180,
+        "dropped_samples": 0,
+        "duration_s": 60.053,
+        "power_w": {
+          "mean": 39.86666666666667,
+          "p5": 39.0,
+          "p95": 41.0,
+          "min": 39.0,
+          "max": 41.0
+        },
+        "util_pct": {
+          "mean": 0.0,
+          "max_of_per_pe_max": 0.0
+        },
+        "dram_used_ratio_mean": 0.29824561403508737
+      },
+      "notes": [],
+      "numa_bind": "node0",
+      "repeat": 0
+    },
+    {
+      "protocol": "open_loop",
+      "harness": "deployed-server-over-http",
+      "offered_rps": 3.0,
+      "trace_rps": 10.279688671855757,
+      "served_concurrency": 99.96711436502113,
+      "ttft_drift_slope_s_per_s": 0.005687883309666255,
+      "saturated": false,
+      "requests_ok": 300,
+      "requests_total": 300,
+      "wall_s": 137.25005712799612,
+      "throughput_tok_s": 1428.4365639073335,
+      "ttft_ms": {
+        "mean": 380.2144886600824,
+        "p50": 256.71341650013346,
+        "p95": 939.2755774519181,
+        "p99": 2089.875349920326
+      },
+      "tpot_ms": {
+        "mean": 70.00515847564975,
+        "p50": 74.39371014319579,
+        "p95": 87.38912219146414,
+        "p99": 89.42202861643926
+      },
+      "launch_error_ms": {
+        "mean": 3.2642622616059547,
+        "p50": 0.8347134266419864,
+        "p99": 25.21219427419708,
+        "max": 32.113573111402616
+      },
+      "warm_up_s": 0.19047582200437319,
+      "ignore_eos": true,
+      "bench_window": {
+        "samples": 414,
+        "dropped_samples": 0,
+        "duration_s": 138.124,
+        "power_w": {
+          "mean": 89.80917874396135,
+          "p5": 39.0,
+          "p95": 210.0,
+          "min": 39.0,
+          "max": 218.0
+        },
+        "util_pct": {
+          "mean": 28.849523804501462,
+          "max_of_per_pe_max": 98.7470354492143
+        },
+        "dram_used_ratio_mean": 0.30486728329710694
+      },
+      "idle_window": {
+        "samples": 180,
+        "dropped_samples": 0,
+        "duration_s": 60.059,
+        "power_w": {
+          "mean": 39.87777777777778,
+          "p5": 39.0,
+          "p95": 41.0,
+          "min": 39.0,
+          "max": 41.0
+        },
+        "util_pct": {
+          "mean": 0.0,
+          "max_of_per_pe_max": 0.0
+        },
+        "dram_used_ratio_mean": 0.29824561403508737
+      },
+      "notes": [],
+      "numa_bind": "node0",
+      "repeat": 0
+    },
+    {
+      "protocol": "open_loop",
+      "harness": "deployed-server-over-http",
+      "offered_rps": 3.5,
+      "trace_rps": 10.279688671855757,
+      "served_concurrency": 114.1975615450701,
+      "ttft_drift_slope_s_per_s": 0.1512599146286933,
+      "saturated": true,
+      "requests_ok": 300,
+      "requests_total": 300,
+      "wall_s": 133.21610533499916,
+      "throughput_tok_s": 1471.6914258000909,
+      "ttft_ms": {
+        "mean": 3587.0927405467955,
+        "p50": 417.1273534957436,
+        "p95": 11428.126147493458,
+        "p99": 12061.396413429027
+      },
+      "tpot_ms": {
+        "mean": 72.55107046299958,
+        "p50": 75.64043468549927,
+        "p95": 88.05376361133676,
+        "p99": 89.11107632095043
+      },
+      "launch_error_ms": {
+        "mean": 3.4659816376495756,
+        "p50": 0.9075689678068599,
+        "p99": 29.14228234306575,
+        "max": 34.813185472273744
+      },
+      "warm_up_s": 0.1924677810020512,
+      "ignore_eos": true,
+      "bench_window": {
+        "samples": 402,
+        "dropped_samples": 0,
+        "duration_s": 134.076,
+        "power_w": {
+          "mean": 89.87064676616916,
+          "p5": 39.0,
+          "p95": 208.0,
+          "min": 39.0,
+          "max": 219.0
+        },
+        "util_pct": {
+          "mean": 28.79783974394797,
+          "max_of_per_pe_max": 98.89810744489846
+        },
+        "dram_used_ratio_mean": 0.304818361746326
+      },
+      "idle_window": {
+        "samples": 180,
+        "dropped_samples": 0,
+        "duration_s": 60.041,
+        "power_w": {
+          "mean": 39.855555555555554,
+          "p5": 39.0,
+          "p95": 41.0,
+          "min": 39.0,
+          "max": 41.0
+        },
+        "util_pct": {
+          "mean": 0.0,
+          "max_of_per_pe_max": 0.0
+        },
+        "dram_used_ratio_mean": 0.29824561403508737
+      },
+      "notes": [
+        "TTFT grew at +0.151 s per second of arrivals (> 0.05) against an offered 3.500 rps: the queue grew, so this point measures saturation and its concurrency is a backlog depth, not the offered load"
+      ],
+      "numa_bind": "node0",
+      "repeat": 0
+    }
+  ]
+}

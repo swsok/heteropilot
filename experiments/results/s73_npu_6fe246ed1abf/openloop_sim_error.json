@@ -1,0 +1,651 @@
+{
+  "sim": [
+    "experiments/p2_evidence/results/v3r_candidates.json",
+    "experiments/results/s73_npu_6fe246ed1abf/sim_extra_rates.json"
+  ],
+  "candidate": "s128-t2048",
+  "real": [
+    "experiments/results/s73_npu_6fe246ed1abf/envelope.json"
+  ],
+  "max_conc_gap": 0.2,
+  "min_requests_p99": 300,
+  "provenance": {
+    "git_commit": "3e7298dd81a462008cbe95ba8376ebed22526492",
+    "git_dirty": true,
+    "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
+    "vllm_version": null,
+    "backend_version": null,
+    "model_revision": null,
+    "hardware_profile_hash": null,
+    "cluster_spec_hash": null,
+    "service_spec_hash": null,
+    "dataset_hash": null,
+    "random_seed": null,
+    "command": "openloop_sim_error.py --real experiments/results/s73_npu_6fe246ed1abf/envelope.json --sim experiments/p2_evidence/results/v3r_candidates.json experiments/results/s73_npu_6fe246ed1abf/sim_extra_rates.json --sim-cache outputs/p2_evidence/v3r/cache --dataset workloads/sharegpt-llama-3.1-8b-300-sps10.jsonl --num-reqs 300 --out-dir experiments/results/s73_npu_6fe246ed1abf --write-domain experiments/results/s73_npu_6fe246ed1abf/rngd_card.accuracy.openloop.yaml",
+    "timestamp": "2026-09-21T02:26:40.469715+00:00",
+    "python_version": "3.10.12",
+    "platform": "Linux-6.8.0-40-generic-x86_64-with-glibc2.35",
+    "hostname": "etri-001",
+    "cpu_count": 96,
+    "accelerators": {
+      "cuda": null,
+      "rngd_cards": 3,
+      "atom_devices": 4,
+      "accelerator_set": {
+        "cuda": null,
+        "rngd": [
+          {
+            "sn": "RNG26040100105Q",
+            "uuid": "89413086-0709-4707-8349-4645404A4442",
+            "bdf": "0000:45:00.0",
+            "firmware": "2026.3.0, 2d3f72a"
+          },
+          {
+            "sn": "RNG26040100181Q",
+            "uuid": "C0413086-0708-4606-8242-4947484F4646",
+            "bdf": "0000:03:00.0",
+            "firmware": "2026.3.0, 2d3f72a"
+          },
+          {
+            "sn": "RNG26040100187Q",
+            "uuid": "89413086-070A-4702-834A-434B4D4F4D44",
+            "bdf": "0000:04:00.0",
+            "firmware": "2026.3.0, 2d3f72a"
+          }
+        ],
+        "atom": [
+          {
+            "sid": "0000000022502229",
+            "uuid": "d86d3e84-f99d-4b9c-a0af-72f208de0b93",
+            "bdf": "0000:83:00.0"
+          },
+          {
+            "sid": "0000000022502247",
+            "uuid": "5c1f197f-094f-48ca-90ee-63ed56998d7e",
+            "bdf": "0000:c3:00.0"
+          },
+          {
+            "sid": "0000000022507041",
+            "uuid": "8a989e88-f2ec-42d7-bd66-4774f9fffe79",
+            "bdf": "0000:84:00.0"
+          },
+          {
+            "sid": "0000000022507045",
+            "uuid": "79c61dbf-3254-4f15-98af-94f69487a33c",
+            "bdf": "0000:c4:00.0"
+          }
+        ],
+        "fingerprint": "6fe246ed1abf"
+      }
+    },
+    "cpu_placement": {
+      "affinity_cpus": 96,
+      "numa_nodes": 2,
+      "numa_node_of_affinity": [
+        0,
+        1
+      ]
+    }
+  },
+  "points": [
+    {
+      "offered_rps": 0.75,
+      "conc_measured": {
+        "median": 11.309448094810678,
+        "min": 11.309448094810678,
+        "max": 11.309448094810678,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "conc_sim": 11.730193512627325,
+      "conc_gap_pct": 3.720300179897422,
+      "requests_ok": {
+        "median": 300.0,
+        "min": 300.0,
+        "max": 300.0,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "saturated_any": false,
+      "numa_bind": [
+        "node0"
+      ],
+      "sources": [
+        "experiments/results/s73_npu_6fe246ed1abf/envelope.json"
+      ],
+      "usable": true,
+      "delivered_token_ratio": {
+        "median": 1.0,
+        "min": 1.0,
+        "max": 1.0,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "tpot_measured_p50": {
+        "median": 23.773702188819072,
+        "min": 23.773702188819072,
+        "max": 23.773702188819072,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "tpot_sim_p50": 25.632813499999997,
+      "tpot_err_pct_p50": 7.820032809426196,
+      "tpot_measured_p99": {
+        "median": 27.547919018358584,
+        "min": 27.547919018358584,
+        "max": 27.547919018358584,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "tpot_sim_p99": 28.10557441,
+      "tpot_err_pct_p99": 2.0243104071482865,
+      "ttft_measured_p99": {
+        "median": 405.7705855509265,
+        "min": 405.7705855509265,
+        "max": 405.7705855509265,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "ttft_sim_p99": 382.1935767799996,
+      "ttft_err_pct_p99": -5.8104282593366685,
+      "p99_undersampled": false,
+      "notes": [
+        "ttft_err_pct is RAW client-side: it includes request serialisation and the SSE first-chunk path, measured at +20.26 ms on the A40 (a40.accuracy.openloop.yaml). Nothing is subtracted here"
+      ]
+    },
+    {
+      "offered_rps": 1.0,
+      "conc_measured": {
+        "median": 16.169276984316074,
+        "min": 16.169276984316074,
+        "max": 16.169276984316074,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "conc_sim": 16.54486856927617,
+      "conc_gap_pct": 2.322871859542094,
+      "requests_ok": {
+        "median": 300.0,
+        "min": 300.0,
+        "max": 300.0,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "saturated_any": false,
+      "numa_bind": [
+        "node0"
+      ],
+      "sources": [
+        "experiments/results/s73_npu_6fe246ed1abf/envelope.json"
+      ],
+      "usable": true,
+      "delivered_token_ratio": {
+        "median": 1.0,
+        "min": 1.0,
+        "max": 1.0,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "tpot_measured_p50": {
+        "median": 26.114857980523638,
+        "min": 26.114857980523638,
+        "max": 26.114857980523638,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "tpot_sim_p50": 27.484824500000002,
+      "tpot_err_pct_p50": 5.245927511832842,
+      "tpot_measured_p99": {
+        "median": 30.113472148726835,
+        "min": 30.113472148726835,
+        "max": 30.113472148726835,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "tpot_sim_p99": 29.8842646,
+      "tpot_err_pct_p99": -0.7611461992652485,
+      "ttft_measured_p99": {
+        "median": 396.4839112912884,
+        "min": 396.4839112912884,
+        "max": 396.4839112912884,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "ttft_sim_p99": 386.8874920799997,
+      "ttft_err_pct_p99": -2.420380484049057,
+      "p99_undersampled": false,
+      "notes": [
+        "ttft_err_pct is RAW client-side: it includes request serialisation and the SSE first-chunk path, measured at +20.26 ms on the A40 (a40.accuracy.openloop.yaml). Nothing is subtracted here"
+      ]
+    },
+    {
+      "offered_rps": 1.25,
+      "conc_measured": {
+        "median": 21.71102418381825,
+        "min": 21.71102418381825,
+        "max": 21.71102418381825,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "conc_sim": 21.667774996430342,
+      "conc_gap_pct": -0.19920381010925292,
+      "requests_ok": {
+        "median": 300.0,
+        "min": 300.0,
+        "max": 300.0,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "saturated_any": false,
+      "numa_bind": [
+        "node0"
+      ],
+      "sources": [
+        "experiments/results/s73_npu_6fe246ed1abf/envelope.json"
+      ],
+      "usable": true,
+      "delivered_token_ratio": {
+        "median": 1.0,
+        "min": 1.0,
+        "max": 1.0,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "tpot_measured_p50": {
+        "median": 28.62250176738629,
+        "min": 28.62250176738629,
+        "max": 28.62250176738629,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "tpot_sim_p50": 29.267277,
+      "tpot_err_pct_p50": 2.252686497685521,
+      "tpot_measured_p99": {
+        "median": 32.291774482057825,
+        "min": 32.291774482057825,
+        "max": 32.291774482057825,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "tpot_sim_p99": 31.56662299,
+      "tpot_err_pct_p99": -2.245622929333721,
+      "ttft_measured_p99": {
+        "median": 455.8256410027387,
+        "min": 455.8256410027387,
+        "max": 455.8256410027387,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "ttft_sim_p99": 386.0117470599997,
+      "ttft_err_pct_p99": -15.315920751882297,
+      "p99_undersampled": false,
+      "notes": [
+        "ttft_err_pct is RAW client-side: it includes request serialisation and the SSE first-chunk path, measured at +20.26 ms on the A40 (a40.accuracy.openloop.yaml). Nothing is subtracted here"
+      ]
+    },
+    {
+      "offered_rps": 1.5,
+      "conc_measured": {
+        "median": 28.712804987309685,
+        "min": 28.712804987309685,
+        "max": 28.712804987309685,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "conc_sim": 27.001880236823695,
+      "conc_gap_pct": -5.9587516832374074,
+      "requests_ok": {
+        "median": 300.0,
+        "min": 300.0,
+        "max": 300.0,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "saturated_any": false,
+      "numa_bind": [
+        "node0"
+      ],
+      "sources": [
+        "experiments/results/s73_npu_6fe246ed1abf/envelope.json"
+      ],
+      "usable": true,
+      "tpot_measured_p50": {
+        "median": 32.71508599218346,
+        "min": 32.71508599218346,
+        "max": 32.71508599218346,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "tpot_sim_p50": 30.8946425,
+      "tpot_err_pct_p50": -5.564538306940154,
+      "tpot_measured_p99": {
+        "median": 35.15225504758477,
+        "min": 35.15225504758477,
+        "max": 35.15225504758477,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "tpot_sim_p99": 33.056421099999994,
+      "tpot_err_pct_p99": -5.962160734062984,
+      "ttft_measured_p99": {
+        "median": 535.2771138615205,
+        "min": 535.2771138615205,
+        "max": 535.2771138615205,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "ttft_sim_p99": 412.47420138999973,
+      "ttft_err_pct_p99": -22.941932186417123,
+      "p99_undersampled": false,
+      "notes": [
+        "delivered output tokens are not recorded on every repeat, so the workload-match invariant COULD NOT BE CHECKED here. That is not a pass: it is the check that catches a truncated completion cap (D115), and an artifact predating it cannot answer for itself",
+        "ttft_err_pct is RAW client-side: it includes request serialisation and the SSE first-chunk path, measured at +20.26 ms on the A40 (a40.accuracy.openloop.yaml). Nothing is subtracted here"
+      ]
+    },
+    {
+      "offered_rps": 1.75,
+      "conc_measured": {
+        "median": 36.38086690336575,
+        "min": 36.38086690336575,
+        "max": 36.38086690336575,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "conc_sim": 32.47461638944143,
+      "conc_gap_pct": -10.737101246927505,
+      "requests_ok": {
+        "median": 300.0,
+        "min": 300.0,
+        "max": 300.0,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "saturated_any": false,
+      "numa_bind": [
+        "node0"
+      ],
+      "sources": [
+        "experiments/results/s73_npu_6fe246ed1abf/envelope.json"
+      ],
+      "usable": true,
+      "delivered_token_ratio": {
+        "median": 1.0,
+        "min": 1.0,
+        "max": 1.0,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "tpot_measured_p50": {
+        "median": 36.33983173400584,
+        "min": 36.33983173400584,
+        "max": 36.33983173400584,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "tpot_sim_p50": 32.3936505,
+      "tpot_err_pct_p50": -10.859107061613361,
+      "tpot_measured_p99": {
+        "median": 39.437278637642265,
+        "min": 39.437278637642265,
+        "max": 39.437278637642265,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "tpot_sim_p99": 34.27147245,
+      "tpot_err_pct_p99": -13.098789688575485,
+      "ttft_measured_p99": {
+        "median": 564.3375740536426,
+        "min": 564.3375740536426,
+        "max": 564.3375740536426,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "ttft_sim_p99": 427.2577849799999,
+      "ttft_err_pct_p99": -24.29038847954021,
+      "p99_undersampled": false,
+      "notes": [
+        "ttft_err_pct is RAW client-side: it includes request serialisation and the SSE first-chunk path, measured at +20.26 ms on the A40 (a40.accuracy.openloop.yaml). Nothing is subtracted here"
+      ]
+    },
+    {
+      "offered_rps": 2.0,
+      "conc_measured": {
+        "median": 44.506278599502025,
+        "min": 44.506278599502025,
+        "max": 44.506278599502025,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "conc_sim": 37.96546697025815,
+      "conc_gap_pct": -14.696379556023048,
+      "requests_ok": {
+        "median": 300.0,
+        "min": 300.0,
+        "max": 300.0,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "saturated_any": false,
+      "numa_bind": [
+        "node0"
+      ],
+      "sources": [
+        "experiments/results/s73_npu_6fe246ed1abf/envelope.json"
+      ],
+      "usable": true,
+      "tpot_measured_p50": {
+        "median": 39.69588319084213,
+        "min": 39.69588319084213,
+        "max": 39.69588319084213,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "tpot_sim_p50": 33.7909455,
+      "tpot_err_pct_p50": -14.87544101853969,
+      "tpot_measured_p99": {
+        "median": 42.89486915882179,
+        "min": 42.89486915882179,
+        "max": 42.89486915882179,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "tpot_sim_p99": 35.331794640000005,
+      "tpot_err_pct_p99": -17.631653079110414,
+      "ttft_measured_p99": {
+        "median": 569.9358409058177,
+        "min": 569.9358409058177,
+        "max": 569.9358409058177,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "ttft_sim_p99": 420.54821122,
+      "ttft_err_pct_p99": -26.211306425016378,
+      "p99_undersampled": false,
+      "notes": [
+        "delivered output tokens are not recorded on every repeat, so the workload-match invariant COULD NOT BE CHECKED here. That is not a pass: it is the check that catches a truncated completion cap (D115), and an artifact predating it cannot answer for itself",
+        "ttft_err_pct is RAW client-side: it includes request serialisation and the SSE first-chunk path, measured at +20.26 ms on the A40 (a40.accuracy.openloop.yaml). Nothing is subtracted here"
+      ]
+    },
+    {
+      "offered_rps": 2.5,
+      "conc_measured": {
+        "median": 73.9972457138114,
+        "min": 73.9972457138114,
+        "max": 73.9972457138114,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "conc_sim": 49.52743934545933,
+      "conc_gap_pct": -33.06853671688059,
+      "requests_ok": {
+        "median": 300.0,
+        "min": 300.0,
+        "max": 300.0,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "saturated_any": false,
+      "numa_bind": [
+        "node0"
+      ],
+      "sources": [
+        "experiments/results/s73_npu_6fe246ed1abf/envelope.json"
+      ],
+      "usable": false,
+      "tpot_measured_p50": {
+        "median": 60.67600683240353,
+        "min": 60.67600683240353,
+        "max": 60.67600683240353,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "tpot_sim_p50": 36.80283,
+      "tpot_err_pct_p50": -39.345332823804505,
+      "tpot_measured_p99": {
+        "median": 65.4220132599255,
+        "min": 65.4220132599255,
+        "max": 65.4220132599255,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "tpot_sim_p99": 38.48017987,
+      "tpot_err_pct_p99": -41.181602410925535,
+      "ttft_measured_p99": {
+        "median": 698.3676022525465,
+        "min": 698.3676022525465,
+        "max": 698.3676022525465,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "ttft_sim_p99": 449.8645605899999,
+      "ttft_err_pct_p99": -35.58341493233845,
+      "p99_undersampled": false,
+      "notes": [
+        "delivered output tokens are not recorded on every repeat, so the workload-match invariant COULD NOT BE CHECKED here. That is not a pass: it is the check that catches a truncated completion cap (D115), and an artifact predating it cannot answer for itself",
+        "served concurrency differs by -33.1% (sim 49.527 vs measured 73.997, guard +/-20%): the simulator's latency here is a DIFFERENT operating point's latency, so this pair is not a point",
+        "ttft_err_pct is RAW client-side: it includes request serialisation and the SSE first-chunk path, measured at +20.26 ms on the A40 (a40.accuracy.openloop.yaml). Nothing is subtracted here"
+      ]
+    },
+    {
+      "offered_rps": 3.0,
+      "conc_measured": {
+        "median": 99.96711436502113,
+        "min": 99.96711436502113,
+        "max": 99.96711436502113,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "conc_sim": 61.6770234423819,
+      "conc_gap_pct": -38.30268700447462,
+      "requests_ok": {
+        "median": 300.0,
+        "min": 300.0,
+        "max": 300.0,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "saturated_any": false,
+      "numa_bind": [
+        "node0"
+      ],
+      "sources": [
+        "experiments/results/s73_npu_6fe246ed1abf/envelope.json"
+      ],
+      "usable": false,
+      "tpot_measured_p50": {
+        "median": 74.39371014319579,
+        "min": 74.39371014319579,
+        "max": 74.39371014319579,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "tpot_sim_p50": 39.865829000000005,
+      "tpot_err_pct_p50": -46.41236614861018,
+      "tpot_measured_p99": {
+        "median": 89.42202861643926,
+        "min": 89.42202861643926,
+        "max": 89.42202861643926,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "tpot_sim_p99": 42.871124869999996,
+      "tpot_err_pct_p99": -52.05753489010133,
+      "ttft_measured_p99": {
+        "median": 2089.875349920326,
+        "min": 2089.875349920326,
+        "max": 2089.875349920326,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "ttft_sim_p99": 471.1439753799999,
+      "ttft_err_pct_p99": -77.45588150039848,
+      "p99_undersampled": false,
+      "notes": [
+        "delivered output tokens are not recorded on every repeat, so the workload-match invariant COULD NOT BE CHECKED here. That is not a pass: it is the check that catches a truncated completion cap (D115), and an artifact predating it cannot answer for itself",
+        "served concurrency differs by -38.3% (sim 61.677 vs measured 99.967, guard +/-20%): the simulator's latency here is a DIFFERENT operating point's latency, so this pair is not a point",
+        "ttft_err_pct is RAW client-side: it includes request serialisation and the SSE first-chunk path, measured at +20.26 ms on the A40 (a40.accuracy.openloop.yaml). Nothing is subtracted here"
+      ]
+    },
+    {
+      "offered_rps": 3.5,
+      "conc_measured": {
+        "median": 114.1975615450701,
+        "min": 114.1975615450701,
+        "max": 114.1975615450701,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "conc_sim": 74.49811667938296,
+      "conc_gap_pct": -34.763828866887884,
+      "requests_ok": {
+        "median": 300.0,
+        "min": 300.0,
+        "max": 300.0,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "saturated_any": true,
+      "numa_bind": [
+        "node0"
+      ],
+      "sources": [
+        "experiments/results/s73_npu_6fe246ed1abf/envelope.json"
+      ],
+      "usable": false,
+      "tpot_measured_p50": {
+        "median": 75.64043468549927,
+        "min": 75.64043468549927,
+        "max": 75.64043468549927,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "tpot_sim_p50": 42.896409,
+      "tpot_err_pct_p50": -43.28905012463724,
+      "tpot_measured_p99": {
+        "median": 89.11107632095043,
+        "min": 89.11107632095043,
+        "max": 89.11107632095043,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "tpot_sim_p99": 46.69059426,
+      "tpot_err_pct_p99": -47.60405082322766,
+      "ttft_measured_p99": {
+        "median": 12061.396413429027,
+        "min": 12061.396413429027,
+        "max": 12061.396413429027,
+        "spread": 0.0,
+        "repeats": 1
+      },
+      "ttft_sim_p99": 581.8356763399997,
+      "ttft_err_pct_p99": -95.17605046384024,
+      "p99_undersampled": false,
+      "notes": [
+        "delivered output tokens are not recorded on every repeat, so the workload-match invariant COULD NOT BE CHECKED here. That is not a pass: it is the check that catches a truncated completion cap (D115), and an artifact predating it cannot answer for itself",
+        "served concurrency differs by -34.8% (sim 74.498 vs measured 114.198, guard +/-20%): the simulator's latency here is a DIFFERENT operating point's latency, so this pair is not a point",
+        "at least one repeat grew its queue (saturated): its served concurrency is a backlog depth, not the offered load",
+        "ttft_err_pct is RAW client-side: it includes request serialisation and the SSE first-chunk path, measured at +20.26 ms on the A40 (a40.accuracy.openloop.yaml). Nothing is subtracted here"
+      ]
+    }
+  ]
+}
