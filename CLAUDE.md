@@ -87,6 +87,12 @@ Island id convention: `{backend}-{model_slug}-{node_id}` (e.g. `cuda-h100-node0`
 6. Every result file records the work order §3.8 provenance metadata (git commits, versions, spec
    hashes, seed, full command line) via `planner/util/provenance.py`.
 7. One feature = one branch = one PR (`feat/service-spec`, `feat/candidate-generator`, …).
+   **Check `base == main` before merging.** A stacked PR whose base branch has already
+   reached `main` merges into a branch nothing merges from again, so it reads MERGED on
+   GitHub and is absent from `main`. This has happened three times — #64–#71, #110/#111
+   (fixed by #112), #114 (fixed by #116) — and GitHub does not warn. Verify with
+   `git rev-list --count origin/main..<branch>` returning 0 after the merge, never the PR
+   list.
 8. **Code comments, docstrings, and log messages in English only** — an upstream convention from
    `AGENTS.md`. The work order is Korean; the code it produces is not.
 
