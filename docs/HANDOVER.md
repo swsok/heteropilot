@@ -391,7 +391,34 @@ have to retake anything S7.3 measures. What item 2 still covers is the
 are closed-loop artifacts and re-taking them bound is a separate decision from
 the open-loop refit.
 
-**3. S7 / V3-R** — one RNGD candidate each of the P2 and P3 shapes, steady-state
+**S7.3 IS DONE (2026-09-21).** The open-loop domain is measured, fitted and
+installed: `profiles/calibration/openloop/rngd_card.accuracy.openloop.yaml`, six
+points over sim L 11.730–37.965, `compared_metric: tpot_p99`, `outside_domain:
+refuse`, `device_binding: numa_pinned`. 15 runs on npu0 of accelerator set
+`6fe246ed1abf` (D80). Record and raw data:
+`experiments/results/s73_npu_6fe246ed1abf/`; analysis:
+`experiments/results/s73_openloop_refit.md`.
+
+Three things it establishes that **S7.4 must absorb before selecting anything**:
+
+* **The error changes sign.** +2.02 % at sim L 11.73 to −17.63 % at 37.97,
+  crossing zero between L 11.73 and 16.55. No scalar expresses it.
+* **The domain stops at sim L 37.965, measured not inferred.** 2.25 rps was run
+  twice for that purpose and lands at a −27.85 % concurrency gap, outside the
+  ±20 % guard. Four unpaired rates are kept as evidence in the domain's
+  `provenance.unpaired_points`; only 3.5 rps is saturated.
+* **S7.0's selection is invalidated and must be redone.** Its P2 candidate
+  (sim L 74.498) is **unmeasurable open-loop** — twice the highest pairable
+  concurrency. Its P3 candidate (sim L 37.965) **inverts**: the margin there
+  moves from the closed-loop 7.51 % to **21.40 %**, above the global 18 %, so
+  the per-point rule becomes the stricter of the two and the candidate becomes
+  a P2-shape.
+
+Measured run-to-run p99 TPOT spread, which S7.4 must report beside every
+verdict: **0.116 ms (0.27 %)** at sim L 37.965 over three runs, and 0.776 ms
+(1.97 %) at L 32.475 — it is not uniform, and it is larger at the lower load.
+
+**4. S7 / V3-R** — one RNGD candidate each of the P2 and P3 shapes, steady-state
 workload, p99/p99. **The only source for the disclosure's §6 verdict-flip
 numbers.** The gate this entry used to leave open — `--condition-mismatch warn`
 now, or wait for item 1 — **is decided**: `WORK_ORDER_domain_scoping.md` §S7.1
