@@ -5,16 +5,24 @@ combined with measurements from another** — see "Why this directory is named
 after a hash" below. `WORK_ORDER_domain_scoping.md` STEP S7.3;
 `docs/deviations.md` D115 (the refit) and D80 (the identity).*
 
-**Preserved rather than finished.** The card was released mid-measurement for
-another user and the work moved to a second RNGD machine, where S7.3 is being
-remeasured from scratch. This directory is the record of what this machine
-produced, kept because three of its findings are structural and would otherwise
-have to be rediscovered.
+**This is S7.3's dataset, and it is finished here.** It was briefly not: the card
+was released mid-measurement for another user and the work was to move to a
+second RNGD machine, so an earlier revision of this file described the contents
+as preserved relics. **That move did not happen** — the second machine's NUMA
+topology turned out to be unsuitable for measurement — so the remaining runs were
+taken on this card and these points are the real thing rather than a record of an
+abandoned attempt.
 
-> **The domain files here are NOT installed.** They sit in this directory, not in
-> `profiles/calibration/openloop/`, and the planner does not load them. They are
-> what the pipeline produced from this machine's data, kept as evidence and as a
-> worked example of the format.
+The fingerprint in the directory name is *not* vestigial. It is what lets this
+dataset be continued rather than restarted: the later runs were confirmed to come
+from the same accelerator set (`6fe246ed1abf`) before being merged with the
+earlier ones, which is exactly the check D80 exists to make possible.
+
+> **Where the domain files live.** The two here are the pipeline's raw output for
+> this dataset. The installed domain is
+> `profiles/calibration/openloop/rngd_card.accuracy.openloop.yaml`; if the two
+> ever disagree, the installed one is authoritative and this pair is the record
+> of what produced it.
 
 ## Why this directory is named after a hash
 
@@ -55,38 +63,52 @@ re-derive a statistic these summaries do not carry.
 
 Harness `measure_envelope.py --mode open` (D114), driver
 `replay_to_endpoint.py --open-loop --ignore-eos`, pairing
-`openloop_sim_error.py --match offered`. 300 requests per point, **one run per
-rate** — the repeats (1.75 and 2.0 ×3, 2.25 ×2) were not reached. Every point
-delivered the trace's 195 753 output tokens to within 0.01 %.
+`openloop_sim_error.py --match offered`. 300 requests per run, **15 runs**:
+three each at 1.75 and 2.0 rps where S7.4 reads the domain, two at 2.25, one
+elsewhere. Every run delivered the trace's 195 753 output tokens to within
+0.01 %.
 
-| offered | L meas | L sim | gap | p99 TPOT meas | sim | **err** | paired |
-| ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| 0.75 | 11.309 | 11.730 | +3.72 % | 27.548 | 28.106 | **+2.02 %** | yes |
-| 1.0 | 16.169 | 16.545 | +2.32 % | 30.113 | 29.884 | **−0.76 %** | yes |
-| 1.25 | 21.711 | 21.668 | −0.20 % | 32.292 | 31.567 | **−2.25 %** | yes |
-| 1.5 | 28.713 | 27.002 | −5.96 % | 35.152 | 33.056 | **−5.96 %** | yes |
-| 1.75 | 36.381 | 32.475 | −10.74 % | 39.437 | 34.271 | **−13.10 %** | yes |
-| 2.0 | 44.506 | 37.965 | −14.70 % | 42.895 | 35.332 | **−17.63 %** | yes |
-| 2.5 | 73.997 | 49.527 | −33.07 % | 65.422 | 38.480 | −41.18 % | **no** |
-| 3.0 | 99.967 | 61.677 | −38.30 % | 89.422 | 42.871 | −52.06 % | **no** |
-| 3.5 | 114.198 | 74.498 | −34.76 % | 89.111 | 46.691 | −47.60 % | **no** (saturated) |
+**Run-to-run spread is recorded per point and is not uniform.** At sim L 37.965
+the p99 TPOT spread over three runs is **0.116 ms (0.27 %)**; at L 32.475 it is
+**0.776 ms (1.97 %)** — seven times larger at the lower load. That is why the
+repeats were concentrated rather than spread evenly, and why a single-run point
+says *"single run, so no run-to-run spread is known here"* instead of reporting
+a spread of zero.
+
+| offered | runs | L meas | L sim | gap | p99 TPOT meas | sim | **err** | paired |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| 0.75 | 1 | 11.309 | 11.730 | +3.72 % | 27.548 | 28.106 | **+2.02 %** | yes |
+| 1 | 1 | 16.169 | 16.545 | +2.32 % | 30.113 | 29.884 | **-0.76 %** | yes |
+| 1.25 | 1 | 21.711 | 21.668 | -0.20 % | 32.292 | 31.567 | **-2.25 %** | yes |
+| 1.5 | 1 | 28.713 | 27.002 | -5.96 % | 35.152 | 33.056 | **-5.96 %** | yes |
+| 1.75 | 3 | 36.381 | 32.475 | -10.74 % | 39.437 | 34.271 | **-13.10 %** | yes |
+| 2 | 3 | 44.506 | 37.965 | -14.70 % | 42.895 | 35.332 | **-17.63 %** | yes |
+| 2.25 | 2 | 60.550 | 43.689 | -27.85 % | 59.862 | 36.715 | **-38.67 %** | **no** |
+| 2.5 | 1 | 73.997 | 49.527 | -33.07 % | 65.422 | 38.480 | **-41.18 %** | **no** |
+| 3 | 1 | 99.967 | 61.677 | -38.30 % | 89.422 | 42.871 | **-52.06 %** | **no** |
+| 3.5 | 1 | 114.198 | 74.498 | -34.76 % | 89.111 | 46.691 | **-47.60 %** | **no** (saturated) |
 
 ## Three findings that should survive the move
 
 **1. The error changes sign, so no scalar can express it.** It runs **+2.02 % at
-sim L 11.73 to −17.63 % at 37.97**, crossing zero between **L 11.73 and 16.55**
-(interpolated ≈ 15.0). The simulator is *pessimistic* at low load and
+sim L 11.73 to −17.63 % at 37.97**, crossing zero between **L 11.73 and 16.55** (interpolated ≈ 15.0). The simulator is *pessimistic* at low load and
 increasingly optimistic above it. That is D22's lesson restated on the open-loop
 axis, and it is why `outside_domain: refuse` is kept: a curve that changes sign
 inside its own range says nothing about outside it.
 
-**2. The pairing cannot be formed above sim L ≈ 38, and not because of
-saturation.** At 2.5 and 3.0 rps the card is *not* saturated — the queue is flat
-— it simply serves far more concurrency at far worse latency than the model
-predicts. Only 3.5 saturates, and there the measured p99 TPOT *plateaus*
-(89.42 ms at 3.0, 89.11 at 3.5) as the backlog absorbs the load. The three
-unpaired rates are kept in the domain's `provenance.unpaired_points`, keyed by
-**offered rps** because that is the only axis the two sides still share.
+**2. The pairing cannot be formed above sim L 37.965, and not because of
+saturation.** The bound is measured, not inferred: 2.25 rps was run twice for
+this purpose and lands at a **−27.85 %** concurrency gap, already outside the
+±20 % guard, so the domain stops at the 2.0 rps point below it. At 2.25, 2.5 and
+3.0 the card is *not* saturated — the queue is flat — it simply serves far more
+concurrency at far worse latency than the model predicts. Only 3.5 saturates,
+and there the measured p99 TPOT *plateaus* (89.42 ms at 3.0, 89.11 at 3.5) as
+the backlog absorbs the load rather than the per-token cost rising further.
+
+The four unpaired rates are kept in the domain's `provenance.unpaired_points`,
+keyed by **offered rps** because that is the only axis the two sides still share
+up there. Their p99 under-prediction runs **−38.67 %, −41.18 %, −52.06 %,
+−47.60 %** at 2.25 / 2.5 / 3.0 / 3.5.
 
 **3. Both of S7.0's selected candidates are affected, and S7.4 must reselect.**
 

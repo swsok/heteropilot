@@ -33,6 +33,7 @@ domains:
   placement:
     islands: 1
     device_binding: unpinned
+  compared_metric: ''
   note: bench-run harness, three points 4.043/10.8/170.56; binding unpinned per v3_verdict_accuracy.md
     A.3
 - path: profiles/calibration/openloop/a40.accuracy.openloop.yaml
@@ -48,8 +49,26 @@ domains:
   placement:
     islands: 1
     device_binding: unpinned
+  compared_metric: ''
   note: deployed-server harness over HTTP; kept in a subdirectory so the loader never chooses between
     two A40 domains (D102)
+- path: profiles/calibration/openloop/rngd_card.accuracy.openloop.yaml
+  hardware: RNGD-CARD
+  model: ''
+  variant: ''
+  workload_shape: ''
+  arrival_process: open_loop
+  parallelism:
+    tp: 1
+    pp: 1
+    dp: 1
+  placement:
+    islands: 1
+    device_binding: numa_pinned
+  compared_metric: tpot_p99
+  note: deployed-server open-loop refit on THIS machine (D80 accelerator set 6fe246ed1abf, card npu0 RNG26040100181Q);
+    six points sim L 11.73-37.97, fitted on tpot_p99 because the margin is applied to one (D101, D115).
+    Answers the open-loop candidates rngd_card_edf.yaml must refuse
 - path: profiles/calibration/rngd_card_edf.yaml
   hardware: RNGD-CARD
   model: ''
@@ -63,6 +82,7 @@ domains:
   placement:
     islands: 1
     device_binding: unknown
+  compared_metric: ''
   note: card-as-device abstraction, rebuilt at 300 requests (D32)
 - path: profiles/calibration/rngd_perpe.yaml
   hardware: RNGD
@@ -77,4 +97,5 @@ domains:
   placement:
     islands: 1
     device_binding: unknown
+  compared_metric: ''
   note: per-PE abstraction of THE SAME card at tp=8; simulator side only, no new hardware measurement

@@ -59,10 +59,10 @@ hardware:
            note: "1.25 rps, 300 req, 1 run. measured L 21.71 (gap -0.2%). single run, so no run-to-run spread is known here"}
         - {conc: 27.002, tpot_err_pct: -5.56, ttft_err_pct: -22.94,
            note: "1.5 rps, 300 req, 1 run. measured L 28.71 (gap -6.0%). single run, so no run-to-run spread is known here"}
-        - {conc: 32.475, tpot_err_pct: -10.86, ttft_err_pct: -24.29,
-           note: "1.75 rps, 300 req, 1 run. measured L 36.38 (gap -10.7%). single run, so no run-to-run spread is known here"}
+        - {conc: 32.475, tpot_err_pct: -10.86, ttft_err_pct: -15.86,
+           note: "1.75 rps, 300 req, 3 runs. measured L 36.38 (gap -10.7%). p99 TPOT spread over the 3 runs 0.7708 ms"}
         - {conc: 37.965, tpot_err_pct: -14.88, ttft_err_pct: -26.21,
-           note: "2 rps, 300 req, 1 run. measured L 44.51 (gap -14.7%). single run, so no run-to-run spread is known here"}
+           note: "2 rps, 300 req, 3 runs. measured L 44.51 (gap -14.7%). p99 TPOT spread over the 3 runs 0.2374 ms"}
       note: >
         6 open-loop points from a deployed furiosa-llm
         server, served concurrency 11.73 to
@@ -84,6 +84,16 @@ provenance:
   # domain stops, which is otherwise an assertion. Keyed by
   # OFFERED rps -- the one axis both sides share up here.
   unpaired_points:
+    - offered_rps: 2.25
+      pairing: unpaired_served_l
+      served_l_real: 60.550
+      served_l_sim: 43.689
+      l_gap_pct: -27.85
+      tpot_p99_measured_ms: 59.862
+      tpot_p99_sim_ms: 36.715
+      tpot_p99_under_prediction_pct: -38.67
+      saturated: false
+      runs: 2
     - offered_rps: 2.5
       pairing: unpaired_served_l
       served_l_real: 73.997
