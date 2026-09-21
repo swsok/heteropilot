@@ -318,3 +318,75 @@ def test_the_committed_artifacts_rescore_byte_identically(tmp_path, raw, envelop
     finally:
         sys.argv = old
     assert (out / "lowload_sim_error.json").read_text() == src.read_text()
+
+
+# --- --compare-stat (S7.3) -------------------------------------------------
+#
+# `WORK_ORDER_domain_scoping.md` S7.3. Every committed domain point is fitted on
+# p50 while the feasibility check applies the margin to a p99 (D101). S7.3's new
+# domain fits on p99; this flag is what a later step will use to migrate the two
+# committed ones, and its default must leave them alone until then.
+
+
+def test_the_default_compare_stat_is_p50_so_committed_artifacts_do_not_move(env):
+    """`score` keeps its old behaviour when the stat is not named."""
+    explicit = ll.score(env, _raw(1.86, 29.04), "served", "p50")
+    implicit = ll.score(env, _raw(1.86, 29.04), "served")
+    assert explicit == implicit
+
+
+def test_served_matching_can_reference_the_p99_curve(env):
+    """The envelope carries `tpot_p99` on every point, so a p99 reference is a
+    measurement and not an interpolation of a different statistic."""
+    p50 = ll.score(env, _raw(1.86, 29.04), "served", "p50")
+    p99 = ll.score(env, _raw(1.86, 29.04), "served", "p99")
+    assert p99["tpot_ref_ms"] is not None
+    # The p99 curve sits above the p50 curve at the same concurrency, so the same
+    # simulated value is LESS optimistic against it.
+    assert p99["tpot_ref_ms"] > p50["tpot_ref_ms"]
+    assert p99["tpot_err_pct"] < p50["tpot_err_pct"]
+
+
+def test_a_stat_the_envelope_does_not_carry_is_refused_by_name(tmp_path):
+    """The refusal has to say WHICH statistic was missing.
+
+    Not the same refusal as an out-of-range concurrency, which names the range
+    instead -- a reader has to be able to tell "I have no p99 here" from "I have
+    nothing here at all", because they ask for different measurements. The
+    committed RNGD envelope carries `tpot_p99` on every point, so this builds one
+    that does not rather than asserting on a branch the fixture cannot reach.
+    """
+    src = (ROOT / "profiles/envelopes/RNGD-CARD/meta-llama/Llama-3.1-8B/bf16/tp1.yaml")
+    text = src.read_text()
+    # Drop tpot_p99 from the two points that bracket the concurrency probed below.
+    for conc in ("  1.00", "  1.99"):
+        line_start = text.index(f"{{conc: {conc},")
+        line_end = text.index("}", line_start)
+        line = text[line_start:line_end]
+        stripped = ", ".join(part for part in line.split(", ")
+                             if not part.strip().startswith("tpot_p99"))
+        text = text[:line_start] + stripped + text[line_end:]
+    variant = tmp_path / "tp1.yaml"
+    variant.write_text(text)
+    env_no_p99 = ll.load_envelope(variant)
+
+    rec = ll.score(env_no_p99, _raw(1.5, 20.0), "served", "p99")
+    assert rec["tpot_err_pct"] is None
+    assert "tpot_p99" in (rec.get("refused") or ""), rec.get("refused")
+    # The p50 curve is still there, so the same point scores fine on p50 -- which
+    # is exactly the case S7.3 handles by leaving the p99 field empty.
+    assert ll.score(env_no_p99, _raw(1.5, 20.0), "served", "p50")["tpot_err_pct"] is not None
+
+
+def test_the_sim_side_computes_both_percentiles(tmp_path):
+    """Both are recorded whichever one is compared, so the artifact says what was
+    available rather than only what was used."""
+    csv = tmp_path / "sim.csv"
+    csv.write_text(
+        "arrival,end_time,latency,TPOT\n"
+        + "".join(f"{i},{i + 10},10,{(20 + i) * 1e6}\n" for i in range(100))
+    )
+    m = ll.sim_metrics(csv)
+    assert m["tpot_p50_ms"] is not None
+    assert m["tpot_p99_ms"] is not None
+    assert m["tpot_p99_ms"] > m["tpot_p50_ms"]

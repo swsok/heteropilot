@@ -384,6 +384,13 @@ class AccuracyDomainMargin:
         owned: set[str] = set()
         unmeasured: set[str] = set()
         closed_loop: set[str] = set()
+        #: Hardware whose domain declares it was fitted on a p50. The margin
+        #: below is applied to a p99 (D101), so such a domain is being consulted
+        #: on a basis it was not measured on. "" means NOT STATED and earns no
+        #: warning: every domain written before 2026-09-18 is p50 in fact and
+        #: says nothing, and warning on silence would fire on every run while
+        #: telling nobody anything new.
+        p50_fitted: set[str] = set()
         reasons: list[str] = []
         records: list[OperatingPointRecord] = []
         extrapolated: dict[str, float] = {}
@@ -486,6 +493,8 @@ class AccuracyDomainMargin:
                 covered[metric].add(kind)
             if domain.arrival_process == "closed_loop":
                 closed_loop.add(hw)
+            if domain.compared_metric == "tpot_p50":
+                p50_fitted.add(hw)
             reasons.append(f"{hw}[{phase}]: {domain.basis_at(conc)}")
             consulted = True
 
@@ -530,6 +539,14 @@ class AccuracyDomainMargin:
             basis += (
                 f" | measured closed-loop ({', '.join(sorted(closed_loop))}), so its "
                 f"TTFT does not transfer to an open-loop deployment (D19)"
+            )
+        if p50_fitted:
+            basis += (
+                f" | fitted on a p50 ({', '.join(sorted(p50_fitted))}) and applied "
+                f"to a p99 (D101): the margin is charged on a basis it was not "
+                f"measured on. The domain is still consulted -- this is a warning, "
+                f"not a refusal, because the mismatch is a known wart and not an "
+                f"unmeasured configuration"
             )
         for warning in condition_warnings:
             basis += f" | {warning}"

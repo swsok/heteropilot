@@ -3146,6 +3146,19 @@ rather than adopt this audit's numbers.
 D100 and `experiments/p2_evidence/results/v0_source_reconciliation.md` annotated
 with the correction. No profile, calibration file or envelope was modified.
 
+**Addendum 2026-09-18 (domain-scoping S7.3, user decision).** New domains are
+fitted on **p99 from here on**, and say so in `AccuracyDomain.compared_metric`,
+so the basis the margin is charged on is the basis it was measured on. The two
+committed domains are **not** touched — this entry's "why nothing is changed"
+stands, blast radius included — so the repository now holds both bases, and
+`compared_metric: ""` on the old files means NOT STATED rather than p50.
+`AccuracyDomainMargin` warns when a domain explicitly declares p50, which is why
+silence earns no warning: it would fire on every run and tell nobody anything.
+`lowload_sim_error.py --compare-stat p50|p99|both` is the tool the migration will
+use; its default is `p50`, so every committed invocation still writes what it
+wrote. **Migrating the two committed domains onto p99 is left as a separate
+step** and is not part of S7. See D115.
+
 ## D102 — the open-loop A40 domain cannot live where the work order put it · Resolved 2026-09-16
 
 *`WORK_ORDER_p2_regular_spec_evidence.md` STEP V2. Third entry from the
@@ -4183,3 +4196,92 @@ serials it describes and tells a reader on different hardware to stop),
 is written when someone works there. It does not retrofit identity onto existing
 artifacts, which remain counts-only; they are all from this machine, but they say
 so only by being older than this entry.
+## D115 — the open-loop refit is fitted on p99, and that makes two bases live in `profiles/calibration/` at once · Recorded 2026-09-18
+
+*`WORK_ORDER_domain_scoping.md` STEP S7.3, the sixth entry from the `D110–D119`
+block. Read D113 first (why an open-loop refit became necessary at all), then
+D101 (the p50/p99 mismatch this departs from) and D102 (why a second harness for
+one hardware label needs a second file). D114 is the harness this uses.*
+
+**Why a refit exists.** S4 stated `arrival_process: closed_loop` on
+`rngd_card_edf.yaml` (D113). `python -m planner plan` always replays an arrival
+trace, so under the default `condition_mismatch: refuse` **no RNGD candidate may
+consult that domain** — 72 of 72 rows in S7.0's sweep were held on that one
+field. A wider load range does not answer them; a measurement under the arrival
+process the planner performs does. That is a new domain file, not more points on
+the committed one: two protocols on one interpolation axis is the class of error
+D22 was, and `a40.accuracy.yaml`'s own header is the precedent for splitting
+instead of extending. No committed `points` value is touched (rule A3).
+
+**The decision this entry records, and it is a departure.** Every domain
+committed before today is fitted on **p50** — `lowload_sim_error.py` writes
+`compared_metric: tpot_p50` — while the feasibility check applies the margin to a
+**p99** (D101). D101 declined to re-fit, for a blast radius that has not
+shrunk. S7.3's file is new, so it inherits nothing, and it is fitted on **p99
+against p99**, because that is the basis the margin is charged on and the basis
+S7.4's verdicts are read at. Fitting on p50 and applying to p99 would carry
+D101's known wart into the one file the disclosure's §6 numbers depend on.
+
+**So the repository now holds both bases, deliberately** (user decision,
+2026-09-18). Three things keep that from becoming a silent trap:
+
+* **`AccuracyDomain.compared_metric`** states the basis. `""` means **not
+  stated**, which is how every older file reads — *not* p50-by-default, because
+  stating it for them is a migration with its own measurement question.
+* **A parallel `.p50.yaml` sibling** is emitted from the same measurement, so
+  this refit can still be compared against `rngd_card_edf.yaml` on the basis that
+  file uses. It is comparison material and is **not** on the loader's default
+  glob path — D102's guard raises on two domains for one hardware label, so only
+  the p99 file is loadable by default and the p50 one is loaded explicitly or not
+  at all.
+* **`AccuracyPoint.tpot_err_pct_p50`** carries the same point's p50 error beside
+  the fitted p99 one, so a reader sees both bases without opening two files. It is
+  recorded and never consulted: `_err_at` interpolates `tpot_err_pct`, whatever
+  the domain declares.
+
+**The margin policy warns rather than refusing.** `AccuracyDomainMargin` appends
+to its basis when a domain explicitly declares `tpot_p50`, modelled on the
+closed-loop warning beside it. A refusal would be wrong — a p50-fitted domain is
+still a real measurement of that hardware at that operating point, and throwing
+it away buys nothing. Silence earns no warning, for the reason above: it would
+fire on every run against every committed domain and tell nobody anything new.
+
+**Migration is out of scope and is left as a step.** `lowload_sim_error.py` grew
+`--compare-stat p50|p99|both` so the migration has a tool; its default is `p50`,
+so every committed invocation writes the artifact it wrote before, and
+`tests/test_lowload_sim_error.py` pins that the default path is unchanged. The
+envelope already carries `tpot_p99` on every point, so the p99 reference is a
+measurement rather than an interpolation of a different statistic — a refusal
+names which statistic was missing so a reader can tell "no p99 here" from
+"nothing here".
+
+**p99 costs sample size, and the protocol says so** (user instruction). A
+300-request run puts roughly three observations above its p99, so
+`openloop_sim_error.py --min-requests-p99` refuses to fit one on less. A5(b)'s
+`pool >= 4x` does not transfer — an open loop has no pool — and its purpose is
+served by the saturation slope D114's harness records. The empirical check on
+stability is the run-to-run spread across repeats, which every point carries and
+which S7.0 requires beside any verdict. A point whose repeats fall short is
+reported with its p50 error and **excluded from the p99 file** rather than
+dropped: making `tpot_err_pct` nullable was the alternative and was not taken,
+because three committed domains depend on that field being present and the p50
+sibling already carries the number.
+
+**Pairing, and the guard that decides whether a point exists at all.** The same
+offered rate goes to both sides, the committed `--match offered` convention.
+Served concurrency is then an outcome on both, and a pair whose two
+concurrencies differ by more than `--max-conc-gap` (default 20 %) is **flagged
+and excluded** — the simulator's latency there is a different operating point's
+latency, which is the failure `rngd_card_edf.yaml` records above c29.3 where the
+sim settled at 37.67 and 44.47 against measured 59.2 and 107.2. The x axis stays
+the **simulator's** served concurrency, because that is what the planner knows
+when it consults the table.
+
+**Where.** `experiments/scripts/openloop_sim_error.py` (new),
+`experiments/scripts/lowload_sim_error.py` (`--compare-stat`, both percentiles on
+the sim side), `planner/predictor/calibration.py`
+(`AccuracyDomain.compared_metric`, `AccuracyPoint.tpot_err_pct_p50`),
+`planner/optimizer/margin.py` (the p50 warning),
+`profiles/calibration/openloop/rngd_card.accuracy.openloop{,.p50}.yaml` (new),
+`profiles/calibration/index.yaml` (regenerated),
+`tests/{test_calibration_condition,test_lowload_sim_error}.py`, D101's addendum.

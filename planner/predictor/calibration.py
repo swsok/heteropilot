@@ -130,6 +130,13 @@ class AccuracyPoint(_Strict):
     tpot_err_pct: float
     tput_err_pct: float | None = None
     ttft_err_pct: float | None = None
+    #: The SAME point's error formed from p50 instead of p99, carried beside the
+    #: fitted value rather than in a second file, so a reader can see both bases
+    #: at once (domain-scoping S7.3). It is RECORDED, never consulted:
+    #: `tpot_err_pct` is what `_err_at` interpolates, whatever basis the domain
+    #: declares in `compared_metric`. Every domain written before 2026-09-18
+    #: leaves this unset, which means not stated and not "equal to the above".
+    tpot_err_pct_p50: float | None = None
     note: str = ""
 
 
@@ -288,6 +295,18 @@ class AccuracyDomain(_Strict):
     #: 2026-09-17 reads; an unstated condition is skipped and flagged.
     parallelism: DomainParallelism | None = None
     placement: DomainPlacement | None = None
+    #: Which percentile of TPOT the points were formed from -- `tpot_p50`,
+    #: `tpot_p99`, or "" for a domain that does not say (domain-scoping S7.3).
+    #:
+    #: It matters because the margin is applied to a **p99** (D101), so a domain
+    #: fitted on p50 is being consulted on a basis it was not measured on. Every
+    #: domain committed before 2026-09-18 is p50 in fact -- `lowload_sim_error.py`
+    #: records `compared_metric: tpot_p50` -- and none of them SAYS so, which is
+    #: why "" means not stated rather than p50: stating it for them is a
+    #: migration, with its own measurement question, and not a field default.
+    #: A margin policy warns when a domain explicitly declares p50, so the
+    #: mismatch is visible in the plan output instead of only in this docstring.
+    compared_metric: str = ""
 
     @model_validator(mode="after")
     def _shape_is_canonical(self) -> AccuracyDomain:
@@ -918,6 +937,18 @@ class DomainIndexEntry(_Strict):
     arrival_process: Literal["open_loop", "closed_loop", "unknown"] = "unknown"
     parallelism: DomainParallelism | None = None
     placement: DomainPlacement | None = None
+    #: Which percentile of TPOT the points were formed from -- `tpot_p50`,
+    #: `tpot_p99`, or "" for a domain that does not say (domain-scoping S7.3).
+    #:
+    #: It matters because the margin is applied to a **p99** (D101), so a domain
+    #: fitted on p50 is being consulted on a basis it was not measured on. Every
+    #: domain committed before 2026-09-18 is p50 in fact -- `lowload_sim_error.py`
+    #: records `compared_metric: tpot_p50` -- and none of them SAYS so, which is
+    #: why "" means not stated rather than p50: stating it for them is a
+    #: migration, with its own measurement question, and not a field default.
+    #: A margin policy warns when a domain explicitly declares p50, so the
+    #: mismatch is visible in the plan output instead of only in this docstring.
+    compared_metric: str = ""
     note: str = ""
 
     @classmethod
@@ -930,6 +961,7 @@ class DomainIndexEntry(_Strict):
             workload_shape=domain.workload_shape,
             arrival_process=domain.arrival_process,
             parallelism=domain.parallelism, placement=domain.placement,
+            compared_metric=domain.compared_metric,
             note=note,
         )
 
@@ -949,6 +981,7 @@ class DomainIndexEntry(_Strict):
             "placement=not stated" if place is None
             else f"islands={place.islands} binding={place.device_binding}"
         )
+        bits.append(f"compared_metric={self.compared_metric or 'not stated'}")
         return ", ".join(bits)
 
 

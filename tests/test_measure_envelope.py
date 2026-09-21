@@ -588,3 +588,56 @@ def test_every_artifact_of_one_open_loop_point_shares_one_stem():
     assert me.openloop_tag(2.0) == "r2"
     assert me.openloop_tag(10) == "r10"
     assert "." not in me.openloop_tag(0.25, 1)
+
+
+# --- the completion cap (S7.3) ---------------------------------------------
+#
+# A default truncated a measurement. `replay_to_endpoint` applies
+# `max_tokens = min(row["output_toks"], cap)` with cap defaulting to 512, and the
+# committed trace asks for up to 1021 -- so the first open-loop points generated
+# 78.5 % of the simulator's tokens, and paired against it that read as the
+# simulator over-predicting served concurrency by 18-37 %. It is the failure
+# `--ignore-eos` prevents (V2 §1), arriving through a different door.
+
+
+def _trace(tmp_path: Path, output_toks: list[int]) -> Path:
+    p = tmp_path / "trace.jsonl"
+    p.write_text("".join(
+        f'{{"input_toks": 100, "output_toks": {t}, "arrival_time_ns": {i * 1000}}}\n'
+        for i, t in enumerate(output_toks)))
+    return p
+
+
+def test_the_cap_is_resolved_from_the_trace_not_carried_as_a_number(tmp_path):
+    assert me.dataset_max_output_toks(_trace(tmp_path, [120, 632, 1021, 400])) == 1021
+
+
+def test_a_trace_with_no_output_toks_is_refused_rather_than_defaulted(tmp_path):
+    p = tmp_path / "bad.jsonl"
+    p.write_text('{"input_toks": 10}\n')
+    with pytest.raises(SystemExit):
+        me.dataset_max_output_toks(p)
+
+
+def test_a_truncating_cap_is_counted_so_it_can_be_reported(tmp_path):
+    trace = _trace(tmp_path, [120, 632, 1021, 400])
+    assert me.dataset_truncated_rows(trace, 512) == 2      # 632 and 1021
+    assert me.dataset_truncated_rows(trace, 1021) == 0     # the resolved cap
+    assert me.dataset_truncated_rows(trace, 100) == 4
+
+
+def test_the_client_command_always_states_the_cap(tmp_path):
+    """Leaving it unstated is what let replay_to_endpoint's 512 apply."""
+    cmd = me.openloop_client_command(
+        "/usr/bin/python3", 8000, "m", Path("d.jsonl"), 2.0, 300,
+        Path("/tmp/o.json"), max_tokens_cap=1021)
+    assert cmd[cmd.index("--max-tokens-cap") + 1] == "1021"
+
+
+def test_the_committed_sharegpt_trace_would_have_been_truncated_by_the_default():
+    """The regression this guards, against the real file rather than a fixture."""
+    trace = ROOT / "workloads/sharegpt-llama-3.1-8b-300-sps10.jsonl"
+    if not trace.exists():                       # pragma: no cover
+        pytest.skip("committed trace not present")
+    assert me.dataset_max_output_toks(trace) == 1021
+    assert me.dataset_truncated_rows(trace, 512) == 299
