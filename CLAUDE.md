@@ -146,6 +146,15 @@ relabel them here. Every result written through `planner/util/provenance.py` now
 records the detected accelerator inventory, so an artifact says for itself which
 node produced it.
 
+**`npu`, `a40`, `a5000` are node KINDS, not machines.** The detector reports
+`npu` for any box with an RNGD or ATOM card, so a second RNGD machine reads the
+same and is pointed at the same node doc — whose inventory would be wrong for
+it. Since **D80** the provenance block also records each accelerator's serial
+and a 12-hex `accelerator_set.fingerprint`, and `whichnode.sh` prints the
+serials as `accel serials`. **Compare them against the node doc's stated set
+before trusting its inventory**, and never append a measurement taken on one
+card set to a domain or envelope built on another.
+
 ## Architecture: the planning pipeline
 
 ```

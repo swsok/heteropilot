@@ -55,6 +55,24 @@ fi
 echo "=== node detection ==============================================="
 echo "  detected node : $NODE${NODE_DOC:+   (read $NODE_DOC)}"
 echo "  hostname      : $(hostname)   <- same on every node, do not key off it"
+# The node KIND above does not identify a MACHINE: any box with RNGD reports
+# `npu`, so a second RNGD node reads the same and is pointed at the same node
+# doc. The accelerator serials do identify one (deviations D80).
+FINGERPRINT=""
+if have furiosa-smi; then
+    FINGERPRINT=$(timeout 30 furiosa-smi info --format json 2>/dev/null \
+        | tr ',' '\n' | grep -o '"device_sn":"[^"]*"' | sed 's/.*://' | tr -d '"' \
+        | sort | tr '\n' '+')
+fi
+if have nvidia-smi; then
+    FINGERPRINT="$FINGERPRINT$(timeout 30 nvidia-smi -L 2>/dev/null \
+        | grep -o 'UUID: [^)]*' | sed 's/UUID: //' | sort | tr '\n' '+')"
+fi
+if [ -n "$FINGERPRINT" ]; then
+    echo "  accel serials : $(printf '%s' "$FINGERPRINT" | sed 's/+$//')"
+    echo "                  ^ THIS identifies the machine; the node kind above does not."
+    echo "                    Compare against the node doc before trusting its inventory."
+fi
 echo "  cores / RAM   : $(nproc) / $(free -g 2>/dev/null | awk '/^Mem:/{print $2" GiB"}')"
 if [ "$GPU_COUNT" -gt 0 ]; then
     echo "  NVIDIA        : ${GPU_COUNT} x ${GPU_MODEL}"
