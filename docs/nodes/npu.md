@@ -3,6 +3,27 @@
 *Read this only after `bash scripts/whichnode.sh` says `detected node : npu`. If it
 says anything else, this file describes a machine you are not on.*
 
+> **And `npu` is a node KIND, not a machine.** The detector reports `npu` for
+> **any** box with an RNGD or ATOM card, so a second RNGD machine reads exactly
+> the same and is pointed at exactly this file — whose inventory, BDFs, NUMA
+> placement and tenant list would then all be wrong for it. That is the failure
+> the *Which machine am I on?* section of `CLAUDE.md` exists to prevent,
+> reappearing one level down.
+>
+> **This file describes the machine whose RNGD serials are**
+>
+> ```
+> RNG26040100105Q + RNG26040100181Q + RNG26040100187Q
+> ```
+>
+> which `whichnode.sh` prints as `accel serials`, and whose
+> `provenance.accelerator_set.fingerprint` is **`6fe246ed1abf`** (that hash
+> covers the four ATOMs too, so it moves if any card is added or removed —
+> deviations D80). If the serials you see differ, **stop**: you are on a
+> different machine and need a node doc of its own. Nothing below is reliable
+> for you, and measurements taken there must not be appended to artifacts taken
+> here.
+
 Moved here from `CLAUDE.md` on 2026-08-28, because a committed file that asserts
 "this machine has X" is true on at most one of the three nodes this project runs
 on, and it had already misled a session into believing an 8×A40 box had no GPU.

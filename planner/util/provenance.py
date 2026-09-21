@@ -185,7 +185,108 @@ def accelerators() -> dict[str, Any]:
     if dev.is_dir():
         found["atom_devices"] = len(list(dev.glob("rbln*")))
 
+    # Counts do not identify a machine, and two nodes of the same kind produce
+    # identical blocks without this. See `accelerator_set`.
+    found["accelerator_set"] = accelerator_set()
     return found
+
+
+def _cuda_ids() -> list[str] | None:
+    """GPU UUIDs, which `nvidia-smi -L` already prints beside the model."""
+    listing = _run(["nvidia-smi", "-L"])
+    if listing is None:
+        return None
+    out = []
+    for line in listing.splitlines():
+        if "(UUID: " in line:
+            out.append(line.split("(UUID: ", 1)[1].rstrip(")").strip())
+    return sorted(out)
+
+
+def _rngd_ids() -> list[dict[str, str]] | None:
+    """Per-card serial, UUID, BDF and firmware from the vendor tool.
+
+    `furiosa-smi info --format json` carries `device_sn` and `device_uuid`. Those
+    are the durable identity: the `npuN` label re-enumerates (the same card at
+    `45:00.0` was `npu2` on 2026-09-17 and `npu3` on 2026-09-18) and a BDF moves
+    with the slot, but a serial does not.
+    """
+    raw = _run(["furiosa-smi", "info", "--format", "json"])
+    if raw is None:
+        return None
+    try:
+        devices = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return None
+    out = []
+    for dev in devices:
+        out.append({
+            "sn": str(dev.get("device_sn", "")),
+            "uuid": str(dev.get("device_uuid", "")),
+            "bdf": str(dev.get("pci_bdf", "")),
+            "firmware": str(dev.get("firmware", "")),
+        })
+    return sorted(out, key=lambda d: d["sn"])
+
+
+def _atom_ids() -> list[dict[str, str]] | None:
+    """Per-device serial, UUID and BDF from `rbln-smi -j`."""
+    raw = _run(["rbln-smi", "-j"])
+    if raw is None:
+        return None
+    try:
+        doc = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return None
+    out = []
+    for dev in doc.get("devices", []):
+        out.append({
+            "sid": str(dev.get("sid", "")),
+            "uuid": str(dev.get("uuid", "")),
+            "bdf": str((dev.get("pci") or {}).get("bus_id", "")),
+        })
+    return sorted(out, key=lambda d: d["sid"])
+
+
+def accelerator_set() -> dict[str, Any]:
+    """Which accelerators these are, not merely how many -- and one hash of them.
+
+    `accelerators()` records counts, and counts do not identify a machine. Two
+    RNGD nodes with three cards each produce a byte-identical provenance block,
+    so an artifact cannot say which of them it came from. `hostname` does not
+    help either: every node of this project has reported `s8`, and the NPU node
+    reports `etri-001`. That gap was harmless while only one machine of each kind
+    existed and stops being harmless the moment a second one does -- a
+    calibration point measured on another node's card would append to the same
+    domain file with nothing to distinguish it (deviations D80).
+
+    **`fingerprint` identifies the ACCELERATOR SET, not the chassis**, and that
+    is the useful thing rather than a compromise: two artifacts agreeing on it
+    were produced on the same physical cards, which is exactly the question a
+    calibration asks. It therefore changes when a card is added or removed --
+    the RNGD count here has gone 4 -> 3 -> 4 -> 3 -- and that is correct: a
+    different card set is a different measurement configuration.
+
+    Every probe may fail. A missing vendor tool records `None`, meaning "not
+    detectable here", never an absence of hardware (absolute rule 3).
+    """
+    ids: dict[str, Any] = {
+        "cuda": _cuda_ids(),
+        "rngd": _rngd_ids(),
+        "atom": _atom_ids(),
+    }
+    parts: list[str] = []
+    for uuid in ids["cuda"] or []:
+        parts.append(f"cuda:{uuid}")
+    for dev in ids["rngd"] or []:
+        parts.append(f"rngd:{dev['sn']}")
+    for dev in ids["atom"] or []:
+        parts.append(f"atom:{dev['sid']}")
+    ids["fingerprint"] = (
+        hashlib.sha256("|".join(sorted(parts)).encode()).hexdigest()[:12]
+        if parts else None
+    )
+    return ids
 
 
 def collect(

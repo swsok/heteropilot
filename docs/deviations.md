@@ -4114,3 +4114,72 @@ artifact.
 `harness` / `closed_loop`), `tests/test_measure_envelope.py` (14 new tests),
 `WORK_ORDER_domain_scoping.md` §S7.2 (amended to name this file),
 `docs/HANDOVER.md` §2.10.1 items 1 and 2.
+
+## D80 — the provenance block recorded how many accelerators, never which ones · Recorded 2026-09-21
+
+*First entry from the `D80–D89` block (one-off work with no work order). Read the
+*Which machine am I on?* section of `CLAUDE.md` first — this is the same failure
+one level down.*
+
+**What the block said, and what it could not say.** `provenance.accelerators()`
+probed for hardware and recorded counts: `{"cuda": null, "rngd_cards": 3,
+"atom_devices": 4}`. That was written to close a real gap — before it, an
+artifact recorded only `hostname` and `cpu_count`, and every node of this project
+reports `s8` (the NPU node now reports `etri-001`), so an A40-node artifact was
+separated from an NPU-node one by an incidental 64-vs-96 core count.
+
+It closed the gap it aimed at and left a second one: **counts do not identify a
+machine.** Two RNGD nodes with three cards each produce a byte-identical
+provenance block. `scripts/whichnode.sh` cannot separate them either — it sets
+`NODE="npu"` for *any* box with an RNGD or ATOM device, by design, so a second
+RNGD machine is detected as `npu` and pointed at `docs/nodes/npu.md`, whose
+inventory, BDFs, NUMA placement and tenant list are assertions about **this**
+machine.
+
+**Why it stopped being harmless.** While one machine of each kind existed, a node
+kind and a machine were the same thing. The moment a second RNGD node is used —
+which is now planned — they are not. Concretely: S7.3's open-loop domain has six
+points measured on this machine's `npu0`. A point measured on another machine's
+card would append to the same file, under the same `hardware: RNGD-CARD` label,
+with nothing in either artifact to tell them apart and nothing recoverable
+afterwards. Different silicon, possibly different firmware and NUMA topology,
+one interpolation axis — the error D22 was, arriving through the hardware door.
+
+**How we adapt.** `accelerators()` gains `accelerator_set`, which records the
+durable per-device identity the vendor tools already expose and hashes it:
+
+| class | identity | source |
+| --- | --- | --- |
+| RNGD | `device_sn`, `device_uuid`, BDF, firmware | `furiosa-smi info --format json` |
+| ATOM | `sid`, `uuid`, BDF | `rbln-smi -j` |
+| CUDA | GPU UUID | `nvidia-smi -L`, already printed beside the model |
+
+The **serial** is the identity, not the label or the BDF: `npuN` re-enumerates
+(the card at `45:00.0` was `npu2` on 2026-09-17 and `npu3` on 2026-09-18) and a
+BDF moves with the slot.
+
+`fingerprint` is a 12-hex hash over the sorted serials. **It identifies the
+accelerator SET, not the chassis**, and that is the useful thing rather than a
+compromise: two artifacts agreeing on it were produced on the same physical
+cards, which is the question a calibration actually asks. It therefore changes
+when a card is added or removed — this node's RNGD count has gone 4 → 3 → 4 → 3
+— and that is correct, because a different card set is a different measurement
+configuration. This machine is **`6fe246ed1abf`**.
+
+**Backward compatibility is deliberate.** `rngd_cards` and `atom_devices` keep
+their integer shape and meaning; the identity is added beside them, never in
+place of them, so the committed artifacts that carry `"rngd_cards": 3` stay
+comparable. A missing vendor tool records `None` — "not detectable here" — and
+never an absence of hardware, and a tool that prints something unparsable is a
+failed probe rather than an exception while an artifact is being written.
+
+**Where.** `planner/util/provenance.py` (`accelerator_set`, `_rngd_ids`,
+`_atom_ids`, `_cuda_ids`), `scripts/whichnode.sh` (prints `accel serials` and
+says the node kind does not identify a machine), `docs/nodes/npu.md` (states the
+serials it describes and tells a reader on different hardware to stop),
+`tests/test_provenance_machine_identity.py`.
+
+**What this does not do.** It does not give the second machine a node doc — that
+is written when someone works there. It does not retrofit identity onto existing
+artifacts, which remain counts-only; they are all from this machine, but they say
+so only by being older than this entry.
