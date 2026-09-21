@@ -1,0 +1,133 @@
+{
+  "label": "numa0_pinned",
+  "torch": "2.10.0+cu128",
+  "note": "direct peer copy; NCCL is not involved on any path here",
+  "pairs": {
+    "0-1": {
+      "peer_access": true,
+      "sizes": {
+        "64MiB": {
+          "one_way": {
+            "median_s": 0.0012902449816465378,
+            "bandwidth_gbps": 52.01249759123997,
+            "bandwidth_gbps_min": 51.60594973439017,
+            "bandwidth_gbps_max": 52.06086110493795,
+            "spread_pct": 0.880690635849833,
+            "iters": 20
+          },
+          "round_trip": {
+            "median_s": 0.0025744326412677765,
+            "bandwidth_gbps": 52.13487657377768,
+            "bandwidth_gbps_min": 52.068121509294635,
+            "bandwidth_gbps_max": 52.15527245665104,
+            "spread_pct": 0.16731324947291806,
+            "iters": 20
+          }
+        },
+        "256MiB": {
+          "one_way": {
+            "median_s": 0.005099711008369923,
+            "bandwidth_gbps": 52.63738583606584,
+            "bandwidth_gbps_min": 51.28003798658849,
+            "bandwidth_gbps_max": 52.75439253033181,
+            "spread_pct": 2.868727392461302,
+            "iters": 20
+          },
+          "round_trip": {
+            "median_s": 0.010177616029977798,
+            "bandwidth_gbps": 52.75016373369424,
+            "bandwidth_gbps_min": 52.72195531959806,
+            "bandwidth_gbps_max": 52.76083840469133,
+            "spread_pct": 0.07373629820723249,
+            "iters": 20
+          }
+        },
+        "512MiB": {
+          "one_way": {
+            "median_s": 0.010177550837397575,
+            "bandwidth_gbps": 52.75050162631064,
+            "bandwidth_gbps_min": 52.64131294851909,
+            "bandwidth_gbps_max": 52.832152171303996,
+            "spread_pct": 0.3619671996736475,
+            "iters": 20
+          },
+          "round_trip": {
+            "median_s": 0.020318216178566217,
+            "bandwidth_gbps": 52.84626438479847,
+            "bandwidth_gbps_min": 52.822312592154844,
+            "bandwidth_gbps_max": 52.85120271520783,
+            "spread_pct": 0.05468791915630352,
+            "iters": 20
+          }
+        }
+      },
+      "device_names": [
+        "NVIDIA A40",
+        "NVIDIA A40"
+      ]
+    },
+    "0-2": {
+      "peer_access": true,
+      "sizes": {
+        "64MiB": {
+          "one_way": {
+            "median_s": 0.002683754079043865,
+            "bandwidth_gbps": 25.005593665984744,
+            "bandwidth_gbps_min": 24.971476962793105,
+            "bandwidth_gbps_max": 25.014638890879258,
+            "spread_pct": 0.17278241457438231,
+            "iters": 20
+          },
+          "round_trip": {
+            "median_s": 0.005363652016967535,
+            "bandwidth_gbps": 25.023571174157397,
+            "bandwidth_gbps_min": 24.997096943625756,
+            "bandwidth_gbps_max": 25.02866671283819,
+            "spread_pct": 0.1262680304609469,
+            "iters": 20
+          }
+        },
+        "256MiB": {
+          "one_way": {
+            "median_s": 0.010683280881494284,
+            "bandwidth_gbps": 25.12668710835707,
+            "bandwidth_gbps_min": 25.1084157337485,
+            "bandwidth_gbps_max": 25.129137350762363,
+            "spread_pct": 0.08252052519353989,
+            "iters": 20
+          },
+          "round_trip": {
+            "median_s": 0.021359903272241354,
+            "bandwidth_gbps": 25.134519813004033,
+            "bandwidth_gbps_min": 25.11043910512688,
+            "bandwidth_gbps_max": 25.1366246676986,
+            "spread_pct": 0.1042728475314488,
+            "iters": 20
+          }
+        },
+        "512MiB": {
+          "one_way": {
+            "median_s": 0.021344659384340048,
+            "bandwidth_gbps": 25.152470336157556,
+            "bandwidth_gbps_min": 25.14885744445186,
+            "bandwidth_gbps_max": 25.15829100263089,
+            "spread_pct": 0.0375022031726253,
+            "iters": 20
+          },
+          "round_trip": {
+            "median_s": 0.04268352780491114,
+            "bandwidth_gbps": 25.1558828245789,
+            "bandwidth_gbps_min": 25.153461936857827,
+            "bandwidth_gbps_max": 25.161156495237115,
+            "spread_pct": 0.03058404307172365,
+            "iters": 20
+          }
+        }
+      },
+      "device_names": [
+        "NVIDIA A40",
+        "NVIDIA A40"
+      ]
+    }
+  }
+}

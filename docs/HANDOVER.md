@@ -4,14 +4,17 @@
 > `WORK_ORDER_domain_scoping.md` **S7 — the work order is now complete except
 > S6**, which is A40 work. Eleven PRs landed that day: #116–#126.
 >
-> **The next session is on the A40 node. Read §2.12 first** — it is the A40
-> list and it is short. §2.10 is where the work order stands; §2.10.1 is the
-> RNGD list and is now almost entirely closed.
+> **§2.12 is the A40 list and it is now empty**; §2.10 is where the work order
+> stands; §2.10.1 is the RNGD list and is almost entirely closed. The open work
+> left in this file needs the RNGD node or the vendor (§2.10.1 items 4 and 5),
+> or is the §6 hold-out design that is not scheduled.
 >
-> **One thing on `main` is not finished and is not S7's: S6** (§2.12). The
-> `test_livelock_watch.py` flake that stood beside it is **fixed** (§2.11) —
-> the read loop reopened the FIFO by name, so a command that exited promptly
-> left its `open(2)` with no writer to wait for.
+> **`WORK_ORDER_domain_scoping.md` is now complete.** S6 closed on the A40 node
+> 2026-09-21 (§2.12, D116) and the `test_livelock_watch.py` flake beside it is
+> fixed (§2.11, PR #128). **The A40 list is empty.** What S6 leaves standing is
+> stated rather than open: P1's −7.01 % residual is not margined by anything,
+> because no A40 domain is fitted at tp=4 — pinned by tests, with the skeleton
+> for that fit in §2.12 should it ever be commissioned.
 >
 > The body below was rewritten 2026-09-10 at the end of
 > `WORK_ORDER_rps_aware.md` rev 2 (STEP 0–6, PRs #60–#72). **The whole stack is on
@@ -76,11 +79,11 @@ ruff check .  All checks passed!
 mypy          Success: no issues found in 47 source files
 ```
 
-**Gates for the `livelock_watch` fix (§2.11)**, A40 node, accelerator set
-`83e3434d7696`:
+**Gates for the `livelock_watch` fix (§2.11) and S6 (§2.12)**, A40 node,
+accelerator set `83e3434d7696`:
 
 ```
-pytest -q     1076 passed, 2 skipped in 142.00s   # A40 node, 2026-09-21
+pytest -q     1078 passed, 2 skipped in 141.27s   # A40 node, 2026-09-21
 ruff check .  All checks passed!
 mypy          Success: no issues found in 47 source files
 ```
@@ -142,7 +145,7 @@ claim a result from hardware the detector does not list.
 | 4 Real deploy + calibration | ✅ CUDA. NPU launcher still a stub |
 | 5 Topology-aware P/D | ✅ core, and **asymmetric TP per phase now representable** (D28). Network-aware routing deferred. **D23 resolved** — it was D26, a PATH-resolved Chakra interpreter |
 | **RPS-aware selection** | ✅ **done 2026-09-09** — envelope, accuracy domain, operating-point margins, `plan --rps`. §2.1 |
-| **Domain scoping (`WORK_ORDER_domain_scoping.md`)** | ✅ **S1–S5, S7 done**; only **S6** left (A40, §2.12). D110–D115 |
+| **Domain scoping (`WORK_ORDER_domain_scoping.md`)** | ✅ **COMPLETE** — S1–S5, S7, and S6 (A40, 2026-09-21). D110–D116 |
 | 6 Online replanning | ⛔ not started — **requires explicit user approval** |
 
 **Accuracy domains on `main` as of 2026-09-21** — **five** files, and which one
@@ -278,42 +281,84 @@ not a gap to paper over.
 
 ## 2. Next work, in priority order
 
-### 2.12 The A40 node list — **read this one first if you are on the A40**
+### 2.12 The A40 node list — **empty. Both items closed 2026-09-21**
 
-Two items, and they are unrelated to each other.
+**`WORK_ORDER_domain_scoping.md` is complete**: S6 closed here, S7 closed on the
+RNGD node the same day. The `test_livelock_watch.py` flake (§2.11) is fixed. No
+A40 work is queued.
 
-**1. S6 — the last step of `WORK_ORDER_domain_scoping.md`.** Optional in the
-work order, and it is what would close the one thing S7 left open on the A40
-side. Three parts, and PR #104 may already contain some of them — check before
-measuring:
+**S6 — DONE, and two of its three parts were already measured.** Reading PR #104
+and V3's own appendix first is what kept it to one afternoon; the handover used
+to carry all three as open:
 
-* **(i) NUMA-bound P1 (TP=4) open-loop, 3 runs**, against the simulator with
-  S3's measured link value. `v3_addendum_s4.md` §3 has the pairing: with the
-  link priced from measurement the simulator lands within **−7.01 %** on p99
-  TPOT and **−0.73 %** on concurrency. The residual −7.01 % is **not margined by
-  anything** — no A40 domain is fitted at tp=4 — which is exactly what rule (e)
-  says, and S6(i) is the measurement that would close it.
-* **(ii) `nccl-tests all_reduce_perf` on 4 GPUs** over the TP message-size
-  range, plus `p2pBandwidthLatencyTest`, **bound and unbound**, loaded into the
-  S3 (D112) link-measurement schema.
-* **(iii) the same candidate at TP=2 inside an NV4 pair** (GPU0↔1), to check the
-  simulator on an NVLink-only path and rule out a TP-arithmetic explanation.
+| part | state |
+| --- | --- |
+| **(i)** NUMA-bound P1 (TP=4), 3 repeats | **already measured** — `v3_verdict_accuracy.md` **A.3**, GPUs 4–7, `numactl --cpunodebind=1 --membind=1`, 64.616 ms p99 TPOT at served `L` 162.26 |
+| **(iii)** TP=2 inside an NV4 pair | **already measured** — **A.2**, 3 repeats bound, 67.337 measured against 63.831 simulated (−5.21 %), which is what exonerates the TP compute model |
+| **(ii)** link figures bound and unbound, in S3's schema | **this sprint** — everything filed was `binding: unpinned` |
 
-Workload: lengthen it so a steady-state interval exists and exclude warm-up
-(V3's transient lesson). `binding: unknown` is what the fixture's nodes say, so
-**record the binding** — it is the axis worth 1.93× of throughput here.
+Result: `experiments/p2_evidence/results/s6_link_binding_and_p2p_control.md`,
+**D116**. Three things from it are worth carrying:
 
-**2. ~~The `test_livelock_watch.py` flake~~ — DONE 2026-09-21**, §2.11
-immediately below. One line: the read loop ended `done <"$FIFO"` instead of
-`done <&3`. No `retry` and no `xfail` were needed — the test was reporting a
-real hang, exactly as the constraint assumed.
+* **Binding does not move this wire.** All ten link cases shift by at most
+  **0.66 %** between `unpinned` and `numa_pinned`, in inconsistent directions —
+  while the same binding is worth **1.93×** of deployment throughput here (A.3).
+  NUMA buys the host memory path, prefill and queueing; not the GPU-to-GPU link.
+  So S3's `unpinned` figures were safe to have filed, and that is now measured
+  rather than argued.
+* **`nccl-tests` was not run, and would not have been a control.** It cannot run
+  here (needs `GLIBC_2.34`, host has 2.31; no `nvcc`, no CUDA samples) — but the
+  deciding reason is that it links the same NCCL 2.27.5 the torch probe reaches,
+  so it agrees by construction. The control that is actually independent is a
+  direct `cudaMemcpyPeer`, which does not touch NCCL: **25.15 GB/s** across the
+  bridge against **19.3** two-rank and **8.8** four-rank on the same wire.
+* **That re-reads D112.** The wire is one number; the ring gets **35 %** of it at
+  four ranks. 8.8 is a property of the collective on that path, not of the path.
 
-**What is NOT on the A40 list.** S7 is finished and needs no A40 work. The
-RNGD-side items in §2.10.1 are closed except where that section says otherwise.
-Do not re-run anything under `experiments/results/s73_npu_6fe246ed1abf/` here:
-those are measurements of **accelerator set `6fe246ed1abf`** (D80) and an A40 box
-is a different machine — `whichnode.sh` prints `accel serials` so the two cannot
-be confused.
+**The NVLink links were measured and deliberately NOT filed** — 39.2–39.3
+against a datasheet 112.5. Filing them would move `island_interconnect`'s `min`
+for every tp=2 candidate inside an NV4 pair, i.e. a planner behaviour change
+rather than a measurement. Figures are in the result doc for whoever takes it.
+
+#### The one thing S6 leaves standing: P1's −7.01 % is stated, not margined
+
+With the link priced from S3's measurement the simulator lands **−7.01 %** on
+p99 TPOT and −0.73 % on concurrency (`v3_addendum_s4.md` §3). No A40 domain is
+fitted at tp=4, so that residual is **not margined by anything**, and it cannot
+be closed by reaching for the domain that exists. Pinned by
+`tests/test_calibration_condition.py` §(vii) against the committed file at V3's
+real operating point:
+
+* `refuse` (the default) → `condition_mismatch`, `mismatch_fields == ["tp"]`,
+  `required_measurement.tp == 4`, and **no margin leaks** (both percents 0.0).
+  162.26 is *inside* the domain's load axis [4.043, 170.56], so it is provably
+  the configuration refusal and not the load-axis one.
+* `warn` → applies the tp=1 domain across the mismatch, says so, and charges
+  **1.38 %** against a 7.01 % residual. **~5× too little, unsafe direction.**
+
+**Skeleton for the tp=4 A40 open-loop domain, if it is ever commissioned.** Not
+started — one residual at one operating point has no slope to widen along, so
+this is a fit and a measurement campaign, not a reading. It inherits S7.3's
+conventions wholesale, because that is the most recent domain and the one whose
+traps are documented:
+
+1. **Key the points by offered rps**, and pair each against the simulator at the
+   *simulator's own* served concurrency; keep the ±20 % concurrency guard and
+   file the rates that fail it as `provenance.unpaired_points` rather than
+   dropping them silently.
+2. **Fit on `tpot_p99`** and carry `tpot_err_pct_p50` beside it (D115), so the
+   basis the margin is charged on is the basis it was fitted on.
+3. **State the validity ceiling from a measured point**, not an inferred one —
+   S7.3 ran 2.25 rps twice for exactly that purpose.
+4. **Per-point `count` and run-to-run spread in the note.** S7.3's spread is not
+   uniform (0.116 ms at one load, 0.776 ms at a lower one), so a single-run
+   point must say it is one run.
+5. **NUMA-bound, verified with `taskset`**, and `device_binding: numa_pinned`
+   stated on the domain — the deploy backend has no affinity control of its own
+   (A.3), so the harness must supply it.
+6. **Pin the measured `link_bw` into provenance.** The whole point is a residual
+   *after* S3's 8.8 is applied; a domain fitted against the 64.0 datasheet run
+   would be fitting D112's error instead of the simulator's.
 
 ### 2.11 `tests/test_livelock_watch.py` was intermittently red on `main` — **FIXED 2026-09-21**
 
