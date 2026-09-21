@@ -272,3 +272,54 @@ def test_a_run_caught_by_grace_leaves_no_orphaned_drain(tmp_path):
     )
     assert proc.returncode == 4
     assert _orphaned_drains() - before == set()
+
+
+# ---------------------------------------------------------------------------
+# The reader must not reopen the FIFO either
+# ---------------------------------------------------------------------------
+
+def test_the_watcher_never_reopens_the_fifo_to_read_it():
+    """fd 3 exists so that nothing opens the FIFO by name a second time.
+
+    The fix above converted the *drain* to `cat <&3` but left the read loop
+    ending `done <"$FIFO"` — a second `open(2)`, which blocks until a writer
+    appears. A command that exits before the shell reaches that line has already
+    taken the only writer with it, so the parent parked in `pipe_wait` forever,
+    holding fd 3, with no child left to rendezvous with. That is the
+    intermittent red this file showed on `main`: 5 hangs in 40 runs, always a
+    60 s `TimeoutExpired`, and always on one of the cases whose command exits
+    promptly — which is why a different test failed each run and each one passed
+    alone.
+
+    Asserted on the source because the behavioural test below can only sample a
+    race, while the invariant is structural: after fd 3 is opened, `$FIFO` is a
+    name to be unlinked, never one to be opened.
+    """
+    src = WATCH.read_text()
+    _, after = src.split('exec 3<"$FIFO"', 1)
+    offenders = [
+        line for line in after.splitlines()
+        if not line.lstrip().startswith("#") and '<"$FIFO"' in line
+    ]
+    assert offenders == [], (
+        "the watcher reopens the FIFO after fd 3 is open; read from fd 3 "
+        f"instead (`done <&3`, `cat <&3`): {offenders}"
+    )
+    assert "done <&3" in src, "the read loop must consume fd 3, not a fresh open"
+
+
+def test_a_command_that_exits_immediately_never_hangs():
+    """The behavioural half: the losing side of that race, sampled often enough.
+
+    A child that is gone before the reader attaches is the whole failure mode,
+    and `exit 7` is the cheapest way to be gone. The hang rate under the bug was
+    12.5 % (5/40), so 60 runs fail it with probability 1 - 0.875**60 > 0.999,
+    while the fixed script cannot hang here at all — there is no `open()` left to
+    block in. A `timeout` therefore is the assertion; `subprocess.run` raises it.
+    """
+    for i in range(60):
+        proc = subprocess.run(
+            [str(WATCH), "-q", "--", "bash", "-c", "exit 7"],
+            capture_output=True, text=True, timeout=30,
+        )
+        assert proc.returncode == 7, f"run {i} returned {proc.returncode}: {proc.stderr}"

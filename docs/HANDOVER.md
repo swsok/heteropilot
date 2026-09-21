@@ -8,9 +8,10 @@
 > list and it is short. §2.10 is where the work order stands; §2.10.1 is the
 > RNGD list and is now almost entirely closed.
 >
-> **Two things on `main` are not finished and are not S7's:** the
-> `test_livelock_watch.py` flake (§2.11, **for the A40 session**, `main` is
-> intermittently red) and S6 (§2.12).
+> **One thing on `main` is not finished and is not S7's: S6** (§2.12). The
+> `test_livelock_watch.py` flake that stood beside it is **fixed** (§2.11) —
+> the read loop reopened the FIFO by name, so a command that exited promptly
+> left its `open(2)` with no writer to wait for.
 >
 > The body below was rewritten 2026-09-10 at the end of
 > `WORK_ORDER_rps_aware.md` rev 2 (STEP 0–6, PRs #60–#72). **The whole stack is on
@@ -71,6 +72,15 @@ mypy          Success: no issues found in 47 source files
 
 ```
 pytest -q     1014 passed in 127.33s             # A5000 node, 2026-09-18
+ruff check .  All checks passed!
+mypy          Success: no issues found in 47 source files
+```
+
+**Gates for the `livelock_watch` fix (§2.11)**, A40 node, accelerator set
+`83e3434d7696`:
+
+```
+pytest -q     1076 passed, 2 skipped in 142.00s   # A40 node, 2026-09-21
 ruff check .  All checks passed!
 mypy          Success: no issues found in 47 source files
 ```
@@ -293,10 +303,10 @@ Workload: lengthen it so a steady-state interval exists and exclude warm-up
 (V3's transient lesson). `binding: unknown` is what the fixture's nodes say, so
 **record the binding** — it is the axis worth 1.93× of throughput here.
 
-**2. The `test_livelock_watch.py` flake** — §2.11 immediately below. It is
-`main`'s current state, it came from #115, and it is the reason a full suite on
-any node may come back red. **Constraints, from the S7 session:** no `retry`, no
-`xfail`; one rerun, recorded in the PR; a red suite is not merged.
+**2. ~~The `test_livelock_watch.py` flake~~ — DONE 2026-09-21**, §2.11
+immediately below. One line: the read loop ended `done <"$FIFO"` instead of
+`done <&3`. No `retry` and no `xfail` were needed — the test was reporting a
+real hang, exactly as the constraint assumed.
 
 **What is NOT on the A40 list.** S7 is finished and needs no A40 work. The
 RNGD-side items in §2.10.1 are closed except where that section says otherwise.
@@ -305,64 +315,114 @@ those are measurements of **accelerator set `6fe246ed1abf`** (D80) and an A40 bo
 is a different machine — `whichnode.sh` prints `accel serials` so the two cannot
 be confused.
 
-### 2.11 `tests/test_livelock_watch.py` is intermittently red on `main` — **for the A40 session**
+### 2.11 `tests/test_livelock_watch.py` was intermittently red on `main` — **FIXED 2026-09-21**
 
-*Filed here rather than as a GitHub issue: this token cannot create issues
-(`createIssue` → 403). Found 2026-09-21 on the NPU node (accelerator set
-`6fe246ed1abf`) while gating #121. `livelock_watch.sh` and its tests came from
-**#115**, so this is that work's to finish, not S7.3's.*
+*Found 2026-09-21 on the NPU node (accelerator set `6fe246ed1abf`) while gating
+#121; fixed the same day on the A40 node (accelerator set
+`83e3434d7696`, 8 x A40). Filed here rather than as a GitHub issue: this token
+cannot create issues (`createIssue` → 403). `livelock_watch.sh` and its tests
+came from **#115**, and this was that work's to finish, not S7.3's.*
 
-**`main` fails intermittently, and a different test each run**, always a 60 s
-`subprocess.TimeoutExpired` on a command that is a single `cat` of a small file
-— so the watcher is not noticing its child exited:
+**The cause is one line, and it is #115's own fix left half-applied.** #115 added
+`exec 3<"$FIFO"` and converted the drain to `cat <&3` so that nothing would open
+the FIFO by name a second time. It did not convert the read loop, which kept
+ending `done <"$FIFO"` — a second `open(2)`. Opening a FIFO read-only blocks
+until a **writer** appears, and previous writers do not count, so a command that
+exits before the shell reaches that line has already taken the only writer with
+it. The parent then parks in `pipe_wait` forever, holding fd 3, with no child
+left to rendezvous with.
 
-| run | failed |
-| --- | --- |
-| 1 | `test_healthy_run_is_never_flagged` |
-| 2 | `test_command_exit_code_passes_through` |
-| 3 | `test_a_growing_queue_alone_does_not_trigger` |
-| 4 | `test_the_streak_must_be_consecutive` **and** `test_command_exit_code_passes_through` |
+The comment #115 wrote above `exec 3<` said the loop already read from fd 3
+("exactly as the old `done <&3` did"). It never did: that commit introduced the
+comment and `done <"$FIFO"` together.
 
-**It is inter-test interference, not a per-test race.**
-`test_a_growing_queue_alone_does_not_trigger` **passes alone in 0.07 s** and
-fails inside the file. Something is carried between tests.
+**Why a different test failed each run, and why each passed alone.** Only a
+command that exits promptly can lose the race, and the watcher's own start-up is
+the window. The four failures recorded on the NPU node are exactly the four cases
+whose command has no trailing `sleep`:
 
-**The orphan cleanup did not fix it.** There were **20 orphaned
-`cat /tmp/livelock_watch.*` processes**, aged 2d21h–3d, all `ppid=1` with their
-FIFO already deleted — the leak #115 fixed, so they predate it. Each was
-verified to belong to no live watcher and killed by PID. Afterwards:
+| run | failed | its command |
+| --- | --- | --- |
+| 1 | `test_healthy_run_is_never_flagged` | `cat <log>` |
+| 2 | `test_command_exit_code_passes_through` | `exit 7` |
+| 3 | `test_a_growing_queue_alone_does_not_trigger` | `cat <log>` |
+| 4 | `test_the_streak_must_be_consecutive` **and** `test_command_exit_code_passes_through` | `cat <log>`, `exit 7` |
+
+Every case carrying `; sleep 30` or `sleep 60` still has a writer when the loop
+opens, and none of them ever failed. It is a race, not inter-test interference —
+"passes alone" is load, not state carried between tests.
+
+**Measured, on the A40 node:**
+
+| | pre-fix | post-fix |
+| --- | ---: | ---: |
+| hangs in 40 runs of `livelock_watch.sh -q -- bash -c 'exit 7'` | **5 (12.5 %)** | — |
+| hangs in 200 runs | — | **0** |
+| leftover `/tmp/livelock_watch.*` | one per hang | 0 |
+| `pytest tests/test_livelock_watch.py` | failed on every run | **9 consecutive runs, 17 passed each** |
+
+A hung watcher's `/proc/<pid>` is the direct evidence and is what identified it:
+`wchan: pipe_wait`, fd 3 open on the FIFO, **no fd 0 on it**, and no children —
+i.e. blocked inside the loop's own `open()`, not in a read.
+
+**The FIFO-file leak was the same bug, not a second one.** §3 recorded `cat=0`
+but the `/tmp/livelock_watch.*` *files* accumulating, and guessed at a second
+leak in the drain path. There is none: a watcher hung in `open()` is SIGKILLed
+by whatever was waiting on it, so it never reaches its EXIT trap and the
+`rm -f "$FIFO"` never fires. From a cleaned `/tmp`, three consecutive runs of the
+file leave **0**, as do 200 runs of the stress case. The one file that did appear
+during this work came from the deliberately-reverted script used to check the new
+tests — i.e. from a hang, which is the mechanism, not a counterexample to it.
+
+**Two regression tests**, and they were checked against the pre-fix script —
+both fail on it, the structural one deterministically and the behavioural one
+with the same `TimeoutExpired` signature recorded above:
+
+* `test_the_watcher_never_reopens_the_fifo_to_read_it` — the invariant is
+  structural, so it is asserted on the source: after fd 3 is open, `$FIFO` is a
+  name to be unlinked, never one to be opened.
+* `test_a_command_that_exits_immediately_never_hangs` — 60 runs of `exit 7`,
+  which fails under the bug with probability > 0.999 and cannot flake once fixed,
+  because there is no `open()` left to block in.
+
+No `retry` and no `xfail`: the test was reporting something real, which is what
+the S7.3 constraint assumed.
+
+**It never affected S7.3 (#121).** Both files are byte-identical to `main`'s
+there and that branch never touched them; S7.3's own suites are green, and its
+measurements did not use `livelock_watch.sh` — the open-loop harness bounds its
+children with the predictor's own `timeout_s`.
+
+<details>
+<summary>Superseded diagnosis, kept because it records what was reasonable to believe</summary>
+
+The first pass read this as inter-test interference and looked for state carried
+between tests, on the strength of `test_a_growing_queue_alone_does_not_trigger`
+passing alone in 0.07 s and failing inside the file. That observation is real and
+the inference from it was wrong: a race whose window is the watcher's start-up
+widens under the load of the other tests in the file, so "passes alone" is
+exactly what a race looks like too. **Before concluding interference, check
+whether the isolated run is also the unloaded one.**
+
+It also cleaned up **20 orphaned `cat /tmp/livelock_watch.*` processes**, aged
+2d21h–3d, all `ppid=1` with their FIFO already deleted — genuinely the leak #115
+fixed, so genuinely predating it, and each verified to belong to no live watcher
+and killed by PID. That cleanup was correct and changed nothing, which was the
+first evidence that the remaining fault was not in the drain:
 
 | | before cleanup | after cleanup |
 | --- | --- | --- |
 | watcher invoked directly, 8× | 1 hang, then 0 on a second sample | 0 hang |
 | `pytest tests/test_livelock_watch.py` | 1 failed | **1 failed, then 2 failed** |
 
-> **8 runs cannot resolve a ~10 % rate** and the direct-invocation samples
-> disagree with each other, so treat that row as inconclusive. The pytest row is
-> the signal: the file has failed on **every** run so far.
+> 8 runs cannot resolve a ~12 % rate, and the direct-invocation samples disagree
+> with each other, so that row was inconclusive at the time. 40 runs settled it.
 
-**`cat` no longer leaks; FIFOs do.** Sampling every 8 s during a run:
-`watcher=1`, `cat=0` throughout, so #115's *process* leak is genuinely fixed.
-But `/tmp/livelock_watch.*` **files** accumulate — 3 → 5 → 6 across runs, 6 left
-with no process holding them. A stale FIFO should not block a fresh `mktemp`, so
-this may be cosmetic rather than causal, but it is a second leak in the same
-drain path and is the cheapest thing to rule out first.
+The `/tmp/livelock_watch.*` files growing 3 → 5 → 6 across runs were read as "a
+second leak in the same drain path". They were the same bug: the hung parent
+never reaches its EXIT trap.
 
-```bash
-.venv/bin/python -m pytest -q tests/test_livelock_watch.py            # fails, varying test
-.venv/bin/python -m pytest -q tests/test_livelock_watch.py::<that one>  # passes
-ls /tmp/livelock_watch.* | wc -l                                      # grows per run
-```
-
-**Constraints on the fix** (S7.3 session owner, 2026-09-21): **no `retry`, no
-`xfail`** — the test is reporting something real. During S7.4 a flake gets **one**
-rerun, is **recorded in the PR**, and **a red suite is not merged**.
-
-**It does not affect S7.3 (#121).** Both files are byte-identical to `main`'s
-there and that branch never touched them; S7.3's own suites are green, and its
-measurements did not use `livelock_watch.sh` — the open-loop harness bounds its
-children with the predictor's own `timeout_s`.
-
+</details>
 
 ### 2.10 `WORK_ORDER_domain_scoping.md` — **S1–S5 and S7 done. Only S6 remains, and it is A40 work**
 
@@ -1143,6 +1203,17 @@ Recorded because they are not discoverable from the code.
   end is opened once on fd 3 and the drain inherits it (`cat <&3`), so no
   `open()` can block and the drain is reaped. Measured before and after on the
   same verdict-3 case: old +1, new +0.
+- **That fix was half-applied, and the other half hung the parent for three more
+  days.** #115 converted the drain to `cat <&3` but left the read loop ending
+  `done <"$FIFO"` — the same `open(2)` on the same FIFO, so the same block, just
+  in the parent instead of an orphan. A child that exits before the loop attaches
+  leaves no writer for it: 5 hangs in 40 runs of `-- bash -c 'exit 7'`, and the
+  intermittently red `tests/test_livelock_watch.py` (§2.11). **The rule is the
+  general one, not the line:** once a FIFO's read end is open on a descriptor,
+  every reader must inherit it (`<&3`), because opening a FIFO by name waits for
+  a *future* writer and a dead child is not one. The `/tmp/livelock_watch.*`
+  files §3 reported accumulating were this — a process hung in `open()` never
+  reaches its EXIT trap — and not a second leak.
 - **Three different self-match filters in a row found "survivors" that were the
   checking command itself.** `CLAUDE.md` warns about `pkill -f` and
   `ps | grep`; the same trap also defeats a *structural* argv match written in
