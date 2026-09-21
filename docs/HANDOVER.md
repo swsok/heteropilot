@@ -477,9 +477,31 @@ Measured run-to-run p99 TPOT spread, which S7.4 must report beside every
 verdict: **0.116 ms (0.27 %)** at sim L 37.965 over three runs, and 0.776 ms
 (1.97 %) at L 32.475 — it is not uniform, and it is larger at the lower load.
 
-**4. S7 / V3-R** — one RNGD candidate each of the P2 and P3 shapes, steady-state
-workload, p99/p99. **The only source for the disclosure's §6 verdict-flip
-numbers.** The gate this entry used to leave open — `--condition-mismatch warn`
+**S7.4 AND S7.5 ARE DONE (2026-09-21). S7 is complete.** V3-R ran, and its
+result is not the one the work order expected:
+
+* **§6 is still not established, and now for a stated reason.** The one rankable
+  case is **circular** — the open-loop domain's robust 42.894 returns the
+  measured 42.895 because that point was fitted from it. Leave-one-out gives the
+  domain ±0.63 ms on held-out interior points, which is predictive accuracy and
+  not a verdict count, and the **boundary points cannot be leave-one-out
+  validated at all**.
+* **What V3-R did establish is a counterfactual, and it belongs to §5.2/§8(3).**
+  Consulted outside its arrival-process condition, the **closed-loop** domain
+  false-passes a violating candidate by **4.911 ms = 42× the run-to-run
+  spread**. D113 asserted that as policy; this is the number.
+* **P2 is a true positive of the hold**: `sim feasible / planner refuse /
+  measured saturated`.
+
+`experiments/p2_evidence/results/v3r_verdict_accuracy.md`;
+`patent2_evidence_map.md` §0(ii) and its §6 rows.
+
+**What §6 would still need**: a verdict case whose domain point was **not**
+fitted from the measurement that judges it — a hold-out design (which the
+boundary points cannot support) or a measurement at an operating point the
+domain already covers from other data.
+
+**~~4. S7 / V3-R~~** — done; kept here only so the numbering below is stable. The gate this entry used to leave open — `--condition-mismatch warn`
 now, or wait for item 1 — **is decided**: `WORK_ORDER_domain_scoping.md` §S7.1
 picks the refit first, because a §6 number obtained with the condition check
 switched off would support the margin claim and contradict the §8(3) scoping

@@ -108,3 +108,14 @@ S6(i) is the measurement that would close it.
 | §6 — verdict-flip numbers | **not from here.** The margin is ≈21 % only in the RNGD region; S7 on the RNGD node is the only source, and it has not run |
 
 The last row is the standing limit and this addendum does not change it.
+
+> **Addendum, 2026-09-21: S7 has now run, and the limit still stands.** S7.3
+> measured an open-loop RNGD domain and S7.4 used it. The ≈21 % margin is real
+> and was reproduced — 21.40 % at sim L 37.965 — but the case whose verdict it
+> decides is **circular**: that domain point was fitted from the very
+> measurement that judges it, so `sim × (1+m)` returns the measurement by
+> construction. What S7.4 *did* establish is a **counterfactual** belonging to
+> the rows above, not to §6: consulted outside its arrival-process condition,
+> the closed-loop domain **false-passes** a candidate that violates, by 4.911 ms
+> = 42× the run-to-run spread. See `v3r_verdict_accuracy.md` and
+> `patent2_evidence_map.md` §0(ii).

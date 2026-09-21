@@ -60,11 +60,23 @@ operating mode, or a vacuous stage 2). A reader seeing one shaded band must be
 able to ask why the rest is unshaded and get an answer per interval, not in
 aggregate.
 
-**(ii) V3-R is left as a selection step.** When an RNGD node is available, select
-one RNGD candidate each of the P2 and P3 shapes and run the same comparison.
-Until then the specification must not imply that the RNGD regime's verdicts have
-been checked against hardware — V0 and V1 establish the *error* and the *margin*
-there, not the *verdict*.
+**(ii) V3-R RAN on 2026-09-21 (S7.4) and this paragraph's conclusion survives it,
+for a different reason.** It was written as "left as a selection step"; the step
+was taken, on the NPU node, against an open-loop domain measured for the purpose
+(S7.3). What it produced is **not** a §6 verdict count:
+
+* the one case whose verdict is rankable is **circular at the point that decides
+  it** — the open-loop domain's robust value returns the measurement it was
+  fitted from, by construction (`v3r_verdict_accuracy.md` §3);
+* leave-one-out gives that domain **±0.63 ms** on held-out interior points, which
+  is predictive accuracy, not a verdict count, and the **two boundary points
+  cannot be leave-one-out validated at all** — one of them is this case.
+
+**So the specification still must not imply that the RNGD regime's verdicts have
+been checked against hardware.** V0 and V1 establish the *error* and the
+*margin* there; V3-R adds a measured **counterfactual** — what a domain
+consulted outside its application conditions does — which belongs to §5.2 and
+§8(3), not to §6.
 
 ## 1. Section-by-section map
 
@@ -90,7 +102,10 @@ there, not the *verdict*.
 | **§8(3)** grounds for withholding a verdict, distinguished | two refusals, not one: `OUTSIDE_CALIBRATION_DOMAIN` (a domain applies, the operating point is past the end of its load axis) and `CALIBRATION_CONDITION_MISMATCH` (no domain was measured under this configuration at all). They ask for **different measurements** — a wider load range against a measurement at the candidate's own configuration — and the planner prints which, per candidate | deviations **D110**, **D113**; `ea1_s4_condition_refuse.md` §3 | **established**. E-A1's 12 single-card RNGD candidates move from the first to the second when `arrival_process` is stated: same hold, different measurement requested |
 | §6 verdict accuracy, A40 cases | — | **not measurable**: the deploy backend blocks P2 and P3 | `v3_verdict_accuracy.md` §4① | **not established** |
 | §6 cost of holding | all 30 held candidates are also rejected unmargined → holding costs nothing on this fixture | `v3_verdict_accuracy.md` §1 | **established** |
-| §6 verdict accuracy, RNGD regime | — | **V3-R, not scheduled** | **not established** |
+| §6 verdict accuracy, RNGD regime | — | **V3-R RAN (S7.4, 2026-09-21) and did NOT establish this.** The one rankable case is **circular at the point that decides it**: the open-loop domain's robust 42.894 against a measured 42.895 is construction, not accuracy — that point's `tpot_err_pct` was computed from that measurement. Leave-one-out gives the domain ±0.63 ms on held-out interior points, which is predictive accuracy and **not a verdict count**; the two boundary points, one of which is this case, cannot be leave-one-out validated at all | `v3r_verdict_accuracy.md` §2–§3 | **not established** — and now for a stated reason rather than for want of a measurement |
+| **§5.2 / §8(3)** — consulting a domain outside its application conditions, measured | the counterfactual D113 asserted as policy. Consulted anyway, the **closed-loop** domain calls the candidate feasible (robust 37.984 ms) and the hardware violates (measured p99 TPOT **42.895**, 3 runs, spread 0.116): a **false pass**, under-predicting by **4.911 ms = 42× the run-to-run spread**. Non-circular — that domain was fitted on a closed-loop burst (D19) with no input from this or any open-loop measurement | `v3r_verdict_accuracy.md` §2 | **established**, n=1, **counterfactual** |
+| **§8(3)** — a hold that was right, measured end to end | P2 at sim L 74.498: `sim feasible` (unmargined 46.691 ms < 50) / `planner refuse` (far outside the domain's [11.730, 37.965]) / **`measured saturated`** (served concurrency 114.198 against the simulator's 74.498, p99 TPOT 89.111 ms, drift slope over threshold). The refusal was right and the unmargined simulator was wrong | `v3r_verdict_accuracy.md` §4 | **established**, n=1. A true positive of the HOLD, which is a different claim from a margin being the right size |
+| §6 reporting discipline — when a verdict may be ranked at all | a separation below **3× the measured run-to-run spread at that operating point** is recorded as **"indistinguishable"**, a verdict rather than a failure to reach one. It bites on the *wider* band: sim L 32.475's inversion band is 3.213 ms — four times wider on its face — but its spread is 0.776 ms and 3× consumes it, while L 37.965's 4.910 ms band against a 0.116 ms spread is rankable at 21.2× | `v3r_verdict_accuracy.md` §1, `v3r_slo_inversion.json` | **established as a rule**. The spread is measured and **varies by operating point**; one value across the range would have mis-ranked L 32.475 |
 | **§2, §5.2** — V3 P1's ENDING | under rule (e) P1 is **held at every TPOT SLO from 38 to 50 ms, identically** — a condition mismatch is decided before any margin exists, so no threshold can move it. Rules (a)–(d) made 6 / 3 / 6 / 6 false passes on that grid; (e) makes **none**, and none of the correct rejections either | `v3_addendum_s4.md` §1 | **established**, n=1. The case closes as "unmeasured at its own configuration", not as a verdict |
 | §2 — and the prediction was recoverable where the margin was not | with the link priced from measurement (8.8 GB/s) the same candidate predicts **60.09 ms** p99 TPOT against **64.616** measured (−7.01 %) and `L` within **0.73 %** | `v3_addendum_s4.md` §3, `v5_resim_measured_link.json` | **established**. P1 needed a bandwidth that was not a datasheet number, not a 44 % correction |
 | fig. 2 | measured residual curve, sign change, zero-margin span, registered region | `experiments/figures/patent2_fig2_measured.png`, from `v4_figure2.py` | **established** — 8 points on the **p99 basis the verdict reads** (D101); c16.6 is absent because it has no per-request pair |
@@ -158,7 +173,13 @@ not in this work order.
    (`arrival_process: closed_loop`, D113), so the planner now refuses that
    transfer rather than performing it silently — but refusing is not the same as
    measuring, and V2 is still what would settle it.
-4. **V3-R** if an RNGD node becomes available.
+4. ~~**V3-R** if an RNGD node becomes available.~~ **Done 2026-09-21 (S7.4).**
+   It did not close §6 — see §0(ii) — so what remains for §6 in the RNGD regime
+   is a verdict case whose domain point was **not** fitted from the measurement
+   that judges it. That needs either a hold-out design (fit the domain without
+   the operating point under test, which the boundary points cannot support) or
+   a second measurement at an operating point the domain already covers from
+   other data.
 5. **A run in which the registry itself names the V3 link** — §1.5 step 1. The
    mechanism that made it impossible is fixed (D112); the demonstration has not
    been done.
