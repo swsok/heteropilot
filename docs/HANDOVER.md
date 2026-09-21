@@ -1112,14 +1112,39 @@ D23 and D14 are **closed** (D26 and D28 respectively); what remains is narrower:
 
 - **PR #13** (`docs/slide-deck-ko`) — dispositioned by the consolidation sprint's
   STEP 4.3; see that PR for what was decided.
-- **Remote branches are clean.** `origin` holds `main` and nothing else. The 17
-  already-merged branches turned out to have been deleted already; the D22 chain
-  and the ScenarioLab workspace branches went during the consolidation sprint, the
-  latter after verifying their content reached the split repo; the twelve
-  `feat/rps-step*` branches and `spike/d14-asym-tp` went after PR #72, once
-  `git rev-list --count origin/main..<tip>` was 0 for each. Nothing on the spike
-  branch was unique except its throwaway `serving/` edits, which A3 forbids
-  merging — its findings live in `docs/d14_spike.md`,
+- **Remote branches are clean, with exactly one deliberate exception.** As of
+  **2026-09-21** `origin` holds **`main` and `spike/npu-exec-b-prototype`**, and
+  nothing else. Verify with `git ls-remote --heads origin`, not with a local
+  `git branch -r`, which can be stale.
+
+  **`spike/npu-exec-b-prototype` is kept on purpose and must not be deleted.**
+  Its `c511efc` is the only commit on any branch that carries content `main`
+  does not have — `serving/__main__.py`, `serving/core/scheduler.py` and two
+  `rngd-card-…-aot-{strict,alternate}.json` fixtures. It is the STEP B prototype
+  §2.0 records as **do-not-merge**: A3 forbids merging those `serving/` edits,
+  so the branch *is* the artifact. Deleting it destroys it.
+
+  **The 19 branches removed on 2026-09-21** were each checked with
+  `git rev-list --count origin/main..origin/<branch>` first. Sixteen were 0.
+  Three read 1 — `feat/ds-s3-link-effective-bw` (`b9137a0`, PR #110),
+  `feat/ds-s4-ea1-condition-refuse` (`b418d9e`, #111) and
+  `spike/npu-exec-a-decompose` (`bf8e4fa`, #102) — and in all three that one
+  commit was an **empty merge commit**: combined diff empty, tree identical to
+  one parent, both parents already on `main`. The first two are the residue of
+  the bottom-up merge accident PR #112 rescued. Nothing was lost; tip SHAs were
+  recorded before the delete.
+
+  **A count of 1 is therefore not automatically "do not delete".** Check what
+  the commit *is*: `git show --format="" -c <sha>` empty plus a tree equal to a
+  parent's means a pure merge and the branch is redundant. A single non-merge
+  commit, as on the spike branch, means the opposite.
+
+  Earlier rounds, for the record: the D22 chain and the ScenarioLab workspace
+  branches went during the consolidation sprint, the latter after verifying
+  their content reached the split repo; the twelve `feat/rps-step*` branches and
+  `spike/d14-asym-tp` went after PR #72. Nothing on *that* spike branch was
+  unique except its throwaway `serving/` edits, which A3 forbids merging — its
+  findings live in `docs/d14_spike.md`,
   `docs/upstream_issues/llmservingsim-trace-column-overflow.md`,
   `outputs/d14/evidence/` and D28.
 - **`docs/nodes/a5000.md` is thin and says so** — written from committed artifacts,
