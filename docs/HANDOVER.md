@@ -238,6 +238,65 @@ not a gap to paper over.
 
 ## 2. Next work, in priority order
 
+### 2.11 `tests/test_livelock_watch.py` is intermittently red on `main` — **for the A40 session**
+
+*Filed here rather than as a GitHub issue: this token cannot create issues
+(`createIssue` → 403). Found 2026-09-21 on the NPU node (accelerator set
+`6fe246ed1abf`) while gating #121. `livelock_watch.sh` and its tests came from
+**#115**, so this is that work's to finish, not S7.3's.*
+
+**`main` fails intermittently, and a different test each run**, always a 60 s
+`subprocess.TimeoutExpired` on a command that is a single `cat` of a small file
+— so the watcher is not noticing its child exited:
+
+| run | failed |
+| --- | --- |
+| 1 | `test_healthy_run_is_never_flagged` |
+| 2 | `test_command_exit_code_passes_through` |
+| 3 | `test_a_growing_queue_alone_does_not_trigger` |
+| 4 | `test_the_streak_must_be_consecutive` **and** `test_command_exit_code_passes_through` |
+
+**It is inter-test interference, not a per-test race.**
+`test_a_growing_queue_alone_does_not_trigger` **passes alone in 0.07 s** and
+fails inside the file. Something is carried between tests.
+
+**The orphan cleanup did not fix it.** There were **20 orphaned
+`cat /tmp/livelock_watch.*` processes**, aged 2d21h–3d, all `ppid=1` with their
+FIFO already deleted — the leak #115 fixed, so they predate it. Each was
+verified to belong to no live watcher and killed by PID. Afterwards:
+
+| | before cleanup | after cleanup |
+| --- | --- | --- |
+| watcher invoked directly, 8× | 1 hang, then 0 on a second sample | 0 hang |
+| `pytest tests/test_livelock_watch.py` | 1 failed | **1 failed, then 2 failed** |
+
+> **8 runs cannot resolve a ~10 % rate** and the direct-invocation samples
+> disagree with each other, so treat that row as inconclusive. The pytest row is
+> the signal: the file has failed on **every** run so far.
+
+**`cat` no longer leaks; FIFOs do.** Sampling every 8 s during a run:
+`watcher=1`, `cat=0` throughout, so #115's *process* leak is genuinely fixed.
+But `/tmp/livelock_watch.*` **files** accumulate — 3 → 5 → 6 across runs, 6 left
+with no process holding them. A stale FIFO should not block a fresh `mktemp`, so
+this may be cosmetic rather than causal, but it is a second leak in the same
+drain path and is the cheapest thing to rule out first.
+
+```bash
+.venv/bin/python -m pytest -q tests/test_livelock_watch.py            # fails, varying test
+.venv/bin/python -m pytest -q tests/test_livelock_watch.py::<that one>  # passes
+ls /tmp/livelock_watch.* | wc -l                                      # grows per run
+```
+
+**Constraints on the fix** (S7.3 session owner, 2026-09-21): **no `retry`, no
+`xfail`** — the test is reporting something real. During S7.4 a flake gets **one**
+rerun, is **recorded in the PR**, and **a red suite is not merged**.
+
+**It does not affect S7.3 (#121).** Both files are byte-identical to `main`'s
+there and that branch never touched them; S7.3's own suites are green, and its
+measurements did not use `livelock_watch.sh` — the open-loop harness bounds its
+children with the predictor's own `timeout_s`.
+
+
 ### 2.10 `WORK_ORDER_domain_scoping.md` — **S1–S5 done 2026-09-17/18. The CPU half is finished; S6 and S7 need nodes**
 
 The newest item and the front of the queue. It exists because STEP V3 of
