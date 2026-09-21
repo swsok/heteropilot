@@ -1,0 +1,126 @@
+# RNGD-CARD accuracy domain -- OPEN-LOOP points, measured 2026-09-21 on the NPU node.
+#
+# WORK_ORDER_domain_scoping.md STEP S7.3; docs/deviations.md D115.
+#
+# A SEPARATE FILE, per rule A3 and for the reason a40.accuracy.yaml's header
+# gives: rngd_card_edf.yaml is CLOSED-LOOP (D113 states it on the file itself),
+# `python -m planner plan` always replays an arrival trace, and two protocols on
+# one interpolation axis is the class of error D22 was. Nothing there is touched.
+#
+# WHY IT EXISTS. Under the default `condition_mismatch: refuse`, every RNGD
+# candidate is held against the closed-loop domain before a margin is ever
+# computed -- 72 of 72 rows in S7.0's sweep, all on `arrival_process`. A wider
+# load range does not answer them; a measurement under the arrival process the
+# planner performs does.
+#
+# COMPARED METRIC: tpot_p99. This is the basis the margin is APPLIED on (D101) and the basis S7.4's verdicts are read at, so the file is fitted where it is used. Its `.p50.yaml` sibling carries the same measurements on the p50 basis, for comparison with rngd_card_edf.yaml, which is p50.
+#
+# Sign: (sim - measured) / measured. Negative = the simulator is optimistic,
+# the direction that earns a margin.
+#
+# TTFT errors are RAW CLIENT-SIDE. Over HTTP the client's TTFT includes request
+# serialisation and the SSE first-chunk path -- measured at +20.26 ms on the A40
+# (openloop/a40.accuracy.openloop.yaml) -- and nothing is subtracted here.
+#
+# THE WORKLOAD-MATCH INVARIANT IS CHECKED, not assumed. With --ignore-eos the
+# card must deliver the trace's own output_toks, because the simulator generates
+# exactly those. The first S7.3 runs did not: replay_to_endpoint caps completions
+# at min(output_toks, --max-tokens-cap) and that cap defaulted to 512 against a
+# trace whose p50 is 632, so the card did 78.6 % of the work and the shortfall
+# read as an 18-37 % concurrency error. Every point below delivered the trace's
+# tokens to within 0.01 %; the cap is now resolved from the trace (D115).
+hardware:
+  RNGD-CARD:
+    hardware: RNGD-CARD
+    accuracy_domain:
+      fitted_at_concurrency: 11.730
+      # `refuse` is the D33 default for a new domain, and it is
+      # kept: these points span a 3.2x concurrency range
+      # and say nothing about what happens outside it.
+      outside_domain: refuse
+      source: measured
+      arrival_process: open_loop
+      compared_metric: tpot_p99
+      # The card as one accelerator: one card is tp=1 on one
+      # island, the same convention rngd_card_edf.yaml states.
+      parallelism: {tp: 1, pp: 1, dp: 1}
+      placement:
+        islands: 1
+        # MEASURED BOUND, unlike every earlier RNGD artifact:
+        # the harness resolves the card's NUMA node through the
+        # BDF and binds server and client to it (default `auto`).
+        device_binding: numa_pinned
+      points:
+        - {conc: 11.730, tpot_err_pct: 2.02, tpot_err_pct_p50: 7.82, ttft_err_pct: -5.81,
+           note: "0.75 rps, 300 req, 1 run. measured L 11.31 (gap +3.7%). single run, so no run-to-run spread is known here"}
+        - {conc: 16.545, tpot_err_pct: -0.76, tpot_err_pct_p50: 5.25, ttft_err_pct: -2.42,
+           note: "1 rps, 300 req, 1 run. measured L 16.17 (gap +2.3%). single run, so no run-to-run spread is known here"}
+        - {conc: 21.668, tpot_err_pct: -2.25, tpot_err_pct_p50: 2.25, ttft_err_pct: -15.32,
+           note: "1.25 rps, 300 req, 1 run. measured L 21.71 (gap -0.2%). single run, so no run-to-run spread is known here"}
+        - {conc: 27.002, tpot_err_pct: -5.96, tpot_err_pct_p50: -5.56, ttft_err_pct: -22.94,
+           note: "1.5 rps, 300 req, 1 run. measured L 28.71 (gap -6.0%). single run, so no run-to-run spread is known here"}
+        - {conc: 32.475, tpot_err_pct: -13.10, tpot_err_pct_p50: -10.86, ttft_err_pct: -15.86,
+           note: "1.75 rps, 300 req, 3 runs. measured L 36.38 (gap -10.7%). p99 TPOT spread over the 3 runs 0.7763 ms"}
+        - {conc: 37.965, tpot_err_pct: -17.63, tpot_err_pct_p50: -14.88, ttft_err_pct: -26.21,
+           note: "2 rps, 300 req, 3 runs. measured L 44.51 (gap -14.7%). p99 TPOT spread over the 3 runs 0.1161 ms"}
+      note: >
+        6 open-loop points from a deployed furiosa-llm
+        server, served concurrency 11.73 to
+        37.97 as the SIMULATOR computes it
+        (the committed files' x-axis convention). Fitted on
+        tpot_p99. The upper bound is NOT where measuring
+        stopped: see provenance.unpaired_points, which records
+        every rate measured above it and why none of them is a
+        point.
+provenance:
+  harness: experiments/scripts/measure_envelope.py --mode open
+  driver: experiments/scripts/replay_to_endpoint.py --open-loop --ignore-eos
+  pairing: experiments/scripts/openloop_sim_error.py, --match offered
+  # MEASURED AND KEPT, not discarded. Each of these is a real
+  # measurement of the card at a real offered rate; what it is
+  # NOT is a calibration point, because the simulator sat at a
+  # different served concurrency, so its p99 is another
+  # operating point's p99. They are the evidence for where the
+  # domain stops, which is otherwise an assertion. Keyed by
+  # OFFERED rps -- the one axis both sides share up here.
+  unpaired_points:
+    - offered_rps: 2.25
+      pairing: unpaired_served_l
+      served_l_real: 60.550
+      served_l_sim: 43.689
+      l_gap_pct: -27.85
+      tpot_p99_measured_ms: 59.862
+      tpot_p99_sim_ms: 36.715
+      tpot_p99_under_prediction_pct: -38.67
+      saturated: false
+      runs: 2
+    - offered_rps: 2.5
+      pairing: unpaired_served_l
+      served_l_real: 73.997
+      served_l_sim: 49.527
+      l_gap_pct: -33.07
+      tpot_p99_measured_ms: 65.422
+      tpot_p99_sim_ms: 38.480
+      tpot_p99_under_prediction_pct: -41.18
+      saturated: false
+      runs: 1
+    - offered_rps: 3
+      pairing: unpaired_served_l
+      served_l_real: 99.967
+      served_l_sim: 61.677
+      l_gap_pct: -38.30
+      tpot_p99_measured_ms: 89.422
+      tpot_p99_sim_ms: 42.871
+      tpot_p99_under_prediction_pct: -52.06
+      saturated: false
+      runs: 1
+    - offered_rps: 3.5
+      pairing: unpaired_served_l
+      served_l_real: 114.198
+      served_l_sim: 74.498
+      l_gap_pct: -34.76
+      tpot_p99_measured_ms: 89.111
+      tpot_p99_sim_ms: 46.691
+      tpot_p99_under_prediction_pct: -47.60
+      saturated: true
+      runs: 1

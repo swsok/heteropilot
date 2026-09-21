@@ -1,0 +1,1061 @@
+{
+  "fixture": {
+    "base_arrival_rate_rps": 10.0,
+    "cluster": "experiments/configs/clusters/pd-rngd-gpu-card.yaml",
+    "num_requests": 300,
+    "seed": 42,
+    "service": "examples/service_specs/llama31-8b.yaml"
+  },
+  "mirror_island": "furiosa-rngd-card-node_rngd1",
+  "provenance": {
+    "accelerators": {
+      "atom_devices": 4,
+      "cuda": null,
+      "rngd_cards": 3
+    },
+    "backend_version": null,
+    "cluster_spec_hash": null,
+    "command": "v3r_select_candidates.py --rps 0.75,1.25,1.75,2.25 --workers 4 --work-dir outputs/s73_sim/work --cache-dir outputs/p2_evidence/v3r/cache --out outputs/s73_sim/v3r_candidates_extra.json",
+    "cpu_count": 96,
+    "cpu_placement": {
+      "affinity_cpus": 48,
+      "numa_node_of_affinity": 1,
+      "numa_nodes": 2
+    },
+    "dataset_hash": null,
+    "git_commit": "05a500259af42691d5a8aa794cf0c9588bff8bd8",
+    "git_dirty": true,
+    "hardware_profile_hash": null,
+    "hostname": "etri-001",
+    "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
+    "model_revision": null,
+    "platform": "Linux-6.8.0-40-generic-x86_64-with-glibc2.35",
+    "python_version": "3.10.12",
+    "random_seed": null,
+    "service_spec_hash": null,
+    "timestamp": "2026-09-18T07:44:37.892476+00:00",
+    "vllm_version": null
+  },
+  "rows": [
+    {
+      "basis": "RNGD-CARD[total]: L=11.73 in domain [1.02, 76]; ttft: NO point - unmeasured in this domain; tpot: interpolated between L=8.211 and L=14.83 | NO margin for ttft: unmeasured in this domain, so that check ran unmargined | measured closed-loop (RNGD-CARD), so its TTFT does not transfer to an open-loop deployment (D19) | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 32,
+      "operating_point": 11.730193512627324,
+      "p99_tpot_ms": 28.10557441,
+      "p99_ttft_ms": 382.1935767799996,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": "unmeasured: RNGD-CARD: the accuracy domain was measured under different conditions (arrival_process) - arrival_process: domain 'closed_loop', candidate 'open_loop'. It may not be consulted here, so this candidate is unmeasured AT ITS OWN CONFIGURATION, not infeasible (S1, D110) | registered domains for this hardware: profiles/calibration/rngd_card_edf.yaml (hardware=RNGD-CARD, model=any, variant=any, workload_shape=any, arrival_process=closed_loop, tp=1 pp=1 dp=1, islands=1 binding=unknown, compared_metric=not stated)"
+      },
+      "rps": 0.75,
+      "served_concurrency": 11.730193512627325,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": "calibration_condition_mismatch"
+      },
+      "tokens_per_joule": 0.8163160595177014,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=11.73 in domain [1.02, 76]; ttft: NO point - unmeasured in this domain; tpot: interpolated between L=8.211 and L=14.83 | NO margin for ttft: unmeasured in this domain, so that check ran unmargined | measured closed-loop (RNGD-CARD), so its TTFT does not transfer to an open-loop deployment (D19) | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 32,
+      "operating_point": 11.730137606583835,
+      "p99_tpot_ms": 28.13101134,
+      "p99_ttft_ms": 302.8145270499999,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": "unmeasured: RNGD-CARD: the accuracy domain was measured under different conditions (arrival_process) - arrival_process: domain 'closed_loop', candidate 'open_loop'. It may not be consulted here, so this candidate is unmeasured AT ITS OWN CONFIGURATION, not infeasible (S1, D110) | registered domains for this hardware: profiles/calibration/rngd_card_edf.yaml (hardware=RNGD-CARD, model=any, variant=any, workload_shape=any, arrival_process=closed_loop, tp=1 pp=1 dp=1, islands=1 binding=unknown, compared_metric=not stated)"
+      },
+      "rps": 0.75,
+      "served_concurrency": 11.730137606583833,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": "calibration_condition_mismatch"
+      },
+      "tokens_per_joule": 0.8163160595177014,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=11.73 in domain [1.02, 76]; ttft: NO point - unmeasured in this domain; tpot: interpolated between L=8.211 and L=14.83 | NO margin for ttft: unmeasured in this domain, so that check ran unmargined | measured closed-loop (RNGD-CARD), so its TTFT does not transfer to an open-loop deployment (D19) | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 128,
+      "operating_point": 11.730193512627324,
+      "p99_tpot_ms": 28.10557441,
+      "p99_ttft_ms": 382.1935767799996,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": "unmeasured: RNGD-CARD: the accuracy domain was measured under different conditions (arrival_process) - arrival_process: domain 'closed_loop', candidate 'open_loop'. It may not be consulted here, so this candidate is unmeasured AT ITS OWN CONFIGURATION, not infeasible (S1, D110) | registered domains for this hardware: profiles/calibration/rngd_card_edf.yaml (hardware=RNGD-CARD, model=any, variant=any, workload_shape=any, arrival_process=closed_loop, tp=1 pp=1 dp=1, islands=1 binding=unknown, compared_metric=not stated)"
+      },
+      "rps": 0.75,
+      "served_concurrency": 11.730193512627325,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": "calibration_condition_mismatch"
+      },
+      "tokens_per_joule": 0.8163160595177014,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=11.73 in domain [1.02, 76]; ttft: NO point - unmeasured in this domain; tpot: interpolated between L=8.211 and L=14.83 | NO margin for ttft: unmeasured in this domain, so that check ran unmargined | measured closed-loop (RNGD-CARD), so its TTFT does not transfer to an open-loop deployment (D19) | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 128,
+      "operating_point": 11.730137606583835,
+      "p99_tpot_ms": 28.13101134,
+      "p99_ttft_ms": 302.8145270499999,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": "unmeasured: RNGD-CARD: the accuracy domain was measured under different conditions (arrival_process) - arrival_process: domain 'closed_loop', candidate 'open_loop'. It may not be consulted here, so this candidate is unmeasured AT ITS OWN CONFIGURATION, not infeasible (S1, D110) | registered domains for this hardware: profiles/calibration/rngd_card_edf.yaml (hardware=RNGD-CARD, model=any, variant=any, workload_shape=any, arrival_process=closed_loop, tp=1 pp=1 dp=1, islands=1 binding=unknown, compared_metric=not stated)"
+      },
+      "rps": 0.75,
+      "served_concurrency": 11.730137606583833,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": "calibration_condition_mismatch"
+      },
+      "tokens_per_joule": 0.8163160595177014,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=11.73 in domain [1.02, 76]; ttft: NO point - unmeasured in this domain; tpot: interpolated between L=8.211 and L=14.83 | NO margin for ttft: unmeasured in this domain, so that check ran unmargined | measured closed-loop (RNGD-CARD), so its TTFT does not transfer to an open-loop deployment (D19) | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 256,
+      "operating_point": 11.730193512627324,
+      "p99_tpot_ms": 28.10557441,
+      "p99_ttft_ms": 382.1935767799996,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": "unmeasured: RNGD-CARD: the accuracy domain was measured under different conditions (arrival_process) - arrival_process: domain 'closed_loop', candidate 'open_loop'. It may not be consulted here, so this candidate is unmeasured AT ITS OWN CONFIGURATION, not infeasible (S1, D110) | registered domains for this hardware: profiles/calibration/rngd_card_edf.yaml (hardware=RNGD-CARD, model=any, variant=any, workload_shape=any, arrival_process=closed_loop, tp=1 pp=1 dp=1, islands=1 binding=unknown, compared_metric=not stated)"
+      },
+      "rps": 0.75,
+      "served_concurrency": 11.730193512627325,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": "calibration_condition_mismatch"
+      },
+      "tokens_per_joule": 0.8163160595177014,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=11.73 in domain [1.02, 76]; ttft: NO point - unmeasured in this domain; tpot: interpolated between L=8.211 and L=14.83 | NO margin for ttft: unmeasured in this domain, so that check ran unmargined | measured closed-loop (RNGD-CARD), so its TTFT does not transfer to an open-loop deployment (D19) | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 256,
+      "operating_point": 11.730137606583835,
+      "p99_tpot_ms": 28.13101134,
+      "p99_ttft_ms": 302.8145270499999,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": "unmeasured: RNGD-CARD: the accuracy domain was measured under different conditions (arrival_process) - arrival_process: domain 'closed_loop', candidate 'open_loop'. It may not be consulted here, so this candidate is unmeasured AT ITS OWN CONFIGURATION, not infeasible (S1, D110) | registered domains for this hardware: profiles/calibration/rngd_card_edf.yaml (hardware=RNGD-CARD, model=any, variant=any, workload_shape=any, arrival_process=closed_loop, tp=1 pp=1 dp=1, islands=1 binding=unknown, compared_metric=not stated)"
+      },
+      "rps": 0.75,
+      "served_concurrency": 11.730137606583833,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": "calibration_condition_mismatch"
+      },
+      "tokens_per_joule": 0.8163160595177014,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=21.75 in domain [1.02, 76]; ttft: NO point - unmeasured in this domain; tpot: interpolated between L=16.6 and L=25.18 | NO margin for ttft: unmeasured in this domain, so that check ran unmargined | measured closed-loop (RNGD-CARD), so its TTFT does not transfer to an open-loop deployment (D19) | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 32,
+      "operating_point": 21.750434426928216,
+      "p99_tpot_ms": 31.46788639,
+      "p99_ttft_ms": 2004.0256879299998,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": "unmeasured: RNGD-CARD: the accuracy domain was measured under different conditions (arrival_process) - arrival_process: domain 'closed_loop', candidate 'open_loop'. It may not be consulted here, so this candidate is unmeasured AT ITS OWN CONFIGURATION, not infeasible (S1, D110) | registered domains for this hardware: profiles/calibration/rngd_card_edf.yaml (hardware=RNGD-CARD, model=any, variant=any, workload_shape=any, arrival_process=closed_loop, tp=1 pp=1 dp=1, islands=1 binding=unknown, compared_metric=not stated)"
+      },
+      "rps": 1.25,
+      "served_concurrency": 21.750434426928216,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": "calibration_condition_mismatch"
+      },
+      "tokens_per_joule": 1.3228019122843484,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 3.3143645707946146,
+        "d_refuse": 3.3143645707946146,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=21.75 in domain [1.02, 76]; ttft: NO point - unmeasured in this domain; tpot: interpolated between L=16.6 and L=25.18 | NO margin for ttft: unmeasured in this domain, so that check ran unmargined | measured closed-loop (RNGD-CARD), so its TTFT does not transfer to an open-loop deployment (D19) | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 32,
+      "operating_point": 21.74800734117506,
+      "p99_tpot_ms": 31.49290339,
+      "p99_ttft_ms": 1997.2791119299998,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": "unmeasured: RNGD-CARD: the accuracy domain was measured under different conditions (arrival_process) - arrival_process: domain 'closed_loop', candidate 'open_loop'. It may not be consulted here, so this candidate is unmeasured AT ITS OWN CONFIGURATION, not infeasible (S1, D110) | registered domains for this hardware: profiles/calibration/rngd_card_edf.yaml (hardware=RNGD-CARD, model=any, variant=any, workload_shape=any, arrival_process=closed_loop, tp=1 pp=1 dp=1, islands=1 binding=unknown, compared_metric=not stated)"
+      },
+      "rps": 1.25,
+      "served_concurrency": 21.74800734117506,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": "calibration_condition_mismatch"
+      },
+      "tokens_per_joule": 1.3228019122843484,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 3.314310228132009,
+        "d_refuse": 3.314310228132009,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=21.67 in domain [1.02, 76]; ttft: NO point - unmeasured in this domain; tpot: interpolated between L=16.6 and L=25.18 | NO margin for ttft: unmeasured in this domain, so that check ran unmargined | measured closed-loop (RNGD-CARD), so its TTFT does not transfer to an open-loop deployment (D19) | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 128,
+      "operating_point": 21.667774996430346,
+      "p99_tpot_ms": 31.56662299,
+      "p99_ttft_ms": 386.0117470599997,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": "unmeasured: RNGD-CARD: the accuracy domain was measured under different conditions (arrival_process) - arrival_process: domain 'closed_loop', candidate 'open_loop'. It may not be consulted here, so this candidate is unmeasured AT ITS OWN CONFIGURATION, not infeasible (S1, D110) | registered domains for this hardware: profiles/calibration/rngd_card_edf.yaml (hardware=RNGD-CARD, model=any, variant=any, workload_shape=any, arrival_process=closed_loop, tp=1 pp=1 dp=1, islands=1 binding=unknown, compared_metric=not stated)"
+      },
+      "rps": 1.25,
+      "served_concurrency": 21.667774996430342,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": "calibration_condition_mismatch"
+      },
+      "tokens_per_joule": 1.3228935698447895,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 3.3125138510854564,
+        "d_refuse": 3.3125138510854564,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=21.67 in domain [1.02, 76]; ttft: NO point - unmeasured in this domain; tpot: interpolated between L=16.6 and L=25.18 | NO margin for ttft: unmeasured in this domain, so that check ran unmargined | measured closed-loop (RNGD-CARD), so its TTFT does not transfer to an open-loop deployment (D19) | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 128,
+      "operating_point": 21.670896836112114,
+      "p99_tpot_ms": 31.634551869999996,
+      "p99_ttft_ms": 316.8674722399999,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": "unmeasured: RNGD-CARD: the accuracy domain was measured under different conditions (arrival_process) - arrival_process: domain 'closed_loop', candidate 'open_loop'. It may not be consulted here, so this candidate is unmeasured AT ITS OWN CONFIGURATION, not infeasible (S1, D110) | registered domains for this hardware: profiles/calibration/rngd_card_edf.yaml (hardware=RNGD-CARD, model=any, variant=any, workload_shape=any, arrival_process=closed_loop, tp=1 pp=1 dp=1, islands=1 binding=unknown, compared_metric=not stated)"
+      },
+      "rps": 1.25,
+      "served_concurrency": 21.670896836112117,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": "calibration_condition_mismatch"
+      },
+      "tokens_per_joule": 1.3228019122843484,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 3.3125837469292105,
+        "d_refuse": 3.3125837469292105,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=21.67 in domain [1.02, 76]; ttft: NO point - unmeasured in this domain; tpot: interpolated between L=16.6 and L=25.18 | NO margin for ttft: unmeasured in this domain, so that check ran unmargined | measured closed-loop (RNGD-CARD), so its TTFT does not transfer to an open-loop deployment (D19) | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 256,
+      "operating_point": 21.667774996430346,
+      "p99_tpot_ms": 31.56662299,
+      "p99_ttft_ms": 386.0117470599997,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": "unmeasured: RNGD-CARD: the accuracy domain was measured under different conditions (arrival_process) - arrival_process: domain 'closed_loop', candidate 'open_loop'. It may not be consulted here, so this candidate is unmeasured AT ITS OWN CONFIGURATION, not infeasible (S1, D110) | registered domains for this hardware: profiles/calibration/rngd_card_edf.yaml (hardware=RNGD-CARD, model=any, variant=any, workload_shape=any, arrival_process=closed_loop, tp=1 pp=1 dp=1, islands=1 binding=unknown, compared_metric=not stated)"
+      },
+      "rps": 1.25,
+      "served_concurrency": 21.667774996430342,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": "calibration_condition_mismatch"
+      },
+      "tokens_per_joule": 1.3228935698447895,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 3.3125138510854564,
+        "d_refuse": 3.3125138510854564,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=21.67 in domain [1.02, 76]; ttft: NO point - unmeasured in this domain; tpot: interpolated between L=16.6 and L=25.18 | NO margin for ttft: unmeasured in this domain, so that check ran unmargined | measured closed-loop (RNGD-CARD), so its TTFT does not transfer to an open-loop deployment (D19) | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 256,
+      "operating_point": 21.670896836112114,
+      "p99_tpot_ms": 31.634551869999996,
+      "p99_ttft_ms": 316.8674722399999,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": "unmeasured: RNGD-CARD: the accuracy domain was measured under different conditions (arrival_process) - arrival_process: domain 'closed_loop', candidate 'open_loop'. It may not be consulted here, so this candidate is unmeasured AT ITS OWN CONFIGURATION, not infeasible (S1, D110) | registered domains for this hardware: profiles/calibration/rngd_card_edf.yaml (hardware=RNGD-CARD, model=any, variant=any, workload_shape=any, arrival_process=closed_loop, tp=1 pp=1 dp=1, islands=1 binding=unknown, compared_metric=not stated)"
+      },
+      "rps": 1.25,
+      "served_concurrency": 21.670896836112117,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": "calibration_condition_mismatch"
+      },
+      "tokens_per_joule": 1.3228019122843484,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 3.3125837469292105,
+        "d_refuse": 3.3125837469292105,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=41.76 in domain [1.02, 76]; ttft: NO point - unmeasured in this domain; tpot: interpolated between L=25.18 and L=76 | NO margin for ttft: unmeasured in this domain, so that check ran unmargined | measured closed-loop (RNGD-CARD), so its TTFT does not transfer to an open-loop deployment (D19) | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 32,
+      "operating_point": 41.76438779711504,
+      "p99_tpot_ms": 32.576394889999996,
+      "p99_ttft_ms": 16569.55770633,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": "unmeasured: RNGD-CARD: the accuracy domain was measured under different conditions (arrival_process) - arrival_process: domain 'closed_loop', candidate 'open_loop'. It may not be consulted here, so this candidate is unmeasured AT ITS OWN CONFIGURATION, not infeasible (S1, D110) | registered domains for this hardware: profiles/calibration/rngd_card_edf.yaml (hardware=RNGD-CARD, model=any, variant=any, workload_shape=any, arrival_process=closed_loop, tp=1 pp=1 dp=1, islands=1 binding=unknown, compared_metric=not stated)"
+      },
+      "rps": 1.75,
+      "served_concurrency": 41.76438779711504,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": "calibration_condition_mismatch"
+      },
+      "tokens_per_joule": 1.6684435899676657,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 8.794357690926837,
+        "d_refuse": 8.794357690926837,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=41.79 in domain [1.02, 76]; ttft: NO point - unmeasured in this domain; tpot: interpolated between L=25.18 and L=76 | NO margin for ttft: unmeasured in this domain, so that check ran unmargined | measured closed-loop (RNGD-CARD), so its TTFT does not transfer to an open-loop deployment (D19) | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 32,
+      "operating_point": 41.79043181340949,
+      "p99_tpot_ms": 32.6258388,
+      "p99_ttft_ms": 16602.768981,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": "unmeasured: RNGD-CARD: the accuracy domain was measured under different conditions (arrival_process) - arrival_process: domain 'closed_loop', candidate 'open_loop'. It may not be consulted here, so this candidate is unmeasured AT ITS OWN CONFIGURATION, not infeasible (S1, D110) | registered domains for this hardware: profiles/calibration/rngd_card_edf.yaml (hardware=RNGD-CARD, model=any, variant=any, workload_shape=any, arrival_process=closed_loop, tp=1 pp=1 dp=1, islands=1 binding=unknown, compared_metric=not stated)"
+      },
+      "rps": 1.75,
+      "served_concurrency": 41.790431813409484,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": "calibration_condition_mismatch"
+      },
+      "tokens_per_joule": 1.6684435899676657,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 8.803287415082071,
+        "d_refuse": 8.803287415082071,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=32.47 in domain [1.02, 76]; ttft: NO point - unmeasured in this domain; tpot: interpolated between L=25.18 and L=76 | NO margin for ttft: unmeasured in this domain, so that check ran unmargined | measured closed-loop (RNGD-CARD), so its TTFT does not transfer to an open-loop deployment (D19) | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 128,
+      "operating_point": 32.47461638944143,
+      "p99_tpot_ms": 34.27147245,
+      "p99_ttft_ms": 427.2577849799999,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": "unmeasured: RNGD-CARD: the accuracy domain was measured under different conditions (arrival_process) - arrival_process: domain 'closed_loop', candidate 'open_loop'. It may not be consulted here, so this candidate is unmeasured AT ITS OWN CONFIGURATION, not infeasible (S1, D110) | registered domains for this hardware: profiles/calibration/rngd_card_edf.yaml (hardware=RNGD-CARD, model=any, variant=any, workload_shape=any, arrival_process=closed_loop, tp=1 pp=1 dp=1, islands=1 binding=unknown, compared_metric=not stated)"
+      },
+      "rps": 1.75,
+      "served_concurrency": 32.47461638944143,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": "calibration_condition_mismatch"
+      },
+      "tokens_per_joule": 1.7962178944397402,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 5.70001683471193,
+        "d_refuse": 5.70001683471193,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=32.46 in domain [1.02, 76]; ttft: NO point - unmeasured in this domain; tpot: interpolated between L=25.18 and L=76 | NO margin for ttft: unmeasured in this domain, so that check ran unmargined | measured closed-loop (RNGD-CARD), so its TTFT does not transfer to an open-loop deployment (D19) | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 128,
+      "operating_point": 32.45921079570754,
+      "p99_tpot_ms": 34.328430139999995,
+      "p99_ttft_ms": 370.83561825999976,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": "unmeasured: RNGD-CARD: the accuracy domain was measured under different conditions (arrival_process) - arrival_process: domain 'closed_loop', candidate 'open_loop'. It may not be consulted here, so this candidate is unmeasured AT ITS OWN CONFIGURATION, not infeasible (S1, D110) | registered domains for this hardware: profiles/calibration/rngd_card_edf.yaml (hardware=RNGD-CARD, model=any, variant=any, workload_shape=any, arrival_process=closed_loop, tp=1 pp=1 dp=1, islands=1 binding=unknown, compared_metric=not stated)"
+      },
+      "rps": 1.75,
+      "served_concurrency": 32.45921079570754,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": "calibration_condition_mismatch"
+      },
+      "tokens_per_joule": 1.7960489181561619,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 5.695031552307766,
+        "d_refuse": 5.695031552307766,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=32.47 in domain [1.02, 76]; ttft: NO point - unmeasured in this domain; tpot: interpolated between L=25.18 and L=76 | NO margin for ttft: unmeasured in this domain, so that check ran unmargined | measured closed-loop (RNGD-CARD), so its TTFT does not transfer to an open-loop deployment (D19) | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 256,
+      "operating_point": 32.47461638944143,
+      "p99_tpot_ms": 34.27147245,
+      "p99_ttft_ms": 427.2577849799999,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": "unmeasured: RNGD-CARD: the accuracy domain was measured under different conditions (arrival_process) - arrival_process: domain 'closed_loop', candidate 'open_loop'. It may not be consulted here, so this candidate is unmeasured AT ITS OWN CONFIGURATION, not infeasible (S1, D110) | registered domains for this hardware: profiles/calibration/rngd_card_edf.yaml (hardware=RNGD-CARD, model=any, variant=any, workload_shape=any, arrival_process=closed_loop, tp=1 pp=1 dp=1, islands=1 binding=unknown, compared_metric=not stated)"
+      },
+      "rps": 1.75,
+      "served_concurrency": 32.47461638944143,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": "calibration_condition_mismatch"
+      },
+      "tokens_per_joule": 1.7962178944397402,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 5.70001683471193,
+        "d_refuse": 5.70001683471193,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=32.46 in domain [1.02, 76]; ttft: NO point - unmeasured in this domain; tpot: interpolated between L=25.18 and L=76 | NO margin for ttft: unmeasured in this domain, so that check ran unmargined | measured closed-loop (RNGD-CARD), so its TTFT does not transfer to an open-loop deployment (D19) | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 256,
+      "operating_point": 32.45921079570754,
+      "p99_tpot_ms": 34.328430139999995,
+      "p99_ttft_ms": 370.83561825999976,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": "unmeasured: RNGD-CARD: the accuracy domain was measured under different conditions (arrival_process) - arrival_process: domain 'closed_loop', candidate 'open_loop'. It may not be consulted here, so this candidate is unmeasured AT ITS OWN CONFIGURATION, not infeasible (S1, D110) | registered domains for this hardware: profiles/calibration/rngd_card_edf.yaml (hardware=RNGD-CARD, model=any, variant=any, workload_shape=any, arrival_process=closed_loop, tp=1 pp=1 dp=1, islands=1 binding=unknown, compared_metric=not stated)"
+      },
+      "rps": 1.75,
+      "served_concurrency": 32.45921079570754,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": "calibration_condition_mismatch"
+      },
+      "tokens_per_joule": 1.7960489181561619,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 5.695031552307766,
+        "d_refuse": 5.695031552307766,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=67.1 in domain [1.02, 76]; ttft: NO point - unmeasured in this domain; tpot: interpolated between L=25.18 and L=76 | NO margin for ttft: unmeasured in this domain, so that check ran unmargined | measured closed-loop (RNGD-CARD), so its TTFT does not transfer to an open-loop deployment (D19) | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t2048",
+      "deciding_metric": "TTFT",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 32,
+      "operating_point": 67.10086170960223,
+      "p99_tpot_ms": 32.541016060000004,
+      "p99_ttft_ms": 50710.20037265,
+      "reasons": {
+        "a_margin0": "p99_ttft_ms=50710.2 vs target 25000.0",
+        "b_global18": "p99_ttft_ms=59838.0 vs target 25000.0",
+        "c_accuracy_domain": "p99_ttft_ms=50710.2 vs target 25000.0",
+        "d_refuse": "p99_ttft_ms=50710.2 vs target 25000.0",
+        "e_condition_refuse": "unmeasured: RNGD-CARD: the accuracy domain was measured under different conditions (arrival_process) - arrival_process: domain 'closed_loop', candidate 'open_loop'. It may not be consulted here, so this candidate is unmeasured AT ITS OWN CONFIGURATION, not infeasible (S1, D110) | registered domains for this hardware: profiles/calibration/rngd_card_edf.yaml (hardware=RNGD-CARD, model=any, variant=any, workload_shape=any, arrival_process=closed_loop, tp=1 pp=1 dp=1, islands=1 binding=unknown, compared_metric=not stated)"
+      },
+      "rps": 2.25,
+      "served_concurrency": 67.10086170960224,
+      "shapes": [],
+      "stages": {
+        "a_margin0": "slo_violated",
+        "b_global18": "slo_violated",
+        "c_accuracy_domain": "slo_violated",
+        "d_refuse": "slo_violated",
+        "e_condition_refuse": "calibration_condition_mismatch"
+      },
+      "tokens_per_joule": 1.687914419591548,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 18.234498092807527,
+        "d_refuse": 18.234498092807527,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "rejected",
+        "b_global18": "rejected",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=67.19 in domain [1.02, 76]; ttft: NO point - unmeasured in this domain; tpot: interpolated between L=25.18 and L=76 | NO margin for ttft: unmeasured in this domain, so that check ran unmargined | measured closed-loop (RNGD-CARD), so its TTFT does not transfer to an open-loop deployment (D19) | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t8192",
+      "deciding_metric": "TTFT",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 32,
+      "operating_point": 67.19093534024185,
+      "p99_tpot_ms": 32.66649483,
+      "p99_ttft_ms": 50800.84505462,
+      "reasons": {
+        "a_margin0": "p99_ttft_ms=50800.8 vs target 25000.0",
+        "b_global18": "p99_ttft_ms=59945.0 vs target 25000.0",
+        "c_accuracy_domain": "p99_ttft_ms=50800.8 vs target 25000.0",
+        "d_refuse": "p99_ttft_ms=50800.8 vs target 25000.0",
+        "e_condition_refuse": "unmeasured: RNGD-CARD: the accuracy domain was measured under different conditions (arrival_process) - arrival_process: domain 'closed_loop', candidate 'open_loop'. It may not be consulted here, so this candidate is unmeasured AT ITS OWN CONFIGURATION, not infeasible (S1, D110) | registered domains for this hardware: profiles/calibration/rngd_card_edf.yaml (hardware=RNGD-CARD, model=any, variant=any, workload_shape=any, arrival_process=closed_loop, tp=1 pp=1 dp=1, islands=1 binding=unknown, compared_metric=not stated)"
+      },
+      "rps": 2.25,
+      "served_concurrency": 67.19093534024185,
+      "shapes": [],
+      "stages": {
+        "a_margin0": "slo_violated",
+        "b_global18": "slo_violated",
+        "c_accuracy_domain": "slo_violated",
+        "d_refuse": "slo_violated",
+        "e_condition_refuse": "calibration_condition_mismatch"
+      },
+      "tokens_per_joule": 1.687317719840919,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 18.270982036646743,
+        "d_refuse": 18.270982036646743,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "rejected",
+        "b_global18": "rejected",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=43.69 in domain [1.02, 76]; ttft: NO point - unmeasured in this domain; tpot: interpolated between L=25.18 and L=76 | NO margin for ttft: unmeasured in this domain, so that check ran unmargined | measured closed-loop (RNGD-CARD), so its TTFT does not transfer to an open-loop deployment (D19) | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 128,
+      "operating_point": 43.68889629838225,
+      "p99_tpot_ms": 36.714980759999996,
+      "p99_ttft_ms": 438.11806115999997,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": "unmeasured: RNGD-CARD: the accuracy domain was measured under different conditions (arrival_process) - arrival_process: domain 'closed_loop', candidate 'open_loop'. It may not be consulted here, so this candidate is unmeasured AT ITS OWN CONFIGURATION, not infeasible (S1, D110) | registered domains for this hardware: profiles/calibration/rngd_card_edf.yaml (hardware=RNGD-CARD, model=any, variant=any, workload_shape=any, arrival_process=closed_loop, tp=1 pp=1 dp=1, islands=1 binding=unknown, compared_metric=not stated)"
+      },
+      "rps": 2.25,
+      "served_concurrency": 43.688896298382254,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": "calibration_condition_mismatch"
+      },
+      "tokens_per_joule": 2.2332436542285645,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 9.458186582783023,
+        "d_refuse": 9.458186582783023,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=43.65 in domain [1.02, 76]; ttft: NO point - unmeasured in this domain; tpot: interpolated between L=25.18 and L=76 | NO margin for ttft: unmeasured in this domain, so that check ran unmargined | measured closed-loop (RNGD-CARD), so its TTFT does not transfer to an open-loop deployment (D19) | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 128,
+      "operating_point": 43.6460808951521,
+      "p99_tpot_ms": 36.65077507,
+      "p99_ttft_ms": 377.1428479699997,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": "unmeasured: RNGD-CARD: the accuracy domain was measured under different conditions (arrival_process) - arrival_process: domain 'closed_loop', candidate 'open_loop'. It may not be consulted here, so this candidate is unmeasured AT ITS OWN CONFIGURATION, not infeasible (S1, D110) | registered domains for this hardware: profiles/calibration/rngd_card_edf.yaml (hardware=RNGD-CARD, model=any, variant=any, workload_shape=any, arrival_process=closed_loop, tp=1 pp=1 dp=1, islands=1 binding=unknown, compared_metric=not stated)"
+      },
+      "rps": 2.25,
+      "served_concurrency": 43.6460808951521,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": "calibration_condition_mismatch"
+      },
+      "tokens_per_joule": 2.232982456140351,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 9.443329987894721,
+        "d_refuse": 9.443329987894721,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=43.69 in domain [1.02, 76]; ttft: NO point - unmeasured in this domain; tpot: interpolated between L=25.18 and L=76 | NO margin for ttft: unmeasured in this domain, so that check ran unmargined | measured closed-loop (RNGD-CARD), so its TTFT does not transfer to an open-loop deployment (D19) | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 256,
+      "operating_point": 43.68889629838225,
+      "p99_tpot_ms": 36.714980759999996,
+      "p99_ttft_ms": 438.11806115999997,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": "unmeasured: RNGD-CARD: the accuracy domain was measured under different conditions (arrival_process) - arrival_process: domain 'closed_loop', candidate 'open_loop'. It may not be consulted here, so this candidate is unmeasured AT ITS OWN CONFIGURATION, not infeasible (S1, D110) | registered domains for this hardware: profiles/calibration/rngd_card_edf.yaml (hardware=RNGD-CARD, model=any, variant=any, workload_shape=any, arrival_process=closed_loop, tp=1 pp=1 dp=1, islands=1 binding=unknown, compared_metric=not stated)"
+      },
+      "rps": 2.25,
+      "served_concurrency": 43.688896298382254,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": "calibration_condition_mismatch"
+      },
+      "tokens_per_joule": 2.2332436542285645,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 9.458186582783023,
+        "d_refuse": 9.458186582783023,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=43.65 in domain [1.02, 76]; ttft: NO point - unmeasured in this domain; tpot: interpolated between L=25.18 and L=76 | NO margin for ttft: unmeasured in this domain, so that check ran unmargined | measured closed-loop (RNGD-CARD), so its TTFT does not transfer to an open-loop deployment (D19) | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 256,
+      "operating_point": 43.6460808951521,
+      "p99_tpot_ms": 36.65077507,
+      "p99_ttft_ms": 377.1428479699997,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": "unmeasured: RNGD-CARD: the accuracy domain was measured under different conditions (arrival_process) - arrival_process: domain 'closed_loop', candidate 'open_loop'. It may not be consulted here, so this candidate is unmeasured AT ITS OWN CONFIGURATION, not infeasible (S1, D110) | registered domains for this hardware: profiles/calibration/rngd_card_edf.yaml (hardware=RNGD-CARD, model=any, variant=any, workload_shape=any, arrival_process=closed_loop, tp=1 pp=1 dp=1, islands=1 binding=unknown, compared_metric=not stated)"
+      },
+      "rps": 2.25,
+      "served_concurrency": 43.6460808951521,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": "calibration_condition_mismatch"
+      },
+      "tokens_per_joule": 2.232982456140351,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 9.443329987894721,
+        "d_refuse": 9.443329987894721,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "rejected"
+      }
+    }
+  ],
+  "rules": [
+    "a_margin0",
+    "b_global18",
+    "c_accuracy_domain",
+    "d_refuse",
+    "e_condition_refuse"
+  ],
+  "swept_island": "furiosa-rngd-card-node_rngd0",
+  "windows": {
+    "p2_conc_min": 15.5,
+    "p3_conc_max": 66.52
+  }
+}

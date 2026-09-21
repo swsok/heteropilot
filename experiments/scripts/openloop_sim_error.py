@@ -73,6 +73,8 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
+from planner.util import provenance as prov  # noqa: E402
+
 #: `e = (sim - measured) / measured`, the sign convention every domain file
 #: declares. Negative TPOT = the simulator is optimistic, the direction that
 #: earns a margin and the direction that produced the D22 retraction.
@@ -525,6 +527,10 @@ def main() -> int:
          "real": [str(p) for p in args.real],
          "max_conc_gap": args.max_conc_gap,
          "min_requests_p99": args.min_requests_p99,
+         # WHICH machine, not merely what kind (D80). Without it a pairing from a
+         # second RNGD node is indistinguishable from this one, and these points
+         # cannot be appended to a domain built on different silicon.
+         "provenance": prov.collect(),
          "points": records}, indent=2) + "\n")
 
     print(f"{'rps':>5} {'L meas':>8} {'L sim':>8} {'gap%':>7} "
