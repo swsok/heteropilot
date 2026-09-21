@@ -1613,6 +1613,31 @@ across the edit (`dd0eca3f…`, `a0563bc7…`, `0b548376…`). R2, the completed
 candidate, is byte-identical too, but only once D26 below was also fixed; before
 that it could not be made to complete at all under an unlucky `PATH`.
 
+> **Erratum, 2026-09-21: the third sum above is a pre-D26 value and does not
+> reproduce.** `0b548376…` is the MoE anchor `r1_Qwen3-30B-A3B-Instruct-2507`
+> as this entry first measured it, and that measurement was taken under the bug
+> D26 names: the trace was converted by a second `chakra` beside protobuf
+> 6.33.1, which emits different `.et` bytes. Under D26 the same example
+> reproduces the committed `7d0ff3ce…` four times out of four
+> (`docs/d23fix_baseline.md`, "All of that was wrong";
+> `outputs/d23fix/anchor/README.md`, "`0b548376` -> `7d0ff3ce` … that change is
+> the whole of D26"). Nothing hashes to `0b548376…` in the tree today.
+>
+> **The committed artifact's own history is separate and has two values, neither
+> of them this one**: `7547edf1…` at the v1.1.0 release, then `7d0ff3ce…` after
+> upstream's `3723a94` "Refresh validation baselines". So a reader checking R1
+> against `bench/examples/Qwen3-30B-A3B-Instruct-2507/outputs/sim.csv` should
+> expect `7d0ff3ce…`.
+>
+> **D25's claim is unaffected.** R1 is byte-identical *across the D25 edit*, which
+> is what this entry asserts; the two runs it compared were both taken under the
+> same (then-unfixed) converter, so the edit moved nothing. Only the recorded
+> value is from a configuration that no longer exists. The sums are left in place
+> rather than rewritten — rule A3 — and this note is the correction.
+>
+> Found while verifying PR #116, which needed R1 untouched. Traced once with
+> `git log -p -S 0b548376 --all`; not pursued further.
+
 **`experiments/scripts/astra_isolated.sh` is no longer required** and says so at
 the top. It is kept as a belt-and-braces measure for a node where it is not certain
 the running frontend carries D25, and because it is the only mechanism that also
