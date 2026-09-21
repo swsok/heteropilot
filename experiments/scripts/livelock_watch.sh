@@ -92,7 +92,7 @@ CHILD=$!
 #
 # This has to happen after the child is launched: opening a FIFO read-only
 # blocks in open(2) until a writer appears, and the child's `>"$FIFO"` is that
-# writer. The two rendezvous here, exactly as the old `done <&3` did.
+# writer. The two rendezvous here.
 #
 # Why a named fd at all: the drain below used to reopen the FIFO with
 # `cat "$FIFO"`, and by then the child had already been TERMed, so there was no
@@ -105,6 +105,16 @@ CHILD=$!
 # Read-only and not `3<>`: holding a write end too would mean the loop never
 # sees EOF when the child exits, and a clean run would be misreported as a
 # no-progress livelock.
+#
+# The loop below reads from this descriptor (`done <&3`) and MUST NOT reopen the
+# FIFO by name. It used to end `done <"$FIFO"`, which is a second open(2), and
+# that open blocks until a writer appears -- a writer that a child exiting
+# faster than the shell reaches this line has already taken with it. The parent
+# then parked in `pipe_wait` forever, holding fd 3, with no child left. Measured
+# at 5 hangs in 40 runs of `livelock_watch.sh -q -- bash -c 'exit 7'`, which is
+# the intermittent red `tests/test_livelock_watch.py` showed on `main`: only the
+# cases whose command exits promptly can lose that race, which is why a
+# different test failed each run and each one passed alone.
 exec 3<"$FIFO"
 
 VERDICT=0          # 0 none, 3 livelock, 4 no-progress
@@ -170,7 +180,7 @@ while true; do
         kill -TERM -"$CHILD" 2>/dev/null
         break
     fi
-done <"$FIFO"
+done <&3
 
 # Drain anything still buffered so the child is not killed by SIGPIPE mid-write.
 # `<&3` inherits the descriptor opened above instead of reopening the FIFO, so
