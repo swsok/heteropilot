@@ -231,6 +231,16 @@ def pair(rps: float, reals: list[dict], sim: dict, *, max_gap: float,
         "offered_rps": rps,
         "conc_measured": conc_real,
         "conc_sim": conc_sim,
+        # The x axis the DOMAIN is keyed on, which is not always `conc_sim`.
+        # `rngd_card_edf.yaml` states the convention: "the operating point AS
+        # COMPUTED FROM THE SIMULATION (planner/util/operating_point.py),
+        # because that is what the planner knows when it consults this table".
+        # The margin policy looks up the per-island operating point, and that
+        # differs from the run-level served concurrency by up to 1 ULP --
+        # enough, at a boundary point, for the very candidate a domain's edge
+        # was measured at to fall outside it. Keyed on the wrong one, the
+        # domain's top and bottom points are unreachable.
+        "conc_axis": sim.get("operating_point") or conc_sim,
         "conc_gap_pct": gap * 100.0,
         "requests_ok": _agg([float(r["requests_ok"]) for r in reals]),
         "saturated_any": any(r["saturated"] for r in reals),
@@ -386,8 +396,8 @@ def _domain_doc(records: list[dict], *, stat: str, date: str) -> str:
     # ... as where the profile was validated"). It is metadata -- neither the
     # optimizer nor the uncertainty stack reads it at judgement time -- so
     # matching that command's convention beats inventing a second one.
-    buf.write(f"      fitted_at_concurrency: {usable[0]['conc_sim']:.3f}\n")
-    span = usable[-1]["conc_sim"] / usable[0]["conc_sim"]
+    buf.write(f"      fitted_at_concurrency: {usable[0]['conc_axis']!r}\n")
+    span = usable[-1]["conc_axis"] / usable[0]["conc_axis"]
     buf.write(f"      # `refuse` is the D33 default for a new domain, and it is\n"
               f"      # kept: these points span a {span:.2g}x concurrency range\n"
               f"      # and say nothing about what happens outside it.\n")
@@ -408,7 +418,11 @@ def _domain_doc(records: list[dict], *, stat: str, date: str) -> str:
         err = r[f"tpot_err_pct_{stat}"]
         other = r["tpot_err_pct_p50"] if stat == "p99" else r["tpot_err_pct_p99"]
         meas = r[f"tpot_measured_{stat}"]
-        line = (f"        - {{conc: {r['conc_sim']:.3f}, "
+        # `conc` is the x axis and is written at FULL PRECISION, not rounded.
+        # At .3f the top point 37.96546697025815 became 37.965, and the very
+        # candidate that point was measured at then fell OUTSIDE its own domain
+        # by 0.00047 and was refused. A coordinate is not a display value.
+        line = (f"        - {{conc: {r['conc_axis']!r}, "
                 f"tpot_err_pct: {err:.2f}, ")
         if stat == "p99" and other is not None:
             line += f"tpot_err_pct_p50: {other:.2f}, "
@@ -424,8 +438,8 @@ def _domain_doc(records: list[dict], *, stat: str, date: str) -> str:
         buf.write(f'           note: "{note}"}}\n')
     buf.write("      note: >\n")
     buf.write(f"        {len(usable)} open-loop points from a deployed furiosa-llm\n"
-              f"        server, served concurrency {usable[0]['conc_sim']:.2f} to\n"
-              f"        {usable[-1]['conc_sim']:.2f} as the SIMULATOR computes it\n"
+              f"        server, served concurrency {usable[0]['conc_axis']:.4g} to\n"
+              f"        {usable[-1]['conc_axis']:.4g} as the SIMULATOR computes it\n"
               f"        (the committed files' x-axis convention). Fitted on\n"
               f"        {compared}. The upper bound is NOT where measuring\n"
               f"        stopped: see provenance.unpaired_points, which records\n"

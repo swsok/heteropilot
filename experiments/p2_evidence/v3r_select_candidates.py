@@ -169,6 +169,13 @@ def main() -> int:
                     default=REPO / "outputs/p2_evidence/v3r/cache")
     ap.add_argument("--out", type=Path,
                     default=REPO / "experiments/p2_evidence/results/v3r_candidates.json")
+    ap.add_argument("--accuracy-domain", nargs="*", default=None, metavar="YAML",
+                    help="judge against THESE domain files instead of whatever the "
+                         "default non-recursive glob finds. S7.4 needs it: the "
+                         "open-loop RNGD domain lives in openloop/ precisely so the "
+                         "default path keeps resolving RNGD-CARD to the closed-loop "
+                         "one (D102), so the two arms of the inversion are two runs "
+                         "of this script differing only in this flag.")
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument("--timeout", type=float, default=1800.0)
     ap.add_argument("--verify-mirror", action="store_true",
@@ -182,8 +189,13 @@ def main() -> int:
     profiles = load_profiles_for(cluster, REPO)
     islands = detect_islands(cluster, profiles)
     by_id = {i.id: i for i in islands}
-    domains = load_accuracy_domains(str(REPO))
+    domains = load_accuracy_domains(str(REPO), args.accuracy_domain or None)
     calibration = load_calibrations(str(REPO))
+    if args.accuracy_domain:
+        print("accuracy domains (explicit): "
+              + ", ".join(f"{hw}[{d.arrival_process}, "
+                          f"{d.compared_metric or 'basis not stated'}]"
+                          for hw, d in sorted(domains.items())), flush=True)
 
     from planner.optimizer.exhaustive import _profile_tiers
 
@@ -196,6 +208,7 @@ def main() -> int:
         "swept_island": SWEPT_ISLAND,
         "mirror_island": MIRROR_ISLAND,
         "rules": list(RULES),
+        "accuracy_domain": [str(a) for a in (args.accuracy_domain or [])] or "default glob",
         "windows": {"p3_conc_max": P3_CONC_MAX, "p2_conc_min": P2_CONC_MIN},
         "rows": [],
         "provenance": prov.collect(),

@@ -260,3 +260,54 @@ def test_the_domain_loads_with_the_unpaired_block_present():
         doc["hardware"]["RNGD-CARD"]["accuracy_domain"])
     assert d.compared_metric == "tpot_p99"
     assert d.in_domain(27.002) and not d.in_domain(49.527)
+
+
+def test_the_x_axis_is_written_at_full_precision():
+    """A coordinate is not a display value.
+
+    Written at `.3f`, the top point 37.96546697025815 became 37.965 — and the
+    very candidate that point was MEASURED AT then fell outside its own domain
+    by 0.00047 and was refused. The domain silently lost its top operating
+    point, which is the one a caller is most likely to ask about.
+    """
+    import yaml
+
+    from planner.predictor.calibration import AccuracyDomain
+
+    recs = _records_for_domain()
+    # The TOP usable point, which is the one the rounding actually lost; the
+    # model validates that points are sorted, so it must stay the largest.
+    top = [r for r in recs if r["usable"]][-1]
+    top["conc_sim"] = top["conc_axis"] = 37.96546697025815
+    doc = yaml.safe_load(ose._domain_doc(recs, stat="p99", date="2026-09-21"))
+    d = AccuracyDomain.model_validate(doc["hardware"]["RNGD-CARD"]["accuracy_domain"])
+    assert 37.96546697025815 in [p.conc for p in d.points], [p.conc for p in d.points]
+    # The point must be inside the domain it defines.
+    assert d.in_domain(37.96546697025815)
+
+
+def test_the_domain_is_keyed_on_the_operating_point_the_margin_looks_up():
+    """`conc_sim` and the margin's operating point differ by up to 1 ULP.
+
+    `rngd_card_edf.yaml` states the convention: the x axis is "the operating
+    point AS COMPUTED FROM THE SIMULATION … because that is what the planner
+    knows when it consults this table". Keyed on the run-level served
+    concurrency instead, the domain's own edge points come out 1 ULP off the
+    value the margin policy looks up with — and the candidate a boundary point
+    was MEASURED AT is then refused as outside its own domain. Observed at both
+    edges before this was fixed.
+    """
+    import yaml
+
+    from planner.predictor.calibration import AccuracyDomain
+
+    recs = _records_for_domain()
+    usable = [r for r in recs if r["usable"]]
+    # The two differ in the last bit, as they do in real records.
+    usable[0]["conc_sim"] = 11.730193512627325
+    usable[0]["conc_axis"] = 11.730193512627324
+    doc = yaml.safe_load(ose._domain_doc(recs, stat="p99", date="2026-09-21"))
+    d = AccuracyDomain.model_validate(doc["hardware"]["RNGD-CARD"]["accuracy_domain"])
+
+    assert d.conc_min == 11.730193512627324, "must key on the lookup value"
+    assert d.in_domain(11.730193512627324), "the boundary point must be inside"

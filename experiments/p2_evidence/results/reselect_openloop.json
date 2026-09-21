@@ -1,0 +1,2671 @@
+{
+  "accuracy_domain": [
+    "profiles/calibration/openloop/rngd_card.accuracy.openloop.yaml"
+  ],
+  "fixture": {
+    "base_arrival_rate_rps": 10.0,
+    "cluster": "experiments/configs/clusters/pd-rngd-gpu-card.yaml",
+    "num_requests": 300,
+    "seed": 42,
+    "service": "examples/service_specs/llama31-8b.yaml"
+  },
+  "mirror_island": "furiosa-rngd-card-node_rngd1",
+  "provenance": {
+    "accelerators": {
+      "accelerator_set": {
+        "atom": [
+          {
+            "bdf": "0000:83:00.0",
+            "sid": "0000000022502229",
+            "uuid": "d86d3e84-f99d-4b9c-a0af-72f208de0b93"
+          },
+          {
+            "bdf": "0000:c3:00.0",
+            "sid": "0000000022502247",
+            "uuid": "5c1f197f-094f-48ca-90ee-63ed56998d7e"
+          },
+          {
+            "bdf": "0000:84:00.0",
+            "sid": "0000000022507041",
+            "uuid": "8a989e88-f2ec-42d7-bd66-4774f9fffe79"
+          },
+          {
+            "bdf": "0000:c4:00.0",
+            "sid": "0000000022507045",
+            "uuid": "79c61dbf-3254-4f15-98af-94f69487a33c"
+          }
+        ],
+        "cuda": null,
+        "fingerprint": "6fe246ed1abf",
+        "rngd": [
+          {
+            "bdf": "0000:45:00.0",
+            "firmware": "2026.3.0, 2d3f72a",
+            "sn": "RNG26040100105Q",
+            "uuid": "89413086-0709-4707-8349-4645404A4442"
+          },
+          {
+            "bdf": "0000:03:00.0",
+            "firmware": "2026.3.0, 2d3f72a",
+            "sn": "RNG26040100181Q",
+            "uuid": "C0413086-0708-4606-8242-4947484F4646"
+          },
+          {
+            "bdf": "0000:04:00.0",
+            "firmware": "2026.3.0, 2d3f72a",
+            "sn": "RNG26040100187Q",
+            "uuid": "89413086-070A-4702-834A-434B4D4F4D44"
+          }
+        ]
+      },
+      "atom_devices": 4,
+      "cuda": null,
+      "rngd_cards": 3
+    },
+    "backend_version": null,
+    "cluster_spec_hash": null,
+    "command": "v3r_select_candidates.py --rps 0.75,1,1.25,1.5,1.75,2,2.25,2.5,3,3.5 --accuracy-domain profiles/calibration/openloop/rngd_card.accuracy.openloop.yaml --work-dir outputs/s74/work_open --cache-dir outputs/p2_evidence/v3r/cache --out outputs/s74/reselect_openloop.json",
+    "cpu_count": 96,
+    "cpu_placement": {
+      "affinity_cpus": 96,
+      "numa_node_of_affinity": [
+        0,
+        1
+      ],
+      "numa_nodes": 2
+    },
+    "dataset_hash": null,
+    "git_commit": "6c4f95f7daa2e2fca8e15a3731bf464b7fd6e7b5",
+    "git_dirty": true,
+    "hardware_profile_hash": null,
+    "hostname": "etri-001",
+    "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
+    "model_revision": null,
+    "platform": "Linux-6.8.0-40-generic-x86_64-with-glibc2.35",
+    "python_version": "3.10.12",
+    "random_seed": null,
+    "service_spec_hash": null,
+    "timestamp": "2026-09-21T05:58:42.584337+00:00",
+    "vllm_version": null
+  },
+  "rows": [
+    {
+      "basis": "RNGD-CARD[total]: L=11.73 in domain [11.73, 37.97]; ttft: exactly at L=11.73; tpot: exactly at L=11.73 | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 32,
+      "operating_point": 11.730193512627324,
+      "p99_tpot_ms": 28.10557441,
+      "p99_ttft_ms": 382.1935767799996,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": ""
+      },
+      "rps": 0.75,
+      "served_concurrency": 11.730193512627325,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": null
+      },
+      "tokens_per_joule": 0.8163160595177014,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "feasible"
+      }
+    },
+    {
+      "basis": "served concurrency 11.73 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=12 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 32,
+      "operating_point": 11.730137606583835,
+      "p99_tpot_ms": 28.13101134,
+      "p99_ttft_ms": 302.8145270499999,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "unmeasured: served concurrency 11.73 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=12 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 11.73 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=12 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 11.73 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=12 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 0.75,
+      "served_concurrency": 11.730137606583833,
+      "shapes": [
+        "P2-shape"
+      ],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 0.8163160595177014,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=11.73 in domain [11.73, 37.97]; ttft: exactly at L=11.73; tpot: exactly at L=11.73 | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 128,
+      "operating_point": 11.730193512627324,
+      "p99_tpot_ms": 28.10557441,
+      "p99_ttft_ms": 382.1935767799996,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": ""
+      },
+      "rps": 0.75,
+      "served_concurrency": 11.730193512627325,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": null
+      },
+      "tokens_per_joule": 0.8163160595177014,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "feasible"
+      }
+    },
+    {
+      "basis": "served concurrency 11.73 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=12 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 128,
+      "operating_point": 11.730137606583835,
+      "p99_tpot_ms": 28.13101134,
+      "p99_ttft_ms": 302.8145270499999,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "unmeasured: served concurrency 11.73 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=12 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 11.73 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=12 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 11.73 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=12 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 0.75,
+      "served_concurrency": 11.730137606583833,
+      "shapes": [
+        "P2-shape"
+      ],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 0.8163160595177014,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=11.73 in domain [11.73, 37.97]; ttft: exactly at L=11.73; tpot: exactly at L=11.73 | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 256,
+      "operating_point": 11.730193512627324,
+      "p99_tpot_ms": 28.10557441,
+      "p99_ttft_ms": 382.1935767799996,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": ""
+      },
+      "rps": 0.75,
+      "served_concurrency": 11.730193512627325,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": null
+      },
+      "tokens_per_joule": 0.8163160595177014,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "feasible"
+      }
+    },
+    {
+      "basis": "served concurrency 11.73 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=12 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 256,
+      "operating_point": 11.730137606583835,
+      "p99_tpot_ms": 28.13101134,
+      "p99_ttft_ms": 302.8145270499999,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "unmeasured: served concurrency 11.73 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=12 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 11.73 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=12 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 11.73 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=12 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 0.75,
+      "served_concurrency": 11.730137606583833,
+      "shapes": [
+        "P2-shape"
+      ],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 0.8163160595177014,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=16.54 in domain [11.73, 37.97]; ttft: exactly at L=16.54; tpot: exactly at L=16.54 | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 32,
+      "operating_point": 16.544868569276172,
+      "p99_tpot_ms": 29.8842646,
+      "p99_ttft_ms": 386.8874920799997,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": ""
+      },
+      "rps": 1.0,
+      "served_concurrency": 16.54486856927617,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": null
+      },
+      "tokens_per_joule": 1.0739115761052986,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.7658202337767033,
+        "d_refuse": 0.7658202337767033,
+        "e_condition_refuse": 0.7658202337767033
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "feasible"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=16.55 in domain [11.73, 37.97]; ttft: interpolated between L=16.54 and L=21.67; tpot: interpolated between L=16.54 and L=21.67 | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 32,
+      "operating_point": 16.547092868387896,
+      "p99_tpot_ms": 29.96675444,
+      "p99_ttft_ms": 313.33300205,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": ""
+      },
+      "rps": 1.0,
+      "served_concurrency": 16.547092868387896,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": null
+      },
+      "tokens_per_joule": 1.0739115761052986,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.7664771233273472,
+        "d_refuse": 0.7664771233273472,
+        "e_condition_refuse": 0.7664771233273472
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "feasible"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=16.54 in domain [11.73, 37.97]; ttft: exactly at L=16.54; tpot: exactly at L=16.54 | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 128,
+      "operating_point": 16.544868569276172,
+      "p99_tpot_ms": 29.8842646,
+      "p99_ttft_ms": 386.8874920799997,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": ""
+      },
+      "rps": 1.0,
+      "served_concurrency": 16.54486856927617,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": null
+      },
+      "tokens_per_joule": 1.0739115761052986,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.7658202337767033,
+        "d_refuse": 0.7658202337767033,
+        "e_condition_refuse": 0.7658202337767033
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "feasible"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=16.55 in domain [11.73, 37.97]; ttft: interpolated between L=16.54 and L=21.67; tpot: interpolated between L=16.54 and L=21.67 | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 128,
+      "operating_point": 16.547092868387896,
+      "p99_tpot_ms": 29.96675444,
+      "p99_ttft_ms": 313.33300205,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": ""
+      },
+      "rps": 1.0,
+      "served_concurrency": 16.547092868387896,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": null
+      },
+      "tokens_per_joule": 1.0739115761052986,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.7664771233273472,
+        "d_refuse": 0.7664771233273472,
+        "e_condition_refuse": 0.7664771233273472
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "feasible"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=16.54 in domain [11.73, 37.97]; ttft: exactly at L=16.54; tpot: exactly at L=16.54 | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 256,
+      "operating_point": 16.544868569276172,
+      "p99_tpot_ms": 29.8842646,
+      "p99_ttft_ms": 386.8874920799997,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": ""
+      },
+      "rps": 1.0,
+      "served_concurrency": 16.54486856927617,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": null
+      },
+      "tokens_per_joule": 1.0739115761052986,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.7658202337767033,
+        "d_refuse": 0.7658202337767033,
+        "e_condition_refuse": 0.7658202337767033
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "feasible"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=16.55 in domain [11.73, 37.97]; ttft: interpolated between L=16.54 and L=21.67; tpot: interpolated between L=16.54 and L=21.67 | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 256,
+      "operating_point": 16.547092868387896,
+      "p99_tpot_ms": 29.96675444,
+      "p99_ttft_ms": 313.33300205,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": ""
+      },
+      "rps": 1.0,
+      "served_concurrency": 16.547092868387896,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": null
+      },
+      "tokens_per_joule": 1.0739115761052986,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.7664771233273472,
+        "d_refuse": 0.7664771233273472,
+        "e_condition_refuse": 0.7664771233273472
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "feasible"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=21.75 in domain [11.73, 37.97]; ttft: interpolated between L=21.67 and L=27; tpot: interpolated between L=21.67 and L=27 | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 32,
+      "operating_point": 21.750434426928216,
+      "p99_tpot_ms": 31.46788639,
+      "p99_ttft_ms": 2004.0256879299998,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": ""
+      },
+      "rps": 1.25,
+      "served_concurrency": 21.750434426928216,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": null
+      },
+      "tokens_per_joule": 1.3228019122843484,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 2.3619944704984515,
+        "d_refuse": 2.3619944704984515,
+        "e_condition_refuse": 2.3619944704984515
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "feasible"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=21.75 in domain [11.73, 37.97]; ttft: interpolated between L=21.67 and L=27; tpot: interpolated between L=21.67 and L=27 | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 32,
+      "operating_point": 21.74800734117506,
+      "p99_tpot_ms": 31.49290339,
+      "p99_ttft_ms": 1997.2791119299998,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": ""
+      },
+      "rps": 1.25,
+      "served_concurrency": 21.74800734117506,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": null
+      },
+      "tokens_per_joule": 1.3228019122843484,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 2.3602257165399063,
+        "d_refuse": 2.3602257165399063,
+        "e_condition_refuse": 2.3602257165399063
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "feasible"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=21.67 in domain [11.73, 37.97]; ttft: exactly at L=21.67; tpot: exactly at L=21.67 | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 128,
+      "operating_point": 21.667774996430346,
+      "p99_tpot_ms": 31.56662299,
+      "p99_ttft_ms": 386.0117470599997,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": ""
+      },
+      "rps": 1.25,
+      "served_concurrency": 21.667774996430342,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": null
+      },
+      "tokens_per_joule": 1.3228935698447895,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 2.301790281329923,
+        "d_refuse": 2.301790281329923,
+        "e_condition_refuse": 2.301790281329923
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "feasible"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=21.67 in domain [11.73, 37.97]; ttft: interpolated between L=21.67 and L=27; tpot: interpolated between L=21.67 and L=27 | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 128,
+      "operating_point": 21.670896836112114,
+      "p99_tpot_ms": 31.634551869999996,
+      "p99_ttft_ms": 316.8674722399999,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": ""
+      },
+      "rps": 1.25,
+      "served_concurrency": 21.670896836112117,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": null
+      },
+      "tokens_per_joule": 1.3228019122843484,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 2.304062755948418,
+        "d_refuse": 2.304062755948418,
+        "e_condition_refuse": 2.304062755948418
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "feasible"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=21.67 in domain [11.73, 37.97]; ttft: exactly at L=21.67; tpot: exactly at L=21.67 | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 256,
+      "operating_point": 21.667774996430346,
+      "p99_tpot_ms": 31.56662299,
+      "p99_ttft_ms": 386.0117470599997,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": ""
+      },
+      "rps": 1.25,
+      "served_concurrency": 21.667774996430342,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": null
+      },
+      "tokens_per_joule": 1.3228935698447895,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 2.301790281329923,
+        "d_refuse": 2.301790281329923,
+        "e_condition_refuse": 2.301790281329923
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "feasible"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=21.67 in domain [11.73, 37.97]; ttft: interpolated between L=21.67 and L=27; tpot: interpolated between L=21.67 and L=27 | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 256,
+      "operating_point": 21.670896836112114,
+      "p99_tpot_ms": 31.634551869999996,
+      "p99_ttft_ms": 316.8674722399999,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": ""
+      },
+      "rps": 1.25,
+      "served_concurrency": 21.670896836112117,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": null
+      },
+      "tokens_per_joule": 1.3228019122843484,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 2.304062755948418,
+        "d_refuse": 2.304062755948418,
+        "e_condition_refuse": 2.304062755948418
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "feasible"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=27.85 in domain [11.73, 37.97]; ttft: interpolated between L=27 and L=32.47; tpot: interpolated between L=27 and L=32.47 | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 32,
+      "operating_point": 27.852886813312754,
+      "p99_tpot_ms": 32.27362594,
+      "p99_ttft_ms": 5249.968199149999,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": ""
+      },
+      "rps": 1.5,
+      "served_concurrency": 27.852886813312754,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": null
+      },
+      "tokens_per_joule": 1.5633802816901408,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 7.608183658160576,
+        "d_refuse": 7.608183658160576,
+        "e_condition_refuse": 7.608183658160576
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "feasible"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=27.88 in domain [11.73, 37.97]; ttft: interpolated between L=27 and L=32.47; tpot: interpolated between L=27 and L=32.47 | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 32,
+      "operating_point": 27.879084036503055,
+      "p99_tpot_ms": 32.221330679999994,
+      "p99_ttft_ms": 5262.1511318699995,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": ""
+      },
+      "rps": 1.5,
+      "served_concurrency": 27.87908403650306,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": null
+      },
+      "tokens_per_joule": 1.5632522721690003,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 7.647774917790113,
+        "d_refuse": 7.647774917790113,
+        "e_condition_refuse": 7.647774917790113
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "feasible"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=27 in domain [11.73, 37.97]; ttft: exactly at L=27; tpot: exactly at L=27 | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 128,
+      "operating_point": 27.001880236823695,
+      "p99_tpot_ms": 33.056421099999994,
+      "p99_ttft_ms": 412.47420138999973,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": ""
+      },
+      "rps": 1.5,
+      "served_concurrency": 27.001880236823695,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": null
+      },
+      "tokens_per_joule": 1.5636363636363637,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 6.3377286261165455,
+        "d_refuse": 6.3377286261165455,
+        "e_condition_refuse": 6.3377286261165455
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "feasible"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=27 in domain [11.73, 37.97]; ttft: interpolated between L=27 and L=32.47; tpot: interpolated between L=27 and L=32.47 | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 128,
+      "operating_point": 27.004849509920497,
+      "p99_tpot_ms": 33.05044417,
+      "p99_ttft_ms": 323.53376216,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": ""
+      },
+      "rps": 1.5,
+      "served_concurrency": 27.0048495099205,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": null
+      },
+      "tokens_per_joule": 1.5635083121775448,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 6.3421092553198495,
+        "d_refuse": 6.3421092553198495,
+        "e_condition_refuse": 6.3421092553198495
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "feasible"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=27 in domain [11.73, 37.97]; ttft: exactly at L=27; tpot: exactly at L=27 | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 256,
+      "operating_point": 27.001880236823695,
+      "p99_tpot_ms": 33.056421099999994,
+      "p99_ttft_ms": 412.47420138999973,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": ""
+      },
+      "rps": 1.5,
+      "served_concurrency": 27.001880236823695,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": null
+      },
+      "tokens_per_joule": 1.5636363636363637,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 6.3377286261165455,
+        "d_refuse": 6.3377286261165455,
+        "e_condition_refuse": 6.3377286261165455
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "feasible"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=27 in domain [11.73, 37.97]; ttft: interpolated between L=27 and L=32.47; tpot: interpolated between L=27 and L=32.47 | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 256,
+      "operating_point": 27.004849509920497,
+      "p99_tpot_ms": 33.05044417,
+      "p99_ttft_ms": 323.53376216,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": ""
+      },
+      "rps": 1.5,
+      "served_concurrency": 27.0048495099205,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": null
+      },
+      "tokens_per_joule": 1.5635083121775448,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 6.3421092553198495,
+        "d_refuse": 6.3421092553198495,
+        "e_condition_refuse": 6.3421092553198495
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "feasible"
+      }
+    },
+    {
+      "basis": "served concurrency 41.76 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=42 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 32,
+      "operating_point": 41.76438779711504,
+      "p99_tpot_ms": 32.576394889999996,
+      "p99_ttft_ms": 16569.55770633,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "unmeasured: served concurrency 41.76 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=42 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 41.76 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=42 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 41.76 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=42 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 1.75,
+      "served_concurrency": 41.76438779711504,
+      "shapes": [
+        "P2-shape"
+      ],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 1.6684435899676657,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "served concurrency 41.79 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=42 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 32,
+      "operating_point": 41.79043181340949,
+      "p99_tpot_ms": 32.6258388,
+      "p99_ttft_ms": 16602.768981,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "unmeasured: served concurrency 41.79 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=42 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 41.79 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=42 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 41.79 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=42 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 1.75,
+      "served_concurrency": 41.790431813409484,
+      "shapes": [
+        "P2-shape"
+      ],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 1.6684435899676657,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=32.47 in domain [11.73, 37.97]; ttft: exactly at L=32.47; tpot: exactly at L=32.47 | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 128,
+      "operating_point": 32.47461638944143,
+      "p99_tpot_ms": 34.27147245,
+      "p99_ttft_ms": 427.2577849799999,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": ""
+      },
+      "rps": 1.75,
+      "served_concurrency": 32.47461638944143,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": null
+      },
+      "tokens_per_joule": 1.7962178944397402,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 15.074798619102417,
+        "d_refuse": 15.074798619102417,
+        "e_condition_refuse": 15.074798619102417
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "feasible"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=32.46 in domain [11.73, 37.97]; ttft: interpolated between L=27 and L=32.47; tpot: interpolated between L=27 and L=32.47 | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 128,
+      "operating_point": 32.45921079570754,
+      "p99_tpot_ms": 34.328430139999995,
+      "p99_ttft_ms": 370.83561825999976,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": ""
+      },
+      "rps": 1.75,
+      "served_concurrency": 32.45921079570754,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": null
+      },
+      "tokens_per_joule": 1.7960489181561619,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 15.048189398530246,
+        "d_refuse": 15.048189398530246,
+        "e_condition_refuse": 15.048189398530246
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "feasible"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=32.47 in domain [11.73, 37.97]; ttft: exactly at L=32.47; tpot: exactly at L=32.47 | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 256,
+      "operating_point": 32.47461638944143,
+      "p99_tpot_ms": 34.27147245,
+      "p99_ttft_ms": 427.2577849799999,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": ""
+      },
+      "rps": 1.75,
+      "served_concurrency": 32.47461638944143,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": null
+      },
+      "tokens_per_joule": 1.7962178944397402,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 15.074798619102417,
+        "d_refuse": 15.074798619102417,
+        "e_condition_refuse": 15.074798619102417
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "feasible"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=32.46 in domain [11.73, 37.97]; ttft: interpolated between L=27 and L=32.47; tpot: interpolated between L=27 and L=32.47 | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 256,
+      "operating_point": 32.45921079570754,
+      "p99_tpot_ms": 34.328430139999995,
+      "p99_ttft_ms": 370.83561825999976,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": ""
+      },
+      "rps": 1.75,
+      "served_concurrency": 32.45921079570754,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": null
+      },
+      "tokens_per_joule": 1.7960489181561619,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 15.048189398530246,
+        "d_refuse": 15.048189398530246,
+        "e_condition_refuse": 15.048189398530246
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "feasible"
+      }
+    },
+    {
+      "basis": "served concurrency 55.8 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=56 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t2048",
+      "deciding_metric": "TTFT",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 32,
+      "operating_point": 55.79913949889079,
+      "p99_tpot_ms": 32.55612463,
+      "p99_ttft_ms": 35260.1662226,
+      "reasons": {
+        "a_margin0": "p99_ttft_ms=35260.2 vs target 25000.0",
+        "b_global18": "p99_ttft_ms=41607.0 vs target 25000.0",
+        "c_accuracy_domain": "unmeasured: served concurrency 55.8 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=56 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 55.8 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=56 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 55.8 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=56 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 2.0,
+      "served_concurrency": 55.79913949889079,
+      "shapes": [],
+      "stages": {
+        "a_margin0": "slo_violated",
+        "b_global18": "slo_violated",
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 1.6828558836491847,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "rejected",
+        "b_global18": "rejected",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "served concurrency 55.87 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=56 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t8192",
+      "deciding_metric": "TTFT",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 32,
+      "operating_point": 55.870773506022964,
+      "p99_tpot_ms": 32.65906836,
+      "p99_ttft_ms": 35445.30262359999,
+      "reasons": {
+        "a_margin0": "p99_ttft_ms=35445.3 vs target 25000.0",
+        "b_global18": "p99_ttft_ms=41825.5 vs target 25000.0",
+        "c_accuracy_domain": "unmeasured: served concurrency 55.87 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=56 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 55.87 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=56 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 55.87 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=56 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 2.0,
+      "served_concurrency": 55.87077350602296,
+      "shapes": [],
+      "stages": {
+        "a_margin0": "slo_violated",
+        "b_global18": "slo_violated",
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 1.6810777494056528,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "rejected",
+        "b_global18": "rejected",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=37.97 in domain [11.73, 37.97]; ttft: exactly at L=37.97; tpot: exactly at L=37.97 | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 128,
+      "operating_point": 37.96546697025815,
+      "p99_tpot_ms": 35.331794640000005,
+      "p99_ttft_ms": 420.54821122,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": ""
+      },
+      "rps": 2.0,
+      "served_concurrency": 37.96546697025815,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": null
+      },
+      "tokens_per_joule": 2.019676293240241,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 21.40342357654486,
+        "d_refuse": 21.40342357654486,
+        "e_condition_refuse": 21.40342357654486
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "feasible"
+      }
+    },
+    {
+      "basis": "served concurrency 37.98 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=38 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 128,
+      "operating_point": 37.97549824645061,
+      "p99_tpot_ms": 35.380199479999995,
+      "p99_ttft_ms": 367.9752700399998,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "unmeasured: served concurrency 37.98 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=38 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 37.98 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=38 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 37.98 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=38 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 2.0,
+      "served_concurrency": 37.97549824645061,
+      "shapes": [
+        "P2-shape"
+      ],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 2.019676293240241,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "RNGD-CARD[total]: L=37.97 in domain [11.73, 37.97]; ttft: exactly at L=37.97; tpot: exactly at L=37.97 | RNGD-CARD: unchecked application conditions (hardware, model, variant, workload_shape, arrival_process, device_binding) - one side does not state them, so the domain is applied on trust for those fields",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 256,
+      "operating_point": 37.96546697025815,
+      "p99_tpot_ms": 35.331794640000005,
+      "p99_ttft_ms": 420.54821122,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "",
+        "d_refuse": "",
+        "e_condition_refuse": ""
+      },
+      "rps": 2.0,
+      "served_concurrency": 37.96546697025815,
+      "shapes": [],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": null,
+        "d_refuse": null,
+        "e_condition_refuse": null
+      },
+      "tokens_per_joule": 2.019676293240241,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 21.40342357654486,
+        "d_refuse": 21.40342357654486,
+        "e_condition_refuse": 21.40342357654486
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "feasible",
+        "d_refuse": "feasible",
+        "e_condition_refuse": "feasible"
+      }
+    },
+    {
+      "basis": "served concurrency 37.98 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=38 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 256,
+      "operating_point": 37.97549824645061,
+      "p99_tpot_ms": 35.380199479999995,
+      "p99_ttft_ms": 367.9752700399998,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "unmeasured: served concurrency 37.98 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=38 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 37.98 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=38 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 37.98 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=38 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 2.0,
+      "served_concurrency": 37.97549824645061,
+      "shapes": [
+        "P2-shape"
+      ],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 2.019676293240241,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "served concurrency 67.1 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=67 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t2048",
+      "deciding_metric": "TTFT",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 32,
+      "operating_point": 67.10086170960223,
+      "p99_tpot_ms": 32.541016060000004,
+      "p99_ttft_ms": 50710.20037265,
+      "reasons": {
+        "a_margin0": "p99_ttft_ms=50710.2 vs target 25000.0",
+        "b_global18": "p99_ttft_ms=59838.0 vs target 25000.0",
+        "c_accuracy_domain": "unmeasured: served concurrency 67.1 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=67 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 67.1 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=67 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 67.1 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=67 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 2.25,
+      "served_concurrency": 67.10086170960224,
+      "shapes": [],
+      "stages": {
+        "a_margin0": "slo_violated",
+        "b_global18": "slo_violated",
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 1.687914419591548,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "rejected",
+        "b_global18": "rejected",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "served concurrency 67.19 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=67 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t8192",
+      "deciding_metric": "TTFT",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 32,
+      "operating_point": 67.19093534024185,
+      "p99_tpot_ms": 32.66649483,
+      "p99_ttft_ms": 50800.84505462,
+      "reasons": {
+        "a_margin0": "p99_ttft_ms=50800.8 vs target 25000.0",
+        "b_global18": "p99_ttft_ms=59945.0 vs target 25000.0",
+        "c_accuracy_domain": "unmeasured: served concurrency 67.19 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=67 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 67.19 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=67 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 67.19 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=67 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 2.25,
+      "served_concurrency": 67.19093534024185,
+      "shapes": [],
+      "stages": {
+        "a_margin0": "slo_violated",
+        "b_global18": "slo_violated",
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 1.687317719840919,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "rejected",
+        "b_global18": "rejected",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "served concurrency 43.69 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=44 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 128,
+      "operating_point": 43.68889629838225,
+      "p99_tpot_ms": 36.714980759999996,
+      "p99_ttft_ms": 438.11806115999997,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "unmeasured: served concurrency 43.69 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=44 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 43.69 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=44 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 43.69 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=44 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 2.25,
+      "served_concurrency": 43.688896298382254,
+      "shapes": [
+        "P2-shape"
+      ],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 2.2332436542285645,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "served concurrency 43.65 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=44 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 128,
+      "operating_point": 43.6460808951521,
+      "p99_tpot_ms": 36.65077507,
+      "p99_ttft_ms": 377.1428479699997,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "unmeasured: served concurrency 43.65 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=44 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 43.65 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=44 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 43.65 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=44 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 2.25,
+      "served_concurrency": 43.6460808951521,
+      "shapes": [
+        "P2-shape"
+      ],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 2.232982456140351,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "served concurrency 43.69 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=44 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 256,
+      "operating_point": 43.68889629838225,
+      "p99_tpot_ms": 36.714980759999996,
+      "p99_ttft_ms": 438.11806115999997,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "unmeasured: served concurrency 43.69 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=44 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 43.69 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=44 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 43.69 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=44 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 2.25,
+      "served_concurrency": 43.688896298382254,
+      "shapes": [
+        "P2-shape"
+      ],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 2.2332436542285645,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "served concurrency 43.65 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=44 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 256,
+      "operating_point": 43.6460808951521,
+      "p99_tpot_ms": 36.65077507,
+      "p99_ttft_ms": 377.1428479699997,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "unmeasured: served concurrency 43.65 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=44 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 43.65 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=44 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 43.65 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=44 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 2.25,
+      "served_concurrency": 43.6460808951521,
+      "shapes": [
+        "P2-shape"
+      ],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 2.232982456140351,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "served concurrency 76.23 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=76 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t2048",
+      "deciding_metric": "TTFT",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 32,
+      "operating_point": 76.23069384086098,
+      "p99_tpot_ms": 32.55078859,
+      "p99_ttft_ms": 63064.176388989996,
+      "reasons": {
+        "a_margin0": "p99_ttft_ms=63064.2 vs target 25000.0",
+        "b_global18": "p99_ttft_ms=74415.7 vs target 25000.0",
+        "c_accuracy_domain": "unmeasured: served concurrency 76.23 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=76 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 76.23 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=76 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 76.23 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=76 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 2.5,
+      "served_concurrency": 76.23069384086098,
+      "shapes": [],
+      "stages": {
+        "a_margin0": "slo_violated",
+        "b_global18": "slo_violated",
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 1.694506079701784,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "rejected",
+        "b_global18": "rejected",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "served concurrency 76.29 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=76 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t8192",
+      "deciding_metric": "TTFT",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 32,
+      "operating_point": 76.29439958961983,
+      "p99_tpot_ms": 32.62571806,
+      "p99_ttft_ms": 63241.14050199,
+      "reasons": {
+        "a_margin0": "p99_ttft_ms=63241.1 vs target 25000.0",
+        "b_global18": "p99_ttft_ms=74624.5 vs target 25000.0",
+        "c_accuracy_domain": "unmeasured: served concurrency 76.29 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=76 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 76.29 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=76 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 76.29 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=76 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 2.5,
+      "served_concurrency": 76.29439958961983,
+      "shapes": [],
+      "stages": {
+        "a_margin0": "slo_violated",
+        "b_global18": "slo_violated",
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 1.693003458366587,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "rejected",
+        "b_global18": "rejected",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "served concurrency 49.53 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=50 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 128,
+      "operating_point": 49.527439345459335,
+      "p99_tpot_ms": 38.48017987,
+      "p99_ttft_ms": 449.8645605899999,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "unmeasured: served concurrency 49.53 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=50 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 49.53 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=50 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 49.53 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=50 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 2.5,
+      "served_concurrency": 49.52743934545933,
+      "shapes": [
+        "P2-shape"
+      ],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 2.438002809347465,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "served concurrency 49.46 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=49 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 128,
+      "operating_point": 49.46238217681389,
+      "p99_tpot_ms": 38.38354436,
+      "p99_ttft_ms": 407.1787508799997,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "unmeasured: served concurrency 49.46 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=49 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 49.46 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=49 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 49.46 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=49 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 2.5,
+      "served_concurrency": 49.46238217681388,
+      "shapes": [
+        "P2-shape"
+      ],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 2.4383141762452105,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "served concurrency 49.53 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=50 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t2048",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 256,
+      "operating_point": 49.527439345459335,
+      "p99_tpot_ms": 38.48017987,
+      "p99_ttft_ms": 449.8645605899999,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "unmeasured: served concurrency 49.53 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=50 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 49.53 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=50 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 49.53 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=50 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 2.5,
+      "served_concurrency": 49.52743934545933,
+      "shapes": [
+        "P2-shape"
+      ],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 2.438002809347465,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "served concurrency 49.46 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=49 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t8192",
+      "deciding_metric": "",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 256,
+      "operating_point": 49.46238217681389,
+      "p99_tpot_ms": 38.38354436,
+      "p99_ttft_ms": 407.1787508799997,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "",
+        "c_accuracy_domain": "unmeasured: served concurrency 49.46 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=49 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 49.46 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=49 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 49.46 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=49 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 2.5,
+      "served_concurrency": 49.46238217681388,
+      "shapes": [
+        "P2-shape"
+      ],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": null,
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 2.4383141762452105,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "feasible",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "served concurrency 90.15 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=90 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t2048",
+      "deciding_metric": "TTFT",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 32,
+      "operating_point": 90.15186082179241,
+      "p99_tpot_ms": 32.63125682,
+      "p99_ttft_ms": 82087.08868537,
+      "reasons": {
+        "a_margin0": "p99_ttft_ms=82087.1 vs target 25000.0",
+        "b_global18": "p99_ttft_ms=96862.8 vs target 25000.0",
+        "c_accuracy_domain": "unmeasured: served concurrency 90.15 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=90 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 90.15 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=90 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 90.15 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=90 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 3.0,
+      "served_concurrency": 90.15186082179243,
+      "shapes": [],
+      "stages": {
+        "a_margin0": "slo_violated",
+        "b_global18": "slo_violated",
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 1.7037301445654114,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "rejected",
+        "b_global18": "rejected",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "served concurrency 90.16 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=90 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t8192",
+      "deciding_metric": "TTFT",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 32,
+      "operating_point": 90.15998877463714,
+      "p99_tpot_ms": 32.66161087,
+      "p99_ttft_ms": 82153.88677437,
+      "reasons": {
+        "a_margin0": "p99_ttft_ms=82153.9 vs target 25000.0",
+        "b_global18": "p99_ttft_ms=96941.6 vs target 25000.0",
+        "c_accuracy_domain": "unmeasured: served concurrency 90.16 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=90 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 90.16 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=90 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 90.16 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=90 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 3.0,
+      "served_concurrency": 90.15998877463713,
+      "shapes": [],
+      "stages": {
+        "a_margin0": "slo_violated",
+        "b_global18": "slo_violated",
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 1.703122212310437,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "rejected",
+        "b_global18": "rejected",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "served concurrency 61.68 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=62 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t2048",
+      "deciding_metric": "TPOT",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 128,
+      "operating_point": 61.6770234423819,
+      "p99_tpot_ms": 42.871124869999996,
+      "p99_ttft_ms": 471.1439753799999,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "p99_tpot_ms=50.6 vs target 50.0",
+        "c_accuracy_domain": "unmeasured: served concurrency 61.68 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=62 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 61.68 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=62 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 61.68 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=62 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 3.0,
+      "served_concurrency": 61.6770234423819,
+      "shapes": [
+        "P2-shape"
+      ],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": "slo_violated",
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 2.822590183323477,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "rejected",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "served concurrency 61.51 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=62 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t8192",
+      "deciding_metric": "TPOT",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 128,
+      "operating_point": 61.50644947637895,
+      "p99_tpot_ms": 42.7482427,
+      "p99_ttft_ms": 446.3241482099998,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "p99_tpot_ms=50.4 vs target 50.0",
+        "c_accuracy_domain": "unmeasured: served concurrency 61.51 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=62 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 61.51 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=62 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 61.51 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=62 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 3.0,
+      "served_concurrency": 61.50644947637895,
+      "shapes": [
+        "P2-shape"
+      ],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": "slo_violated",
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 2.822590183323477,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "rejected",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "served concurrency 61.68 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=62 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t2048",
+      "deciding_metric": "TPOT",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 256,
+      "operating_point": 61.6770234423819,
+      "p99_tpot_ms": 42.871124869999996,
+      "p99_ttft_ms": 471.1439753799999,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "p99_tpot_ms=50.6 vs target 50.0",
+        "c_accuracy_domain": "unmeasured: served concurrency 61.68 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=62 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 61.68 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=62 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 61.68 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=62 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 3.0,
+      "served_concurrency": 61.6770234423819,
+      "shapes": [
+        "P2-shape"
+      ],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": "slo_violated",
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 2.822590183323477,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "rejected",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "served concurrency 61.51 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=62 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t8192",
+      "deciding_metric": "TPOT",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 256,
+      "operating_point": 61.50644947637895,
+      "p99_tpot_ms": 42.7482427,
+      "p99_ttft_ms": 446.3241482099998,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "p99_tpot_ms=50.4 vs target 50.0",
+        "c_accuracy_domain": "unmeasured: served concurrency 61.51 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=62 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 61.51 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=62 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 61.51 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=62 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 3.0,
+      "served_concurrency": 61.50644947637895,
+      "shapes": [
+        "P2-shape"
+      ],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": "slo_violated",
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 2.822590183323477,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "rejected",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "served concurrency 100.1 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=100 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t2048",
+      "deciding_metric": "TTFT",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 32,
+      "operating_point": 100.13926061796359,
+      "p99_tpot_ms": 32.55090418,
+      "p99_ttft_ms": 95779.91116807,
+      "reasons": {
+        "a_margin0": "p99_ttft_ms=95779.9 vs target 25000.0",
+        "b_global18": "p99_ttft_ms=113020.3 vs target 25000.0",
+        "c_accuracy_domain": "unmeasured: served concurrency 100.1 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=100 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 100.1 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=100 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 100.1 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=100 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 3.5,
+      "served_concurrency": 100.13926061796359,
+      "shapes": [],
+      "stages": {
+        "a_margin0": "slo_violated",
+        "b_global18": "slo_violated",
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 1.7084563758389262,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "rejected",
+        "b_global18": "rejected",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "served concurrency 100.1 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=100 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s32-t8192",
+      "deciding_metric": "TTFT",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 32,
+      "operating_point": 100.1411130748746,
+      "p99_tpot_ms": 32.63191588,
+      "p99_ttft_ms": 95880.72600913,
+      "reasons": {
+        "a_margin0": "p99_ttft_ms=95880.7 vs target 25000.0",
+        "b_global18": "p99_ttft_ms=113139.3 vs target 25000.0",
+        "c_accuracy_domain": "unmeasured: served concurrency 100.1 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=100 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 100.1 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=100 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 100.1 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=100 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 3.5,
+      "served_concurrency": 100.1411130748746,
+      "shapes": [],
+      "stages": {
+        "a_margin0": "slo_violated",
+        "b_global18": "slo_violated",
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 1.7072341947599035,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "rejected",
+        "b_global18": "rejected",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "served concurrency 74.5 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=74 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t2048",
+      "deciding_metric": "TPOT",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 128,
+      "operating_point": 74.49811667938295,
+      "p99_tpot_ms": 46.69059426,
+      "p99_ttft_ms": 581.8356763399997,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "p99_tpot_ms=55.1 vs target 50.0",
+        "c_accuracy_domain": "unmeasured: served concurrency 74.5 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=74 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 74.5 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=74 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 74.5 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=74 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 3.5,
+      "served_concurrency": 74.49811667938296,
+      "shapes": [
+        "P2-shape"
+      ],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": "slo_violated",
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 3.1735372340425534,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "rejected",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "served concurrency 74.23 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=74 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s128-t8192",
+      "deciding_metric": "TPOT",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 128,
+      "operating_point": 74.22630086307062,
+      "p99_tpot_ms": 46.4422092,
+      "p99_ttft_ms": 478.4043489999998,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "p99_tpot_ms=54.8 vs target 50.0",
+        "c_accuracy_domain": "unmeasured: served concurrency 74.23 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=74 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 74.23 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=74 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 74.23 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=74 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 3.5,
+      "served_concurrency": 74.22630086307062,
+      "shapes": [
+        "P2-shape"
+      ],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": "slo_violated",
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 3.1740648379052367,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "rejected",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "served concurrency 74.5 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=74 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t2048",
+      "deciding_metric": "TPOT",
+      "max_num_batched_tokens": 2048,
+      "max_num_seqs": 256,
+      "operating_point": 74.49811667938295,
+      "p99_tpot_ms": 46.69059426,
+      "p99_ttft_ms": 581.8356763399997,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "p99_tpot_ms=55.1 vs target 50.0",
+        "c_accuracy_domain": "unmeasured: served concurrency 74.5 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=74 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 74.5 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=74 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 74.5 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=74 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 3.5,
+      "served_concurrency": 74.49811667938296,
+      "shapes": [
+        "P2-shape"
+      ],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": "slo_violated",
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 3.1735372340425534,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "rejected",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    },
+    {
+      "basis": "served concurrency 74.23 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=74 or set outside_domain: widen_error_bars to accept an extrapolation",
+      "candidate_id": "furiosa-rngd-card-node_rngd0-tp1-dp1-s256-t8192",
+      "deciding_metric": "TPOT",
+      "max_num_batched_tokens": 8192,
+      "max_num_seqs": 256,
+      "operating_point": 74.22630086307062,
+      "p99_tpot_ms": 46.4422092,
+      "p99_ttft_ms": 478.4043489999998,
+      "reasons": {
+        "a_margin0": "",
+        "b_global18": "p99_tpot_ms=54.8 vs target 50.0",
+        "c_accuracy_domain": "unmeasured: served concurrency 74.23 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=74 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "d_refuse": "unmeasured: served concurrency 74.23 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=74 or set outside_domain: widen_error_bars to accept an extrapolation",
+        "e_condition_refuse": "unmeasured: served concurrency 74.23 on RNGD-CARD outside its accuracy domain [11.73, 37.97] (policy refuse); measure the envelope at c>=74 or set outside_domain: widen_error_bars to accept an extrapolation"
+      },
+      "rps": 3.5,
+      "served_concurrency": 74.22630086307062,
+      "shapes": [
+        "P2-shape"
+      ],
+      "stages": {
+        "a_margin0": null,
+        "b_global18": "slo_violated",
+        "c_accuracy_domain": "outside_calibration_domain",
+        "d_refuse": "outside_calibration_domain",
+        "e_condition_refuse": "outside_calibration_domain"
+      },
+      "tokens_per_joule": 3.1740648379052367,
+      "tpot_margin_pct": {
+        "a_margin0": 0.0,
+        "b_global18": 18.0,
+        "c_accuracy_domain": 0.0,
+        "d_refuse": 0.0,
+        "e_condition_refuse": 0.0
+      },
+      "verdicts": {
+        "a_margin0": "feasible",
+        "b_global18": "rejected",
+        "c_accuracy_domain": "rejected",
+        "d_refuse": "rejected",
+        "e_condition_refuse": "rejected"
+      }
+    }
+  ],
+  "rules": [
+    "a_margin0",
+    "b_global18",
+    "c_accuracy_domain",
+    "d_refuse",
+    "e_condition_refuse"
+  ],
+  "swept_island": "furiosa-rngd-card-node_rngd0",
+  "windows": {
+    "p2_conc_min": 15.5,
+    "p3_conc_max": 66.52
+  }
+}

@@ -1,0 +1,244 @@
+{
+  "closed": "outputs/s74/reselect_closedloop.json",
+  "open": "outputs/s74/reselect_openloop.json",
+  "candidate": "s128-t2048",
+  "spread_threshold": 3.0,
+  "measured_spread_ms": {
+    "1.75": 0.776,
+    "2.0": 0.116
+  },
+  "provenance": {
+    "git_commit": "6c4f95f7daa2e2fca8e15a3731bf464b7fd6e7b5",
+    "git_dirty": true,
+    "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
+    "vllm_version": null,
+    "backend_version": null,
+    "model_revision": null,
+    "hardware_profile_hash": null,
+    "cluster_spec_hash": null,
+    "service_spec_hash": null,
+    "dataset_hash": null,
+    "random_seed": null,
+    "command": "v3r_slo_inversion.py --closed outputs/s74/reselect_closedloop.json --open outputs/s74/reselect_openloop.json --out experiments/p2_evidence/results/v3r_slo_inversion.json",
+    "timestamp": "2026-09-21T06:06:46.999373+00:00",
+    "python_version": "3.10.12",
+    "platform": "Linux-6.8.0-40-generic-x86_64-with-glibc2.35",
+    "hostname": "etri-001",
+    "cpu_count": 96,
+    "accelerators": {
+      "cuda": null,
+      "rngd_cards": 3,
+      "atom_devices": 4,
+      "accelerator_set": {
+        "cuda": null,
+        "rngd": [
+          {
+            "sn": "RNG26040100105Q",
+            "uuid": "89413086-0709-4707-8349-4645404A4442",
+            "bdf": "0000:45:00.0",
+            "firmware": "2026.3.0, 2d3f72a"
+          },
+          {
+            "sn": "RNG26040100181Q",
+            "uuid": "C0413086-0708-4606-8242-4947484F4646",
+            "bdf": "0000:03:00.0",
+            "firmware": "2026.3.0, 2d3f72a"
+          },
+          {
+            "sn": "RNG26040100187Q",
+            "uuid": "89413086-070A-4702-834A-434B4D4F4D44",
+            "bdf": "0000:04:00.0",
+            "firmware": "2026.3.0, 2d3f72a"
+          }
+        ],
+        "atom": [
+          {
+            "sid": "0000000022502229",
+            "uuid": "d86d3e84-f99d-4b9c-a0af-72f208de0b93",
+            "bdf": "0000:83:00.0"
+          },
+          {
+            "sid": "0000000022502247",
+            "uuid": "5c1f197f-094f-48ca-90ee-63ed56998d7e",
+            "bdf": "0000:c3:00.0"
+          },
+          {
+            "sid": "0000000022507041",
+            "uuid": "8a989e88-f2ec-42d7-bd66-4774f9fffe79",
+            "bdf": "0000:84:00.0"
+          },
+          {
+            "sid": "0000000022507045",
+            "uuid": "79c61dbf-3254-4f15-98af-94f69487a33c",
+            "bdf": "0000:c4:00.0"
+          }
+        ],
+        "fingerprint": "6fe246ed1abf"
+      }
+    },
+    "cpu_placement": {
+      "affinity_cpus": 96,
+      "numa_nodes": 2,
+      "numa_node_of_affinity": [
+        0,
+        1
+      ]
+    }
+  },
+  "points": [
+    {
+      "offered_rps": 0.75,
+      "conc_sim": 11.730193512627325,
+      "operating_point": 11.730193512627324,
+      "tpot_p99_ms": 28.10557441,
+      "margin_closed_pct": 0.0,
+      "margin_open_pct": 0.0,
+      "stage_open": null,
+      "spread_ms": null,
+      "robust_closed_ms": 28.10557441,
+      "robust_open_ms": 28.10557441,
+      "inversion_band_ms": null,
+      "verdict": "no inversion in this direction: the open-loop margin is the looser of the two here"
+    },
+    {
+      "offered_rps": 1.0,
+      "conc_sim": 16.54486856927617,
+      "operating_point": 16.544868569276172,
+      "tpot_p99_ms": 29.8842646,
+      "margin_closed_pct": 2.9640882837973543,
+      "margin_open_pct": 0.7658202337767033,
+      "stage_open": null,
+      "spread_ms": null,
+      "robust_closed_ms": 30.7700605857076,
+      "robust_open_ms": 30.113124345022168,
+      "inversion_band_ms": null,
+      "verdict": "no inversion in this direction: the open-loop margin is the looser of the two here"
+    },
+    {
+      "offered_rps": 1.25,
+      "conc_sim": 21.667774996430342,
+      "operating_point": 21.667774996430346,
+      "tpot_p99_ms": 31.56662299,
+      "margin_closed_pct": 3.3125138510854564,
+      "margin_open_pct": 2.301790281329923,
+      "stage_open": null,
+      "spread_ms": null,
+      "robust_closed_ms": 32.61227174886368,
+      "robust_open_ms": 32.293220450127876,
+      "inversion_band_ms": null,
+      "verdict": "no inversion in this direction: the open-loop margin is the looser of the two here"
+    },
+    {
+      "offered_rps": 1.5,
+      "conc_sim": 27.001880236823695,
+      "operating_point": 27.001880236823695,
+      "tpot_p99_ms": 33.056421099999994,
+      "margin_closed_pct": 3.958130850413281,
+      "margin_open_pct": 6.3377286261165455,
+      "stage_open": null,
+      "spread_ms": null,
+      "robust_closed_ms": 34.36483750160162,
+      "robust_open_ms": 35.15144736282432,
+      "inversion_band_ms": [
+        34.36483750160162,
+        35.15144736282432
+      ],
+      "band_width_ms": 0.7866098612227006,
+      "verdict": "band exists but this point was run ONCE: its spread is unknown, so no verdict may be ranked here (rev 4)"
+    },
+    {
+      "offered_rps": 1.75,
+      "conc_sim": 32.47461638944143,
+      "operating_point": 32.47461638944143,
+      "tpot_p99_ms": 34.27147245,
+      "margin_closed_pct": 5.70001683471193,
+      "margin_open_pct": 15.074798619102417,
+      "stage_open": null,
+      "spread_ms": 0.776,
+      "robust_closed_ms": 36.22495214915366,
+      "robust_open_ms": 39.43782790563866,
+      "inversion_band_ms": [
+        36.22495214915366,
+        39.43782790563866
+      ],
+      "band_width_ms": 3.212875756485005,
+      "spread_threshold_ms": 2.3280000000000003,
+      "verdict": "INDISTINGUISHABLE: the band is 3.213 ms but 3x the spread is 2.328 ms on each side, which consumes it. Recorded as a verdict, not as a failure to reach one (rev 4)",
+      "usable_slo_ms": null
+    },
+    {
+      "offered_rps": 2.0,
+      "conc_sim": 37.96546697025815,
+      "operating_point": 37.96546697025815,
+      "tpot_p99_ms": 35.331794640000005,
+      "margin_closed_pct": 7.507334406737772,
+      "margin_open_pct": 21.40342357654486,
+      "stage_open": null,
+      "spread_ms": 0.116,
+      "robust_closed_ms": 37.984270615526654,
+      "robust_open_ms": 42.89400830399418,
+      "inversion_band_ms": [
+        37.984270615526654,
+        42.89400830399418
+      ],
+      "band_width_ms": 4.909737688467523,
+      "spread_threshold_ms": 0.34800000000000003,
+      "usable_slo_ms": [
+        38.33227061552665,
+        42.54600830399418
+      ],
+      "best_slo_ms": 40.43913945976041,
+      "separation_at_best_ms": 2.454868844233758,
+      "separation_in_spreads": 21.162662450291016,
+      "verdict": "RANKABLE at SLO 40.439 ms: closed-loop passes by 2.455 ms, open-loop fails by 2.455 ms, each 21.2x the measured spread"
+    },
+    {
+      "offered_rps": 2.25,
+      "conc_sim": 43.688896298382254,
+      "operating_point": 43.68889629838225,
+      "tpot_p99_ms": 36.714980759999996,
+      "margin_closed_pct": 9.458186582783023,
+      "margin_open_pct": 0.0,
+      "stage_open": "outside_calibration_domain",
+      "spread_ms": null,
+      "verdict": "no inversion: the open-loop domain REFUSES this operating point (outside_calibration_domain), so there is no margin to compare",
+      "inversion_band_ms": null
+    },
+    {
+      "offered_rps": 2.5,
+      "conc_sim": 49.52743934545933,
+      "operating_point": 49.527439345459335,
+      "tpot_p99_ms": 38.48017987,
+      "margin_closed_pct": 11.522603115851298,
+      "margin_open_pct": 0.0,
+      "stage_open": "outside_calibration_domain",
+      "spread_ms": null,
+      "verdict": "no inversion: the open-loop domain REFUSES this operating point (outside_calibration_domain), so there is no margin to compare",
+      "inversion_band_ms": null
+    },
+    {
+      "offered_rps": 3.0,
+      "conc_sim": 61.6770234423819,
+      "operating_point": 61.6770234423819,
+      "tpot_p99_ms": 42.871124869999996,
+      "margin_closed_pct": 16.07832427549019,
+      "margin_open_pct": 0.0,
+      "stage_open": "outside_calibration_domain",
+      "spread_ms": null,
+      "verdict": "no inversion: the open-loop domain REFUSES this operating point (outside_calibration_domain), so there is no margin to compare",
+      "inversion_band_ms": null
+    },
+    {
+      "offered_rps": 3.5,
+      "conc_sim": 74.49811667938296,
+      "operating_point": 74.49811667938295,
+      "tpot_p99_ms": 46.69059426,
+      "margin_closed_pct": 21.307654769442443,
+      "margin_open_pct": 0.0,
+      "stage_open": "outside_calibration_domain",
+      "spread_ms": null,
+      "verdict": "no inversion: the open-loop domain REFUSES this operating point (outside_calibration_domain), so there is no margin to compare",
+      "inversion_band_ms": null
+    }
+  ]
+}

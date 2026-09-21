@@ -10,7 +10,7 @@
   "max_conc_gap": 0.2,
   "min_requests_p99": 300,
   "provenance": {
-    "git_commit": "acad84e54a05c51c9f1597a97ae2bf0700496ebd",
+    "git_commit": "6c4f95f7daa2e2fca8e15a3731bf464b7fd6e7b5",
     "git_dirty": true,
     "llmservingsim_commit": "2c2042ce4bf1b0283ebeed1db95db6f25e3e7511",
     "vllm_version": null,
@@ -22,7 +22,7 @@
     "dataset_hash": null,
     "random_seed": null,
     "command": "openloop_sim_error.py --real experiments/results/s73_npu_6fe246ed1abf/envelope.json --sim experiments/p2_evidence/results/v3r_candidates.json experiments/results/s73_npu_6fe246ed1abf/sim_extra_rates.json --sim-cache outputs/p2_evidence/v3r/cache --dataset workloads/sharegpt-llama-3.1-8b-300-sps10.jsonl --num-reqs 300 --out-dir experiments/results/s73_npu_6fe246ed1abf --write-domain experiments/results/s73_npu_6fe246ed1abf/rngd_card.accuracy.openloop.yaml",
-    "timestamp": "2026-09-21T04:52:07.130265+00:00",
+    "timestamp": "2026-09-21T05:58:25.010685+00:00",
     "python_version": "3.10.12",
     "platform": "Linux-6.8.0-40-generic-x86_64-with-glibc2.35",
     "hostname": "etri-001",
@@ -98,6 +98,7 @@
         "repeats": 1
       },
       "conc_sim": 11.730193512627325,
+      "conc_axis": 11.730193512627324,
       "conc_gap_pct": 3.720300179897422,
       "requests_ok": {
         "median": 300.0,
@@ -163,6 +164,7 @@
         "repeats": 1
       },
       "conc_sim": 16.54486856927617,
+      "conc_axis": 16.544868569276172,
       "conc_gap_pct": 2.322871859542094,
       "requests_ok": {
         "median": 300.0,
@@ -228,6 +230,7 @@
         "repeats": 1
       },
       "conc_sim": 21.667774996430342,
+      "conc_axis": 21.667774996430346,
       "conc_gap_pct": -0.19920381010925292,
       "requests_ok": {
         "median": 300.0,
@@ -293,6 +296,7 @@
         "repeats": 1
       },
       "conc_sim": 27.001880236823695,
+      "conc_axis": 27.001880236823695,
       "conc_gap_pct": -5.9587516832374074,
       "requests_ok": {
         "median": 300.0,
@@ -352,6 +356,7 @@
         "repeats": 3
       },
       "conc_sim": 32.47461638944143,
+      "conc_axis": 32.47461638944143,
       "conc_gap_pct": -10.737101246927505,
       "requests_ok": {
         "median": 300.0,
@@ -417,6 +422,7 @@
         "repeats": 3
       },
       "conc_sim": 37.96546697025815,
+      "conc_axis": 37.96546697025815,
       "conc_gap_pct": -14.696379556023048,
       "requests_ok": {
         "median": 300.0,
@@ -476,6 +482,7 @@
         "repeats": 2
       },
       "conc_sim": 43.688896298382254,
+      "conc_axis": 43.68889629838225,
       "conc_gap_pct": -27.847170682625734,
       "requests_ok": {
         "median": 300.0,
@@ -542,6 +549,7 @@
         "repeats": 1
       },
       "conc_sim": 49.52743934545933,
+      "conc_axis": 49.527439345459335,
       "conc_gap_pct": -33.06853671688059,
       "requests_ok": {
         "median": 300.0,
@@ -602,6 +610,7 @@
         "repeats": 1
       },
       "conc_sim": 61.6770234423819,
+      "conc_axis": 61.6770234423819,
       "conc_gap_pct": -38.30268700447462,
       "requests_ok": {
         "median": 300.0,
@@ -662,6 +671,7 @@
         "repeats": 1
       },
       "conc_sim": 74.49811667938296,
+      "conc_axis": 74.49811667938295,
       "conc_gap_pct": -34.763828866887884,
       "requests_ok": {
         "median": 300.0,
