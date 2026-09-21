@@ -183,3 +183,48 @@ here. What S7.3 establishes is that the selection must be redone, and why.
 * **Nothing about the closed-loop domain's correctness.** `rngd_card_edf.yaml`
   is untouched and remains right for what it measured; it simply cannot answer
   for an arrival-trace replay.
+
+## 9. Reproducing
+
+**The pairing and both domain files, from committed data, no card needed:**
+
+```bash
+D=experiments/results/s73_npu_6fe246ed1abf
+PYTHONPATH=$PWD .venv/bin/python experiments/scripts/openloop_sim_error.py \
+    --real $D/envelope.json \
+    --sim experiments/p2_evidence/results/v3r_candidates.json $D/sim_extra_rates.json \
+    --sim-cache outputs/p2_evidence/v3r/cache \
+    --dataset workloads/sharegpt-llama-3.1-8b-300-sps10.jsonl --num-reqs 300 \
+    --out-dir /tmp/s73check --write-domain /tmp/s73check/rngd_card.accuracy.openloop.yaml
+```
+
+`--sim-cache` is untracked. Without it the run still works but the `_p50` column
+cannot be formed, and it says so rather than deriving a p50 from a p99.
+
+**The measurements themselves, which need the card** — and which must not be
+appended to this dataset unless `whichnode.sh` prints the same `accel serials`
+(D80):
+
+```bash
+bash scripts/whichnode.sh     # accel serials must be RNG26040100105Q+...181Q+...187Q
+ps -eo pid,etime,cmd | grep "[r]ngd_pd.serving.cluster"   # the only reliable holder check
+ART=~/.cache/huggingface/hub/models--furiosa-ai--Llama-3.1-8B-Instruct/snapshots/231d94fbc03cdd66aaeb2411697064a45f008ec7
+PYTHONPATH=$PWD .venv/bin/python experiments/scripts/measure_envelope.py \
+    --backend furiosa --mode open --rps 0.75,1,1.25,1.5,1.75,2,2.25,2.5,3,3.5 \
+    --num-reqs 300 --artifact "$ART" \
+    --dataset workloads/sharegpt-llama-3.1-8b-300-sps10.jsonl \
+    --card 0 --port 8020 --out outputs/s73_rerun
+```
+
+The driver runs in `.venv`; the client runs in `/usr/bin/python3`, which is where
+the vendor stack and `openai` live — that split is the `bench_python` column of
+the `BACKENDS` table, not a choice made here. **Do not pass `--max-tokens-cap`**:
+its `auto` default resolves the cap from the trace, and a number below the
+trace's longest row is what invalidated the first attempt (§2).
+
+**Regenerating the index after installing a domain:**
+
+```bash
+PYTHONPATH=$PWD .venv/bin/python experiments/scripts/rebuild_domain_index.py --check
+```
+
