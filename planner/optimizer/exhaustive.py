@@ -346,6 +346,7 @@ def evaluate_candidates(
     island_hw: dict[str, str] | None = None,
     max_workers: int | None = None,
     progress: Callable[[int, int, CandidateConfig], None] | None = None,
+    plan_id_base: int = 0,
 ) -> SearchResult:
     """Simulate every candidate and split by feasibility.
 
@@ -355,6 +356,12 @@ def evaluate_candidates(
     only speeds it up. §9 reproducibility is a property of the assembly order, not
     of the simulation order. The envelope cache is read before and written after
     the parallel phase, never from a worker thread, so no locking is needed.
+
+    ``plan_id_base`` offsets those ids. A caller that evaluates in BATCHES - the
+    graph-search driver's adaptive top-K does - would otherwise restart at
+    `hp-00000` each time and hand back several plans with the same id. Passing
+    the running total keeps ids unique and contiguous across batches. Default 0,
+    which is the single-call behaviour and is what `search()` uses.
     """
     result = SearchResult()
     topology = TopologyGraph(cluster)
@@ -493,7 +500,7 @@ def evaluate_candidates(
         if decision.unreadable:
             _unreadable += 1
         plan = DeploymentPlan(
-            plan_id=_plan_id(index),
+            plan_id=_plan_id(plan_id_base + index),
             model=spec.model,
             candidate=candidate,
             predicted=metrics,
@@ -1043,7 +1050,6 @@ def search(
 
     all_rejections = (generation.rejections + envelope_rejections
                       + surrogate_rejections + evaluation.rejections)
-    summary = summarize_rejections(all_rejections)
     caveats = [PHASE2_PREFIX_CACHE_CAVEAT]
     caveats.extend(tier_warnings)
     if not enable_bound_pruning:
@@ -1095,6 +1101,49 @@ def search(
             "candidates": evaluation.pd_transfers,
         }
 
+    return _assemble_output(
+        spec=spec,
+        cluster=cluster,
+        generated=generation.generated,
+        evaluation=evaluation,
+        all_rejections=all_rejections,
+        caveats=caveats,
+        prov=prov,
+        island_tiers=island_tiers,
+        island_hw=island_hw,
+    )
+
+
+def _assemble_output(
+    *,
+    spec: ServiceSpec,
+    cluster: ClusterSpecV2,
+    generated: int,
+    evaluation: SearchResult,
+    all_rejections: list[Rejection],
+    caveats: list[str],
+    prov: dict,
+    island_tiers: dict[str, tierutil.ProfileTier],
+    island_hw: dict[str, str],
+) -> PlannerOutput:
+    """Turn a finished evaluation into the `PlannerOutput` the CLI renders.
+
+    Lifted out of `search()` unchanged so a caller that drives the search
+    ITSELF can still produce the same object. The graph-search driver in
+    `swsok/heteropilot-graphsearch` evaluates in batches and has rejections of
+    its own -- `excluded_by_scope`, `not_evaluated_budget` -- so it builds
+    `all_rejections`, `caveats` and `prov`, then hands them here rather than
+    re-deriving the ranking, the tier summary and the two-branch construction.
+
+    Everything conditional on HOW the search ran (oracle mode, a surrogate
+    top-K, a caller filter, an envelope prefilter) stays with the caller: those
+    caveats describe the search, not the result. That is why
+    `enable_bound_pruning` is not a parameter here although the work order's
+    sketch listed one.
+    """
+
+    summary = summarize_rejections(all_rejections)
+
     ranking = rank_plans(evaluation.feasible_plans, spec)
     unscored = ranking.unscored
 
@@ -1125,7 +1174,7 @@ def search(
             unscored=unscored,
             rejected_summary=summary,
             evaluated_candidates=evaluation.evaluated,
-            generated_candidates=generation.generated,
+            generated_candidates=generated,
             provenance=prov,
             caveats=feasible_caveats + evaluation.notes + tier_caveats,
             profile_tier=tier_value,
@@ -1174,7 +1223,7 @@ def search(
         unscored=unscored,
         rejected_summary=summary,
         evaluated_candidates=evaluation.evaluated,
-        generated_candidates=generation.generated,
+        generated_candidates=generated,
         provenance=prov,
         caveats=caveats + evaluation.notes + tier_caveats,
         profile_tier=tier_value,

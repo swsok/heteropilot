@@ -11,6 +11,7 @@ full key are interchangeable; anything else is a different experiment.
 
 from __future__ import annotations
 
+import copy
 import json
 import re
 from dataclasses import dataclass
@@ -205,6 +206,7 @@ class EnvelopeCache:
         trace_digest: str | None = None,
         enabled: bool = True,
         topology_level: int = 1,
+        graph_signature: str | None = None,
     ) -> None:
         self.root = Path(root)
         self.spec = spec
@@ -216,10 +218,39 @@ class EnvelopeCache:
         # than Level 1, so the two must not share cache entries. Folded into the
         # key only when != 1, keeping existing (Level-1) cache files valid.
         self.topology_level = topology_level
-        self.hits = 0
-        self.misses = 0
+        # Structure the key cannot otherwise see. The envelope key describes a
+        # candidate's parallelism and hardware, not the GRAPH it was placed on,
+        # so two graph-search representatives that differ only in which shared
+        # uplink they cross would collide here. None - every path but the
+        # graph-search driver - leaves the file names exactly as they were, so
+        # the committed replay caches keep working. Same precedent as
+        # `topology_level` above.
+        self.graph_signature = graph_signature
+        # Counters live in a dict so `with_graph_signature` can hand out a
+        # sibling cache that SHARES them: the caller wants one hit/miss tally
+        # for the run, not one per representative.
+        self._stats = {"hits": 0, "misses": 0}
         if self.enabled:
             self.root.mkdir(parents=True, exist_ok=True)
+
+    @property
+    def hits(self) -> int:
+        return self._stats["hits"]
+
+    @property
+    def misses(self) -> int:
+        return self._stats["misses"]
+
+    def with_graph_signature(self, sig: str) -> EnvelopeCache:
+        """A sibling reading the same root under a different graph signature.
+
+        Shares this cache's hit/miss counters by reference, so a driver that
+        makes one per representative still reports a single tally.
+        """
+        sibling = copy.copy(self)
+        sibling.graph_signature = sig
+        sibling._stats = self._stats
+        return sibling
 
     def cache_key(self, candidate: CandidateConfig) -> str | None:
         """Stable string identifying a candidate's cache entry, or None if it has
@@ -242,6 +273,8 @@ class EnvelopeCache:
             name = prov.hash_object([name, self.trace_digest])
         if self.topology_level != 1:
             name = prov.hash_object([name, f"topology_level={self.topology_level}"])
+        if self.graph_signature:
+            name = prov.hash_object([name, f"graph={self.graph_signature}"])
         return self.root / f"{name}.json"
 
     def get(self, candidate: CandidateConfig) -> SimResult | None:
@@ -249,22 +282,22 @@ class EnvelopeCache:
             return None
         path = self._path(candidate)
         if path is None or not path.exists():
-            self.misses += 1
+            self._stats["misses"] += 1
             return None
         try:
             payload = json.loads(path.read_text())
             metrics = PredictedMetrics.model_validate(payload["metrics"])
         except Exception:
             # Unreadable entry: treat as a miss and let it be overwritten.
-            self.misses += 1
+            self._stats["misses"] += 1
             return None
         stored_schema = payload.get("metrics_schema")
         if stored_schema is not None and stored_schema != _METRICS_SCHEMA:
             # Written under a different PredictedMetrics field set: a stale
             # entry that would validate anyway. A miss, so it re-simulates.
-            self.misses += 1
+            self._stats["misses"] += 1
             return None
-        self.hits += 1
+        self._stats["hits"] += 1
         op = payload.get("operating_point") or {}
         warnings = ["metrics served from the envelope cache"]
         if stored_schema is None:

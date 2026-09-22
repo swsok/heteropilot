@@ -4477,3 +4477,86 @@ an under-priced one cheapest.
 
 **Where.** `planner/inventory.py`, `tests/test_inventory_v2.py` (new),
 `tests/data/cluster_v2_min.yaml` (new), `docs/cluster_spec_v2.md` (new).
+
+---
+
+## D122 — the graph mode turns the generator's bounds OFF and applies its own; the default path keeps stages 4–5 · Recorded 2026-09-22
+
+*`WORK_ORDER_graph_search.md` STEP H3, from the `D120–D129` block. Read D121 and
+D120 first. A5000 node, accelerator set `GPU-bd2a06dc`.*
+
+**The arrangement.** `swsok/heteropilot-graphsearch` calls
+`CandidateGenerator(..., enable_bound_pruning=False)` and takes the surviving
+candidates as *templates*, then applies its own cut-capacity bounds in
+`graphsearch/bounds.py` after expanding each template into physical embeddings.
+Stages 4 and 5 are not modified and not removed: `python -m planner plan` runs
+them exactly as before, and `enable_bound_pruning=False` is the flag oracle mode
+has always used.
+
+**Why the graph mode cannot reuse them.** Stage 4 reasons about an island's
+representative interconnect. Two embeddings of one template can place the same
+TP group on two GPUs inside a node or across two nodes sharing a saturated
+uplink, and the stage cannot tell them apart because a `CandidateConfig` names
+islands, not devices. A bound that cannot see the difference is not wrong — it
+is a bound on the template, and it stays sound for the path that uses templates.
+It is simply not the bound the graph mode needs, which is over the *cut* between
+the ranks of a specific placement, minus whatever an external reservation holds.
+
+**Both must stay relaxations.** The rule is unchanged and it binds the new code
+too: a stage may reject only when the most optimistic arithmetic already misses
+a constraint §5.6 declares. The graph side's throughput bound is the one to
+watch, because it exists only now that H1 added `slo.min_goodput_rps` — with the
+field unset it must not run at all. `graphsearch`'s oracle-agreement harness is
+what checks this, the same way `tests/test_search.py` checks it here.
+
+---
+
+## D123 — networkx is a graphsearch dependency; this repo keeps its hand-rolled BFS · Recorded 2026-09-22
+
+*STEP H3, `D120–D129`.*
+
+`planner/topology.py` walks the cluster with its own BFS and says so
+(`path_aware=False`, `contention_modeled=False`). The graph search needs
+max-flow over a cut, subgraph isomorphism (VF2) and Weisfeiler–Lehman hashing,
+which are not worth hand-rolling and are exactly what networkx provides.
+
+**It is not added here.** `pyproject.toml` is untouched, `planner/` imports
+nothing new, and a checkout of this repo installs the same set it always did.
+The dependency lives in `heteropilot-graphsearch`, whose `Signature.tool_version`
+records the version it ran with, because a WL hash is only comparable against
+itself: the same graph hashed by two networkx releases may differ, and an
+equivalence class silently re-cut by a library upgrade would be invisible.
+
+---
+
+## D124 — the MVP adapter cannot hand shared resources to the simulator, so it reports what it dropped · Recorded 2026-09-22
+
+*STEP H3, `D120–D129`. The extension of D3 the graph work runs into.*
+
+D3 recorded that the legacy cluster config carries no topology graph. The
+consequence for graph search is sharper than for the planner: two placements
+that differ *only* in whether they cross a shared uplink compile to the **same**
+simulator input, so the simulator's prediction cannot distinguish them, and a
+difference the equivalence layer was careful to preserve is lost at the last
+step.
+
+The MVP does not fix this — a flow-level contention model is out of scope and
+`graphsearch/contention.py` ships an interface with a null implementation. What
+it does is refuse to lose the fact quietly: `compile_embedded` returns a
+`TopologyLossReport` naming every shared resource the config could not express,
+and a caveat travels with any plan whose report is non-empty.
+
+**What this costs a reader.** A `graphsearch` result comparing two such
+representatives is comparing their *bounds and their cost*, not their simulated
+performance, because the simulator gave both the same answer. That is a real
+limit on what the first paper can claim from simulation alone, and it is why the
+contention experiment is listed as work that follows a `ContentionModel`
+implementation rather than as something the MVP measures.
+
+**Where (D122–D124).** `planner/plan.py` (three `RejectionStage` values),
+`planner/optimizer/exhaustive.py` (`plan_id_base`, `_assemble_output`),
+`planner/envelope.py` (`graph_signature`, `with_graph_signature`),
+`planner/predictor/llmservingsim.py` (`set_compile_hook`),
+`tests/test_search_hooks.py` (new), `CLAUDE.md` (the `E-G*` row and the document
+table line). The consumers named above are in `swsok/heteropilot-graphsearch`
+and none of them exists yet.

@@ -19,6 +19,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 import pandas as pd
@@ -351,6 +352,15 @@ def compile_to_sim_config(
     return config, reduction
 
 
+#: A replacement compile step. Returns the same pair `compile_to_sim_config`
+#: does, or None to decline and let the normal path run.
+CompileHook = Callable[
+    [CandidateConfig, ClusterSpecV2, "dict[str, ExecutionIsland]",
+     "dict[str, AcceleratorProfile]"],
+    "tuple[dict, TopologyReduction] | None",
+]
+
+
 class LLMServingSimPredictor(Predictor):
     """Runs `python -m serving` as a subprocess, one process per candidate."""
 
@@ -401,6 +411,23 @@ class LLMServingSimPredictor(Predictor):
         )
         self.work_dir.mkdir(parents=True, exist_ok=True)
         self.last_reduction: TopologyReduction | None = None
+        self._compile_hook: CompileHook | None = None
+
+    def set_compile_hook(self, hook: CompileHook | None) -> None:
+        """Install a replacement for `compile_to_sim_config`, or clear it.
+
+        The graph-search driver places a candidate on specific PHYSICAL devices
+        and needs the simulator config to reflect the path it chose, which
+        `compile_to_sim_config` cannot know - a `CandidateConfig` names islands,
+        not devices. Rather than teach the planner about embeddings, the driver
+        hands in a closure.
+
+        A hook returning None means "not mine", and the normal compile runs. So
+        a driver binds only the candidates it is driving and everything else
+        takes the untouched path; with no hook installed this class behaves
+        exactly as it did.
+        """
+        self._compile_hook = hook
 
     # -- Predictor ---------------------------------------------------------
 
@@ -413,16 +440,21 @@ class LLMServingSimPredictor(Predictor):
         profiles: dict[str, AcceleratorProfile],
     ) -> SimResult:
         try:
-            config, reduction = compile_to_sim_config(
-                candidate,
-                cluster,
-                islands,
-                profiles,
-                topology=TopologyGraph(cluster),
-                gpu_memory_utilization=self.gpu_memory_utilization,
-                activation_reserve_gb=self.activation_reserve_gb,
-                topology_level=self.topology_level,
-            )
+            compiled = None
+            if self._compile_hook is not None:
+                compiled = self._compile_hook(candidate, cluster, islands, profiles)
+            if compiled is None:
+                compiled = compile_to_sim_config(
+                    candidate,
+                    cluster,
+                    islands,
+                    profiles,
+                    topology=TopologyGraph(cluster),
+                    gpu_memory_utilization=self.gpu_memory_utilization,
+                    activation_reserve_gb=self.activation_reserve_gb,
+                    topology_level=self.topology_level,
+                )
+            config, reduction = compiled
         except OutsideCalibrationDomain as exc:
             return SimResult(
                 candidate.id, SimOutcome.OUTSIDE_CALIBRATION_DOMAIN, detail=str(exc)

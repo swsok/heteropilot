@@ -182,6 +182,24 @@ class RejectionStage(str, enum.Enum):
     #: which the oracle-agreement test reports rather than treats as a bug.
     #: Opt-in: hardware without an envelope is never touched by it.
     OUTSIDE_MEASURED_ENVELOPE = "outside_measured_envelope"
+    #: A sound upper bound on what the candidate could serve falls below
+    #: `slo.min_goodput_rps`. A relaxation like stages 4-5, and MEANINGLESS
+    #: without that field: until H1 added it §5.6 declared no throughput
+    #: constraint at all, which is exactly why the generator's old throughput
+    #: bound had to be removed (`candidate_generator`, and the comment there).
+    #: With the field unset nothing ever charges to this stage.
+    THROUGHPUT_UPPER_BOUND = "throughput_upper_bound"
+    #: NOT a verdict. The candidate was never judged - an enumeration cap or a
+    #: caller-supplied filter kept it out of the search entirely. Separate from
+    #: every stage above because those say something about the candidate and
+    #: this says something about the search: counting it as infeasible would
+    #: report a budget as a property of the hardware.
+    EXCLUDED_BY_SCOPE = "excluded_by_scope"
+    #: NOT a verdict either. Adaptive search ran out of budget before reaching
+    #: it. Split from SURROGATE_PRUNED, which is a ranking decision about a
+    #: candidate that WAS considered; this one was not considered at all, and
+    #: the honest report is "N were never evaluated" rather than a silence.
+    NOT_EVALUATED_BUDGET = "not_evaluated_budget"
     SLO_VIOLATED = "slo_violated"
     POWER_VIOLATED = "power_violated"
     EFFICIENCY_VIOLATED = "efficiency_violated"
