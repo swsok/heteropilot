@@ -23,6 +23,7 @@ _DIMENSIONS: list[tuple[str, str, bool]] = [
     ("peak_power_w", "peak_power_w", True),
     ("tokens_per_joule", "tokens_per_joule", False),
     ("active_accelerators", "__devices__", True),
+    ("cost_per_hour_usd", "__cost__", True),
 ]
 
 
@@ -31,6 +32,11 @@ def _dimension_values(plan: DeploymentPlan) -> dict[str, float | None]:
     for name, attr, _ in _DIMENSIONS:
         if attr == "__devices__":
             out[name] = float(plan.active_accelerators)
+        elif attr == "__cost__":
+            # Lives on the plan, not on the metrics, and is None until a price
+            # model fills it. `dominates` skips a None dimension, so a priced
+            # plan cannot dominate an unpriced one by that alone.
+            out[name] = None if plan.cost_per_hour_usd is None else float(plan.cost_per_hour_usd)
         else:
             value = getattr(plan.predicted, attr, None)
             out[name] = None if value is None else float(value)
@@ -121,6 +127,12 @@ def can_score(plan: DeploymentPlan, objective: Objective) -> tuple[bool, str]:
             )
         if m.total_energy_j <= 0:
             return False, f"objective '{objective.value}' needs energy > 0, got {m.total_energy_j}"
+    if objective is Objective.MINIMIZE_COST_PER_HOUR and plan.cost_per_hour_usd is None:
+        return False, (
+            f"objective '{objective.value}' needs a price model; this plan has none - "
+            f"some accelerator or host it occupies carries no price_per_hour_usd, and a "
+            f"partial sum would rank an under-priced plan cheapest"
+        )
     return True, ""
 
 
@@ -139,6 +151,10 @@ def objective_value(plan: DeploymentPlan, objective: Objective) -> float:
         return -m.total_energy_j
     if objective is Objective.MINIMIZE_ACTIVE_ACCELERATORS:
         return -float(plan.active_accelerators)
+    if objective is Objective.MINIMIZE_COST_PER_HOUR:
+        if plan.cost_per_hour_usd is None:
+            return float("-inf")
+        return -float(plan.cost_per_hour_usd)
     raise ValueError(f"unhandled objective {objective}")
 
 

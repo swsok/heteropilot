@@ -76,6 +76,55 @@ def check_latency(
     return out
 
 
+def check_throughput(
+    metrics: PredictedMetrics, spec: ServiceSpec
+) -> tuple[list[Violation], list[str]]:
+    """Throughput floor and completion ratio.
+
+    Both are opt-in; with neither set this is a no-op and the declared
+    constraint set is exactly what it was. That matters beyond this function:
+    `candidate_generator` removed its throughput lower bound precisely because
+    §5.6 declared no throughput constraint for it to relax, and restoring that
+    bound is only sound once `slo.min_goodput_rps` is what both sides read.
+
+    `min_completion_ratio` needs to know how many requests were offered. A
+    predictor that keeps no per-request records cannot say, and an unknown
+    figure is reported as a note - never as a pass, and never as a violation.
+    Treating "not measured" as either one is the failure D2 records for power.
+    """
+    violations: list[Violation] = []
+    notes: list[str] = []
+
+    if spec.slo.min_goodput_rps is not None and metrics.slo_goodput_rps < spec.slo.min_goodput_rps:
+        violations.append(
+            Violation(
+                metric="slo_goodput_rps",
+                target=spec.slo.min_goodput_rps,
+                predicted=metrics.slo_goodput_rps,
+            )
+        )
+
+    if spec.slo.min_completion_ratio is not None:
+        offered = metrics.offered_requests
+        if offered is None or offered <= 0:
+            notes.append(
+                "slo.min_completion_ratio is set but the predictor reported no offered "
+                "request count; the constraint could not be checked"
+            )
+        else:
+            ratio = metrics.completed_requests / offered
+            if ratio < spec.slo.min_completion_ratio:
+                violations.append(
+                    Violation(
+                        metric="completion_ratio",
+                        target=spec.slo.min_completion_ratio,
+                        predicted=ratio,
+                    )
+                )
+
+    return violations, notes
+
+
 def check_power(metrics: PredictedMetrics, spec: ServiceSpec) -> tuple[list[Violation], list[str]]:
     """Power cap and energy-efficiency floor.
 
@@ -139,9 +188,15 @@ def evaluate(
         ttft_margin_percent=ttft_margin_percent,
         tpot_margin_percent=tpot_margin_percent,
     )
+    # Throughput sits between latency and power because it is the same class of
+    # constraint as latency - the service contract - and charges to the same
+    # stage. Power comes last so an SLO miss is named before an energy one.
+    throughput_violations, throughput_notes = check_throughput(metrics, spec)
+    violations.extend(throughput_violations)
     stage = RejectionStage.SLO_VIOLATED if violations else None
 
     power_violations, notes = check_power(metrics, spec)
+    notes = throughput_notes + notes
     if power_violations and stage is None:
         stage = (
             RejectionStage.POWER_VIOLATED

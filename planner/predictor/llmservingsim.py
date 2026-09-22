@@ -675,6 +675,12 @@ class LLMServingSimPredictor(Predictor):
                 slo_goodput_rps=goodput_rps,
                 slo_attainment=attainment,
                 completed_requests=len(df),
+                # Every request the simulator admitted also finished, so this
+                # equals `completed_requests` and the ratio is 1.0. The field
+                # earns its place against a predictor or a real bench where the
+                # two differ; here it says the count is KNOWN, which is what
+                # separates "ratio met" from "ratio unchecked".
+                offered_requests=len(df),
                 completed_tokens=completed_tokens,
                 total_energy_j=energy,
                 average_power_w=avg_w,

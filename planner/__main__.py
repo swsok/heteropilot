@@ -168,6 +168,31 @@ _UNCERTAINTY_FIELDS: tuple[tuple[str, str], ...] = (
 )
 
 
+#: Fields added by the graph-search hook PR H1, dropped WHILE THEY ARE None.
+#: Unlike the uncertainty fields above this is not gated on a flag: nothing on
+#: the default path ever fills them, and the graph-search driver that does fill
+#: them wants them emitted. Marker-keyed so a same-named key elsewhere in the
+#: dump cannot be hit by accident.
+_OPTIONAL_NONE_FIELDS: tuple[tuple[str, str], ...] = (
+    ("p50_ttft_ms", "offered_requests"),     # PredictedMetrics
+    ("plan_id", "cost_per_hour_usd"),        # DeploymentPlan
+    ("plan_id", "cost_basis"),
+)
+
+
+def _strip_none_fields(node: object) -> None:
+    """Recursively drop `_OPTIONAL_NONE_FIELDS` entries that are still None."""
+    if isinstance(node, dict):
+        for marker, field in _OPTIONAL_NONE_FIELDS:
+            if marker in node and node.get(field, "") is None:
+                node.pop(field, None)
+        for value in node.values():
+            _strip_none_fields(value)
+    elif isinstance(node, list):
+        for value in node:
+            _strip_none_fields(value)
+
+
 def _strip_uncertainty_fields(node: object) -> None:
     """Recursively drop the opt-in uncertainty fields from a dumped output."""
     if isinstance(node, dict):
@@ -193,6 +218,7 @@ def _write_output(output: PlannerOutput, path: Path) -> None:
         # to keep the default path's YAML byte-identical (absolute rule A4).
         data.pop("uncertain_inputs", None)
         _strip_uncertainty_fields(data)
+    _strip_none_fields(data)
     path.write_text(yaml.safe_dump(data, sort_keys=False))
 
 

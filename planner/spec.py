@@ -21,6 +21,10 @@ class Objective(str, enum.Enum):
     MINIMIZE_ENERGY = "minimize_energy"
     MAXIMIZE_SLO_GOODPUT_PER_JOULE = "maximize_slo_goodput_per_joule"
     MINIMIZE_ACTIVE_ACCELERATORS = "minimize_active_accelerators"
+    #: Cheapest deployment that still meets every hard constraint. Needs a price
+    #: model; a plan with no price cannot be scored on it and says so rather
+    #: than sorting last (`pareto.can_score`).
+    MINIMIZE_COST_PER_HOUR = "minimize_cost_per_hour"
 
 
 class _Strict(BaseModel):
@@ -81,6 +85,19 @@ class Slo(_Strict):
     tpot: LatencyTarget
     max_cluster_power_w: float | None = Field(default=None, gt=0)
     min_tokens_per_joule: float | None = Field(default=None, gt=0)
+    #: Throughput floor. Until this exists §5.6 declares no throughput
+    #: constraint at all, which is why the generator's throughput lower bound
+    #: had to be removed - a pruning stage may only relax a constraint
+    #: feasibility actually declares (`candidate_generator._stage5_*`, and the
+    #: comment there that says restoring it needs exactly this field).
+    min_goodput_rps: float | None = Field(default=None, gt=0)
+    #: Fraction of offered requests that must complete. Separate from
+    #: `slo_attainment`, which asks how many of the COMPLETED ones met their
+    #: latency targets: a run that drops half its load can still attain 100%.
+    min_completion_ratio: float | None = Field(default=None, gt=0, le=1)
+    #: Window the two figures above are read over. Recorded, not enforced: the
+    #: simulator reports one figure for the whole run.
+    observation_window_s: float | None = Field(default=None, gt=0)
 
 
 class ObjectiveSpec(_Strict):

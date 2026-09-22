@@ -4347,3 +4347,67 @@ not what S6 was scoped to do. The figures are in the result document.
 appended), `experiments/p2_evidence/results/s6_link_binding_and_p2p_control.md`
 (new), `tests/test_calibration_condition.py` (§(vii), the committed A40 domain
 against V3's real P1), `outputs/p2_evidence/{link_numa,p2p_control}/`.
+
+---
+
+## D121 — `PredictedMetrics.offered_requests` changes the metrics schema digest, so every envelope cache entry misses · Recorded 2026-09-22
+
+*`WORK_ORDER_graph_search.md` STEP H1, the first entry from the `D120–D129`
+block claimed by that work order (which lives in `swsok/heteropilot-graphsearch`;
+the staged copy is `graphsearch/WORK_ORDER_graph_search.md`). A5000 node,
+accelerator set `GPU-bd2a06dc`. This entry records a cache consequence, not a
+disagreement with upstream.*
+
+**What H1 added.** The service contract grew three optional SLO fields
+(`min_goodput_rps`, `min_completion_ratio`, `observation_window_s`), a fourth
+objective (`minimize_cost_per_hour`), a price on a plan (`cost_per_hour_usd`,
+`cost_basis`), and one field on the metrics — `offered_requests`, the
+denominator `completed_requests` is a ratio of. Everything defaults to None and
+`_write_output` drops the three new keys while they are, so a flagless
+`python -m planner plan` emits the same YAML it did before.
+
+**The cache is the exception, and it is deliberate.** `envelope._METRICS_SCHEMA`
+is a digest over `sorted(PredictedMetrics.model_fields)`, stored inside every
+entry, and an entry whose stored digest differs from the running one is a miss.
+Adding a field therefore invalidates every cached simulation at once:
+
+    pre-H1   44b33e454ef8d016
+    post-H1  aefae37de6a24695
+
+That is the mechanism working. The digest exists because of what happened in
+uncertainty STEP B2 — E-A1 re-ran to byte-identical numbers off entries written
+before `served_concurrency_per_island` existed, which reads as "the change had
+no effect" when it means "the change was never applied". An experiment run
+against a warm pre-H1 cache must refill it; `outputs/uncertainty/ea1/cache`,
+`outputs/perf/topk/cache_*` and `outputs/.hp-envelope` are all affected.
+
+**Why a throughput floor had to come first.** `candidate_generator` once carried
+a throughput lower bound and it was removed, because §5.6 declared no throughput
+constraint for it to relax and the oracle-agreement test caught the
+disagreement. The comment left at `planner/candidate_generator.py` says
+restoring it requires feasibility to declare one. `feasibility.check_throughput`
+is that declaration, so the graph-search bound in `graphsearch/bounds.py` and
+the final feasibility test now read the same field. Until a spec sets
+`min_goodput_rps` the check is a no-op and the declared constraint set is
+unchanged — the bound stays off with it.
+
+**`offered_requests` is None, not zero, when unknown.** A predictor with no
+per-request records cannot say how many requests were offered, and
+`check_throughput` then reports the completion-ratio constraint as unchecked
+rather than satisfied. That is D2's rule for an unmeasurable constraint, applied
+to a second one. `LLMServingSimPredictor` fills it with the CSV row count, which
+equals `completed_requests` there — every admitted request finishes — so the
+ratio is 1.0 and the field's value on that path is that the count is *known*.
+
+**The work order put the block claim in H3; the guard puts it here.** STEP H3's
+change list is where `WORK_ORDER_graph_search.md` says the `D120–D129` row lands
+in `CLAUDE.md`. But `tests/test_deviations_numbering.py` fails on the *first*
+entry taken from a block CLAUDE.md does not yet assign, and that entry is this
+one — so the row had to be written in H1 or D121 could not be recorded at all.
+The row is therefore already present when H3 runs; H3 still owns the experiment
+tag `E-G*` and the document-table line. The real code wins, as ever.
+
+**Where.** `planner/spec.py`, `planner/plan.py`,
+`planner/optimizer/{feasibility,pareto}.py`, `planner/__main__.py`,
+`planner/predictor/llmservingsim.py`, `tests/test_spec_contract.py` (new),
+`CLAUDE.md` (the block row).

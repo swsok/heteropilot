@@ -223,6 +223,13 @@ class PredictedMetrics(_Strict):
     slo_attainment: float
     completed_requests: int
     completed_tokens: int
+    #: How many requests were OFFERED, against which `completed_requests` is a
+    #: ratio. None for a predictor with no per-request records, and then
+    #: `feasibility.check_throughput` reports the completion-ratio constraint as
+    #: unchecked rather than satisfied - the D2 rule for an unmeasurable
+    #: constraint. `_write_output` drops the key while it is None, so the
+    #: default path's YAML is unchanged.
+    offered_requests: int | None = None
     total_energy_j: float | None = None
     average_power_w: float | None = None
     peak_power_w: float | None = None
@@ -282,6 +289,13 @@ class DeploymentPlan(_Strict):
     #: so `_write_output` can drop the key entirely and leave default plans
     #: byte-identical (rule A4).
     margin_basis: str | None = None
+    #: Price of the devices and hosts this plan occupies, per hour. None when
+    #: any of them has no price: a partial sum would make an under-priced plan
+    #: look cheapest. Never substitute the accelerator count for it.
+    cost_per_hour_usd: float | None = None
+    #: What that number was built from, so a reader can tell a datasheet list
+    #: price from a negotiated one. None (not "") so the key can be dropped.
+    cost_basis: str | None = None
 
     @property
     def active_accelerators(self) -> int:
