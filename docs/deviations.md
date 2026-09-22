@@ -4411,3 +4411,69 @@ tag `E-G*` and the document-table line. The real code wins, as ever.
 `planner/optimizer/{feasibility,pareto}.py`, `planner/__main__.py`,
 `planner/predictor/llmservingsim.py`, `tests/test_spec_contract.py` (new),
 `CLAUDE.md` (the block row).
+
+---
+
+## D120 — `bandwidth_gbps` stays GB/s, and the v2 schema is documented in a fork file because upstream's page describes the other layer · Recorded 2026-09-22
+
+*`WORK_ORDER_graph_search.md` STEP H2, the second entry from the `D120–D129`
+block. Read D121 first for what H1 established. A5000 node, accelerator set
+`GPU-bd2a06dc`.*
+
+**What H2 added.** `ClusterSpecV2.schema_version`, defaulting to 1, and a set of
+fields that exist only at 2: CPU sockets, PCIe switches and cluster-scoped
+network switches as vertices; `shared_resources` with a capacity and an external
+reservation; per-device and per-host prices; `runtime_capabilities` on a
+profile; and `bandwidth_unit`, `direction`, `rdma`, `p2p`, `shared_resource` on
+a link. Every committed cluster is v1 and reads exactly as it did.
+
+**The unit does not move.** `Link.bandwidth_gbps` is named for bits and has
+always held **GB/s** (`planner/topology.py`). v2 could have taken the
+opportunity to fix the name; it does not. A v1 file setting `bandwidth_unit` to
+anything but `GB/s` is refused outright, because the failure mode is silent: a
+committed `64` reinterpreted as Gbit/s becomes `8`, every bound that reads it
+moves by 8x, and nothing in the output says a unit changed. The name stays wrong
+and the number stays right.
+
+**A v2 field in a v1 file is an error, not an ignored key.** `_Strict` already
+rejects unknown keys, but these keys are not unknown - they exist on the model
+and pydantic would happily accept them, leaving a file that looks honoured and
+is not. `ClusterSpecV2._consistent` compares each v2 field against its default
+and names the first one set. This is the same class of failure as an entry
+served from a stale cache (D121) and an unmeasurable constraint reading as
+satisfied (D2): what makes it dangerous is that it is quiet.
+
+**The work order's documentation target was the wrong file, and this is the
+divergence.** STEP H2 says to add a v2 section to
+`docs/docs/reference/cluster-config.md`. That page documents the **legacy JSON**
+passed to `--cluster-config` - `num_nodes`, `link_bw`, `instances[]` - which is
+the layer the planner *compiles down to*, not the layer `schema_version` belongs
+to. It is also upstream's Docusaurus site (migrated in upstream `b55c52e`) with
+no fork content, the situation D35 records for `README.md` and `CHANGELOG.md`.
+Writing a `ClusterSpecV2` section there would document one schema on another
+schema's reference page, in a file the fork does not own.
+
+There was no fork-owned reference for the upper layer to extend either: the
+`ClusterSpecV2` fields are documented by their docstrings, and `device_binding`
+(D110) went into `docs/uncertainty_planner.md` because that is what consumed it.
+So H2 writes **`docs/cluster_spec_v2.md`**, which says in its first paragraph
+which of the two layers it describes and points at the other two pages for the
+lower one. Upstream's page is untouched.
+
+**A net_switch has no node, and that is load-bearing.** Every other endpoint is
+`<node>/<device>`; a switch endpoint is a bare id. `Link.endpoints` reports it as
+node `""`, and the intra-node callers (`_intra_node_adjacency`, `_dominant_link`)
+compare that against a real node id, so a switch can never be read as a device
+on some node. An empty node id is rejected to keep the sentinel sound. The v1
+requirement of exactly one slash therefore moved out of `Link._endpoint_format`,
+which cannot see its cluster's version, into `ClusterSpecV2._consistent`, which
+can - a bare endpoint in a v1 file is still refused, with a message that says
+`schema_version 2` is what it would need.
+
+**A price with no source is refused** (`AcceleratorProfile.price_source`), the
+rule-3 treatment a datasheet already gets. Unpriced stays None rather than zero,
+so H1's `MINIMIZE_COST_PER_HOUR` declines to score the plan instead of ranking
+an under-priced one cheapest.
+
+**Where.** `planner/inventory.py`, `tests/test_inventory_v2.py` (new),
+`tests/data/cluster_v2_min.yaml` (new), `docs/cluster_spec_v2.md` (new).

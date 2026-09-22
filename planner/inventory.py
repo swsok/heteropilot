@@ -201,6 +201,88 @@ class Nic(_Strict):
     speed_gbps: float = Field(gt=0)
 
 
+def _split_endpoint(value: str) -> tuple[str, str]:
+    """`'node0/gpu1'` -> `('node0', 'gpu1')`; `'sw0'` -> `('', 'sw0')`."""
+    node, _, device = value.rpartition("/")
+    return node, device
+
+
+class CpuSocket(_Strict):
+    """A host socket, so a placement can say which accelerators share one.
+
+    `schema_version: 2` only. Today's files have no CPU vertex at all, which is
+    why a graph built from them cannot tell two GPUs on one socket from two on
+    different ones.
+    """
+
+    id: str
+    numa_node: int | None = Field(default=None, ge=0)
+
+
+class PcieSwitch(_Strict):
+    """A PCIe switch, and what sits above it. `schema_version: 2` only."""
+
+    id: str
+    #: The cpu_socket or pcie_switch id this one hangs off, within the same node.
+    upstream: str | None = None
+
+
+class NetSwitch(_Strict):
+    """A network switch, named at cluster scope. `schema_version: 2` only.
+
+    Unlike every other vertex a switch belongs to no node, so a link endpoint
+    naming one carries no `<node>/` prefix - that is how the two are told apart.
+    """
+
+    id: str
+    ports: int | None = Field(default=None, gt=0)
+
+
+class SharedResourceSpec(_Strict):
+    """Capacity several links contend for. `schema_version: 2` only.
+
+    `Link.contention_group` already marks links as sharing something, but it
+    says only *that* they share - with no capacity there is nothing to subtract
+    a reservation from, and no cut bound that can be computed. This names the
+    resource, gives it a capacity, and records how much of it something outside
+    this deployment is already using.
+    """
+
+    id: str
+    kind: Literal["pcie_uplink", "nic", "switch_port", "other"]
+    capacity: float = Field(gt=0)
+    unit: Literal["GB/s", "Gbit/s"] = "GB/s"
+    #: Held by traffic this planner does not control. Subtracted from capacity
+    #: before any bound is computed; a bound over the full capacity would be
+    #: optimistic in a way no measurement can rescue.
+    reserved: float = Field(default=0.0, ge=0)
+    node: str | None = None
+    source: Source = Source.PLACEHOLDER
+
+    @model_validator(mode="after")
+    def _reservation_fits(self) -> SharedResourceSpec:
+        if self.reserved > self.capacity:
+            raise ValueError(
+                f"shared resource {self.id}: reserved={self.reserved} exceeds "
+                f"capacity={self.capacity}; nothing would be left to allocate"
+            )
+        return self
+
+
+class RuntimeCapabilities(_Strict):
+    """What the runtime on this accelerator can actually do.
+
+    Absent (None) means UNSTATED, which is not the same as unsupported: a
+    compatibility check skips an unstated capability and says it did, rather
+    than rejecting a candidate for a fact nobody recorded.
+    """
+
+    collectives: list[str] = Field(default_factory=list)
+    max_world_size: int | None = Field(default=None, ge=1)
+    kv_transfer: bool | None = None
+    source: Source = Source.PLACEHOLDER
+
+
 class Accelerator(_Strict):
     id: str
     type: AcceleratorType
@@ -210,6 +292,10 @@ class Accelerator(_Strict):
     memory_gb: float = Field(gt=0)
     state: AcceleratorState = AcceleratorState.FREE
     profile: str | None = None
+    #: Per-hour price of THIS device, overriding the profile's. `schema_version:
+    #: 2` only. None means unpriced, and a plan touching it cannot be scored on
+    #: cost at all - a partial sum would rank the under-priced plan cheapest.
+    price_per_hour_usd: float | None = Field(default=None, ge=0)
 
     # Dynamic fields, populated by the Phase 4 monitor. Optional until then.
     utilization: float | None = Field(default=None, ge=0.0, le=1.0)
@@ -278,11 +364,34 @@ class Node(_Strict):
     #: every committed cluster says today - means the match test skips it and
     #: flags it rather than assuming either state.
     device_binding: Literal["numa_pinned", "unpinned", "unknown"] = "unknown"
+    #: Host vertices, `schema_version: 2` only. Without them a graph cannot tell
+    #: two accelerators sharing a socket or a PCIe switch from two that do not.
+    cpu_sockets: list[CpuSocket] = Field(default_factory=list)
+    pcie_switches: list[PcieSwitch] = Field(default_factory=list)
+    #: Per-hour price of the host itself, charged in full to any plan that
+    #: touches this node. `schema_version: 2` only.
+    host_price_per_hour_usd: float | None = Field(default=None, ge=0)
 
     @model_validator(mode="after")
     def _unique_ids(self) -> Node:
         _reject_duplicates([a.id for a in self.accelerators], f"node {self.id} accelerator")
         _reject_duplicates([n.id for n in self.nics], f"node {self.id} nic")
+        _reject_duplicates([s.id for s in self.cpu_sockets], f"node {self.id} cpu_socket")
+        _reject_duplicates([s.id for s in self.pcie_switches], f"node {self.id} pcie_switch")
+        # One namespace per node: a link endpoint is `<node>/<id>` whatever kind
+        # of device the id names, so two kinds may not share one.
+        _reject_duplicates(
+            [a.id for a in self.accelerators] + [n.id for n in self.nics]
+            + [s.id for s in self.cpu_sockets] + [s.id for s in self.pcie_switches],
+            f"node {self.id} device",
+        )
+        known = {s.id for s in self.cpu_sockets} | {s.id for s in self.pcie_switches}
+        for switch in self.pcie_switches:
+            if switch.upstream is not None and switch.upstream not in known:
+                raise ValueError(
+                    f"node {self.id} pcie_switch {switch.id}: upstream="
+                    f"'{switch.upstream}' names no cpu_socket or pcie_switch on this node"
+                )
         return self
 
 
@@ -304,22 +413,55 @@ class Link(_Strict):
     #: spec value is all there is, and the registry keeps grading it at
     #: `source` so it stays in the measurement queue.
     measurements: list[LinkMeasurement] = Field(default_factory=list)
+    #: `schema_version: 2` only. `bandwidth_gbps` keeps its v1 meaning - GB/s
+    #: despite the name (see `topology.py`) - and this says so explicitly, or
+    #: switches the field to bits. A v1 file may not set it to anything else:
+    #: reinterpreting a committed number's unit is how a 64 becomes an 8.
+    bandwidth_unit: Literal["GB/s", "Gbit/s"] = "GB/s"
+    #: `schema_version: 2` only. v1 links are undirected and stay that way.
+    direction: Literal["bidir", "src_to_dst"] = "bidir"
+    rdma: bool | None = None
+    p2p: bool | None = None
+    #: `schema_version: 2` only. The capacity-carrying successor to
+    #: `contention_group`, which names a sharing relation but no capacity.
+    #: Setting both is an error rather than a merge - they would disagree.
+    shared_resource: str | None = None
 
     @model_validator(mode="after")
     def _endpoint_format(self) -> Link:
         for role, value in (("src", self.src), ("dst", self.dst)):
-            if value.count("/") != 1:
+            # 0 slashes = a net_switch id (cluster-scoped, v2 only); 1 = the v1
+            # `<node>/<device>`. `ClusterSpecV2._consistent` is what rejects the
+            # switch form in a v1 file and checks that either one resolves - a
+            # Link cannot see its cluster, so the shape is all that is checked
+            # here.
+            if value.count("/") > 1:
                 raise ValueError(
-                    f"link {self.id}: {role}='{value}' must be '<node_id>/<device_or_nic_id>'"
+                    f"link {self.id}: {role}='{value}' must be "
+                    f"'<node_id>/<device_or_nic_id>' or a net_switch id"
                 )
+            if not value:
+                raise ValueError(f"link {self.id}: {role} is empty")
         if self.src == self.dst:
             raise ValueError(f"link {self.id}: src and dst are the same endpoint '{self.src}'")
+        if self.shared_resource is not None and self.contention_group is not None:
+            raise ValueError(
+                f"link {self.id}: sets both contention_group='{self.contention_group}' and "
+                f"shared_resource='{self.shared_resource}'; they name the same thing and "
+                f"only shared_resource carries a capacity, so state one"
+            )
         return self
 
     @property
     def endpoints(self) -> tuple[tuple[str, str], tuple[str, str]]:
-        (sn, sd), (dn, dd) = self.src.split("/"), self.dst.split("/")
-        return (sn, sd), (dn, dd)
+        """`((src_node, src_device), (dst_node, dst_device))`.
+
+        A net_switch endpoint has no node, and reports `("", "<switch_id>")`.
+        Callers compare the node half against a real node id, and
+        `ClusterSpecV2._consistent` rejects an empty node id, so a switch can
+        never be mistaken for a device on some node.
+        """
+        return _split_endpoint(self.src), _split_endpoint(self.dst)
 
     @model_validator(mode="after")
     def _one_measurement_per_key(self) -> Link:
@@ -376,25 +518,108 @@ class Link(_Strict):
         return best
 
 
+#: Fields that exist only at `schema_version: 2`, as (owner, field) pairs. A v1
+#: file carrying any of them at a non-default value is an error rather than a
+#: silent read: the point of the version is that a v1 file means today exactly
+#: what it meant yesterday, and a field that is quietly ignored breaks that as
+#: surely as one that is quietly honoured.
+_V2_ONLY: dict[str, tuple[str, ...]] = {
+    "cluster": ("net_switches", "shared_resources", "snapshot_id"),
+    "node": ("cpu_sockets", "pcie_switches", "host_price_per_hour_usd"),
+    "accelerator": ("price_per_hour_usd",),
+    "link": ("bandwidth_unit", "direction", "rdma", "p2p", "shared_resource"),
+}
+
+
+def _reject_v2_fields(owner: str, model: BaseModel, where: str) -> None:
+    for name in _V2_ONLY[owner]:
+        default = type(model).model_fields[name].get_default(call_default_factory=True)
+        if getattr(model, name) != default:
+            raise ValueError(
+                f"{where}: schema_version 2 required for {name!r}; this file declares "
+                f"schema_version 1, where that field does not exist"
+            )
+
+
 class ClusterSpecV2(_Strict):
     cluster_id: str
+    #: 1 = the shape every committed file has; 2 = graph-aware (H2). Kept as an
+    #: int rather than inferred from which fields are present: inference would
+    #: make a typo'd v2 field read as a v1 file.
+    schema_version: int = Field(default=1, ge=1, le=2)
     nodes: list[Node] = Field(min_length=1)
     links: list[Link] = Field(default_factory=list)
+    #: `schema_version: 2` only. Switches belong to no node, so they live here.
+    net_switches: list[NetSwitch] = Field(default_factory=list)
+    shared_resources: list[SharedResourceSpec] = Field(default_factory=list)
+    #: Identifies the inventory reading this file was written from, so a plan
+    #: can be re-checked against a later one. `schema_version: 2` only.
+    snapshot_id: str | None = None
 
     @model_validator(mode="after")
     def _consistent(self) -> ClusterSpecV2:
         _reject_duplicates([n.id for n in self.nodes], "node")
         _reject_duplicates([link.id for link in self.links], "link")
+        _reject_duplicates([s.id for s in self.net_switches], "net_switch")
+        _reject_duplicates([s.id for s in self.shared_resources], "shared_resource")
+
+        v1 = self.schema_version == 1
+        if v1:
+            _reject_v2_fields("cluster", self, f"cluster {self.cluster_id}")
+
+        switches = {s.id for s in self.net_switches}
+        resources = {s.id for s in self.shared_resources}
         known: set[str] = set()
         for node in self.nodes:
+            if not node.id:
+                # `Link.endpoints` reports a switch endpoint as node `""`; an
+                # empty node id would make the two indistinguishable.
+                raise ValueError("node id must not be empty")
+            if "/" in node.id:
+                raise ValueError(f"node id '{node.id}' must not contain '/'")
+            if v1:
+                _reject_v2_fields("node", node, f"node {node.id}")
+                for accel in node.accelerators:
+                    _reject_v2_fields(
+                        "accelerator", accel, f"node {node.id} accelerator {accel.id}"
+                    )
             known.update(f"{node.id}/{a.id}" for a in node.accelerators)
             known.update(f"{node.id}/{n.id}" for n in node.nics)
+            known.update(f"{node.id}/{s.id}" for s in node.cpu_sockets)
+            known.update(f"{node.id}/{s.id}" for s in node.pcie_switches)
+
         for link in self.links:
+            if v1:
+                _reject_v2_fields("link", link, f"link {link.id}")
             for role, value in (("src", link.src), ("dst", link.dst)):
-                if value not in known:
+                if "/" in value:
+                    if value not in known:
+                        raise ValueError(
+                            f"link {link.id}: {role}='{value}' does not name any "
+                            f"accelerator or nic"
+                        )
+                elif v1:
                     raise ValueError(
-                        f"link {link.id}: {role}='{value}' does not name any accelerator or nic"
+                        f"link {link.id}: {role}='{value}' must be "
+                        f"'<node_id>/<device_or_nic_id>'; a bare net_switch endpoint "
+                        f"needs schema_version 2"
                     )
+                elif value not in switches:
+                    raise ValueError(
+                        f"link {link.id}: {role}='{value}' has no '<node>/' prefix, so it "
+                        f"must name a net_switch, and no net_switch has that id"
+                    )
+            if link.shared_resource is not None and link.shared_resource not in resources:
+                raise ValueError(
+                    f"link {link.id}: shared_resource='{link.shared_resource}' names no "
+                    f"entry in shared_resources"
+                )
+
+        for resource in self.shared_resources:
+            if resource.node is not None and resource.node not in {n.id for n in self.nodes}:
+                raise ValueError(
+                    f"shared resource {resource.id}: node='{resource.node}' is not a node"
+                )
         return self
 
     def node(self, node_id: str) -> Node:
@@ -560,6 +785,26 @@ class AcceleratorProfile(_Strict):
     #: Vendor datasheet values for Tier 0/1 synthetic bundles. None for
     #: profiles that only ever use measured bundles.
     datasheet: Datasheet | None = None
+    #: What the runtime supports. None means UNSTATED - a compatibility check
+    #: skips it and records that it did, rather than rejecting a candidate for
+    #: something nobody wrote down.
+    runtime_capabilities: RuntimeCapabilities | None = None
+    #: Default per-hour price for accelerators of this model; an `Accelerator`
+    #: may override it. Unlike the cluster's v2 fields this is not version-gated
+    #: - a profile carries no schema_version - but it is subject to rule 3, so
+    #: a price with no stated source is refused the same way a datasheet is.
+    price_per_hour_usd: float | None = Field(default=None, ge=0)
+    price_source: Source | None = None
+
+    @model_validator(mode="after")
+    def _price_is_attributed(self) -> AcceleratorProfile:
+        if self.price_per_hour_usd is not None and self.price_source is None:
+            raise ValueError(
+                f"profile {self.profile_id}: price_per_hour_usd is set but price_source "
+                f"is not - an unattributed price is a made-up number (rule 3), and a "
+                f"cost ranking built on one cannot be defended"
+            )
+        return self
 
     @model_validator(mode="after")
     def _tier_label_rules(self) -> AcceleratorProfile:

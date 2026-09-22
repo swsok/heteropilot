@@ -1,0 +1,65 @@
+# Smallest cluster that exercises every vertex kind schema_version 2 adds.
+# Fictional: every value is `source: placeholder` and no hardware here was
+# measured (absolute rule 3). It exists to validate the schema, not to plan on.
+cluster_id: v2-min
+schema_version: 2
+snapshot_id: "2026-09-22T00:00:00Z"
+
+nodes:
+  - id: node0
+    cpu_sockets:
+      - {id: sock0, numa_node: 0}
+    pcie_switches:
+      - {id: pcisw0, upstream: sock0}
+    host_price_per_hour_usd: 1.0
+    accelerators:
+      - id: gpu0
+        type: GPU
+        vendor: NVIDIA
+        model: H100
+        backend: cuda
+        memory_gb: 80
+        price_per_hour_usd: 2.0
+    nics:
+      - {id: nic0, type: ethernet, speed_gbps: 100}
+
+  - id: node1
+    cpu_sockets:
+      - {id: sock0, numa_node: 0}
+    host_price_per_hour_usd: 1.0
+    accelerators:
+      - id: gpu0
+        type: GPU
+        vendor: NVIDIA
+        model: H100
+        backend: cuda
+        memory_gb: 80
+        price_per_hour_usd: 2.0
+    nics:
+      - {id: nic0, type: ethernet, speed_gbps: 100}
+
+net_switches:
+  - {id: sw0, ports: 32}
+
+shared_resources:
+  # 10 GB/s of uplink, 6 of which something outside this deployment already
+  # holds. A bound computed over the full 10 would be optimistic in a way no
+  # later measurement can rescue, which is why `reserved` is part of the schema.
+  - {id: uplink-node0, kind: pcie_uplink, capacity: 10.0, unit: "GB/s",
+     reserved: 6.0, node: node0, source: placeholder}
+
+links:
+  # Device to its own node's PCIe switch, then switch to NIC: the intra-host
+  # path a v1 file cannot express at all.
+  - {id: l-gpu0-pcisw0, src: node0/gpu0, dst: node0/pcisw0, type: PCIE,
+     bandwidth_gbps: 64.0, latency_ns: 900, shared_resource: uplink-node0,
+     rdma: false, p2p: true}
+  - {id: l-pcisw0-nic0, src: node0/pcisw0, dst: node0/nic0, type: PCIE,
+     bandwidth_gbps: 64.0, latency_ns: 900, shared_resource: uplink-node0}
+  # NIC to a switch: the endpoint with no `<node>/` prefix, which is how a
+  # cluster-scoped vertex is told from a node-scoped one.
+  - {id: l-nic0-sw0, src: node0/nic0, dst: sw0, type: ETHERNET,
+     bandwidth_gbps: 100.0, bandwidth_unit: "Gbit/s", latency_ns: 5000,
+     direction: bidir, rdma: true}
+  - {id: l-sw0-nic1, src: sw0, dst: node1/nic0, type: ETHERNET,
+     bandwidth_gbps: 100.0, bandwidth_unit: "Gbit/s", latency_ns: 5000}
