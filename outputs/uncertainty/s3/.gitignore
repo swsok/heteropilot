@@ -1,0 +1,5 @@
+# Simulator work dirs: regenerable from the command in
+# experiments/uncertainty/results/s3_link_effective_bw.md. The result JSON and
+# the table are committed; this is not.
+work/
+run.log

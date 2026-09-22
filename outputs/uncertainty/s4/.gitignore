@@ -1,0 +1,5 @@
+# Simulator work dirs: regenerable from the command in
+# experiments/uncertainty/results/ea1_s4_condition_refuse.md §5. The result
+# JSONs and their tables are committed; this is not.
+work/
+run.log
