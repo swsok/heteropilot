@@ -147,6 +147,3 @@ outputs/a40_lowload_sim_error/trace_*.jsonl
 # kept as outputs/a40_envelope_openloop/lowload_reference/ because a test reads
 # them; the rest of the directory is scratch.
 outputs/a40_envelope_openloop/_smoke/
-
-# graft's local graph cache — regenerable, not committed (run `graft build`).
-/graft/
