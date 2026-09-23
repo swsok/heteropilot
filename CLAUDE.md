@@ -34,7 +34,7 @@ Authoritative documents, all of which outrank this file:
 | `docs/CLAIMS.md` | What can be claimed today, with each claim's label and artifact — Established / Not established / Retracted | Read before writing any result into a paper or deck |
 | `docs/uncertainty_planner.md` | `--accuracy-domain` / `--measurement-plan`: per-candidate margins, the `unmeasured` verdict, closed-form perturbation, the measurement queue — design, CLI, results, limits | Read before touching `planner/uncertainty/` or any accuracy domain |
 | `docs/HANDOVER.md` | Current state, next work by node, traps that cost a session | The live handover; the `HANDOVER_*.md` files are historical |
-| `graphsearch/` | Graph-based placement search: research design, software design, work order | Staged here; the implementation repo is `swsok/heteropilot-graphsearch`, which pins this one as a submodule and imports `planner.*` one-way. Only the hook PRs H1–H3 land here — see `docs/cluster_spec_v2.md` and D120–D124 |
+| `swsok/heteropilot-graphsearch` | Graph-based placement search — research design, software design, work order, and the implementation | **Another repository.** It pins this one as a submodule and imports `planner.*` one-way; nothing here depends on it. Only the hook PRs H1–H3 landed here — see `docs/cluster_spec_v2.md` and D120–D124 |
 
 Upstream ships `CLAUDE.md` as a symlink to `AGENTS.md`. This fork replaces it with a real file;
 read `AGENTS.md` directly for anything about the simulator itself.
@@ -441,7 +441,7 @@ So each concurrent work order owns a block and takes numbers only from it:
 | D90–D99 | `WORK_ORDER_npu_exec_model_spike.md` (claimed 2026-09-15) |
 | D100–D109 | `WORK_ORDER_p2_regular_spec_evidence.md` (claimed 2026-09-16, STEP V0) |
 | D110–D119 | `WORK_ORDER_domain_scoping.md` (claimed 2026-09-17, STEP S1) |
-| D120–D129 | `WORK_ORDER_graph_search.md` (claimed 2026-09-22, STEP H1) — the work order belongs to `swsok/heteropilot-graphsearch`; the staged copy is `graphsearch/WORK_ORDER_graph_search.md` |
+| D120–D129 | `WORK_ORDER_graph_search.md` (claimed 2026-09-22, STEP H1) — that work order lives in `swsok/heteropilot-graphsearch`, not here; only its hook PRs write entries in this file |
 
 D37–D39 are left free on purpose: they are the only numbers a stream may take
 **without** a block, and only for an entry that must sit immediately after the last
