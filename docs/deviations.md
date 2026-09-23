@@ -4561,3 +4561,71 @@ implementation rather than as something the MVP measures.
 `tests/test_search_hooks.py` (new), `CLAUDE.md` (the `E-G*` row and the document
 table line). The consumers named above are in `swsok/heteropilot-graphsearch`
 and none of them exists yet.
+
+---
+
+## D125 — the P/D transfer cost must be replaceable, and it must land before the verdict · Recorded 2026-09-23
+
+*`WORK_ORDER_graph_search.md` STEP H4, from the `D120–D129` block. Read D124
+first. A5000 node, accelerator set `GPU-bd2a06dc`. Raised by a review of the
+graph-search MVP (§3-A of that review).*
+
+**What was wrong.** `evaluate_candidates` always calls `apply_pd_transfer_cost`,
+which prices the prefill→decode handoff over the interconnect **class** —
+correct for the planner, because a `CandidateConfig` names islands and not
+devices. The graph-search driver knows the physical path, so it had been
+*subtracting* that figure afterwards and adding its own.
+
+Two things break under that arrangement, and the second is the serious one:
+
+1. On the `--predictor sim` path the driver subtracted and never added. Nothing
+   called `apply_pd_transfer_cost_embedded` at all, so the simulator's free
+   handoff went uncorrected and a P/D plan's TTFT carried **no** transfer cost.
+   The mock happened to hide it by adding its own path cost inside `predict`.
+2. Even correctly implemented, subtracting afterwards is too late. The
+   feasibility verdict is taken **inside** `evaluate_candidates`, on the metrics
+   as they stand there. A metric corrected after that call disagrees with the
+   verdict already reached — a plan could be marked infeasible on a cost it does
+   not carry, or feasible on one it does.
+
+**The fix.** Two hooks, both no-ops by default:
+
+* `evaluate_candidates(..., pd_transfer: bool = True)`. `False` skips the
+  class-default cost entirely and leaves `pd_transfers` empty, so the caller's
+  figure is the only one — absent rather than subtracted.
+* `LLMServingSimPredictor.set_result_hook(fn)`, applied inside `predict` just
+  before it returns. That is what makes the corrected metrics the ones
+  feasibility is judged on **and** the ones the envelope cache stores; a
+  correction applied outside the predictor would be lost on a cache hit.
+
+**Where.** `planner/optimizer/exhaustive.py`,
+`planner/predictor/llmservingsim.py`, `tests/test_search_hooks.py`.
+
+---
+
+## D126 — `EnvelopeKey` cannot see a candidate's physical boundary, so the caller supplies a signature · Recorded 2026-09-23
+
+*STEP H4, `D120–D129`. The per-candidate half of what H3's `graph_signature`
+started. Raised by the same review (§3-B).*
+
+**What was wrong.** H3 added one `graph_signature` for a whole cache, and the
+graph-search driver applied it only when a batch held exactly one
+representative — anything larger fell back to an unsignatured cache.
+
+`EnvelopeKey` describes a candidate's parallelism and hardware. It does not
+describe the shared resources the placement crosses, and it cannot: those are a
+property of the physical embedding, which the planner's own types do not carry.
+So two representatives alike in every field the key reads, and differing only in
+whether they cross a contended uplink, **produce the same key**. In a batch of
+two the second is served the first's metrics, with nothing in the output to say
+so.
+
+That is a mis-merge the oracle harness cannot catch either, because it happens
+below the level the harness compares.
+
+**The fix.** `EnvelopeCache(..., signature_of: Callable[[CandidateConfig], str |
+None] | None)`, folded into the file name exactly as `graph_signature` is and
+taking precedence over it. `None` from the callable falls back, and `None` for
+the whole parameter leaves every existing cache file name unchanged.
+
+**Where.** `planner/envelope.py`, `tests/test_search_hooks.py`.

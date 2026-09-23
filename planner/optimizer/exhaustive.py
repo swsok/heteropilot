@@ -347,6 +347,7 @@ def evaluate_candidates(
     max_workers: int | None = None,
     progress: Callable[[int, int, CandidateConfig], None] | None = None,
     plan_id_base: int = 0,
+    pd_transfer: bool = True,
 ) -> SearchResult:
     """Simulate every candidate and split by feasibility.
 
@@ -356,6 +357,14 @@ def evaluate_candidates(
     only speeds it up. §9 reproducibility is a property of the assembly order, not
     of the simulation order. The envelope cache is read before and written after
     the parallel phase, never from a worker thread, so no locking is needed.
+
+    ``pd_transfer=False`` skips `apply_pd_transfer_cost` entirely and leaves
+    `pd_transfers` empty. A caller that knows the PHYSICAL path -- the
+    graph-search driver does -- prices the handoff itself, and the class-default
+    figure this function would add has to be absent rather than subtracted
+    afterwards: the feasibility verdict is taken HERE, so a metric corrected
+    after the fact would disagree with the verdict that was already reached
+    (D125). Default True, which is byte-identical to before.
 
     ``plan_id_base`` offsets those ids. A caller that evaluates in BATCHES - the
     graph-search driver's adaptive top-K does - would otherwise restart at
@@ -480,7 +489,7 @@ def evaluate_candidates(
         # P/D whose transfer blows the TTFT budget must become infeasible. Applied
         # identically here in oracle and pruned modes, so oracle-agreement holds.
         metrics = sim.metrics
-        if candidate.serving_arch is ServingArch.PD_SPLIT:
+        if pd_transfer and candidate.serving_arch is ServingArch.PD_SPLIT:
             metrics, pd_info = apply_pd_transfer_cost(
                 candidate, metrics, spec, cluster, islands, topology
             )

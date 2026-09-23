@@ -14,6 +14,7 @@ from __future__ import annotations
 import copy
 import json
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -207,6 +208,7 @@ class EnvelopeCache:
         enabled: bool = True,
         topology_level: int = 1,
         graph_signature: str | None = None,
+        signature_of: Callable[[CandidateConfig], str | None] | None = None,
     ) -> None:
         self.root = Path(root)
         self.spec = spec
@@ -226,6 +228,14 @@ class EnvelopeCache:
         # the committed replay caches keep working. Same precedent as
         # `topology_level` above.
         self.graph_signature = graph_signature
+        # PER-CANDIDATE structure, where one signature for the whole cache is
+        # not enough. A batch of graph-search representatives differs candidate
+        # by candidate, and `EnvelopeKey` cannot see any of it: two placements
+        # alike in parallelism and hardware but crossing different shared
+        # uplinks produce the same key, so the second would be served the
+        # first's metrics with nothing in the output to show it (D126).
+        # Takes precedence over `graph_signature` when both are set.
+        self.signature_of = signature_of
         # Counters live in a dict so `with_graph_signature` can hand out a
         # sibling cache that SHARES them: the caller wants one hit/miss tally
         # for the run, not one per representative.
@@ -240,6 +250,15 @@ class EnvelopeCache:
     @property
     def misses(self) -> int:
         return self._stats["misses"]
+
+    def with_signature_of(
+        self, signature_of: Callable[[CandidateConfig], str | None]
+    ) -> EnvelopeCache:
+        """A sibling keyed per candidate, sharing this cache's counters."""
+        sibling = copy.copy(self)
+        sibling.signature_of = signature_of
+        sibling._stats = self._stats
+        return sibling
 
     def with_graph_signature(self, sig: str) -> EnvelopeCache:
         """A sibling reading the same root under a different graph signature.
@@ -273,8 +292,13 @@ class EnvelopeCache:
             name = prov.hash_object([name, self.trace_digest])
         if self.topology_level != 1:
             name = prov.hash_object([name, f"topology_level={self.topology_level}"])
-        if self.graph_signature:
-            name = prov.hash_object([name, f"graph={self.graph_signature}"])
+        signature = self.graph_signature
+        if self.signature_of is not None:
+            per_candidate = self.signature_of(candidate)
+            if per_candidate is not None:
+                signature = per_candidate
+        if signature:
+            name = prov.hash_object([name, f"graph={signature}"])
         return self.root / f"{name}.json"
 
     def get(self, candidate: CandidateConfig) -> SimResult | None:
