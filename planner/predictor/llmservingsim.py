@@ -354,6 +354,13 @@ def compile_to_sim_config(
 
 #: A replacement compile step. Returns the same pair `compile_to_sim_config`
 #: does, or None to decline and let the normal path run.
+#: A last-chance correction to a finished prediction. Applied INSIDE
+#: `predict`, so whatever it returns is what `evaluate_candidates` judges and
+#: what the envelope cache stores -- a correction made after `predict` would
+#: leave the verdict and the metrics disagreeing, and would be lost on a cache
+#: hit (D125).
+ResultHook = Callable[[CandidateConfig, "SimResult"], "SimResult"]
+
 CompileHook = Callable[
     [CandidateConfig, ClusterSpecV2, "dict[str, ExecutionIsland]",
      "dict[str, AcceleratorProfile]"],
@@ -412,6 +419,24 @@ class LLMServingSimPredictor(Predictor):
         self.work_dir.mkdir(parents=True, exist_ok=True)
         self.last_reduction: TopologyReduction | None = None
         self._compile_hook: CompileHook | None = None
+        self._result_hook: ResultHook | None = None
+
+    def set_result_hook(self, hook: ResultHook | None) -> None:
+        """Install a correction applied to every `SimResult`, or clear it.
+
+        The graph-search driver uses this to price a P/D handoff over the path
+        its placement actually takes. It runs before `predict` returns, which is
+        what makes the corrected metrics the ones feasibility is judged on and
+        the ones the cache stores; a caller that adjusted metrics afterwards
+        would have a verdict taken on different numbers, and would lose the
+        adjustment entirely on a cache hit.
+        """
+        self._result_hook = hook
+
+    def _finish(self, candidate: CandidateConfig, result: SimResult) -> SimResult:
+        if self._result_hook is None:
+            return result
+        return self._result_hook(candidate, result)
 
     def set_compile_hook(self, hook: CompileHook | None) -> None:
         """Install a replacement for `compile_to_sim_config`, or clear it.
@@ -490,8 +515,8 @@ class LLMServingSimPredictor(Predictor):
             )
             if retry.ok:
                 retry.warnings.append("succeeded on retry after a first-attempt failure")
-                return retry
-        return result
+                return self._finish(candidate, retry)
+        return self._finish(candidate, result)
 
     def close(self) -> None:
         if self._owns_dir and not self.keep_artifacts and self.work_dir.exists():

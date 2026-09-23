@@ -26,6 +26,7 @@ from planner.envelope import EnvelopeCache
 from planner.plan import (
     CandidateConfig,
     IslandAssignment,
+    PredictedMetrics,
     Rejection,
     RejectionStage,
     VllmKnobs,
@@ -287,3 +288,156 @@ def test_existing_stage_strings_are_unchanged() -> None:
     assert RejectionStage.SURROGATE_PRUNED.value == "surrogate_pruned"
     assert RejectionStage.OUTSIDE_CALIBRATION_DOMAIN.value == "outside_calibration_domain"
     assert RejectionStage.SIM_ERROR.value == "sim_error"
+
+
+# --- H4: the three hooks the graph driver needs to price and key correctly ---
+
+def _pd_candidate(spec, islands) -> CandidateConfig:
+    """A P/D candidate across the first two islands of different nodes."""
+    from planner.plan import Role, ServingArch
+
+    by_node: dict[str, str] = {}
+    for island in islands:
+        by_node.setdefault(island.node_id, island.id)
+    nodes = sorted(by_node)[:2]
+    return CandidateConfig(
+        id="pd", model=spec.model, dtype="bfloat16",
+        serving_arch=ServingArch.PD_SPLIT,
+        assignments=[
+            IslandAssignment(island_id=by_node[nodes[0]], role=Role.PREFILL, tp_size=1),
+            IslandAssignment(island_id=by_node[nodes[1]], role=Role.DECODE, tp_size=1),
+        ],
+    )
+
+
+def test_pd_transfer_can_be_left_to_the_caller(
+    spec, cluster, islands, profiles, mock_predictor
+) -> None:
+    """D125: a caller that knows the physical path prices the handoff itself.
+
+    The class-default figure has to be ABSENT rather than subtracted afterwards:
+    the feasibility verdict is taken inside `evaluate_candidates`, so a metric
+    corrected after the fact would disagree with the verdict already reached.
+    """
+    from planner.optimizer.exhaustive import evaluate_candidates
+
+    by_id = {i.id: i for i in islands}
+    candidate = _pd_candidate(spec, islands)
+
+    charged = evaluate_candidates(
+        [candidate], spec, cluster, by_id, profiles, mock_predictor
+    )
+    assert charged.pd_transfers, "the fixture produced no P/D handoff to price"
+
+    left = evaluate_candidates(
+        [candidate], spec, cluster, by_id, profiles, mock_predictor,
+        pd_transfer=False,
+    )
+    assert left.pd_transfers == []
+
+    def ttft(result) -> float:
+        plans = result.feasible_plans + [p for p, _ in result.infeasible_plans]
+        return plans[0].predicted.p99_ttft_ms
+
+    added = float(charged.pd_transfers[0]["xfer_ms_p99"])
+    assert ttft(charged) == pytest.approx(ttft(left) + added)
+
+
+def test_the_default_still_charges_it(
+    spec, cluster, islands, profiles, mock_predictor
+) -> None:
+    from planner.optimizer.exhaustive import evaluate_candidates
+
+    by_id = {i.id: i for i in islands}
+    result = evaluate_candidates(
+        [_pd_candidate(spec, islands)], spec, cluster, by_id, profiles, mock_predictor
+    )
+    assert result.pd_transfers
+
+
+def test_a_result_hook_is_applied_before_the_verdict_and_the_cache(
+    monkeypatch, tmp_path, spec, cluster, islands, profiles
+) -> None:
+    """D125. A correction made after `predict` would leave the verdict taken on
+    different numbers, and would be lost entirely on a cache hit."""
+    from dataclasses import replace
+
+    from planner.predictor import llmservingsim
+
+    predictor = llmservingsim.LLMServingSimPredictor(
+        _trace(tmp_path), work_dir=tmp_path / "w"
+    )
+    baseline = SimResult(
+        "c", SimOutcome.OK,
+        metrics=PredictedMetrics(
+            p50_ttft_ms=1.0, p95_ttft_ms=1.0, p99_ttft_ms=1.0,
+            p50_tpot_ms=1.0, p95_tpot_ms=1.0, p99_tpot_ms=1.0,
+            throughput_tps=1.0, slo_goodput_rps=1.0, slo_attainment=1.0,
+            completed_requests=1, completed_tokens=1,
+        ),
+    )
+    monkeypatch.setattr(
+        llmservingsim, "compile_to_sim_config",
+        lambda *a, **k: ({"num_nodes": 1, "nodes": [{}]}, None),
+    )
+    monkeypatch.setattr(predictor, "_run_once", lambda *a, **k: baseline)
+
+    def add_100(candidate, result):
+        metrics = result.metrics
+        return replace(
+            result,
+            metrics=metrics.model_copy(
+                update={"p99_ttft_ms": metrics.p99_ttft_ms + 100.0}
+            ),
+        )
+
+    predictor.set_result_hook(add_100)
+    candidate = CandidateConfig(
+        id="c", model=spec.model, dtype="bfloat16",
+        assignments=[IslandAssignment(island_id=islands[0].id, tp_size=1)],
+    )
+    out = predictor.predict(candidate, spec, cluster, {i.id: i for i in islands}, profiles)
+    assert out.metrics is not None
+    assert out.metrics.p99_ttft_ms == pytest.approx(101.0)
+
+    predictor.set_result_hook(None)
+    plain = predictor.predict(
+        candidate, spec, cluster, {i.id: i for i in islands}, profiles
+    )
+    assert plain.metrics is not None
+    assert plain.metrics.p99_ttft_ms == pytest.approx(1.0)
+
+
+def test_a_per_candidate_signature_splits_two_identical_candidates(
+    tmp_path, spec
+) -> None:
+    """D126: `EnvelopeKey` cannot see a candidate's physical boundary, so two
+    placements alike in parallelism and hardware collide on one key."""
+    first, second = candidate("a"), candidate("b")
+    signatures = {"a": "crosses-a-busy-uplink", "b": "crosses-a-free-one"}
+
+    base = _cache(tmp_path, spec)
+    keyed = base.with_signature_of(lambda c: signatures.get(c.id))
+    assert keyed.cache_key(first) != keyed.cache_key(second)
+
+    # Without it they are the same entry, which is the collision D126 records.
+    assert base.cache_key(first) == base.cache_key(second)
+
+
+def test_a_signature_of_returning_none_falls_back(tmp_path, spec) -> None:
+    base = _cache(tmp_path, spec)
+    keyed = base.with_signature_of(lambda c: None)
+    assert keyed.cache_key(candidate("a")) == base.cache_key(candidate("a"))
+
+
+def test_signature_of_takes_precedence_over_graph_signature(tmp_path, spec) -> None:
+    both = _cache(tmp_path, spec, graph_signature="whole-cache")
+    keyed = both.with_signature_of(lambda c: "per-candidate")
+    assert keyed.cache_key(candidate("a")) != both.cache_key(candidate("a"))
+
+
+def test_a_keyed_sibling_shares_the_counters(tmp_path, spec) -> None:
+    base = _cache(tmp_path, spec)
+    sibling = base.with_signature_of(lambda c: "x")
+    assert sibling.get(candidate("a")) is None
+    assert base.stats() == {"hits": 0, "misses": 1}
