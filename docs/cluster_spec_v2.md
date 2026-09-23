@@ -7,7 +7,8 @@ this YAML (`planner/inventory.py`) and *compiles down* to the untouched legacy
 neither of those describes this file's schema, and they never have.
 
 `schema_version` was added by STEP H1–H3 of the graph-search work order
-(`graphsearch/WORK_ORDER_graph_search.md`, STEP H2; deviation **D120**). Nothing
+(`WORK_ORDER_graph_search.md` in `swsok/heteropilot-graphsearch`, STEP H2;
+deviation **D120**). Nothing
 in the planner requires it yet — the graph-search driver in
 `swsok/heteropilot-graphsearch` is its first consumer.
 

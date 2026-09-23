@@ -4353,10 +4353,11 @@ against V3's real P1), `outputs/p2_evidence/{link_numa,p2p_control}/`.
 ## D121 — `PredictedMetrics.offered_requests` changes the metrics schema digest, so every envelope cache entry misses · Recorded 2026-09-22
 
 *`WORK_ORDER_graph_search.md` STEP H1, the first entry from the `D120–D129`
-block claimed by that work order (which lives in `swsok/heteropilot-graphsearch`;
-the staged copy is `graphsearch/WORK_ORDER_graph_search.md`). A5000 node,
-accelerator set `GPU-bd2a06dc`. This entry records a cache consequence, not a
-disagreement with upstream.*
+block claimed by that work order, which lives in `swsok/heteropilot-graphsearch`.
+When this entry was written a staged copy sat at `graphsearch/` in this repo; it
+was removed on 2026-09-23 once G0 had committed the originals there, so the
+three documents have one home. A5000 node, accelerator set `GPU-bd2a06dc`. This
+entry records a cache consequence, not a disagreement with upstream.*
 
 **What H1 added.** The service contract grew three optional SLO fields
 (`min_goodput_rps`, `min_completion_ratio`, `observation_window_s`), a fourth
